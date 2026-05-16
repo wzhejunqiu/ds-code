@@ -9,6 +9,9 @@ install:
 test:
 	go test -race -count=1 ./...
 
+test-integration:
+	go test -tags=integration -race -count=1 ./internal/lsp/... ./internal/tool/builtin/...
+
 vet:
 	go vet ./...
 
