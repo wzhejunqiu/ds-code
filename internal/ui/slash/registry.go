@@ -20,13 +20,13 @@ func All() []Command {
 		{Name: "btw", Args: "<question…>", Description: "Side-channel question (not in main thread)", Phase: "4"},
 		{Name: "compact", Description: "Manually compact API context"},
 		{Name: "resume", Args: "[session_id]", Description: "Resume a saved session"},
-		{Name: "plan", Description: "Enter Plan mode (read-only tools)", Phase: "6"},
-		{Name: "agent", Description: "Return to Agent mode", Phase: "6"},
+		{Name: "plan", Description: "Enter Plan mode (read-only tools)"},
+		{Name: "agent", Description: "Return to Agent mode"},
 		{Name: "permissions", Description: "View or switch permission mode"},
 		{Name: "checkpoint", Args: "[list|rewind n]", Description: "Checkpoint list or rewind", Phase: "7"},
 		{Name: "git", Description: "Refresh git status/diff snapshot for next request"},
-		{Name: "skill", Args: "<name>", Description: "Activate a skill", Phase: "6"},
-		{Name: "task", Args: "<description…>", Description: "Dispatch read-only subagent", Phase: "6"},
+		{Name: "skill", Args: "[name]", Description: "List or activate a skill"},
+		{Name: "task", Args: "<prompt…>", Description: "Dispatch read-only subagent (direct)"},
 	}
 }
 

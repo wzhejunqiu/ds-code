@@ -158,9 +158,25 @@ mcp:
 - **写操作**（`write_file`、`create_directory` 等）与内置工具一样走 `permission.mode`（`ask` / `readonly` / `auto`）
 - 单 server 崩溃不影响主进程（panic 隔离）
 
+## Phase 6 增强
+
+- **Rules**：`<git-root>/.ds-code/rules/*.md` 合并进 system 上下文
+- **Skills**：`.ds-code/skills/<name>/SKILL.md` 或 `~/.ds-code/skills/`；`/skill [name]` 激活
+- **Plan 模式**：`ds-code --plan` 或 `/plan` — 仅 `read_file` / `grep` / `glob` / `list_dir` / `diagnostics`（+ 可选 `web_fetch`）
+- **子代理**：`task` 工具（只读、并发上限 `tools.task.max_parallel`）；`/task <prompt>` 直接派发
+- **Web**：`web_fetch` / `web_search`（默认关闭，需 `web.allowlist`）
+- **LSP**：`diagnostics` 工具 — 内置 gopls、typescript-language-server、clangd；Java 需在 `lsp.servers.java.command` 自配 jdtls
+
+```bash
+ds-code --plan -p "分析 internal/agent 目录结构并给出重构建议"
+# REPL: /plan, /agent, /skill my-skill, /task 找出所有 TODO
+```
+
+配置见 [`configs/example.yaml`](configs/example.yaml) 中 `web.*` 与 `lsp.*`。
+
 ## 实施阶段
 
-当前：**Phase 5**（MCP 子进程、工具归一化、统一权限）。
+当前：**Phase 6**（Rules/Skills、Plan 模式、子代理、LSP diagnostics、Web 工具）。
 路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证

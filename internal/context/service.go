@@ -17,6 +17,10 @@ type Service struct {
 	Tools      *tool.Registry
 	LLM        llm.Client
 	AgentsMD   string
+	Rules      string
+	ActiveSkill string
+	SkillsText  string
+
 	AtExpander *AtExpander
 
 	// Cached for compact condition A within one user turn.
@@ -128,9 +132,12 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 	}
 
 	toolDefs := s.Tools.Definitions()
+	skills := s.SkillsText
 	view := &APIContextView{
 		SystemPrompt: defaultSystemBase,
 		AgentsMD:     s.AgentsMD,
+		Rules:        s.Rules,
+		Skills:       skills,
 		GitSnapshot:  sess.GitSnapshot,
 		ToolsJSON:    deepseek.ToolsJSON(toolDefs),
 		WindowTokens: window,

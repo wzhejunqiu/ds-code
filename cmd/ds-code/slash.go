@@ -85,6 +85,18 @@ func (a *app) handleSlash(env *slashEnv, line string) (handled bool, err error) 
 	case "resume":
 		return true, a.slashResume(env, args)
 
+	case "plan":
+		return true, a.slashRunMode(env, "plan")
+
+	case "agent":
+		return true, a.slashRunMode(env, "agent")
+
+	case "skill":
+		return true, a.slashSkill(env, args)
+
+	case "task":
+		return true, a.slashTask(env, args)
+
 	default:
 		if c, ok := slash.Lookup(cmd); ok && c.Phase != "" {
 			fmt.Fprintf(env.out, "/%s is planned for Phase %s.\n", cmd, c.Phase)

@@ -15,11 +15,11 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/hejunqiu/ds-code/internal/lsp"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/spf13/cobra"
 )
@@ -28,6 +28,7 @@ type app struct {
 	cfg    *config.Config
 	store  session.Store
 	mcpMgr *mcpsvc.Manager
+	lspMgr *lsp.Manager
 }
 
 func (a *app) openStore() (session.Store, error) {
@@ -55,14 +56,14 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 
 	strict := a.cfg.LLM.StrictTools
 	gi, _ := tool.LoadGitignore(a.cfg.ProjectRoot)
-	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: a.cfg, Perm: perm, Strict: strict})
-	reg.Register(&builtin.GrepTool{Cfg: a.cfg, Perm: perm, Gitignore: gi, Strict: strict})
-	reg.Register(&builtin.ShellTool{Cfg: a.cfg, Perm: perm, Strict: strict})
-	reg.Register(&builtin.ApplyPatchTool{Cfg: a.cfg, Perm: perm, Strict: strict})
-	reg.Register(&builtin.WriteFileTool{Cfg: a.cfg, Perm: perm, Strict: strict})
 
-	if err := a.attachMCP(context.Background(), reg, perm, strict); err != nil {
+	if err := a.ensureMCP(context.Background(), perm, strict); err != nil {
+		return nil, nil, nil, err
+	}
+
+	llmClient := deepseek.NewClient(a.cfg)
+	bundle, err := a.buildTools(context.Background(), perm, gi, strict, llmClient, a.cfg.RunMode)
+	if err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -70,15 +71,18 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	llmClient := deepseek.NewClient(a.cfg)
+	rules, err := ctxpkg.LoadRules(a.cfg.ProjectRoot)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	ctxSvc := &ctxpkg.Service{
 		Cfg:      a.cfg,
 		Store:    store,
-		Tools:    reg,
+		Tools:    bundle.reg,
 		LLM:      llmClient,
 		AgentsMD: agentsMD,
+		Rules:    rules,
 		AtExpander: &ctxpkg.AtExpander{
 			Cfg:       a.cfg,
 			Perm:      perm,
@@ -98,7 +102,7 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 
 	runner := &agent.Runner{
 		LLM:      llmClient,
-		Tools:    reg,
+		Tools:    bundle.reg,
 		Perm:     perm,
 		Sessions: store,
 		Context:  ctxSvc,
@@ -114,6 +118,7 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	defer a.closeMCP()
+	defer a.closeLSP()
 
 	out := cmd.OutOrStdout()
 	runnerOut := io.Writer(out)
@@ -165,6 +170,8 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 func (a *app) runREPLWithSession(cmd *cobra.Command, sessionID string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	defer a.closeMCP()
+	defer a.closeLSP()
 
 	out := cmd.OutOrStdout()
 	store, err := a.openStore()
@@ -185,6 +192,8 @@ func (a *app) runREPLWithSession(cmd *cobra.Command, sessionID string) error {
 func (a *app) runREPL(cmd *cobra.Command) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	defer a.closeMCP()
+	defer a.closeLSP()
 
 	out := cmd.OutOrStdout()
 	runner, store, ctxSvc, err := a.newRunner(out)
@@ -253,22 +262,6 @@ func (a *app) trySlashLine(ctx context.Context, out io.Writer, runner *agent.Run
 		sessionID: sessionID,
 	}
 	return a.handleSlash(env, line)
-}
-
-func (a *app) attachMCP(ctx context.Context, reg *tool.Registry, perm *permission.Engine, strict bool) error {
-	if len(a.cfg.MCP.Servers) == 0 {
-		return nil
-	}
-	if a.mcpMgr == nil {
-		mgr, err := mcpsvc.NewManagerFromConfig(ctx, a.cfg.MCP.Servers, strict)
-		if err != nil {
-			return err
-		}
-		a.mcpMgr = mgr
-	}
-	perm.SetWriteToolDetector(a.mcpMgr.IsWriteTool)
-	a.mcpMgr.Register(reg)
-	return nil
 }
 
 func (a *app) closeMCP() {
