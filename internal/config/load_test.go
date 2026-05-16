@@ -9,6 +9,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func TestResolveProjectRoot_gitWorktreeFile(t *testing.T) {
+	root := t.TempDir()
+	gitFile := filepath.Join(root, ".git")
+	if err := os.WriteFile(gitFile, []byte("gitdir: /path/to/actual/.git/worktrees/foo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := config.ResolveProjectRoot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, _ := filepath.EvalSymlinks(root)
+	if got != want {
+		t.Fatalf("project root = %q, want %q", got, want)
+	}
+}
+
 func TestResolveProjectRoot_gitRepo(t *testing.T) {
 	root := t.TempDir()
 	gitDir := filepath.Join(root, ".git")

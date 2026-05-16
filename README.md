@@ -74,10 +74,27 @@ make vuln    # govulncheck
 
 CI：`.github/workflows/ci.yml`（test、vet、build、golangci-lint、govulncheck）。
 
+## Agent 使用（Phase 1）
+
+```bash
+export DS_CODE_DEEPSEEK_API_KEY=sk-...
+
+# 非交互单次任务
+ds-code -p "在项目根目录找出 main 函数并解释其作用"
+
+# JSON 输出（CI）
+ds-code --json -p "列出 internal 目录结构"
+
+# 交互 REPL（TTY）
+ds-code
+```
+
+非 TTY 下 `permission.mode=ask` 时，`shell` 等写操作会被拒绝；脚本请使用 `--permission-mode readonly` 或 `--dangerously-auto`。
+
 ## 实施阶段
 
-当前：**Phase 0**（脚手架：cobra、`internal/config`、CI）。  
-下一步 Phase 1：LLM client、内存 session、基础工具与 `-p` Agent MVP。路线图见 [docs/PLAN.md](docs/PLAN.md)。
+当前：**Phase 1**（MVP Agent：DeepSeek client、内存 session、`read_file`/`grep`/`shell`、`-p`/`--json`、简单 REPL）。  
+路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证
 

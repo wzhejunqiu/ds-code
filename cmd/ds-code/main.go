@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -9,10 +8,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.0.0-dev"
+var version = "0.1.0-dev"
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -56,30 +56,27 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	application := &app{cfg: cfg}
+
 	if cfg.Prompt != "" {
-		return runNonInteractive(cmd, cfg)
+		return application.runNonInteractive(cmd)
 	}
 
-	fmt.Fprintln(cmd.OutOrStdout(), "Interactive TUI is planned for Phase 4.")
-	fmt.Fprintln(cmd.OutOrStdout(), "Use: ds-code -p \"your task\"  (Phase 1+ Agent MVP)")
-	fmt.Fprintln(cmd.OutOrStdout(), "Config loaded — project:", cfg.ProjectRoot)
+	if permissionIsTTY() {
+		return application.runREPL(cmd)
+	}
+
+	fmt.Fprintln(cmd.OutOrStdout(), "stdin is not a TTY. Use: ds-code -p \"your task\"")
 	return nil
 }
 
-func runNonInteractive(cmd *cobra.Command, cfg *config.Config) error {
-	msg := map[string]any{
-		"status":  "not_implemented",
-		"phase":   "Phase 1",
-		"message": "Non-interactive Agent (-p) will be available in Phase 1.",
-		"prompt":  cfg.Prompt,
+func permissionIsTTY() bool {
+	// local wrapper to avoid importing permission in main for tiny helper
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
 	}
-	if cfg.JSONOutput {
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		return enc.Encode(msg)
-	}
-	fmt.Fprintln(cmd.OutOrStdout(), msg["message"])
-	return nil
+	return (fi.Mode() & os.ModeCharDevice) != 0
 }
 
 func sessionsCmd() *cobra.Command {

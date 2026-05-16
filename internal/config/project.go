@@ -37,12 +37,16 @@ func ResolveProjectRoot(startDir string) (string, error) {
 }
 
 func isGitRoot(dir string) bool {
-	gitDir := filepath.Join(dir, ".git")
-	info, err := os.Stat(gitDir)
+	gitPath := filepath.Join(dir, ".git")
+	info, err := os.Stat(gitPath)
 	if err != nil {
 		return false
 	}
-	return info.IsDir() || !info.IsDir() // file .git (worktree) or directory
+	// 常规仓库：.git/ 目录；worktree / 部分 submodule：.git 为指向 gitdir 的普通文件。
+	if info.IsDir() {
+		return true
+	}
+	return info.Mode().IsRegular()
 }
 
 // ProjectConfigPath returns <git-root>/.ds-code/config.yaml if the file exists.
