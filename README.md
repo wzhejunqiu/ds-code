@@ -175,9 +175,24 @@ ds-code --plan -p "分析 internal/agent 目录结构并给出重构建议"
 
 配置见 [`configs/example.yaml`](configs/example.yaml) 中 `web.*` 与 `lsp.*`。
 
+## Phase 7 Checkpoint 与加固
+
+- **Checkpoint**：`apply_patch` / `write_file` 执行前自动快照（`~/.ds-code/projects/<id>/checkpoints/<session>/`）
+- **回滚**：`/checkpoint list`、`/checkpoint rewind N` 或 `/rewind N`；历史追加 `role=system` 事件（不进 API）
+- **`/btw`**：旁路单次问答，不写 `messages`、默认无 tools（见 `btw.*` 配置）
+- **`shell` 后台任务**：`background=true` 启动；`job_id` 轮询输出；`cancel=true` 终止；`list_jobs=true` 列表
+- **安全**：威胁模型与 S1–S14 映射见 [docs/SECURITY.md](docs/SECURITY.md)
+
+```bash
+# REPL
+/checkpoint list
+/checkpoint rewind 2
+/btw 用一句话解释 compact 条件 A
+```
+
 ## 实施阶段
 
-当前：**Phase 6**（Rules/Skills、Plan 模式、子代理、LSP diagnostics、Web 工具）。
+当前：**Phase 7**（Checkpoint、/btw、安全文档与审计测试）。
 路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证

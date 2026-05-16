@@ -41,6 +41,9 @@ func NewEngine(mode, workspace string, interactive bool) *Engine {
 
 // Check validates whether a tool may run with the given arguments map.
 func (e *Engine) Check(tool string, args map[string]any) error {
+	if tool == "shell" && isShellReadOnlyOp(args) {
+		return e.checkShellReadOnly(args)
+	}
 	if e.isWriteTool(tool) && e.Mode == "readonly" {
 		return fmt.Errorf("%w: %s in readonly mode", ErrDenied, tool)
 	}
@@ -131,6 +134,28 @@ func summarizeArgs(tool string, args map[string]any) string {
 		}
 	}
 	return ""
+}
+
+func isShellReadOnlyOp(args map[string]any) bool {
+	if list, _ := args["list_jobs"].(bool); list {
+		return true
+	}
+	jobID, _ := args["job_id"].(string)
+	if jobID == "" {
+		return false
+	}
+	if cancel, _ := args["cancel"].(bool); cancel {
+		return false
+	}
+	return true
+}
+
+func (e *Engine) checkShellReadOnly(args map[string]any) error {
+	// Poll/list background jobs: allowed in readonly; still blocked in ask without TTY for consistency with read ops.
+	if e.Mode == "ask" && !e.Interactive {
+		return ErrNeedTTY
+	}
+	return nil
 }
 
 func (e *Engine) isWriteTool(tool string) bool {

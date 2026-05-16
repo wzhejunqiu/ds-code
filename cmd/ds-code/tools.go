@@ -9,6 +9,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/lsp"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	toolsetup "github.com/hejunqiu/ds-code/internal/tool/setup"
 )
@@ -34,6 +35,11 @@ func (a *app) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 		}
 	}
 
+	shellMgr, err := a.openShellJobs()
+	if err != nil {
+		return nil, err
+	}
+
 	deps := toolsetup.Deps{
 		Cfg:       a.cfg,
 		Perm:      perm,
@@ -42,9 +48,29 @@ func (a *app) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 		LLM:       llmClient,
 		LSP:       lspMgr,
 		MCP:       a.mcpMgr,
+		ShellJobs: shellMgr,
 	}
 	reg := toolsetup.BuildRegistry(runMode, deps)
 	return &toolBundle{reg: reg, lspMgr: lspMgr, deps: deps}, nil
+}
+
+func (a *app) openShellJobs() (*shelljobs.Manager, error) {
+	if a.shellJobs != nil {
+		return a.shellJobs, nil
+	}
+	mgr, err := shelljobs.OpenManager(a.cfg.ProjectRoot, a.cfg.Tools.Shell)
+	if err != nil {
+		return nil, err
+	}
+	a.shellJobs = mgr
+	return mgr, nil
+}
+
+func (a *app) closeShellJobs() {
+	if a.shellJobs != nil {
+		a.shellJobs.Close()
+		a.shellJobs = nil
+	}
 }
 
 func (a *app) closeLSP() {

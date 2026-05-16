@@ -30,6 +30,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("tools.glob.max_results", 200)
 	v.SetDefault("tools.apply_patch.max_changed_lines", 2000)
 	v.SetDefault("tools.shell.timeout", "120s")
+	v.SetDefault("tools.shell.max_background", 5)
+	v.SetDefault("tools.shell.background_output_max_bytes", 262144)
 	v.SetDefault("tools.task.max_parallel", 3)
 	v.SetDefault("tools.task.summary_max_chars", 16_000)
 

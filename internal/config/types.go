@@ -82,7 +82,9 @@ type ApplyPatchConfig struct {
 }
 
 type ShellToolConfig struct {
-	Timeout time.Duration `mapstructure:"timeout"`
+	Timeout                  time.Duration `mapstructure:"timeout"`
+	MaxBackground            int           `mapstructure:"max_background"`
+	BackgroundOutputMaxBytes int           `mapstructure:"background_output_max_bytes"`
 }
 
 type TaskToolConfig struct {

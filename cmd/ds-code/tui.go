@@ -59,5 +59,6 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 	_ = out
 	defer a.closeMCP()
 	defer a.closeLSP()
+	defer a.closeShellJobs()
 	return tui.Run(deps)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
@@ -19,6 +20,7 @@ type Deps struct {
 	LLM       llm.Client
 	LSP       *lsp.Manager
 	MCP       *mcpsvc.Manager
+	ShellJobs *shelljobs.Manager
 }
 
 // RegisterReadOnly registers plan-mode and subagent tools.
@@ -34,7 +36,7 @@ func RegisterReadOnly(reg *tool.Registry, d Deps) {
 
 // RegisterWrite registers mutating tools (agent mode only).
 func RegisterWrite(reg *tool.Registry, d Deps) {
-	reg.Register(&builtin.ShellTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict})
+	reg.Register(&builtin.ShellTool{Cfg: d.Cfg, Perm: d.Perm, Jobs: d.ShellJobs, Strict: d.Strict})
 	reg.Register(&builtin.ApplyPatchTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict})
 	reg.Register(&builtin.WriteFileTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict})
 }

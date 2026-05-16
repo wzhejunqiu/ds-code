@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/hejunqiu/ds-code/internal/audit"
+	"github.com/hejunqiu/ds-code/internal/checkpoint"
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
@@ -27,8 +28,9 @@ type Runner struct {
 	Context *ctxpkg.Service
 	Cfg      *config.Config
 	MaxTurns int
-	Out      io.Writer
-	Audit    *audit.Logger
+	Out          io.Writer
+	Audit        *audit.Logger
+	Checkpoints  *checkpoint.Store
 }
 
 // TurnResult is the outcome of a user turn.
@@ -145,7 +147,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			if cb != nil && cb.OnToolStart != nil {
 				cb.OnToolStart(tc.Name)
 			}
-			body := r.executeTool(ctx, tc)
+			body := r.executeTool(ctx, sessionID, tc)
 			if cb != nil && cb.OnToolEnd != nil {
 				preview := body
 				if len(preview) > 120 {
@@ -168,11 +170,14 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 	return nil, fmt.Errorf("agent: exceeded max sub-rounds (%d)", r.MaxTurns)
 }
 
-func (r *Runner) executeTool(ctx context.Context, tc llm.ToolCall) string {
+func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolCall) string {
 	rawArgs := []byte(tc.Arguments)
 	args := tool.ArgsMap(rawArgs)
 	if err := r.Perm.Check(tc.Name, args); err != nil {
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)
+	}
+	if err := r.recordCheckpoint(ctx, sessionID, tc.Name, args); err != nil {
+		return ctxpkg.FormatToolError(tc.Name, tc.ID, fmt.Errorf("checkpoint: %w", err))
 	}
 	if r.Audit != nil {
 		_ = r.Audit.Log(tc.Name, rawArgs)

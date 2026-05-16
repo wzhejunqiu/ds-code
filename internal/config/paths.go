@@ -63,6 +63,15 @@ func DefaultAuditLogPath(projectRoot string) string {
 	return filepath.Join(dir, "audit.jsonl")
 }
 
+// DefaultShellJobsDir returns the fixed shell-jobs directory for a project.
+func DefaultShellJobsDir(projectRoot string) string {
+	dir, err := ProjectDataDir(projectRoot)
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "shell-jobs")
+}
+
 // DefaultCheckpointDir returns the fixed checkpoints directory for a project.
 func DefaultCheckpointDir(projectRoot string) string {
 	dir, err := ProjectDataDir(projectRoot)

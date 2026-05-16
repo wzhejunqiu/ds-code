@@ -119,6 +119,8 @@ func formatTurnsForCompact(turns []session.UserTurn) string {
 		fmt.Fprintf(&b, "--- Turn %d ---\n", i+1)
 		for _, m := range t.Messages {
 			switch m.Role {
+			case "system":
+				continue
 			case "user":
 				b.WriteString("User: ")
 				b.WriteString(truncateCompact(m.Content, 8000))

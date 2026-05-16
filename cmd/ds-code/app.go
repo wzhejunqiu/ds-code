@@ -12,6 +12,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/agent"
 	"github.com/hejunqiu/ds-code/internal/audit"
+	"github.com/hejunqiu/ds-code/internal/checkpoint"
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
@@ -19,16 +20,19 @@ import (
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/spf13/cobra"
 )
 
 type app struct {
-	cfg    *config.Config
-	store  session.Store
-	mcpMgr *mcpsvc.Manager
-	lspMgr *lsp.Manager
+	cfg          *config.Config
+	store        session.Store
+	mcpMgr       *mcpsvc.Manager
+	lspMgr       *lsp.Manager
+	checkpointSt *checkpoint.Store
+	shellJobs    *shelljobs.Manager
 }
 
 func (a *app) openStore() (session.Store, error) {
@@ -100,6 +104,11 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		auditLog = audit.NewLogger(config.DefaultAuditLogPath(a.cfg.ProjectRoot))
 	}
 
+	cpStore, err := a.openCheckpointStore()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	runner := &agent.Runner{
 		LLM:      llmClient,
 		Tools:    bundle.reg,
@@ -109,9 +118,22 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		Cfg:      a.cfg,
 		MaxTurns: maxTurns,
 		Out:      out,
-		Audit:    auditLog,
+		Audit:       auditLog,
+		Checkpoints: cpStore,
 	}
 	return runner, store, ctxSvc, nil
+}
+
+func (a *app) openCheckpointStore() (*checkpoint.Store, error) {
+	if a.checkpointSt != nil {
+		return a.checkpointSt, nil
+	}
+	st, err := checkpoint.OpenStore(a.cfg.ProjectRoot)
+	if err != nil {
+		return nil, err
+	}
+	a.checkpointSt = st
+	return st, nil
 }
 
 func (a *app) runNonInteractive(cmd *cobra.Command) error {
@@ -119,6 +141,7 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 	defer cancel()
 	defer a.closeMCP()
 	defer a.closeLSP()
+	defer a.closeShellJobs()
 
 	out := cmd.OutOrStdout()
 	runnerOut := io.Writer(out)
@@ -172,6 +195,7 @@ func (a *app) runREPLWithSession(cmd *cobra.Command, sessionID string) error {
 	defer cancel()
 	defer a.closeMCP()
 	defer a.closeLSP()
+	defer a.closeShellJobs()
 
 	out := cmd.OutOrStdout()
 	store, err := a.openStore()
@@ -194,6 +218,7 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 	defer cancel()
 	defer a.closeMCP()
 	defer a.closeLSP()
+	defer a.closeShellJobs()
 
 	out := cmd.OutOrStdout()
 	runner, store, ctxSvc, err := a.newRunner(out)

@@ -41,6 +41,8 @@ tools:
     max_changed_lines: 2000
   shell:
     timeout: 120s
+    max_background: 5
+    background_output_max_bytes: 262144
   task:
     max_parallel: 3
     summary_max_chars: 16000
