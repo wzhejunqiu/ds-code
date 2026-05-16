@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
+	"github.com/hejunqiu/ds-code/internal/audit"
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
@@ -30,12 +31,18 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	store := session.NewMemoryStore()
 	interactive := permission.IsInteractiveTTY()
 	perm := permission.NewEngine(a.cfg.Permission.Mode, a.cfg.ProjectRoot, interactive)
+	if interactive && a.cfg.Permission.Mode == "ask" {
+		perm.Prompter = permission.StdinPrompter(os.Stderr)
+	}
 
+	strict := a.cfg.LLM.StrictTools
 	gi, _ := tool.LoadGitignore(a.cfg.ProjectRoot)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: a.cfg, Perm: perm})
-	reg.Register(&builtin.GrepTool{Cfg: a.cfg, Perm: perm, Gitignore: gi})
-	reg.Register(&builtin.ShellTool{Cfg: a.cfg, Perm: perm})
+	reg.Register(&builtin.ReadFileTool{Cfg: a.cfg, Perm: perm, Strict: strict})
+	reg.Register(&builtin.GrepTool{Cfg: a.cfg, Perm: perm, Gitignore: gi, Strict: strict})
+	reg.Register(&builtin.ShellTool{Cfg: a.cfg, Perm: perm, Strict: strict})
+	reg.Register(&builtin.ApplyPatchTool{Cfg: a.cfg, Perm: perm, Strict: strict})
+	reg.Register(&builtin.WriteFileTool{Cfg: a.cfg, Perm: perm, Strict: strict})
 
 	agentsMD, err := ctxpkg.LoadAgentsMD(a.cfg.ProjectRoot)
 	if err != nil {
@@ -60,6 +67,11 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		maxTurns = 25
 	}
 
+	var auditLog *audit.Logger
+	if a.cfg.Audit.Enabled {
+		auditLog = audit.NewLogger(config.DefaultAuditLogPath(a.cfg.ProjectRoot))
+	}
+
 	runner := &agent.Runner{
 		LLM:      llmClient,
 		Tools:    reg,
@@ -69,6 +81,7 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		Cfg:      a.cfg,
 		MaxTurns: maxTurns,
 		Out:      out,
+		Audit:    auditLog,
 	}
 	return runner, store, ctxSvc, nil
 }

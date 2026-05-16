@@ -14,8 +14,9 @@ import (
 
 // ReadFileTool reads file contents with optional line range.
 type ReadFileTool struct {
-	Cfg  *config.Config
-	Perm *permission.Engine
+	Cfg    *config.Config
+	Perm   *permission.Engine
+	Strict bool
 }
 
 func (t *ReadFileTool) Name() string { return "read_file" }
@@ -25,16 +26,11 @@ func (t *ReadFileTool) Description() string {
 }
 
 func (t *ReadFileTool) Schema() map[string]any {
-	return map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"path":   map[string]any{"type": "string", "description": "Relative path from project root"},
-			"offset": map[string]any{"type": "integer", "description": "Start line (1-based)"},
-			"limit":  map[string]any{"type": "integer", "description": "Max lines to read"},
-		},
-		"required":             []string{"path"},
-		"additionalProperties": false,
-	}
+	return tool.ObjectSchema(map[string]any{
+		"path":   map[string]any{"type": "string", "description": "Relative path from project root"},
+		"offset": map[string]any{"type": "integer", "description": "Start line (1-based)"},
+		"limit":  map[string]any{"type": "integer", "description": "Max lines to read"},
+	}, []string{"path"}, t.Strict)
 }
 
 func (t *ReadFileTool) PermissionLevel() permission.Level { return permission.LevelLow }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/hejunqiu/ds-code/internal/audit"
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
@@ -24,9 +25,10 @@ type Runner struct {
 	Perm    *permission.Engine
 	Sessions session.Store
 	Context *ctxpkg.Service
-	Cfg     *config.Config
+	Cfg      *config.Config
 	MaxTurns int
-	Out     io.Writer
+	Out      io.Writer
+	Audit    *audit.Logger
 }
 
 // TurnResult is the outcome of a user turn.
@@ -84,8 +86,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*Turn
 		resp, err := r.LLM.Chat(ctx, req)
 		if err != nil {
 			if deepseek.IsContextTooLong(err) {
-				_ = r.Context.CompactAPIContext(ctx, sessionID)
-				continue
+				return nil, fmt.Errorf("context too long: use /compact (Phase 3) or shorten the task: %w", err)
 			}
 			return nil, err
 		}
@@ -135,12 +136,15 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*Turn
 }
 
 func (r *Runner) executeTool(ctx context.Context, tc llm.ToolCall) string {
-	args := tool.ArgsMap([]byte(tc.Arguments))
-	argMap := args
-	if err := r.Perm.Check(tc.Name, argMap); err != nil {
+	rawArgs := []byte(tc.Arguments)
+	args := tool.ArgsMap(rawArgs)
+	if err := r.Perm.Check(tc.Name, args); err != nil {
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)
 	}
-	out, err := r.Tools.Execute(ctx, tc.Name, []byte(tc.Arguments))
+	if r.Audit != nil {
+		_ = r.Audit.Log(tc.Name, rawArgs)
+	}
+	out, err := r.Tools.Execute(ctx, tc.Name, rawArgs)
 	if err != nil {
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)
 	}

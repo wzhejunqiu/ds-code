@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/hejunqiu/ds-code/internal/patch"
 )
 
 // ErrDenied is returned when an operation is not allowed.
@@ -14,11 +16,15 @@ var ErrDenied = errors.New("permission denied")
 // ErrNeedTTY is returned when ask mode cannot prompt in non-interactive mode.
 var ErrNeedTTY = errors.New("permission: ask mode requires a TTY; use --permission-mode readonly or --dangerously-auto")
 
+// ErrRejected is returned when the user declines a prompt.
+var ErrRejected = errors.New("permission: user rejected")
+
 // Engine enforces permission mode and path policies.
 type Engine struct {
-	Mode          string
-	Workspace     string
-	Interactive   bool
+	Mode        string
+	Workspace   string
+	Interactive bool
+	Prompter    Prompter
 }
 
 // NewEngine creates a permission engine.
@@ -34,6 +40,22 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 	if e.isWriteTool(tool) && e.Mode == "ask" && !e.Interactive {
 		return ErrNeedTTY
 	}
+
+	if tool == "apply_patch" {
+		patchText, _ := args["patch"].(string)
+		if patchText != "" {
+			paths, err := patch.Paths(patchText)
+			if err != nil {
+				return fmt.Errorf("%w: invalid patch: %v", ErrDenied, err)
+			}
+			for _, p := range paths {
+				if err := e.checkPath(p); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	if path, _ := args["path"].(string); path != "" {
 		if err := e.checkPath(path); err != nil {
 			return err
@@ -55,7 +77,42 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 			}
 		}
 	}
+
+	if e.isWriteTool(tool) && e.Mode == "ask" && e.Interactive {
+		if e.Prompter == nil {
+			return fmt.Errorf("%w: no prompter configured for ask mode", ErrDenied)
+		}
+		ok, err := e.Prompter(tool, summarizeArgs(tool, args))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrRejected
+		}
+	}
 	return nil
+}
+
+func summarizeArgs(tool string, args map[string]any) string {
+	switch tool {
+	case "shell":
+		if c, _ := args["command"].(string); c != "" {
+			return c
+		}
+	case "write_file":
+		if p, _ := args["path"].(string); p != "" {
+			return "path=" + p
+		}
+	case "apply_patch":
+		if p, _ := args["patch"].(string); p != "" {
+			paths, err := patch.Paths(p)
+			if err == nil {
+				return "files: " + strings.Join(paths, ", ")
+			}
+			return "patch (unparsed)"
+		}
+	}
+	return ""
 }
 
 func (e *Engine) isWriteTool(tool string) bool {
@@ -78,7 +135,7 @@ func (e *Engine) checkPath(rel string) error {
 	return nil
 }
 
-// ResolvePath resolves rel under workspace and blocks escape.
+// ResolvePath resolves rel under workspace and blocks escape (S2: symlinks evaluated).
 func (e *Engine) ResolvePath(rel string) (string, error) {
 	if filepath.IsAbs(rel) {
 		return "", fmt.Errorf("%w: absolute paths not allowed: %s", ErrDenied, rel)
@@ -86,15 +143,27 @@ func (e *Engine) ResolvePath(rel string) (string, error) {
 	if strings.Contains(rel, "..") {
 		return "", fmt.Errorf("%w: path traversal: %s", ErrDenied, rel)
 	}
-	abs := filepath.Join(e.Workspace, filepath.Clean(rel))
-	abs, err := filepath.Abs(abs)
+
+	ws, err := filepath.EvalSymlinks(e.Workspace)
 	if err != nil {
-		return "", err
+		ws, err = filepath.Abs(e.Workspace)
+		if err != nil {
+			return "", err
+		}
 	}
-	ws, err := filepath.Abs(e.Workspace)
-	if err != nil {
-		return "", err
+
+	abs := filepath.Join(ws, filepath.Clean(rel))
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		abs = resolved
+	} else if _, statErr := os.Stat(abs); statErr != nil {
+		// New file: resolve parent directory
+		parent, err := filepath.EvalSymlinks(filepath.Dir(abs))
+		if err != nil {
+			return "", fmt.Errorf("%w: cannot resolve parent of %s", ErrDenied, rel)
+		}
+		abs = filepath.Join(parent, filepath.Base(abs))
 	}
+
 	relTo, err := filepath.Rel(ws, abs)
 	if err != nil || strings.HasPrefix(relTo, "..") {
 		return "", fmt.Errorf("%w: outside workspace: %s", ErrDenied, rel)

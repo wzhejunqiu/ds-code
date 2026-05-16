@@ -25,7 +25,7 @@ type Client struct {
 // NewClient builds a DeepSeek client from config (API key must be set).
 func NewClient(cfg *config.Config) *Client {
 	base := strings.TrimSuffix(cfg.LLM.BaseURL, "/")
-	if cfg.LLM.StrictTools {
+	if cfg.LLM.StrictTools && !strings.HasSuffix(base, "/beta") {
 		base = base + "/beta"
 	}
 	return &Client{
@@ -186,20 +186,41 @@ func (c *Client) doWithRetry(ctx context.Context, body []byte) (*http.Response, 
 		resp, err := c.http.Do(httpReq)
 		if err != nil {
 			lastErr = err
-			time.Sleep(backoff)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if !sleepCtx(ctx, backoff) {
+				return nil, ctx.Err()
+			}
 			backoff *= 2
 			continue
 		}
 		if resp.StatusCode == 429 || resp.StatusCode >= 500 {
 			lastErr = parseAPIError(resp)
 			resp.Body.Close()
-			time.Sleep(backoff)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if !sleepCtx(ctx, backoff) {
+				return nil, ctx.Err()
+			}
 			backoff *= 2
 			continue
 		}
 		return resp, nil
 	}
 	return nil, lastErr
+}
+
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
 }
 
 func parseAPIError(resp *http.Response) error {

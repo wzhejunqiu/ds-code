@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
+	"github.com/hejunqiu/ds-code/internal/permission"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
@@ -146,7 +148,16 @@ func (a *app) slashPermissions(env *slashEnv, args string) error {
 	case "readonly", "ask", "auto":
 		a.cfg.Permission.Mode = args
 		env.runner.Perm.Mode = args
-		fmt.Fprintf(env.out, "permission.mode set to %s (this process only)\n", args)
+		if args == "ask" && permission.IsInteractiveTTY() {
+			env.runner.Perm.Prompter = permission.StdinPrompter(os.Stderr)
+		} else {
+			env.runner.Perm.Prompter = nil
+		}
+		_ = env.store.UpdateSession(env.ctx, *env.sessionID, func(s *session.Session) error {
+			s.PermissionMode = args
+			return nil
+		})
+		fmt.Fprintf(env.out, "permission.mode set to %s\n", args)
 	default:
 		return fmt.Errorf("invalid permission mode %q", args)
 	}

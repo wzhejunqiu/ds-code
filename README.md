@@ -102,9 +102,17 @@ ds-code -p "解释 @cmd/ds-code/main.go"
 ds-code    # REPL 中: /help, /git, /mode deepseek-v4-flash
 ```
 
+## Phase 2 写操作
+
+- **`apply_patch`**：Codex 格式（`*** Begin Patch` …），失败自动回滚
+- **`write_file`**：新建或整文件覆盖
+- **权限 `ask`**：TTY 下写操作前 `y/N` 确认；非 TTY 仍拒绝（除非 `auto`）
+- **`llm.strict_tools: true`**：工具 schema `additionalProperties: false`，API 走 `/beta`
+- **审计**：`audit.enabled: true` 或 `--audit-log` → `~/.ds-code/projects/<id>/audit.jsonl`（仅 tool 名 + args 哈希）
+
 ## 实施阶段
 
-当前：**Phase 1.5**（`@` 引用、Slash、`git` 快照）。  
+当前：**Phase 2**（写操作、权限确认、strict、审计）。  
 路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证

@@ -32,7 +32,7 @@ func TestRunner_multiRoundTool(t *testing.T) {
 
 	perm := permission.NewEngine("auto", dir, false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm})
+	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
 
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{

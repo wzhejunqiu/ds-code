@@ -16,9 +16,10 @@ import (
 
 // GrepTool searches file contents with a regex.
 type GrepTool struct {
-	Cfg      *config.Config
-	Perm     *permission.Engine
+	Cfg       *config.Config
+	Perm      *permission.Engine
 	Gitignore *tool.GitignoreMatcher
+	Strict    bool
 }
 
 func (t *GrepTool) Name() string { return "grep" }
@@ -28,15 +29,10 @@ func (t *GrepTool) Description() string {
 }
 
 func (t *GrepTool) Schema() map[string]any {
-	return map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"pattern": map[string]any{"type": "string", "description": "Regular expression"},
-			"path":    map[string]any{"type": "string", "description": "Directory or file relative to project root (default .)"},
-		},
-		"required":             []string{"pattern"},
-		"additionalProperties": false,
-	}
+	return tool.ObjectSchema(map[string]any{
+		"pattern": map[string]any{"type": "string", "description": "Regular expression"},
+		"path":    map[string]any{"type": "string", "description": "Directory or file relative to project root (default .)"},
+	}, []string{"pattern"}, t.Strict)
 }
 
 func (t *GrepTool) PermissionLevel() permission.Level { return permission.LevelLow }

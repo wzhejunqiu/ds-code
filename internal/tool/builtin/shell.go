@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/permission"
@@ -16,8 +17,9 @@ import (
 
 // ShellTool runs a shell command synchronously in the workspace.
 type ShellTool struct {
-	Cfg  *config.Config
-	Perm *permission.Engine
+	Cfg    *config.Config
+	Perm   *permission.Engine
+	Strict bool
 }
 
 func (t *ShellTool) Name() string { return "shell" }
@@ -27,14 +29,9 @@ func (t *ShellTool) Description() string {
 }
 
 func (t *ShellTool) Schema() map[string]any {
-	return map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"command": map[string]any{"type": "string", "description": "Shell command to execute"},
-		},
-		"required":             []string{"command"},
-		"additionalProperties": false,
-	}
+	return tool.ObjectSchema(map[string]any{
+		"command": map[string]any{"type": "string", "description": "Shell command to execute"},
+	}, []string{"command"}, t.Strict)
 }
 
 func (t *ShellTool) PermissionLevel() permission.Level { return permission.LevelHighest }
@@ -50,11 +47,18 @@ func (t *ShellTool) Execute(ctx context.Context, args json.RawMessage) (string, 
 		return "", fmt.Errorf("command is required")
 	}
 
+	timeout := t.Cfg.Tools.Shell.Timeout
+	if timeout <= 0 {
+		timeout = 120 * time.Second
+	}
+	runCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "/bin/sh"
 	}
-	cmd := exec.CommandContext(ctx, shell, "-c", in.Command)
+	cmd := exec.CommandContext(runCtx, shell, "-c", in.Command)
 	cmd.Dir = t.Perm.Workspace
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
