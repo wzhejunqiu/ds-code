@@ -30,7 +30,7 @@ make build
 仓库内含 DeepSeek V4 tokenizer 资源（`internal/assets/deepseek-v4/`），用于：
 
 - `cmd/count-tokens` 调试与本地 token 计数
-- Phase 3+ 的 `CountBreakdown`、`context.truncate_by: tokenizer` 精确截断
+- `CountBreakdown`（compact 条件 A、`/context`）、`context.truncate_by: tokenizer` 精确截断
 
 ### 默认（无 CGO）
 
@@ -110,9 +110,22 @@ ds-code    # REPL 中: /help, /git, /mode deepseek-v4-flash
 - **`llm.strict_tools: true`**：工具 schema `additionalProperties: false`，API 走 `/beta`
 - **审计**：`audit.enabled: true` 或 `--audit-log` → `~/.ds-code/projects/<id>/audit.jsonl`（仅 tool 名 + args 哈希）
 
+## Phase 3 会话与压缩
+
+- **SQLite**：`~/.ds-code/projects/<project_id>/sessions.db`（按项目分库，0600）
+- **自动 compact**：`PrepareRequest` 条件 A/B；API 过长时 compact 后重试（条件 C）
+- **手动**：`/compact`、`/context`；`/clear` 换新 session（历史仍保留）
+- **CLI**：`ds-code sessions`、`ds-code resume <id>`
+
+```bash
+ds-code sessions
+ds-code resume <session-uuid>
+# REPL: /compact, /context, /resume <id>
+```
+
 ## 实施阶段
 
-当前：**Phase 2**（写操作、权限确认、strict、审计）。  
+当前：**Phase 3**（SQLite 会话、compact、resume）。  
 路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证

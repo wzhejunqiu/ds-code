@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"text/tabwriter"
+	"time"
 
 	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/spf13/cobra"
 )
 
@@ -71,7 +75,6 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 }
 
 func permissionIsTTY() bool {
-	// local wrapper to avoid importing permission in main for tiny helper
 	fi, err := os.Stdin.Stat()
 	if err != nil {
 		return false
@@ -82,29 +85,57 @@ func permissionIsTTY() bool {
 func sessionsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "sessions",
-		Short: "List saved sessions (Phase 3+)",
+		Short: "List saved sessions for the current project",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := config.Load(cmd, config.Options{})
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Sessions DB (Phase 3): %s\n", config.DefaultDBPath(cfg.ProjectRoot))
-			return nil
+			store, err := session.OpenDefaultStore(cfg.ProjectRoot)
+			if err != nil {
+				return err
+			}
+			defer store.Close()
+
+			list, err := store.ListSessions(context.Background(), 50)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			if len(list) == 0 {
+				fmt.Fprintf(out, "No sessions in %s\n", config.DefaultDBPath(cfg.ProjectRoot))
+				return nil
+			}
+			w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+			fmt.Fprintln(w, "ID\tTITLE\tMODEL\tTOKENS\tUPDATED")
+			for _, s := range list {
+				title := s.Title
+				if len(title) > 40 {
+					title = title[:37] + "..."
+				}
+				fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
+					s.ID, title, s.Model, s.BilledTokens, s.UpdatedAt.Format(time.RFC3339))
+			}
+			return w.Flush()
 		},
 	}
 }
 
 func resumeCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "resume [session_id]",
-		Short: "Resume a session (Phase 3+)",
+		Use:   "resume <session_id>",
+		Short: "Resume an interactive session",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := config.Load(cmd, config.Options{RequireAPIKey: true})
+			cfg, err := config.Load(cmd, config.Options{RequireAPIKey: true})
 			if err != nil {
 				return err
 			}
-			return fmt.Errorf("resume %q: not implemented (Phase 3)", args[0])
+			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
+				return err
+			}
+			application := &app{cfg: cfg}
+			return application.runREPLWithSession(cmd, args[0])
 		},
 	}
 }

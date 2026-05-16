@@ -58,6 +58,9 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*Turn
 		return nil, err
 	}
 
+	r.Context.BeginUserTurn()
+	defer r.Context.EndUserTurn()
+
 	result := &TurnResult{}
 	for round := 0; round < r.MaxTurns; round++ {
 		if ctx.Err() != nil {
@@ -84,10 +87,20 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*Turn
 		}
 
 		resp, err := r.LLM.Chat(ctx, req)
-		if err != nil {
-			if deepseek.IsContextTooLong(err) {
-				return nil, fmt.Errorf("context too long: use /compact (Phase 3) or shorten the task: %w", err)
+		if err != nil && deepseek.IsContextTooLong(err) {
+			if compactErr := r.Context.CompactAPIContext(ctx, sessionID); compactErr != nil {
+				return nil, fmt.Errorf("context too long; compact failed: %w", compactErr)
 			}
+			view, maxTokens, prepErr := r.Context.PrepareRequest(ctx, sessionID)
+			if prepErr != nil {
+				return nil, prepErr
+			}
+			req.Messages = view.Messages
+			req.MergedSystem = view.MergedSystem()
+			req.MaxTokens = maxTokens
+			resp, err = r.LLM.Chat(ctx, req)
+		}
+		if err != nil {
 			return nil, err
 		}
 

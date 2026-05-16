@@ -11,6 +11,7 @@ type APIContextView struct {
 	GitSnapshot  string
 	ToolsJSON    string
 	Messages     []llm.Message
+	WindowTokens int
 }
 
 // MergedSystem returns the single system string for the API.

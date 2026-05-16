@@ -2,7 +2,6 @@ package context
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/llm"
@@ -16,8 +15,30 @@ type Service struct {
 	Cfg        *config.Config
 	Store      session.Store
 	Tools      *tool.Registry
+	LLM        llm.Client
 	AgentsMD   string
 	AtExpander *AtExpander
+
+	// Cached for compact condition A within one user turn.
+	userTurnBreakdown *ContextBreakdown
+	userTurnCounted   bool
+}
+
+// BeginUserTurn resets per-user-turn breakdown cache (condition A).
+func (s *Service) BeginUserTurn() {
+	s.userTurnBreakdown = nil
+	s.userTurnCounted = false
+}
+
+// EndUserTurn clears cached breakdown after a user turn completes.
+func (s *Service) EndUserTurn() {
+	s.userTurnBreakdown = nil
+	s.userTurnCounted = false
+}
+
+// CachedBreakdown returns the breakdown cached for the current user turn, if any.
+func (s *Service) CachedBreakdown() *ContextBreakdown {
+	return s.userTurnBreakdown
 }
 
 // ExpandUserText expands @file and @dir/ references in a user message.
@@ -44,8 +65,17 @@ func (s *Service) RefreshGitSnapshot(ctx context.Context, sessionID, projectRoot
 	return snap, nil
 }
 
-// PrepareRequest builds the API view; compact is no-op in Phase 1–2.
+// PrepareRequest builds the API view and may compact once (conditions A/B).
 func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APIContextView, int, error) {
+	sess, err := s.Store.Get(ctx, sessionID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if s.shouldCompact(ctx, sessionID, sess) {
+		_ = s.CompactAPIContext(ctx, sessionID)
+	}
+
 	view, err := s.BuildAPIContext(ctx, sessionID)
 	if err != nil {
 		return nil, 0, err
@@ -55,6 +85,30 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 		maxTokens = deepseek.MaxOutputTokens
 	}
 	return view, maxTokens, nil
+}
+
+func (s *Service) shouldCompact(ctx context.Context, sessionID string, sess session.Session) bool {
+	threshold := s.compactThreshold()
+	if int(sess.PromptTokensTotal) >= threshold {
+		return true
+	}
+	if !s.userTurnCounted {
+		view, err := s.BuildAPIContext(ctx, sessionID)
+		if err != nil {
+			return false
+		}
+		bd, err := CountBreakdown(view)
+		if err != nil {
+			return false
+		}
+		s.userTurnBreakdown = &bd
+		s.userTurnCounted = true
+		return bd.Total() >= threshold
+	}
+	if s.userTurnBreakdown != nil {
+		return s.userTurnBreakdown.Total() >= threshold
+	}
+	return false
 }
 
 // BuildAPIContext constructs the next-request snapshot from session history.
@@ -68,49 +122,41 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 		return nil, err
 	}
 
+	window := s.Cfg.Context.WindowTokens
+	if window <= 0 {
+		window = deepseek.ContextWindowTokens
+	}
+
 	toolDefs := s.Tools.Definitions()
 	view := &APIContextView{
 		SystemPrompt: defaultSystemBase,
 		AgentsMD:     s.AgentsMD,
 		GitSnapshot:  sess.GitSnapshot,
 		ToolsJSON:    deepseek.ToolsJSON(toolDefs),
+		WindowTokens: window,
+	}
+
+	turns := session.SplitUserTurns(msgs)
+	keep := s.keepRecentTurns()
+	var recent []session.UserTurn
+	if len(turns) > keep {
+		recent = turns[len(turns)-keep:]
+	} else {
+		recent = turns
 	}
 
 	var apiMsgs []llm.Message
-	for _, m := range msgs {
-		if m.ID <= 0 {
-			continue
-		}
-		// Phase 3+: filter by compact_up_to_message_id and inject compact summary.
-		switch m.Role {
-		case "user":
-			apiMsgs = append(apiMsgs, llm.Message{Role: "user", Content: m.Content})
-		case "assistant":
-			am := llm.Message{
-				Role:             "assistant",
-				Content:          m.Content,
-				ReasoningContent: m.ReasoningContent,
+	if sess.CompactSummary != "" {
+		apiMsgs = append(apiMsgs, compactSummaryMessage(sess.CompactSummary))
+	}
+	for _, turn := range recent {
+		for _, m := range turn.Messages {
+			if m.ID <= sess.CompactUpToMessageID && sess.CompactSummary != "" {
+				continue
 			}
-			if m.ToolCallsJSON != "" {
-				var calls []llm.ToolCall
-				_ = json.Unmarshal([]byte(m.ToolCallsJSON), &calls)
-				am.ToolCalls = calls
-			}
-			apiMsgs = append(apiMsgs, am)
-		case "tool":
-			apiMsgs = append(apiMsgs, llm.Message{
-				Role:       "tool",
-				Content:    m.Content,
-				ToolCallID: m.ToolCallID,
-				Name:       m.ToolName,
-			})
+			apiMsgs = append(apiMsgs, messageToLLM(m))
 		}
 	}
 	view.Messages = apiMsgs
 	return view, nil
-}
-
-// CompactAPIContext is a no-op until Phase 3.
-func (s *Service) CompactAPIContext(_ context.Context, _ string) error {
-	return nil
 }

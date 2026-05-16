@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -87,6 +88,47 @@ func (m *MemoryStore) ListMessages(_ context.Context, sessionID string) ([]Messa
 	return out, nil
 }
 
+func (m *MemoryStore) ListSessions(_ context.Context, limit int) ([]Summary, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	type item struct {
+		s Summary
+		t time.Time
+	}
+	var items []item
+	for id, sess := range m.sessions {
+		title := sess.Title
+		if title == "" {
+			title = "(untitled)"
+		}
+		items = append(items, item{
+			s: Summary{
+				ID:           id,
+				Title:        title,
+				Model:        sess.Model,
+				BilledTokens: BilledTokens(sess),
+				UpdatedAt:    sess.UpdatedAt,
+				CreatedAt:    sess.CreatedAt,
+			},
+			t: sess.UpdatedAt,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].t.After(items[j].t)
+	})
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	out := make([]Summary, len(items))
+	for i, it := range items {
+		out[i] = it.s
+	}
+	return out, nil
+}
+
 func (m *MemoryStore) AppendMessage(_ context.Context, msg Message) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -99,6 +141,9 @@ func (m *MemoryStore) AppendMessage(_ context.Context, msg Message) error {
 	m.messages[msg.SessionID] = append(m.messages[msg.SessionID], msg)
 	s := m.sessions[msg.SessionID]
 	s.UpdatedAt = msg.CreatedAt
+	if msg.Role == "user" && s.Title == "" {
+		s.Title = truncateTitle(msg.Content, 80)
+	}
 	m.sessions[msg.SessionID] = s
 	return nil
 }

@@ -24,11 +24,27 @@ import (
 )
 
 type app struct {
-	cfg *config.Config
+	cfg   *config.Config
+	store session.Store
+}
+
+func (a *app) openStore() (session.Store, error) {
+	if a.store != nil {
+		return a.store, nil
+	}
+	st, err := session.OpenDefaultStore(a.cfg.ProjectRoot)
+	if err != nil {
+		return nil, err
+	}
+	a.store = st
+	return st, nil
 }
 
 func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Service, error) {
-	store := session.NewMemoryStore()
+	store, err := a.openStore()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	interactive := permission.IsInteractiveTTY()
 	perm := permission.NewEngine(a.cfg.Permission.Mode, a.cfg.ProjectRoot, interactive)
 	if interactive && a.cfg.Permission.Mode == "ask" {
@@ -49,10 +65,13 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		return nil, nil, nil, err
 	}
 
+	llmClient := deepseek.NewClient(a.cfg)
+
 	ctxSvc := &ctxpkg.Service{
 		Cfg:      a.cfg,
 		Store:    store,
 		Tools:    reg,
+		LLM:      llmClient,
 		AgentsMD: agentsMD,
 		AtExpander: &ctxpkg.AtExpander{
 			Cfg:       a.cfg,
@@ -61,7 +80,6 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		},
 	}
 
-	llmClient := deepseek.NewClient(a.cfg)
 	maxTurns := a.cfg.Agent.MaxTurns
 	if maxTurns <= 0 {
 		maxTurns = 25
@@ -137,6 +155,26 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 	return nil
 }
 
+func (a *app) runREPLWithSession(cmd *cobra.Command, sessionID string) error {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	out := cmd.OutOrStdout()
+	store, err := a.openStore()
+	if err != nil {
+		return err
+	}
+	if _, err := store.Get(ctx, sessionID); err != nil {
+		return fmt.Errorf("session %q: %w", sessionID, err)
+	}
+
+	runner, _, ctxSvc, err := a.newRunner(out)
+	if err != nil {
+		return err
+	}
+	return a.replLoop(ctx, out, runner, store, ctxSvc, sessionID)
+}
+
 func (a *app) runREPL(cmd *cobra.Command) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -155,7 +193,11 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 		return err
 	}
 
-	fmt.Fprintf(out, "ds-code REPL (session %s). /help for commands. /exit to quit.\n", sess.ID)
+	return a.replLoop(ctx, out, runner, store, ctxSvc, sess.ID)
+}
+
+func (a *app) replLoop(ctx context.Context, out io.Writer, runner *agent.Runner, store session.Store, ctxSvc *ctxpkg.Service, sessionID string) error {
+	fmt.Fprintf(out, "ds-code REPL (session %s). /help for commands. /exit to quit.\n", sessionID)
 
 	sc := bufio.NewScanner(os.Stdin)
 	for {
@@ -171,7 +213,7 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 			continue
 		}
 
-		if handled, err := a.trySlashLine(ctx, out, runner, store, ctxSvc, &sess.ID, line); err != nil {
+		if handled, err := a.trySlashLine(ctx, out, runner, store, ctxSvc, &sessionID, line); err != nil {
 			fmt.Fprintf(out, "error: %v\n\n", err)
 			continue
 		} else if handled {
@@ -180,7 +222,7 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 		}
 
 		fmt.Fprintln(out)
-		_, err := runner.RunTurn(ctx, sess.ID, line)
+		_, err := runner.RunTurn(ctx, sessionID, line)
 		if err != nil {
 			fmt.Fprintf(out, "error: %v\n\n", err)
 			continue
