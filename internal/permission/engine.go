@@ -1,6 +1,7 @@
 package permission
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -25,6 +26,12 @@ type Engine struct {
 	Workspace   string
 	Interactive bool
 	Prompter    Prompter
+	writeTool   func(string) bool
+}
+
+// SetWriteToolDetector registers extra write tools (e.g. MCP mcp__* tools).
+func (e *Engine) SetWriteToolDetector(fn func(string) bool) {
+	e.writeTool = fn
 }
 
 // NewEngine creates a permission engine.
@@ -111,11 +118,25 @@ func summarizeArgs(tool string, args map[string]any) string {
 			}
 			return "patch (unparsed)"
 		}
+	default:
+		if strings.HasPrefix(tool, "mcp__") {
+			b, err := json.Marshal(args)
+			if err == nil {
+				s := string(b)
+				if len(s) > 200 {
+					s = s[:200] + "..."
+				}
+				return s
+			}
+		}
 	}
 	return ""
 }
 
 func (e *Engine) isWriteTool(tool string) bool {
+	if e.writeTool != nil && e.writeTool(tool) {
+		return true
+	}
 	switch tool {
 	case "shell", "write_file", "apply_patch":
 		return true

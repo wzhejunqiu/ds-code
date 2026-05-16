@@ -110,6 +110,20 @@ ds-code    # REPL 中: /help, /git, /mode deepseek-v4-flash
 - **`llm.strict_tools: true`**：工具 schema `additionalProperties: false`，API 走 `/beta`
 - **审计**：`audit.enabled: true` 或 `--audit-log` → `~/.ds-code/projects/<id>/audit.jsonl`（仅 tool 名 + args 哈希）
 
+
+## Phase 3 会话与压缩
+
+- **SQLite**：`~/.ds-code/projects/<project_id>/sessions.db`（按项目分库，0600）
+- **自动 compact**：`PrepareRequest` 条件 A/B；API 过长时 compact 后重试（条件 C）
+- **手动**：`/compact`、`/context`；`/clear` 换新 session（历史仍保留）
+- **CLI**：`ds-code sessions`、`ds-code resume <id>`
+
+```bash
+ds-code sessions
+ds-code resume <session-uuid>
+# REPL: /compact, /context, /resume <id>
+```
+
 ## Phase 4 TUI
 
 交互模式（TTY）启动 **Bubble Tea** 全屏界面：
@@ -128,22 +142,25 @@ ds-code resume <id>
 
 非 TTY 仍使用 `ds-code -p "..."`。
 
-## Phase 3 会话与压缩
+## Phase 5 MCP
 
-- **SQLite**：`~/.ds-code/projects/<project_id>/sessions.db`（按项目分库，0600）
-- **自动 compact**：`PrepareRequest` 条件 A/B；API 过长时 compact 后重试（条件 C）
-- **手动**：`/compact`、`/context`；`/clear` 换新 session（历史仍保留）
-- **CLI**：`ds-code sessions`、`ds-code resume <id>`
+在 `~/.ds-code/config/config.yaml` 或项目 `.ds-code/config.yaml` 中配置 `mcp.servers`：
 
-```bash
-ds-code sessions
-ds-code resume <session-uuid>
-# REPL: /compact, /context, /resume <id>
+```yaml
+mcp:
+  servers:
+    - name: fs
+      command: npx
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
 ```
+
+- 工具名归一化为 `mcp__{server}__{tool}`（如 `mcp__fs__read_file`）
+- **写操作**（`write_file`、`create_directory` 等）与内置工具一样走 `permission.mode`（`ask` / `readonly` / `auto`）
+- 单 server 崩溃不影响主进程（panic 隔离）
 
 ## 实施阶段
 
-当前：**Phase 4**（Bubble Tea TUI、流式、状态栏、费用估算）。  
+当前：**Phase 5**（MCP 子进程、工具归一化、统一权限）。
 路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证

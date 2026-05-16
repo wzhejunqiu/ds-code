@@ -63,9 +63,11 @@ audit:
 
 mcp:
   servers: []
-  # - name: example
+  # MCP tools are exposed as mcp__{name}__{tool} and use the same permission engine as builtins.
+  # - name: fs
   #   command: npx
-  #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/path"]
+  #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/absolute/path/to/workspace"]
+  #   env: {}
 
 web:
   fetch_enabled: false

@@ -15,6 +15,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
+	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
@@ -24,8 +25,9 @@ import (
 )
 
 type app struct {
-	cfg   *config.Config
-	store session.Store
+	cfg    *config.Config
+	store  session.Store
+	mcpMgr *mcpsvc.Manager
 }
 
 func (a *app) openStore() (session.Store, error) {
@@ -59,6 +61,10 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	reg.Register(&builtin.ShellTool{Cfg: a.cfg, Perm: perm, Strict: strict})
 	reg.Register(&builtin.ApplyPatchTool{Cfg: a.cfg, Perm: perm, Strict: strict})
 	reg.Register(&builtin.WriteFileTool{Cfg: a.cfg, Perm: perm, Strict: strict})
+
+	if err := a.attachMCP(context.Background(), reg, perm, strict); err != nil {
+		return nil, nil, nil, err
+	}
 
 	agentsMD, err := ctxpkg.LoadAgentsMD(a.cfg.ProjectRoot)
 	if err != nil {
@@ -107,6 +113,7 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 func (a *app) runNonInteractive(cmd *cobra.Command) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	defer a.closeMCP()
 
 	out := cmd.OutOrStdout()
 	runnerOut := io.Writer(out)
@@ -246,6 +253,29 @@ func (a *app) trySlashLine(ctx context.Context, out io.Writer, runner *agent.Run
 		sessionID: sessionID,
 	}
 	return a.handleSlash(env, line)
+}
+
+func (a *app) attachMCP(ctx context.Context, reg *tool.Registry, perm *permission.Engine, strict bool) error {
+	if len(a.cfg.MCP.Servers) == 0 {
+		return nil
+	}
+	if a.mcpMgr == nil {
+		mgr, err := mcpsvc.NewManagerFromConfig(ctx, a.cfg.MCP.Servers, strict)
+		if err != nil {
+			return err
+		}
+		a.mcpMgr = mgr
+	}
+	perm.SetWriteToolDetector(a.mcpMgr.IsWriteTool)
+	a.mcpMgr.Register(reg)
+	return nil
+}
+
+func (a *app) closeMCP() {
+	if a.mcpMgr != nil {
+		_ = a.mcpMgr.Close()
+		a.mcpMgr = nil
+	}
 }
 
 func (a *app) createSession(store session.Store) (session.Session, error) {
