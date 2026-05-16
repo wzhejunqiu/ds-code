@@ -40,7 +40,7 @@ type TurnResult struct {
 }
 
 // RunTurn handles one user message through sub-rounds until no tool_calls or max turns.
-func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*TurnResult, error) {
+func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *TurnCallbacks) (*TurnResult, error) {
 	expanded, err := r.Context.ExpandUserText(userText)
 	if err != nil {
 		return nil, fmt.Errorf("expand @ references: %w", err)
@@ -85,6 +85,16 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*Turn
 			UserID:          cacheScope(sessionID),
 			StrictTools:     r.Cfg.LLM.StrictTools,
 		}
+		if cb != nil {
+			req.OnStream = func(d llm.StreamDelta) {
+				if d.Content != "" && cb.OnContentDelta != nil {
+					cb.OnContentDelta(d.Content)
+				}
+				if d.Reasoning != "" && cb.OnReasoningDelta != nil {
+					cb.OnReasoningDelta(d.Reasoning)
+				}
+			}
+		}
 
 		resp, err := r.LLM.Chat(ctx, req)
 		if err != nil && deepseek.IsContextTooLong(err) {
@@ -122,7 +132,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*Turn
 		if len(resp.ToolCalls) == 0 {
 			result.FinalContent = resp.Content
 			result.FinalReasoning = resp.ReasoningContent
-			if r.Out != nil && resp.Content != "" {
+			if cb == nil && r.Out != nil && resp.Content != "" {
 				_, _ = io.WriteString(r.Out, resp.Content)
 			}
 			return result, nil
@@ -132,7 +142,17 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*Turn
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
+			if cb != nil && cb.OnToolStart != nil {
+				cb.OnToolStart(tc.Name)
+			}
 			body := r.executeTool(ctx, tc)
+			if cb != nil && cb.OnToolEnd != nil {
+				preview := body
+				if len(preview) > 120 {
+					preview = preview[:120] + "..."
+				}
+				cb.OnToolEnd(tc.Name, preview)
+			}
 			body = ctxpkg.TruncateToolResult(body, r.Cfg)
 			if err := r.Sessions.AppendMessage(ctx, session.Message{
 				SessionID:  sessionID,

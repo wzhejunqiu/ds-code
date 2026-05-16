@@ -64,7 +64,7 @@ func TestRunner_multiRoundTool(t *testing.T) {
 		Out:      &bytes.Buffer{},
 	}
 
-	res, err := r.RunTurn(context.Background(), sess.ID, "find main")
+	res, err := r.RunTurn(context.Background(), sess.ID, "find main", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

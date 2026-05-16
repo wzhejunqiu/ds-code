@@ -110,6 +110,24 @@ ds-code    # REPL 中: /help, /git, /mode deepseek-v4-flash
 - **`llm.strict_tools: true`**：工具 schema `additionalProperties: false`，API 走 `/beta`
 - **审计**：`audit.enabled: true` 或 `--audit-log` → `~/.ds-code/projects/<id>/audit.jsonl`（仅 tool 名 + args 哈希）
 
+## Phase 4 TUI
+
+交互模式（TTY）启动 **Bubble Tea** 全屏界面：
+
+- **多面板**：对话区、工具日志（`Ctrl+T` 折叠）、输入框、状态栏
+- **流式输出**：`reasoning` 默认折叠，`Ctrl+R` 全部展开/收起
+- **`/` 补全**：命令列表、前缀过滤、↑↓/Tab 选择
+- **`/context`**：累计用量 + 六分项（`Ctrl+L` 或 `/context`）；`--json` 导出
+- **状态栏**：模型 · 强度 · 累计 in/out/cache · **费用估算（USD）** · 下次请求预估
+- **取消**：运行中 `Ctrl+C` 取消当前轮次
+
+```bash
+ds-code          # TUI
+ds-code resume <id>
+```
+
+非 TTY 仍使用 `ds-code -p "..."`。
+
 ## Phase 3 会话与压缩
 
 - **SQLite**：`~/.ds-code/projects/<project_id>/sessions.db`（按项目分库，0600）
@@ -125,7 +143,7 @@ ds-code resume <session-uuid>
 
 ## 实施阶段
 
-当前：**Phase 3**（SQLite 会话、compact、resume）。  
+当前：**Phase 4**（Bubble Tea TUI、流式、状态栏、费用估算）。  
 路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证

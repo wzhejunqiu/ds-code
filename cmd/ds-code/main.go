@@ -67,7 +67,7 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	}
 
 	if permissionIsTTY() {
-		return application.runREPL(cmd)
+		return application.runTUI(cmd, "")
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), "stdin is not a TTY. Use: ds-code -p \"your task\"")
@@ -135,7 +135,7 @@ func resumeCmd() *cobra.Command {
 				return err
 			}
 			application := &app{cfg: cfg}
-			return application.runREPLWithSession(cmd, args[0])
+			return application.runTUI(cmd, args[0])
 		},
 	}
 }

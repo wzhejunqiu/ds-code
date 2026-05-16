@@ -11,6 +11,7 @@ import (
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
+	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
 )
 
@@ -79,7 +80,7 @@ func (a *app) handleSlash(env *slashEnv, line string) (handled bool, err error) 
 		return true, nil
 
 	case "context":
-		return true, a.slashContext(env)
+		return true, a.slashContext(env, args)
 
 	case "resume":
 		return true, a.slashResume(env, args)
@@ -92,6 +93,31 @@ func (a *app) handleSlash(env *slashEnv, line string) (handled bool, err error) 
 		fmt.Fprintf(env.out, "Unknown command: /%s (try /help)\n", cmd)
 		return true, nil
 	}
+}
+
+func (a *app) slashContext(env *slashEnv, args string) error {
+	view, err := env.ctxSvc.BuildAPIContext(env.ctx, *env.sessionID)
+	if err != nil {
+		return err
+	}
+	sess, err := env.store.Get(env.ctx, *env.sessionID)
+	if err != nil {
+		return err
+	}
+	panel, err := uipkg.BuildContextPanelData(a.cfg, sess, view)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(args) == "--json" {
+		text, err := uipkg.FormatContextJSON(panel)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(env.out, text)
+		return nil
+	}
+	fmt.Fprintln(env.out, uipkg.FormatContextPanel(panel))
+	return nil
 }
 
 func (a *app) slashMode(env *slashEnv, args string) error {
@@ -173,44 +199,6 @@ func (a *app) slashPermissions(env *slashEnv, args string) error {
 		fmt.Fprintf(env.out, "permission.mode set to %s\n", args)
 	default:
 		return fmt.Errorf("invalid permission mode %q", args)
-	}
-	return nil
-}
-
-func (a *app) slashContext(env *slashEnv) error {
-	view, err := env.ctxSvc.BuildAPIContext(env.ctx, *env.sessionID)
-	if err != nil {
-		return err
-	}
-	bd, err := ctxpkg.CountBreakdown(view)
-	if err != nil {
-		return err
-	}
-	sess, err := env.store.Get(env.ctx, *env.sessionID)
-	if err != nil {
-		return err
-	}
-	est := ""
-	if bd.Estimated {
-		est = " (estimated)"
-	}
-	threshold := int(float64(bd.Window) * a.cfg.Context.CompactThresholdRatio)
-	fmt.Fprintf(env.out, "Session %s\n", sess.ID)
-	fmt.Fprintf(env.out, "Billed (prompt+completion): %d\n", session.BilledTokens(sess))
-	fmt.Fprintf(env.out, "Prompt total: %d | compact threshold: %d\n", sess.PromptTokensTotal, threshold)
-	fmt.Fprintf(env.out, "Next request breakdown%s — total %d / window %d:\n", est, bd.Total(), bd.Window)
-	fmt.Fprintf(env.out, "  system:       %d (%.1f%% of total)\n", bd.SystemPrompt, bd.PercentOfTotal(bd.SystemPrompt))
-	fmt.Fprintf(env.out, "  tools:        %d\n", bd.Tools)
-	if bd.Rules > 0 {
-		fmt.Fprintf(env.out, "  rules:        %d (display only, in system)\n", bd.Rules)
-	}
-	if bd.Skills > 0 {
-		fmt.Fprintf(env.out, "  skills:       %d (display only)\n", bd.Skills)
-	}
-	fmt.Fprintf(env.out, "  subagents:    %d\n", bd.Subagents)
-	fmt.Fprintf(env.out, "  conversation: %d\n", bd.Conversation)
-	if sess.CompactSummary != "" {
-		fmt.Fprintf(env.out, "Compact summary active (watermark message id %d)\n", sess.CompactUpToMessageID)
 	}
 	return nil
 }

@@ -165,7 +165,7 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (*llm.Response, erro
 	}
 
 	if req.Stream {
-		return parseStream(httpResp.Body)
+		return parseStream(httpResp.Body, req.OnStream)
 	}
 	return parseNonStream(httpResp.Body)
 }
@@ -242,7 +242,7 @@ func parseNonStream(r io.Reader) (*llm.Response, error) {
 	return responseFromChat(cr)
 }
 
-func parseStream(r io.Reader) (*llm.Response, error) {
+func parseStream(r io.Reader, onStream llm.StreamFunc) (*llm.Response, error) {
 	var content, reasoning strings.Builder
 	toolAcc := map[int]*llm.ToolCall{}
 	finish := ""
@@ -279,9 +279,15 @@ func parseStream(r io.Reader) (*llm.Response, error) {
 		}
 		if ch.Delta.Content != "" {
 			content.WriteString(ch.Delta.Content)
+			if onStream != nil {
+				onStream(llm.StreamDelta{Content: ch.Delta.Content})
+			}
 		}
 		if ch.Delta.ReasoningContent != "" {
 			reasoning.WriteString(ch.Delta.ReasoningContent)
+			if onStream != nil {
+				onStream(llm.StreamDelta{Reasoning: ch.Delta.ReasoningContent})
+			}
 		}
 		for _, td := range ch.Delta.ToolCalls {
 			tc, ok := toolAcc[td.Index]

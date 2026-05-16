@@ -31,6 +31,15 @@ type ToolDef struct {
 	Parameters  map[string]any
 }
 
+// StreamDelta is one streaming chunk from the API.
+type StreamDelta struct {
+	Content   string
+	Reasoning string
+}
+
+// StreamFunc receives streaming deltas; nil disables incremental callbacks.
+type StreamFunc func(StreamDelta)
+
 // Request is a chat completion request.
 type Request struct {
 	MergedSystem    string
@@ -43,6 +52,7 @@ type Request struct {
 	ReasoningEffort string
 	UserID          string
 	StrictTools     bool
+	OnStream        StreamFunc
 }
 
 // Response is a completed chat completion (stream aggregated).

@@ -133,7 +133,7 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 		return nil
 	}
 
-	result, err := runner.RunTurn(ctx, sess.ID, line)
+	result, err := runner.RunTurn(ctx, sess.ID, line, nil)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (a *app) replLoop(ctx context.Context, out io.Writer, runner *agent.Runner,
 		}
 
 		fmt.Fprintln(out)
-		_, err := runner.RunTurn(ctx, sessionID, line)
+		_, err := runner.RunTurn(ctx, sessionID, line, nil)
 		if err != nil {
 			fmt.Fprintf(out, "error: %v\n\n", err)
 			continue
