@@ -1,9 +1,9 @@
 # ds-code 详细设计文档
 
-> 文档版本：v1.0  
+> 文档版本：v1.2  
 > 更新日期：2026-05-16  
 > 状态：实现基线  
-> 上游文档：[PLAN.md](PLAN.md)（路线图与验收）、[llm-deepseek.md](llm-deepseek.md)（模型/API 契约）
+> 上游文档：[PLAN.md](PLAN.md) v0.13+（路线图与验收）、[llm-deepseek.md](llm-deepseek.md)（模型/API 契约）、[CONFIG.md](CONFIG.md)（配置 / CLI / 环境变量）
 
 ---
 
@@ -16,7 +16,7 @@
 | 核心开发 | §3–§8、§10 |
 | TUI/交互 | §9 |
 | 安全/审计 | §11 |
-| 运维/发布 | §12、§13 |
+| 运维/发布 | [CONFIG.md](CONFIG.md)、§13 |
 
 ---
 
@@ -33,7 +33,7 @@
 | 上下文窗口 | **1,048,576** tokens（1Mi，2²⁰） |
 | 单次最大输出 | **393,216** tokens（384Ki） |
 | 历史不可删 | `messages` 表只增；compact/clear **不删除**历史行 |
-| compact 触发 | **会话 API usage 累计** ≥ 80% 窗口；**不在**每次发请求前本地 Count |
+| compact 触发 | **A** CountBreakdown / **B** 累计 prompt / **C** API 过长；计费 `prompt+completion` 仅展示 |
 | `/context` 六分项 | 用户执行 `/context` 时**按需** `CountBreakdown`；与 compact **解耦** |
 | 单二进制 | `go build` 产出 `ds-code`；MCP/LSP 子进程外置 |
 
@@ -73,6 +73,7 @@ flowchart TB
     Sess[internal/session]
     CP[internal/checkpoint]
     Tools[internal/tool]
+    LSP[internal/lsp]
     MCP[internal/mcp]
   end
 
@@ -94,7 +95,9 @@ flowchart TB
   Runner --> LLM
   Runner --> SubRunner
   Ephemeral --> LLM
+  Tools --> LSP
   Tools --> MCP
+  LSP --> Config
   Perm --> Tools
   Sess --> DB
   CtxPkg --> Sess
@@ -107,6 +110,7 @@ flowchart TB
 1. **`internal/agent`** 可依赖 context、session、tool、permission、llm；**不**依赖 ui。
 2. **`internal/ui`** 依赖 agent、session、context（只读 Build/CountBreakdown）。
 3. **`internal/llm`** 不依赖 agent/ui；通过接口 `llm.Client` 注入。
+4. **`internal/tool`** 可依赖 **`internal/lsp`**（仅 `diagnostics`）；**`internal/lsp`** 不依赖 agent/ui。
 4. **循环依赖禁止**：context ↔ session 通过接口 `session.Reader` / `session.Writer` 解耦。
 
 ### 3.3 核心类型（包级）
@@ -154,10 +158,12 @@ type Session struct {
     UpdatedAt                 time.Time
 }
 
-func SessionUsedTokens(s Session) int {
+func SessionBilledTokens(s Session) int {
     return int(s.PromptTokensTotal + s.CompletionTokensTotal)
 }
 ```
+
+`ShouldCompact(sess, view, cfg)` 见 [PLAN.md · compact 触发](PLAN.md#会话-token计费累计-vs-compact-触发)；`PrepareRequest` 内最多 compact 一次。
 
 ### 4.2 Message（历史层）
 
@@ -221,8 +227,33 @@ func (b ContextBreakdown) Total() int {
 
 ### 5.1 存储选型
 
-- **SQLite**（`modernc.org/sqlite`），路径默认 `~/.local/share/ds-code/sessions.db`（可配置）。
-- 单写连接 + WAL；`session_id` 索引。
+- **SQLite**（`modernc.org/sqlite`），路径固定见 §5.1.1（**按项目**分库，**不可配置**）。
+- 单写连接 + WAL；`session_id` 索引；DB 文件权限 **0600**。
+- **项目隔离**：不同 `project_root` → 不同 `project_id` → 不同 `sessions.db`；同一项目下多 session 共用一库。
+
+#### 5.1.1 用户数据目录与项目运行时目录
+
+本机**全局**目录（配置、用户 Skills）与**按项目**运行时数据分离；用户数据根 **固定** `~/.ds-code/`（不可配置），详见 **[CONFIG.md §2](CONFIG.md#2-用户数据目录ds-code固定路径)**。
+
+```text
+~/.ds-code/
+├── config/config.yaml          # 用户级配置（全项目共享）
+├── skills/                     # 用户级 Skills
+└── projects/
+    └── <project_id>/           # hex(SHA256(project_root_abs))
+        ├── project.meta.json
+        ├── sessions.db         # 默认 DB
+        ├── audit.jsonl
+        └── checkpoints/        # Phase 7
+```
+
+| 概念 | 说明 |
+|------|------|
+| `project_root` | git 根（自 cwd 向上）；无 git 时用 cwd 绝对路径 |
+| `project_id` | `hex(sha256(project_root))`，作 `projects/` 子目录名 |
+| `sessions.db` | 位于 `projects/<project_id>/`，**不**放在仓库工作区内 |
+
+启动时：解析 `project_root` → 计算 `project_id` → `MkdirAll` 项目目录 → 打开 SQLite。
 
 ### 5.2 表结构
 
@@ -279,7 +310,7 @@ sequenceDiagram
   R->>S: AppendMessage(user)
   R->>C: PrepareRequest(sessionID)
   C->>S: Load session + messages
-  alt SessionUsedTokens >= threshold
+  alt ShouldCompact
     C->>L: CompactAPIContext LLM call
     C->>S: Update compact_summary, watermark
     C->>S: AddUsage(compact usage)
@@ -311,15 +342,17 @@ type Service interface {
 
 ```
 1. sess := store.Get(sessionID)
-2. if SessionUsedTokens(sess) >= ratio * ContextWindowTokens:
-       CompactAPIContext(sessionID)  // 可能调 LLM，usage 累加
+2. if !prepareCompactDone && ShouldCompact(sess, cachedView, cfg):  // A 或 B
+       CompactAPIContext(sessionID); prepareCompactDone = true
 3. view := BuildAPIContext(sessionID)
 4. maxTokens := min(cfg.LLM.MaxTokens, MaxOutputTokens)
 5. return view, maxTokens
 ```
 
-- **不**调用 `CountBreakdown`。
-- API 返回上下文过长：Runner 捕获 → `CompactAPIContext` → **重试一次**。
+- **条件 A**：用户轮首个子轮次 `CountBreakdown(BuildAPIContext)`，缓存至用户轮结束。
+- **条件 B**：`prompt_tokens_total >= ratio × window`（不含 completion）。
+- **条件 C**：API 上下文过长 → compact → 重试（不计入 `prepareCompactDone` 的「已 compact」可另议，建议仍占一次配额）。
+- Phase 1–2：`ShouldCompact` 恒 false。
 
 ### 6.3 BuildAPIContext
 
@@ -333,7 +366,7 @@ type Service interface {
 2. `tools` ← `tool.Registry.SchemasForMode(runMode)` → JSON
 3. `Messages`：
    - 若有 `compact_summary`：首条 assistant（元数据 `compact=true`）
-   - 近端 `keep_recent_turns` 轮全文（含 `reasoning_content`、`tool_calls`）
+   - 近端 `keep_recent_turns` **用户轮**全文（含 `reasoning_content`、`tool_calls`）
    - `@` 引用已并入对应 user 内容
 
 **禁止**：`Messages` 内第二条 `system`。
@@ -360,8 +393,8 @@ type Service interface {
 |--------|------|------|
 | `AgentsMDLoader` | 自 cwd 向上至 git 根 `AGENTS.md` | per-session 失效：cwd 变更 |
 | `RulesLoader` | `.ds-code/rules/**` | glob 匹配结果缓存 |
-| `SkillsLoader` | `.ds-code/skills/**/SKILL.md` + 用户目录 | 按 name 懒加载 |
-| `GitSnapshot` | `git status -sb`、`git diff --stat` | 每 Turn 或 `/git` 刷新 |
+| `SkillsLoader` | `.ds-code/skills/**/SKILL.md` + `~/.ds-code/skills/**/SKILL.md` | 按 name 懒加载 |
+| `GitSnapshot` | `git status -sb`、`git diff --stat` | 每用户轮或 `/git` 刷新；≤ `git_snapshot_max_chars` |
 
 ---
 
@@ -408,9 +441,13 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) error 
 
         if len(resp.ToolCalls) == 0 { break }
 
-        for _, tc := range resp.ToolCalls {
-            if err := r.Perm.Check(tc.Name, tc.Args); err != nil { ... }
-            result, err := r.Tools.Execute(ctx, tc)
+        for _, tc := range resp.ToolCalls { // 或 parallel 见 cfg.Tools.ParallelToolCalls
+            if err := r.Perm.Check(tc.Name, tc.Args); err != nil {
+                result = formatToolError(tc, err)
+            } else {
+                result, err = r.Tools.Execute(ctx, tc)
+                if err != nil { result = formatToolError(tc, err) }
+            }
             result = context.TruncateToolResult(result, r.Config)
             r.Sessions.AppendMessage(sessionID, toolMsg(tc.ID, result))
         }
@@ -438,7 +475,7 @@ func (r *Runner) RunEphemeral(ctx context.Context, prompt string, opts Ephemeral
 |----|-----|
 | messages | 独立切片，不写 DB |
 | tools | 默认 nil |
-| user_id | `btw-{uuid}` |
+| cache_scope | `btw-{uuid}`（→ API `user_id`） |
 | usage | 默认不计入 session（`btw.count_toward_session`） |
 | compact | **不**触发 |
 
@@ -572,6 +609,154 @@ MCP 工具名：`mcp__{server}__{tool}`。
 </tool_result>
 ```
 
+### 9.5 LSP 子系统（internal/lsp，Phase 6）
+
+**目标**：通过内置 `diagnostics` 工具，把各语言的 **Language Server** 诊断（错误/警告）以摘要形式提供给 Agent；**不**内嵌编译器/分析器，**不**实现补全、跳转、重构等 LSP 能力。
+
+#### 9.5.1 架构
+
+```text
+tool/diagnostics.Execute
+    → lsp.Manager（按 project_root + serverID 缓存 Client）
+    → lsp.Client（单 Language Server 子进程，stdio JSON-RPC）
+    → 用户 PATH 中的 gopls | clangd | typescript-language-server | jdtls …
+```
+
+| 原则 | 说明 |
+|------|------|
+| 工作区 | `InitializeParams.rootUri` = `file://` + `project_root`（与 CONFIG 一致） |
+| 只读 | 仅 `textDocument/didOpen` + 接收 `textDocument/publishDiagnostics`；不向工作区写入 |
+| 懒启动 | 按**语言 server** 首次需要时再 `exec`；空闲 `idle_shutdown` 后 `shutdown`/`exit` |
+| 路径 | 打开的文件须在 workspace 内；与 `permission.resolvePath` 一致（S2/S3） |
+| 取消 | `ctx.Done()` → `shutdown` + 杀子进程（S9） |
+
+**不在 `go.mod` 绑定语言 SDK**；传输层为 LSP 标准 stdio（`Content-Length` + JSON-RPC），Go 侧实现最小协议子集或使用轻量 JSON-RPC 库。
+
+#### 9.5.2 目录与类型
+
+```text
+internal/lsp/
+  transport/       # stdio 读写、请求/通知分发
+  protocol/        # Initialize、DidOpen、PublishDiagnostics 等最小类型
+  registry.go      # 扩展名 → ServerConfig；合并内置默认与用户 YAML
+  client.go        # 单 server：启动、initialize、didOpen、收集诊断
+  manager.go       # map[serverID]*Client；idle 计时与关闭
+internal/tool/diagnostics.go
+```
+
+```go
+// registry.go
+type ServerConfig struct {
+    ID          string   // go | typescript | cpp | java | …
+    Command     string   // PATH 可执行文件
+    Args        []string
+    Extensions  []string // .go, .ts, …
+    Env         []string // 可选，追加 os.Environ()
+    WorkspaceFS bool     // 默认 true：rootUri = project_root
+}
+
+type Manager struct {
+    root    string
+    cfg     config.LSP
+    clients map[string]*Client
+    mu      sync.Mutex
+}
+```
+
+#### 9.5.3 内置语言服务器注册表（默认）
+
+用户可通过 [CONFIG.md §5.12](CONFIG.md#512-lsp--language-serverphase-6) 覆盖 `command`/`args` 或禁用某 ID。
+
+| ID | 语言 | 默认命令 | 扩展名 | 备注 |
+|----|------|----------|--------|------|
+| `go` | Go | `gopls serve` | `.go` | Phase **6a** 首个落地 |
+| `typescript` | JS/TS | `typescript-language-server --stdio` | `.ts`, `.tsx`, `.js`, `.jsx` | 需项目内 `package.json` / `tsconfig` 时诊断更准 |
+| `cpp` | C/C++ | `clangd` | `.c`, `.h`, `.cpp`, `.hpp`, `.cc`, `.cxx` | Phase **6b**；依赖 `compile_commands.json` 时语义诊断才完整 |
+| `java` | Java | **无默认 command** | `.java` | Phase **6c**；仅配置模板，**不**打包 jdtls；用户自填 `java -jar …/launcher.jar` |
+| `rust` | Rust | `rust-analyzer` | `.rs` | 可选；默认注册表可含，Phase 6 不强制测 |
+| `python` | Python | `pyright-langserver --stdio` | `.py` | 可选；同上 |
+
+找不到 server 或 `exec.LookPath` 失败：工具返回 `error: lsp server "java" not found…`，不崩溃。
+
+#### 9.5.4 `diagnostics` 工具契约
+
+**Schema（strict 时 `additionalProperties: false`）**：
+
+```json
+{
+  "paths": ["src/foo.go", "pkg/bar/"],
+  "severity": ["error", "warning"]
+}
+```
+
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `paths` | `[]string` | 必填 | 相对 `project_root` 的文件或目录 |
+| `severity` | `[]string` | `["error","warning"]` | 过滤 `publishDiagnostics` 严重级别 |
+
+**执行流程**：
+
+1. 解析 `paths` → workspace 内绝对路径；目录则有限 glob（扩展名过滤 + `lsp.max_files_per_call` + 尊重 `.gitignore`）。
+2. 按扩展名分组到 `ServerConfig`；未映射扩展名跳过并附注。
+3. 对每个 server：`Manager.EnsureClient` → 对每个文件读盘 → `textDocument/didOpen`（版本 1，uri + 全文）。
+4. 等待 `textDocument/publishDiagnostics` 通知，直至 `diagnostics_timeout` 或 `ctx` 取消。
+5. 格式化为文本（见下），应用 `max_issues_per_file` / `tool_result_max_chars` 截断。
+6. 可选 `textDocument/didClose`；空闲超过 `idle_shutdown` 关闭子进程。
+
+**输出格式**（示例）：
+
+```text
+src/foo.go:12:3 [error] undefined: Bar
+src/foo.go:45:1 [warning] unused parameter x
+--- truncated: 3 more issue(s) in src/foo.go
+--- hint: C++ project missing compile_commands.json; clangd may show syntax-only diagnostics
+```
+
+**首期不实现**：`textDocument/completion`、`definition`、`references`、`codeAction`、`workspace/executeCommand`；pull diagnostics（LSP 3.17）后续可选。
+
+#### 9.5.5 协议最小子集
+
+| 方向 | 方法 / 通知 | 用途 |
+|------|-------------|------|
+| → server | `initialize` / `initialized` | 绑定 rootUri、clientInfo |
+| → server | `textDocument/didOpen` | 提交文件内容与 URI |
+| ← server | `textDocument/publishDiagnostics` | 收集诊断（主路径） |
+| → server | `textDocument/didClose` | 释放文档（可选） |
+| → server | `shutdown` / `exit` | 正常退出 |
+
+`Initialize` 能力声明保持保守（不要求 dynamic registration）；各 server 差异通过集成测覆盖。
+
+#### 9.5.6 与 Runner / Plan 模式
+
+- **按需调用**：Runner **不**每用户轮自动跑全仓库诊断；由模型调用 `diagnostics` 或 patch 失败后自行决定。
+- **预热**（可选）：`lsp.warmup_on_start: ["go"]` 仅 `initialize`，不 `didOpen` 全库。
+- **Plan 模式**：`diagnostics` 在只读工具子集中允许。
+
+#### 9.5.7 各语言环境前置（写入工具 hint）
+
+| 语言 | 前置条件 | 诊断偏弱时提示 |
+|------|----------|----------------|
+| Go | `go.mod` 在 `project_root` 子树 | 检查 `gopls` 是否在 PATH |
+| JS/TS | 建议有 `tsconfig.json` | 提示安装/配置 tsserver |
+| C/C++ | `compile_commands.json` 或 `compile_flags.txt` | 提示生成 compile db |
+| Java | JDK + jdtls 启动脚本 | 提示配置 `lsp.servers.java` |
+
+#### 9.5.8 测试
+
+| 层级 | 内容 |
+|------|------|
+| 单元 | mock `transport` 注入 `publishDiagnostics`；格式化、截断、severity 过滤 |
+| 集成 | 有 `gopls` 时对样例 Go 模块跑 `diagnostics`（CI nightly） |
+| 手工 | clangd + CMake 项目、jdtls + Maven 项目（文档 checklist） |
+
+#### 9.5.9 Phase 6 交付切分
+
+| 子阶段 | 内容 |
+|--------|------|
+| **6a** | `internal/lsp` 框架 + `diagnostics` 工具 + **go** + **typescript** |
+| **6b** | 默认注册 **cpp**（clangd）+ CONFIG 文档 |
+| **6c** | **java** 仅配置驱动 + 用户文档（不捆绑 jdtls） |
+
 ---
 
 ## 10. 权限引擎（internal/permission）
@@ -596,7 +781,8 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 ```
 
 - **MCP 写操作**与内置工具**同一** `Check` 入口（S6）。
-- 路径：`filepath.Clean`、禁止 `..` 逃逸、symlink 解析（S2）。
+- **Workspace** = `project_root`；路径：`filepath.Clean`、禁止 `..` 逃逸、symlink 解析（S2）。
+- 非 TTY + `ask`：返回 `ErrPermissionNeedTTY`，不阻塞。
 
 ---
 
@@ -652,42 +838,13 @@ panel.Render(snap, bd)
 
 ## 12. 配置（internal/config）
 
-配置文件：`~/.config/ds-code/config.yaml`，示例见 `configs/example.yaml`。
+配置加载、合并优先级、YAML 全表、CLI flags、环境变量见 **[CONFIG.md](CONFIG.md)**。
 
-```yaml
-llm:
-  base_url: https://api.deepseek.com
-  model: deepseek-v4-pro
-  max_tokens: 16384
-  strict_tools: false
-  thinking:
-    type: enabled
-  reasoning_effort: max
+实现要点：
 
-context:
-  window_tokens: 1048576
-  compact_threshold_ratio: 0.80
-  keep_recent_turns: 6
-  truncate_by: chars
-  tool_result_max_chars: 100000
-  at_reference_max_chars: 128000
-
-permission:
-  mode: ask
-
-btw:
-  include_recent_turns: 0
-  max_tokens: 4096
-  count_toward_session: false
-
-session:
-  db_path: ~/.local/share/ds-code/sessions.db
-
-non_interactive:
-  ephemeral_session: true
-```
-
-环境变量覆盖：`DEEPSEEK_API_KEY`、`DS_CODE_CONFIG` 等（Viper）。
+- `internal/config.Load()`：`SetDefault` → 用户级 `~/.ds-code/config/config.yaml` → 项目级 `.ds-code/config.yaml` → `cobra` flags。
+- 示例键全集：[`configs/example.yaml`](../configs/example.yaml)（非运行时加载）。
+- API Key 仅环境变量：`DS_CODE_DEEPSEEK_API_KEY` → `DEEPSEEK_API_KEY`；见 [CONFIG.md §3.1](CONFIG.md#31-deepseek-api-keyllmapi_key)。
 
 ---
 
@@ -710,6 +867,7 @@ func (m *Manager) Call(ctx context.Context, name string, args json.RawMessage) (
 ## 14. Checkpoint（internal/checkpoint，Phase 7）
 
 - 写操作前：记录 affected files 的 hash 或 patch 集。
+- 存储目录固定：`~/.ds-code/projects/<project_id>/checkpoints/`（不可配置，见 [CONFIG.md §2.1](CONFIG.md#项目目录内文件固定路径均不可配置)）。
 - `/rewind n`：回滚工作区；`messages` **追加** system 事件行。
 - 首期可仅记录 patch 路径，不全量快照仓库。
 
@@ -727,13 +885,14 @@ func (m *Manager) Call(ctx context.Context, name string, args json.RawMessage) (
 | S4 | shell 高危 + cancel kill |
 | S5 | tool_result 边界；system 固定序 |
 | S6 | MCP → `Perm.Check` |
-| S7 | session_id 隔离；DB 文件权限 0600 |
+| S7 | 按 `project_id` 分库；`session_id` 库内隔离；DB 权限 0600 |
 | S8 | CI govulncheck |
 | S9 | context 贯穿 |
-| S10 | `--audit-log` JSONL |
+| S10 | `audit.enabled` / `--audit-log` → 固定 `…/audit.jsonl` |
 | S11 | TruncateToolResult / @ max_chars |
 | S12 | compact prompt 脱敏 |
 | S13 | btw 无 tools、不写 DB |
+| S14 | subagent 只读 + S3 denylist |
 
 ### 15.2 威胁简要
 
@@ -761,9 +920,10 @@ func (m *Manager) Call(ctx context.Context, name string, args json.RawMessage) (
 
 | 层级 | 范围 |
 |------|------|
-| 单元 | `slash.Parse`、`mergeSystem`、`CountBreakdown` 不变式、`SessionUsedTokens` |
+| 单元 | `slash.Parse`、`mergeSystem`、`CountBreakdown` 不变式、`ShouldCompact` |
 | 集成 | mock `llm.Client` 驱动 Runner 多轮 tool |
 | 契约 | serialize 与 tokenizer Count 一致性（有 CGO 时） |
+| LSP | mock transport 的 `publishDiagnostics`；nightly 有 `gopls` 时集成 |
 | E2E | `ds-code -p` 对样例仓库（需 API Key，CI 可选 nightly） |
 
 ---
@@ -773,25 +933,28 @@ func (m *Manager) Call(ctx context.Context, name string, args json.RawMessage) (
 | Phase | 设计章节 | 交付物 |
 |-------|----------|--------|
 | 0 | §12、目录 | cobra、config、CI |
-| 1 | §6–§8、§9.2 部分 | Runner、PrepareRequest、read/grep/shell |
+| 1 | §6–§8、§9.2 部分 | Runner、内存 session、PrepareRequest（compact no-op）、read/grep/shell |
 | 1.5 | §6.6、§11.3 | @、slash 骨架、git |
 | 2 | §9.3、§10 | apply_patch、permission、strict |
 | 3 | §5、§6.4 | SQLite、compact、resume、clear |
 | 4 | §11 | TUI、/context、状态栏 |
 | 5 | §13 | MCP |
-| 6 | §6.6、§7.5、§9.2 | 子代理、Rules、Skills、Plan、LSP、Web |
+| 6 | §6.6、§7.5、§9.2、§9.5 | 子代理、Rules、Skills、Plan、LSP（6a/6b/6c）、Web |
 | 7 | §14、§15 | checkpoint、审计加固 |
 
 ---
 
-## 19. 开放问题（实现时决议）
+## 19. 已决议（原开放问题）
 
-| # | 问题 | 建议默认 |
-|---|------|----------|
-| O1 | `/mode` 作用域 global vs per-session | **per-session**（PLAN 建议） |
-| O2 | compact 后 usage 仍 >80% 是否二次 compact | 单次 Prepare 最多 compact 一次；仍超限靠 API 重试 |
-| O3 | `CharCounter` 与 tokenizer 并存时的测试矩阵 | CI 无 CGO 跑 CharCounter 路径 |
-| O4 | 费用估算数据源 | Phase 4 静态单价表 + usage |
+| # | 决议 |
+|---|------|
+| O1 | `/mode`、`/effort` → **per-session** |
+| O2 | 单次 `PrepareRequest` **最多 compact 一次**；触发见 PLAN A/B/C |
+| O3 | CI 无 CGO：compact 条件 A 与 `/context` 用 `CharCounter` |
+| O4 | 费用估算：Phase 4 静态单价表 + `usage` |
+| O5 | `tool_calls` 默认**顺序**执行；`tools.parallel_tool_calls` 可开并行 |
+| O6 | Phase 1–2 **内存 session**，compact no-op |
+| O7 | LSP：**stdio 子进程** + 扩展名注册表；首期仅诊断；6a→6b→6c |
 
 ---
 
@@ -800,6 +963,7 @@ func (m *Manager) Call(ctx context.Context, name string, args json.RawMessage) (
 | 文档 | 内容 |
 |------|------|
 | [PLAN.md](PLAN.md) | 路线图、对标、Slash 表、验收 |
+| [CONFIG.md](CONFIG.md) | YAML 键、CLI、环境变量、优先级 |
 | [llm-deepseek.md](llm-deepseek.md) | API 字段、思考模式、usage、strict |
 | **DESIGN.md**（本文） | 模块、Schema、流程、接口 |
 
@@ -810,3 +974,5 @@ func (m *Manager) Call(ctx context.Context, name string, args json.RawMessage) (
 | 日期 | 版本 | 摘要 |
 |------|------|------|
 | 2026-05-16 | v1.0 | 基于 PLAN v0.11 首版详细设计 |
+| 2026-05-16 | v1.1 | 对齐 PLAN v0.12：compact A/B/C、turn 定义、workspace、并行 tool、Phase 1–2 |
+| 2026-05-16 | v1.2 | §9.5 LSP 多语言：`diagnostics`、注册表、gopls/tsserver/clangd/jdtls、Phase 6a–c |

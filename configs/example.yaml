@@ -1,0 +1,96 @@
+# ds-code 配置示例（全量键）
+# 用户级：复制到 ~/.ds-code/config/config.yaml（路径固定，不可改）
+# 项目级：复制到 <git-root>/.ds-code/config.yaml
+# 权威说明：docs/CONFIG.md
+
+llm:
+  # api_key: 禁止写在此处；仅 DS_CODE_DEEPSEEK_API_KEY 或 DEEPSEEK_API_KEY 环境变量
+  base_url: https://api.deepseek.com
+  model: deepseek-v4-pro
+  max_tokens: 16384
+  timeout: 120s
+  strict_tools: false
+  thinking:
+    type: enabled # enabled | disabled
+  reasoning_effort: max # high | max
+
+context:
+  window_tokens: 1048576
+  max_output_tokens: 393216
+  compact_threshold_ratio: 0.80
+  keep_recent_turns: 6
+  truncate_by: chars # chars | tokenizer
+  tool_result_max_chars: 100000
+  at_reference_max_chars: 128000
+  git_snapshot_max_chars: 16000
+  at_dir_max_files: 50
+  at_dir_max_depth: 4
+
+agent:
+  max_turns: 25
+
+tools:
+  parallel_tool_calls: false
+  read_file:
+    max_lines: 500
+  grep:
+    head_limit: 200
+  glob:
+    max_results: 200
+  apply_patch:
+    max_changed_lines: 2000
+  shell:
+    timeout: 120s
+  task:
+    max_parallel: 3
+    summary_max_chars: 16000
+
+permission:
+  mode: ask # readonly | ask | auto
+
+# session / sessions.db：无配置项，固定 ~/.ds-code/projects/<project_id>/sessions.db
+
+btw:
+  include_recent_turns: 0
+  max_tokens: 4096
+  count_toward_session: false
+
+non_interactive:
+  ephemeral_session: true
+
+audit:
+  enabled: false # true 或 CLI --audit-log；写入 ~/.ds-code/projects/<id>/audit.jsonl（路径不可配）
+
+mcp:
+  servers: []
+  # - name: example
+  #   command: npx
+  #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/path"]
+
+web:
+  fetch_enabled: false
+  search_enabled: false
+  allowlist: []
+
+# Phase 6：Language Server（用户本机安装，ds-code 不捆绑）
+lsp:
+  enabled: true
+  idle_shutdown: 120s
+  diagnostics_timeout: 20s
+  max_files_per_call: 10
+  max_issues_per_file: 20
+  warmup_on_start: [] # 例: ["go"]
+  servers:
+    go:
+      command: gopls
+      args: ["serve"]
+    typescript:
+      command: typescript-language-server
+      args: ["--stdio"]
+    cpp:
+      command: clangd
+      args: []
+    # java: 须自填 jdtls 启动命令，例如：
+    # java:
+    #   command: /opt/jdtls/bin/jdtls
+    #   args: []

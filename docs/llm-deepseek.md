@@ -1,8 +1,8 @@
 # DeepSeek 模型调用规范（ds-code）
 
-> 文档版本：v1.9  
+> 文档版本：v2.0  
 > 更新日期：2026-05-16  
-> 状态：与 [PLAN.md](PLAN.md)、[DESIGN.md](DESIGN.md) 配套，实现 `internal/llm/deepseek` 时以本文为准
+> 状态：与 [PLAN.md](PLAN.md) v0.12+、[DESIGN.md](DESIGN.md) 配套，实现 `internal/llm/deepseek` 时以本文为准
 
 ## 官方参考
 
@@ -20,7 +20,7 @@
 |------|-----|
 | `base_url`（OpenAI 兼容） | `https://api.deepseek.com` |
 | `base_url`（Beta，strict 模式） | `https://api.deepseek.com/beta` |
-| API Key | `DEEPSEEK_API_KEY` 环境变量或 `~/.config/ds-code/config.yaml` |
+| API Key | **仅环境变量**：`DS_CODE_DEEPSEEK_API_KEY` → `DEEPSEEK_API_KEY`；缺失则报错（[CONFIG.md §3.1](CONFIG.md#31-deepseek-api-keyllmapi_key)） |
 | 对话接口 | `POST /chat/completions` |
 
 **Go 客户端**：[`github.com/sashabaranov/go-openai`](https://github.com/sashabaranov/go-openai) + `WithBaseURL("https://api.deepseek.com")`
@@ -50,40 +50,47 @@ const (
 
 **请求预算**（简化，模型无关）：
 
-- **compact 触发**：`SessionUsedTokens >= compact_threshold_ratio × ContextWindowTokens`（见下方），依据 **API 回传的 `usage` 累计**，不在发送前本地数 token。
+- **compact 触发**：条件 **A/B/C**（见下方）；计费展示 `SessionBilledTokens = prompt + completion` **不单独**作为 compact 依据。
 - **`max_tokens`**：`min(配置, MaxOutputTokens)`；默认 **16384**，硬顶 **393,216**。若 API 返回上下文过长，触发 compact 并重试。
 
 ---
 
-## 上下文预算（会话用量驱动）
+## 上下文预算（compact 与计费）
 
-### 会话已用 Token（compact 唯一依据）
+### 计费累计（状态栏）
 
 每次 `chat/completions` 响应后，将 `usage` 累加到当前 `session`：
 
 ```go
-func SessionUsedTokens(s Session) int {
+func SessionBilledTokens(s Session) int {
     return s.PromptTokensTotal + s.CompletionTokensTotal
 }
 ```
 
+### compact 触发（A / B / C）
+
+阈值 `T = compact_threshold_ratio × ContextWindowTokens`（默认 **838,861**）。在 `PrepareRequest` 评估，**同一 `PrepareRequest` 最多 compact 一次**（详见 [PLAN.md](PLAN.md#会话-token计费累计-vs-compact-触发)）：
+
+| 条件 | 规则 |
+|------|------|
+| **A** | 用户轮首个子轮次：`CountBreakdown(BuildAPIContext).Total() >= T`；缓存至用户轮结束 |
+| **B** | `prompt_tokens_total >= T`（**不含** completion） |
+| **C** | API 返回上下文过长 → compact → 重试一次 |
+
 | 项 | 说明 |
 |----|------|
-| 阈值 | `SessionUsedTokens >= 0.80 × 1_048_576` → **838,861** |
-| 检查时机 | 每次发起新的 `chat/completions` **之前**（`PrepareRequest`） |
-| compact 后 | **不清零**累计用量；压缩 API 上下文，使后续实际 prompt 变小 |
-| 手动 | `/compact` 同逻辑，仅改 API 层 |
+| compact 后 | 计费累计 **不清零**；压缩 API 上下文层 |
+| 手动 | `/compact` 同 `CompactAPIContext`，仅改 API 层 |
+| Phase 1–2 | `ShouldCompact` 恒 false |
 
 ### `internal/context` 职责
 
 **入口**：`PrepareRequest(session) (*APIContextView, maxTokens, error)`
 
-1. 若 `SessionUsedTokens(session) >= threshold` → `CompactAPIContext(session)`
+1. 若 `ShouldCompact(...)` → `CompactAPIContext(session)`（至多一次）
 2. `view := BuildAPIContext(session)`
 3. `maxTokens := min(cfg.MaxTokens, MaxOutputTokens)`
 4. 返回 view，供 client 发送
-
-**不做**：`PrepareRequest` 中发送前计数、字符估算（`len/4`）作为 compact 依据。`CountBreakdown` **仅**在用户触发 `/context` 时调用。
 
 ### 可选：本地 Tokenizer（非预算路径）
 
@@ -93,10 +100,10 @@ func SessionUsedTokens(s Session) int {
 |------|------|
 | 调试 | `cmd/count-tokens` |
 | 工具截断 | 配置 `context.truncate_by: tokenizer` 时可选；**默认按字符/字节上限** |
-| **`/context` 六分项** | 用户执行 `/context` 时 `CountBreakdown` **按需**计数（首期 DeepSeek tokenizer） |
-| 不参与 | compact 阈值、`max_tokens` 计算、**每次发请求前**计数 |
+| **compact 条件 A** | 用户轮首个子轮次 `CountBreakdown`（缓存复用） |
+| **`/context` 六分项** | 用户执行 `/context` 时展示（可与 A 同源） |
 
-依赖 CGO + `scripts/fetch-tokenizers-lib.sh`；无 CGO 时 compact 仍可用，但 `/context` 六分项降级为字符估算并标注。
+依赖 CGO + `scripts/fetch-tokenizers-lib.sh`；无 CGO 时条件 A 与 `/context` 用 `CharCounter` 并标注「估算」。
 
 #### 输入：`APIContextView`
 
@@ -120,19 +127,19 @@ func SessionUsedTokens(s Session) int {
 
 **每次**主对话 LLM 请求前（含 tool 子轮次）：
 
-1. 若 `SessionUsedTokens(session) >= 0.80 × 1_048_576` → `CompactAPIContext`（usage 累加、失败降级同 [PLAN.md](PLAN.md)）
+1. 若 `ShouldCompact`（A/B）→ `CompactAPIContext`（至多一次；usage 累加、失败降级同 [PLAN.md](PLAN.md)）
 2. `view := BuildAPIContext(session)`
 3. `maxTokens := min(cfg.MaxTokens, MaxOutputTokens)`
 4. 发送 `chat/completions`；响应后累加 `usage`
 
 #### 工具结果截断
 
-- 默认：`TruncateToolResult(body, maxChars int)` 按**字符**上限（配置 `tool_result_max_chars` 或与 `tool_result_max_tokens` 映射的保守倍数）。
+- 默认：`TruncateToolResult(body, maxChars int)` 按**字符**上限（`context.tool_result_max_chars`）。
 - 可选：`truncate_by: tokenizer` 时用 `tokenizer/deepseek.Count` 精确截断。
 
 #### `CountBreakdown(view *APIContextView) (ContextBreakdown, error)`
 
-**用途**：仅 **`/context` 展示**与调试；**不**用于 compact 触发、**不**在 `PrepareRequest` 中调用。
+**用途**：**compact 条件 A**（用户轮内缓存）与 **`/context` 展示**；不在每个 tool 子轮次重复计算。
 
 **含义**：将「下一次请求」的 API 输入拆成 **6 个互斥分项**（本地估算，可能与实际上屏 `usage` 略有偏差）。
 
@@ -174,32 +181,9 @@ func (b ContextBreakdown) PercentOfTotal(part int) float64 { ... }
 
 ## ds-code 默认配置
 
-```yaml
-# ~/.config/ds-code/config.yaml
-llm:
-  base_url: https://api.deepseek.com
-  model: deepseek-v4-pro          # 默认模型
-  thinking:
-    type: enabled                 # enabled | disabled；V4 默认 enabled
-  reasoning_effort: max           # 默认 max；见下方「思考强度」
-  max_tokens: 16384               # 单次 completion 上限，≤ 393216（384Ki）；见「上下文与 max_tokens」
-  strict_tools: false             # true → 全部请求走 beta base_url + function.strict
-  timeout: 120s
+YAML 键、CLI、环境变量及合并优先级见 **[CONFIG.md](CONFIG.md)**；全量示例见 [`configs/example.yaml`](../configs/example.yaml)。
 
-context:
-  window_tokens: 1048576          # 1Mi；与 limits.go 一致
-  max_output_tokens: 393216       # 384Ki
-  compact_threshold_ratio: 0.80   # SessionUsedTokens ≥ 80% 窗口 → 自动 compact（仅 API 层）
-  keep_recent_turns: 6            # compact 后 API 上下文保留最近 N 轮全文
-  truncate_by: chars              # chars | tokenizer；工具/@ 截断方式
-  tool_result_max_chars: 100000   # 单次 tool 返回字符上限（默认）
-  at_reference_max_chars: 128000  # @ 引用预加载字符总上限
-
-btw:
-  include_recent_turns: 0         # /btw 默认不带主对话历史
-  max_tokens: 4096                # btw 单次输出上限
-  count_toward_session: false     # btw 用量不计入 session Token 累计
-```
+与 API 直接相关的默认：`llm.model` = **`deepseek-v4-pro`**，`llm.thinking.type` = **`enabled`**，`llm.reasoning_effort` = **`max`**，`llm.max_tokens` = **16384**（硬顶 393216），`context.window_tokens` = **1048576**，`context.compact_threshold_ratio` = **0.80**。
 
 **允许切换的模型**（`/mode` 与配置校验白名单）：`deepseek-v4-pro`、`deepseek-v4-flash`（弃用名自动迁移见上表）。
 
@@ -213,9 +197,9 @@ btw:
 
 | 方式 | 说明 |
 |------|------|
-| 配置文件 | `llm.model` |
-| TUI **`/mode`** | `/mode` 显示当前；`/mode deepseek-v4-flash` 切换；仅影响**当前 session** 或全局（实现二选一，建议 **per-session** 并写入 `sessions.model`） |
-| 启动参数 | `ds-code --model deepseek-v4-flash`（可选） |
+| 配置文件 | `llm.model`（[CONFIG.md §5.1](CONFIG.md#51-llm--deepseek-客户端)） |
+| TUI **`/mode`** | `/mode` 显示当前；`/mode deepseek-v4-flash` 切换；建议 **per-session** 写入 `sessions.model` |
+| 启动参数 | `ds-code --model deepseek-v4-flash`（[CONFIG.md §4](CONFIG.md#4-cli-参数)） |
 
 ### 思考模式开关 `thinking.type`
 
@@ -224,7 +208,7 @@ btw:
 | `enabled` | **默认**；返回 `reasoning_content` |
 | `disabled` | 关闭思维链；无 `reasoning_content` |
 
-配置项 `llm.thinking.type`；TUI 可选 `/thinking on|off`（与 `/effort` 一并列入 PLAN）。
+配置项 `llm.thinking.type`（[CONFIG.md](CONFIG.md)）；TUI 可选 `/thinking on|off`。
 
 ### 思考强度 `reasoning_effort`（默认 `max`）
 
@@ -237,8 +221,8 @@ btw:
 
 | 方式 | 说明 |
 |------|------|
-| 配置文件 | `llm.reasoning_effort: max` |
-| TUI **`/effort`** | `/effort` 显示当前；`/effort max` 或 `/effort high` 切换（**per-session**，写入 `sessions.reasoning_effort`） |
+| 配置文件 | `llm.reasoning_effort`（默认 `max`，见 [CONFIG.md](CONFIG.md)） |
+| TUI **`/effort`** | `/effort max` \| `/effort high`（**per-session** → `sessions.reasoning_effort`） |
 
 **请求组装**（每次 `POST /chat/completions`，字段以[官方 API](https://api-docs.deepseek.com/zh-cn/api/create-chat-completion)为准）：
 
@@ -253,7 +237,7 @@ btw:
   "max_tokens": 16384,
   "thinking": { "type": "enabled" },
   "reasoning_effort": "max",
-  "user_id": "<optional: session 级隔离 KV cache>"
+  "user_id": "<optional: cache_scope，见下表>"
 }
 ```
 
@@ -267,7 +251,7 @@ btw:
 | `reasoning_effort` | `high` \| `max`，默认 `max` |
 | `temperature` / `top_p` | 思考模式 **enabled** 时不传或忽略（官方不生效） |
 | `frequency_penalty` / `presence_penalty` | **deprecated**，不传 |
-| `user_id` | 可选；`sessions.id` 哈希，用于 KV cache 隔离（[API 说明](https://api-docs.deepseek.com/zh-cn/api/create-chat-completion)） |
+| `user_id` | 可选；ds-code 称 **cache_scope**：主会话为 `hex(session_id)`，`/btw` 为 `btw-{uuid}`；用于 KV cache 隔离（[API 说明](https://api-docs.deepseek.com/zh-cn/api/create-chat-completion)） |
 
 **`finish_reason: length`**：达到 `max_tokens` 或上下文上限；Runner 应提示用户缩小任务或 `/compact`。
 
@@ -336,7 +320,7 @@ Go SDK：`thinking` 放请求体顶层或 `extra_body`（与 [官方 Python 样�
 | 消息序列化 | 持久化/回传保留 `reasoning_content`（tool call 路径） |
 | 错误重试 | 429/5xx 指数退避 |
 | 用量统计 | 解析 `usage`（含 `completion_tokens_details.reasoning_tokens`） |
-| compact 触发 | `SessionUsedTokens` ≥ 阈值 → `CompactAPIContext`；API 上下文错误 → 重试 |
+| compact 触发 | `ShouldCompact` A/B → `CompactAPIContext`（至多一次/Prepare）；C = API 过长重试 |
 
 ---
 
@@ -398,7 +382,7 @@ Go SDK：`thinking` 放请求体顶层或 `extra_body`（与 [官方 Python 样�
 | `apply_patch` | 拒绝单 patch 变更行数超阈值（可配置） | 防止超大 diff 回注 |
 | tool 结果 | 超长截断 + 提示「已截断，可用 offset/limit 续读」 | 边界内可审计 |
 | 子代理 | 摘要 ≤ 4K tokens 量级 | 主会话省窗口 |
-| 自动 compact | `PrepareRequest`：`SessionUsedTokens` ≥ **838,861** | 摘要写入 session；**messages 历史不变**；API 层 = 摘要 + 近 N 轮 |
+| 自动 compact | `PrepareRequest`：条件 A 或 B（阈值默认 **838,861**） | 摘要写入 session；**messages 历史不变**；API 层 = 摘要 + 近 N **用户轮** |
 | `/compact` | 用户手动 | 同自动 compact，仅 API 层 |
 | `max_tokens` | 默认 16Ki/轮；长回答可配置上调，硬顶 **393,216** | 为 prompt 留足空间 |
 
@@ -408,7 +392,7 @@ Go SDK：`thinking` 放请求体顶层或 `extra_body`（与 [官方 Python 样�
 
 `messages` 表建议包含：`id`, `session_id`, `role`, `content`, `reasoning_content`, `tool_calls_json`, `tool_call_id`, `prompt_tokens`, `completion_tokens`, `prompt_cache_hit_tokens`, `created_at`。
 
-`/btw`：**不**写入 `messages`；`user_id` 使用 `btw-{uuid}`，与主 session 的 `user_id` 隔离（见 [PLAN.md · /btw](PLAN.md#btw-快速提问不进入主对话)）。
+`/btw`：**不**写入 `messages`；`cache_scope` 为 `btw-{uuid}`（写入 API `user_id`），与主 session 的 `cache_scope` 隔离（见 [PLAN.md · /btw](PLAN.md#btw-快速提问不进入主对话)）。
 
 ---
 
@@ -428,6 +412,7 @@ Go SDK：`thinking` 放请求体顶层或 `extra_body`（与 [官方 Python 样�
 | 2026-05-16 | `/btw` 旁路请求：不写 messages，默认无 tools |
 | 2026-05-16 | `CountBreakdown` 六分项：system/tools/rules/skills/subagents/conversation |
 | 2026-05-16 | 重写 `budget`：`APIContextView`、`CountPrompt`/`CountBreakdown` 算法与互斥不变式 |
-| 2026-05-16 | **v1.7**：`GitSnapshot`、merge 单条 system、`task`→Subagents、compact usage/降级、`strict_tools`、btw `user_id` |
+| 2026-05-16 | **v1.7**：`GitSnapshot`、merge 单条 system、`task`→Subagents、compact usage/降级、`strict_tools`、btw `cache_scope` |
 | 2026-05-16 | **v1.8**：取消发送前 `CountPrompt`；compact 由 **session API usage 累计** ≥80% 触发 |
 | 2026-05-16 | **v1.9**：`/context` 恢复 **六分项** `CountBreakdown`（按需、仅展示）；与会话累计分层 |
+| 2026-05-16 | **v2.0**：compact **A/B/C**；`SessionBilledTokens`；条件 A 使用 `CountBreakdown`（用户轮缓存） |
