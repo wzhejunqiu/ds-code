@@ -91,9 +91,20 @@ ds-code
 
 非 TTY 下 `permission.mode=ask` 时，`shell` 等写操作会被拒绝；脚本请使用 `--permission-mode readonly` 或 `--dangerously-auto`。
 
+## Phase 1.5 交互
+
+- **`@path` / `@dir/`**：在用户消息中预加载文件/目录内容（预算见 `context.at_reference_*`）
+- **Slash 命令**：行首 `/` 识别；`/help` 列出全部命令；`/git` 刷新 git 快照；`/mode`、`/effort`、`/thinking`、`/clear` 等
+- **Git 感知**：启动时自动注入 `git status -sb` + `git diff --stat`（若在 git 仓库内）
+
+```bash
+ds-code -p "解释 @cmd/ds-code/main.go"
+ds-code    # REPL 中: /help, /git, /mode deepseek-v4-flash
+```
+
 ## 实施阶段
 
-当前：**Phase 1**（MVP Agent：DeepSeek client、内存 session、`read_file`/`grep`/`shell`、`-p`/`--json`、简单 REPL）。  
+当前：**Phase 1.5**（`@` 引用、Slash、`git` 快照）。  
 路线图见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 许可证

@@ -15,6 +15,7 @@ type Session struct {
 	PromptTokensTotal         int64
 	CompletionTokensTotal     int64
 	PromptCacheHitTokensTotal int64
+	GitSnapshot               string
 	CreatedAt                 time.Time
 	UpdatedAt                 time.Time
 }

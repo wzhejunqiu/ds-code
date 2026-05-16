@@ -13,10 +13,35 @@ import (
 
 // Service builds API context and prepares requests.
 type Service struct {
-	Cfg     *config.Config
-	Store   session.Store
-	Tools   *tool.Registry
-	AgentsMD string
+	Cfg        *config.Config
+	Store      session.Store
+	Tools      *tool.Registry
+	AgentsMD   string
+	AtExpander *AtExpander
+}
+
+// ExpandUserText expands @file and @dir/ references in a user message.
+func (s *Service) ExpandUserText(text string) (string, error) {
+	if s.AtExpander == nil {
+		return text, nil
+	}
+	return s.AtExpander.Expand(text)
+}
+
+// RefreshGitSnapshot captures git status/diff and stores it on the session.
+func (s *Service) RefreshGitSnapshot(ctx context.Context, sessionID, projectRoot string) (string, error) {
+	snap, err := CaptureGitSnapshot(projectRoot, s.Cfg.Context.GitSnapshotMaxChars)
+	if err != nil {
+		return "", err
+	}
+	err = s.Store.UpdateSession(ctx, sessionID, func(sess *session.Session) error {
+		sess.GitSnapshot = snap
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return snap, nil
 }
 
 // PrepareRequest builds the API view; compact is no-op in Phase 1–2.
@@ -34,7 +59,7 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 
 // BuildAPIContext constructs the next-request snapshot from session history.
 func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APIContextView, error) {
-	_, err := s.Store.Get(ctx, sessionID)
+	sess, err := s.Store.Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +72,7 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 	view := &APIContextView{
 		SystemPrompt: defaultSystemBase,
 		AgentsMD:     s.AgentsMD,
+		GitSnapshot:  sess.GitSnapshot,
 		ToolsJSON:    deepseek.ToolsJSON(toolDefs),
 	}
 

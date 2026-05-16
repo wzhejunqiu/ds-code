@@ -39,10 +39,14 @@ type TurnResult struct {
 
 // RunTurn handles one user message through sub-rounds until no tool_calls or max turns.
 func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string) (*TurnResult, error) {
+	expanded, err := r.Context.ExpandUserText(userText)
+	if err != nil {
+		return nil, fmt.Errorf("expand @ references: %w", err)
+	}
 	if err := r.Sessions.AppendMessage(ctx, session.Message{
 		SessionID: sessionID,
 		Role:      "user",
-		Content:   userText,
+		Content:   expanded,
 	}); err != nil {
 		return nil, err
 	}

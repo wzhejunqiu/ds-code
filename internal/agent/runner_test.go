@@ -52,7 +52,7 @@ func TestRunner_multiRoundTool(t *testing.T) {
 		},
 	}
 
-	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg}
+	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
 	r := &agent.Runner{
 		LLM:      mockLLM,
 		Tools:    reg,

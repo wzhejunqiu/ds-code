@@ -18,6 +18,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +26,7 @@ type app struct {
 	cfg *config.Config
 }
 
-func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, error) {
+func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Service, error) {
 	store := session.NewMemoryStore()
 	interactive := permission.IsInteractiveTTY()
 	perm := permission.NewEngine(a.cfg.Permission.Mode, a.cfg.ProjectRoot, interactive)
@@ -38,7 +39,7 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, error) {
 
 	agentsMD, err := ctxpkg.LoadAgentsMD(a.cfg.ProjectRoot)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	ctxSvc := &ctxpkg.Service{
@@ -46,6 +47,11 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, error) {
 		Store:    store,
 		Tools:    reg,
 		AgentsMD: agentsMD,
+		AtExpander: &ctxpkg.AtExpander{
+			Cfg:       a.cfg,
+			Perm:      perm,
+			Gitignore: gi,
+		},
 	}
 
 	llmClient := deepseek.NewClient(a.cfg)
@@ -54,7 +60,7 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, error) {
 		maxTurns = 25
 	}
 
-	return &agent.Runner{
+	runner := &agent.Runner{
 		LLM:      llmClient,
 		Tools:    reg,
 		Perm:     perm,
@@ -63,7 +69,8 @@ func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, error) {
 		Cfg:      a.cfg,
 		MaxTurns: maxTurns,
 		Out:      out,
-	}, store, nil
+	}
+	return runner, store, ctxSvc, nil
 }
 
 func (a *app) runNonInteractive(cmd *cobra.Command) error {
@@ -75,7 +82,7 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 	if a.cfg.JSONOutput {
 		runnerOut = io.Discard
 	}
-	runner, store, err := a.newRunner(runnerOut)
+	runner, store, ctxSvc, err := a.newRunner(runnerOut)
 	if err != nil {
 		return err
 	}
@@ -84,8 +91,18 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
+	if err := a.seedGitSnapshot(ctx, store, ctxSvc, sess.ID); err != nil {
+		return err
+	}
 
-	result, err := runner.RunTurn(ctx, sess.ID, a.cfg.Prompt)
+	line := a.cfg.Prompt
+	if handled, err := a.trySlashLine(ctx, out, runner, store, ctxSvc, &sess.ID, line); err != nil {
+		return err
+	} else if handled {
+		return nil
+	}
+
+	result, err := runner.RunTurn(ctx, sess.ID, line)
 	if err != nil {
 		return err
 	}
@@ -112,11 +129,7 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 	defer cancel()
 
 	out := cmd.OutOrStdout()
-	runnerOut := io.Writer(out)
-	if a.cfg.JSONOutput {
-		runnerOut = io.Discard
-	}
-	runner, store, err := a.newRunner(runnerOut)
+	runner, store, ctxSvc, err := a.newRunner(out)
 	if err != nil {
 		return err
 	}
@@ -125,7 +138,11 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "ds-code REPL (session %s). Ctrl+C to cancel turn. Type /exit to quit.\n", sess.ID)
+	if err := a.seedGitSnapshot(ctx, store, ctxSvc, sess.ID); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(out, "ds-code REPL (session %s). /help for commands. /exit to quit.\n", sess.ID)
 
 	sc := bufio.NewScanner(os.Stdin)
 	for {
@@ -140,6 +157,15 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 		if line == "" {
 			continue
 		}
+
+		if handled, err := a.trySlashLine(ctx, out, runner, store, ctxSvc, &sess.ID, line); err != nil {
+			fmt.Fprintf(out, "error: %v\n\n", err)
+			continue
+		} else if handled {
+			fmt.Fprintln(out)
+			continue
+		}
+
 		fmt.Fprintln(out)
 		_, err := runner.RunTurn(ctx, sess.ID, line)
 		if err != nil {
@@ -149,6 +175,22 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 		fmt.Fprintln(out)
 	}
 	return sc.Err()
+}
+
+func (a *app) trySlashLine(ctx context.Context, out io.Writer, runner *agent.Runner, store session.Store, ctxSvc *ctxpkg.Service, sessionID *string, line string) (bool, error) {
+	if _, _, ok := slash.Parse(line); !ok {
+		return false, nil
+	}
+	env := &slashEnv{
+		ctx:       ctx,
+		out:       out,
+		cfg:       a,
+		runner:    runner,
+		store:     store,
+		ctxSvc:    ctxSvc,
+		sessionID: sessionID,
+	}
+	return a.handleSlash(env, line)
 }
 
 func (a *app) createSession(store session.Store) (session.Session, error) {

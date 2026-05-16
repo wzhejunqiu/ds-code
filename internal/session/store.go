@@ -14,4 +14,5 @@ type Store interface {
 	ListMessages(ctx context.Context, sessionID string) ([]Message, error)
 	AppendMessage(ctx context.Context, msg Message) error
 	AddUsage(ctx context.Context, sessionID string, u llm.Usage) error
+	UpdateSession(ctx context.Context, sessionID string, fn func(*Session) error) error
 }

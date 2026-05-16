@@ -103,6 +103,21 @@ func (m *MemoryStore) AppendMessage(_ context.Context, msg Message) error {
 	return nil
 }
 
+func (m *MemoryStore) UpdateSession(_ context.Context, sessionID string, fn func(*Session) error) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s, ok := m.sessions[sessionID]
+	if !ok {
+		return fmt.Errorf("session: not found %s", sessionID)
+	}
+	if err := fn(&s); err != nil {
+		return err
+	}
+	s.UpdatedAt = time.Now().UTC()
+	m.sessions[sessionID] = s
+	return nil
+}
+
 func (m *MemoryStore) AddUsage(_ context.Context, sessionID string, u llm.Usage) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
