@@ -1,6 +1,7 @@
 package permission_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -87,5 +88,139 @@ func TestEngine_resolvePath_rejectsAbsoluteOutsideWorkspace(t *testing.T) {
 	_, err := e.ResolvePath(outside)
 	if err == nil {
 		t.Fatal("expected outside workspace error")
+	}
+}
+
+func TestEngine_readonly_allowsShellListJobs(t *testing.T) {
+	e := permission.NewEngine("readonly", t.TempDir(), true)
+	if err := e.Check("shell", map[string]any{"list_jobs": true}); err != nil {
+		t.Fatalf("list_jobs should be allowed in readonly: %v", err)
+	}
+}
+
+func TestEngine_askNonInteractive_deniesShellJobPoll(t *testing.T) {
+	e := permission.NewEngine("ask", t.TempDir(), false)
+	err := e.Check("shell", map[string]any{"job_id": "job-1"})
+	if !errors.Is(err, permission.ErrNeedTTY) {
+		t.Fatalf("err = %v, want ErrNeedTTY", err)
+	}
+}
+
+func TestEngine_check_deniesSensitivePathOnWriteFile(t *testing.T) {
+	root := t.TempDir()
+	e := permission.NewEngine("auto", root, true)
+	err := e.Check("write_file", map[string]any{"path": ".env"})
+	if err == nil {
+		t.Fatal("expected sensitive path denial")
+	}
+}
+
+func TestEngine_check_deniesSensitivePathInPathsArray(t *testing.T) {
+	root := t.TempDir()
+	e := permission.NewEngine("auto", root, true)
+	err := e.Check("read_file", map[string]any{
+		"paths": []any{".env"},
+	})
+	if err == nil {
+		t.Fatal("expected sensitive path denial")
+	}
+}
+
+func TestEngine_check_deniesHighRiskShell(t *testing.T) {
+	e := permission.NewEngine("auto", t.TempDir(), true)
+	err := e.Check("shell", map[string]any{"command": "rm -rf /"})
+	if err == nil {
+		t.Fatal("expected high-risk shell denial")
+	}
+}
+
+func TestEngine_check_applyPatchSensitiveFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("KEY=1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e := permission.NewEngine("auto", root, true)
+	patch := `*** Begin Patch
+*** Update File: .env
+@@
+-KEY=1
++KEY=2
+*** End Patch`
+	err := e.Check("apply_patch", map[string]any{"patch": patch})
+	if err == nil {
+		t.Fatal("expected sensitive path denial for apply_patch")
+	}
+}
+
+func TestEngine_check_applyPatchInvalidPatch(t *testing.T) {
+	e := permission.NewEngine("auto", t.TempDir(), true)
+	err := e.Check("apply_patch", map[string]any{"patch": "not a patch"})
+	if err == nil {
+		t.Fatal("expected invalid patch error")
+	}
+}
+
+func TestEngine_askInteractive_prompterApproves(t *testing.T) {
+	root := t.TempDir()
+	e := permission.NewEngine("ask", root, true)
+	e.Prompter = func(tool, summary string) (bool, error) {
+		if tool != "write_file" || summary == "" {
+			t.Fatalf("prompter tool=%q summary=%q", tool, summary)
+		}
+		return true, nil
+	}
+	if err := e.Check("write_file", map[string]any{"path": "notes.txt"}); err != nil {
+		t.Fatalf("expected approval: %v", err)
+	}
+}
+
+func TestEngine_askInteractive_prompterRejects(t *testing.T) {
+	e := permission.NewEngine("ask", t.TempDir(), true)
+	e.Prompter = func(tool, summary string) (bool, error) {
+		return false, nil
+	}
+	err := e.Check("write_file", map[string]any{"path": "notes.txt"})
+	if !errors.Is(err, permission.ErrRejected) {
+		t.Fatalf("err = %v, want ErrRejected", err)
+	}
+}
+
+func TestEngine_askInteractive_noPrompter(t *testing.T) {
+	e := permission.NewEngine("ask", t.TempDir(), true)
+	err := e.Check("shell", map[string]any{"command": "echo hi"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, permission.ErrDenied) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestEngine_setWriteToolDetector_readonlyDeniesMCPWrite(t *testing.T) {
+	e := permission.NewEngine("readonly", t.TempDir(), true)
+	e.SetWriteToolDetector(func(name string) bool {
+		return name == "mcp__fs__write_file"
+	})
+	err := e.Check("mcp__fs__write_file", map[string]any{"path": "x"})
+	if err == nil {
+		t.Fatal("expected readonly denial")
+	}
+}
+
+func TestEngine_askInteractive_prompterSummarizesMCPArgs(t *testing.T) {
+	var gotSummary string
+	e := permission.NewEngine("ask", t.TempDir(), true)
+	e.SetWriteToolDetector(func(name string) bool {
+		return name == "mcp__srv__execute"
+	})
+	e.Prompter = func(tool, summary string) (bool, error) {
+		gotSummary = summary
+		return true, nil
+	}
+	if err := e.Check("mcp__srv__execute", map[string]any{"cmd": "ls"}); err != nil {
+		t.Fatal(err)
+	}
+	if gotSummary == "" {
+		t.Fatal("expected non-empty MCP summary for prompter")
 	}
 }

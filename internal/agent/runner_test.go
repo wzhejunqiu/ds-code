@@ -3,6 +3,8 @@ package agent_test
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -78,6 +80,143 @@ func TestRunner_multiRoundTool(t *testing.T) {
 	if len(msgs) < 4 {
 		t.Fatalf("messages = %d, want >= 4", len(msgs))
 	}
+}
+
+func TestRunner_contextTooLong_retriesAfterCompact(t *testing.T) {
+	cfg := testConfig()
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("deepseek-v4-pro", "max", "enabled", "auto", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockLLM := &mock.Client{
+		Errors: []error{fmt.Errorf("context length exceeded")},
+		Responses: []*llm.Response{
+			{Content: "after compact", FinishReason: "stop"},
+		},
+	}
+	perm := permission.NewEngine("auto", t.TempDir(), false)
+	reg := tool.NewRegistry()
+	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, LLM: mockLLM, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
+	r := &agent.Runner{
+		LLM:      mockLLM,
+		Tools:    reg,
+		Perm:     perm,
+		Sessions: store,
+		Context:  ctxSvc,
+		Cfg:      cfg,
+		MaxTurns: 5,
+	}
+
+	res, err := r.RunTurn(context.Background(), sess.ID, "hello", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.FinalContent != "after compact" {
+		t.Fatalf("content = %q", res.FinalContent)
+	}
+	if len(mockLLM.Calls) != 2 {
+		t.Fatalf("llm calls = %d, want 2", len(mockLLM.Calls))
+	}
+}
+
+func TestRunner_cancelledContext(t *testing.T) {
+	cfg := testConfig()
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("deepseek-v4-pro", "max", "enabled", "auto", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	mockLLM := &mock.Client{
+		Responses: []*llm.Response{{Content: "unused", FinishReason: "stop"}},
+	}
+	perm := permission.NewEngine("auto", t.TempDir(), false)
+	reg := tool.NewRegistry()
+	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
+	r := &agent.Runner{
+		LLM:      mockLLM,
+		Tools:    reg,
+		Perm:     perm,
+		Sessions: store,
+		Context:  ctxSvc,
+		Cfg:      cfg,
+		MaxTurns: 5,
+	}
+
+	_, err = r.RunTurn(ctx, sess.ID, "hello", nil)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+}
+
+func TestRunner_cancelledDuringToolRound(t *testing.T) {
+	cfg := testConfig()
+	dir := t.TempDir()
+	if err := os.WriteFile(dir+"/foo.txt", []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("deepseek-v4-pro", "max", "enabled", "auto", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	inner := &mock.Client{
+		Responses: []*llm.Response{
+			{
+				ToolCalls: []llm.ToolCall{{
+					ID:        "call_1",
+					Name:      "read_file",
+					Arguments: `{"path":"foo.txt"}`,
+				}},
+				FinishReason: "tool_calls",
+			},
+			{Content: "should not run", FinishReason: "stop"},
+		},
+	}
+	llmClient := &cancelOnNthChat{n: 2, cancel: cancel, inner: inner}
+	perm := permission.NewEngine("auto", dir, false)
+	reg := tool.NewRegistry()
+	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
+	r := &agent.Runner{
+		LLM:      llmClient,
+		Tools:    reg,
+		Perm:     perm,
+		Sessions: store,
+		Context:  ctxSvc,
+		Cfg:      cfg,
+		MaxTurns: 5,
+	}
+
+	_, err = r.RunTurn(ctx, sess.ID, "read foo", nil)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+}
+
+type cancelOnNthChat struct {
+	n      int
+	calls  int
+	cancel context.CancelFunc
+	inner  *mock.Client
+}
+
+func (c *cancelOnNthChat) Chat(ctx context.Context, req llm.Request) (*llm.Response, error) {
+	c.calls++
+	if c.calls >= c.n {
+		c.cancel()
+	}
+	return c.inner.Chat(ctx, req)
 }
 
 func testConfig() *config.Config {

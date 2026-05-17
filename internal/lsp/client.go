@@ -59,8 +59,8 @@ func NewClient(root string, lspCfg config.LSPConfig, srv ServerConfig) *Client {
 // Start launches the language server process.
 func (c *Client) Start(ctx context.Context) error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	if c.cmd != nil {
+		c.mu.Unlock()
 		return nil
 	}
 	cmd := exec.CommandContext(ctx, c.cfg.Command, c.cfg.Args...)
@@ -71,26 +71,34 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
+		c.mu.Unlock()
 		return err
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		c.mu.Unlock()
 		return err
 	}
 	cmd.Stderr = io.Discard
 	if err := cmd.Start(); err != nil {
+		c.mu.Unlock()
 		return fmt.Errorf("lsp %s: start %s: %w", c.cfg.ID, c.cfg.Command, err)
 	}
 	c.cmd = cmd
 	c.stdin = stdin
 	c.reader = bufio.NewReader(stdout)
 	go c.readLoop()
+	c.mu.Unlock()
 
 	if err := c.initialize(ctx); err != nil {
+		c.mu.Lock()
 		_ = c.closeLocked()
+		c.mu.Unlock()
 		return err
 	}
+	c.mu.Lock()
 	c.lastUsed = time.Now()
+	c.mu.Unlock()
 	return nil
 }
 
@@ -231,15 +239,23 @@ func (c *Client) waitResponse(ctx context.Context, ch <-chan json.RawMessage, id
 func (c *Client) allocID() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.allocIDLocked()
+}
+
+func (c *Client) allocIDLocked() int {
 	c.nextID++
 	return c.nextID
 }
 
 func (c *Client) registerPending(id int) chan json.RawMessage {
-	ch := make(chan json.RawMessage, 1)
 	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.registerPendingLocked(id)
+}
+
+func (c *Client) registerPendingLocked(id int) chan json.RawMessage {
+	ch := make(chan json.RawMessage, 1)
 	c.pending[id] = ch
-	c.mu.Unlock()
 	return ch
 }
 
@@ -330,8 +346,8 @@ func (c *Client) closeLocked() error {
 		return nil
 	}
 	if c.stdin != nil {
-		id := c.allocID()
-		ch := c.registerPending(id)
+		id := c.allocIDLocked()
+		ch := c.registerPendingLocked(id)
 		_ = transport.WriteMessage(c.stdin, map[string]any{
 			"jsonrpc": "2.0",
 			"id":      id,

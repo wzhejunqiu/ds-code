@@ -7,6 +7,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/ui/tui"
+	"github.com/hejunqiu/ds-code/internal/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -49,7 +50,7 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 		Store:     store,
 		Context:   ctxSvc,
 		SessionID: sessionID,
-		Version:   version,
+		Version:   version.Version,
 		PromptCh:  promptCh,
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line string) (bool, error) {
 			env := &slashEnv{

@@ -16,6 +16,11 @@ import (
 type Server struct {
 	Name   string
 	client *mcpclient.Client
+
+	// Test hooks (nil = use client). Set only in unit tests.
+	testListTools func(context.Context) ([]mcpsdk.Tool, error)
+	testCallTool  func(context.Context, string, json.RawMessage) (string, error)
+	testClose     func() error
 }
 
 // ConnectServer starts and initializes an MCP server from config.
@@ -53,6 +58,9 @@ func ConnectServer(ctx context.Context, cfg config.MCPServerConfig) (*Server, er
 
 // ListTools returns tools advertised by the server.
 func (s *Server) ListTools(ctx context.Context) ([]mcpsdk.Tool, error) {
+	if s.testListTools != nil {
+		return s.testListTools(ctx)
+	}
 	res, err := s.client.ListTools(ctx, mcpsdk.ListToolsRequest{})
 	if err != nil {
 		return nil, err
@@ -62,6 +70,9 @@ func (s *Server) ListTools(ctx context.Context) ([]mcpsdk.Tool, error) {
 
 // CallTool invokes a tool on this server.
 func (s *Server) CallTool(ctx context.Context, tool string, args json.RawMessage) (string, error) {
+	if s.testCallTool != nil {
+		return s.testCallTool(ctx, tool, args)
+	}
 	var argMap map[string]any
 	if len(args) > 0 && string(args) != "null" {
 		if err := json.Unmarshal(args, &argMap); err != nil {
@@ -102,6 +113,9 @@ func formatToolResult(res *mcpsdk.CallToolResult) string {
 
 // Close shuts down the server process.
 func (s *Server) Close() error {
+	if s.testClose != nil {
+		return s.testClose()
+	}
 	if s.client == nil {
 		return nil
 	}

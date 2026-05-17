@@ -10,10 +10,12 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/version"
+	"github.com/hejunqiu/ds-code/internal/versioninfo"
 	"github.com/spf13/cobra"
 )
 
-var version = "0.1.0-dev"
+var gitCommit string // set at release build via -ldflags; empty uses vcs info from go build
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
@@ -35,7 +37,7 @@ func newRootCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print version",
 		Run: func(cmd *cobra.Command, _ []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), version)
+			versioninfo.Write(cmd.OutOrStdout(), version.Version, gitCommit)
 		},
 	})
 

@@ -11,6 +11,7 @@ import (
 type Client struct {
 	mu        sync.Mutex
 	Responses []*llm.Response
+	Errors    []error
 	Calls     []llm.Request
 }
 
@@ -21,6 +22,11 @@ func (m *Client) Chat(ctx context.Context, req llm.Request) (*llm.Response, erro
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.Calls = append(m.Calls, req)
+	if len(m.Errors) > 0 {
+		err := m.Errors[0]
+		m.Errors = m.Errors[1:]
+		return nil, err
+	}
 	if len(m.Responses) == 0 {
 		return &llm.Response{Content: "done", FinishReason: "stop"}, nil
 	}

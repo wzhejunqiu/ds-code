@@ -53,15 +53,19 @@ func (m *Manager) EnsureClient(ctx context.Context, serverID string) (*Client, e
 	}
 	srv, ok := m.registry[serverID]
 	if !ok {
+		m.mu.Unlock()
 		return nil, fmt.Errorf("lsp server %q not configured", serverID)
 	}
 	if srv.Disabled {
+		m.mu.Unlock()
 		return nil, fmt.Errorf("lsp server %q is disabled", serverID)
 	}
 	if srv.Command == "" {
+		m.mu.Unlock()
 		return nil, fmt.Errorf("lsp server %q has no command configured (install the language server or set lsp.servers.%s.command)", serverID, serverID)
 	}
 	if _, err := exec.LookPath(srv.Command); err != nil {
+		m.mu.Unlock()
 		return nil, fmt.Errorf("lsp server %q: %s not found in PATH", serverID, srv.Command)
 	}
 	m.mu.Unlock()
