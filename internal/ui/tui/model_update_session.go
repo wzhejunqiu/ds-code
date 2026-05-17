@@ -34,6 +34,7 @@ func (m *model) updateResumeList(msg resumeListMsg) tea.Cmd {
 	return nil
 }
 
+// updateSessionResumed switches session id and transcript after /resume selection.
 func (m *model) updateSessionResumed(msg sessionResumedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.errLine = msg.err.Error()
@@ -52,6 +53,7 @@ func (m *model) updateSessionResumed(msg sessionResumedMsg) tea.Cmd {
 	return nil
 }
 
+// updateHistoryLoaded replaces m.chat when the current session history finishes loading.
 func (m *model) updateHistoryLoaded(msg historyLoadedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.errLine = msg.err.Error()

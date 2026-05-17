@@ -23,15 +23,16 @@ func Run(deps Deps) error {
 	return err
 }
 
+// runTurnAsync runs agent.RunTurn on a goroutine and forwards TurnCallbacks to the UI.
+// Must not block on a full events channel — streaming uses trySend (drops if UI lags).
 func runTurnAsync(d Deps, line string, events chan<- tea.Msg) {
 	ctx, cancel := context.WithCancel(context.Background())
-	// cancel is stored on model via turnStartedMsg - send cancel func
-	events <- turnStartedMsg{cancel: cancel}
+	events <- turnStartedMsg{cancel: cancel} // model stores cancel for Esc
 
 	trySend := func(msg tea.Msg) {
 		select {
 		case events <- msg:
-		default:
+		default: // backpressure: skip delta rather than stall the agent
 		}
 	}
 

@@ -2,6 +2,7 @@ package config
 
 import "github.com/spf13/viper"
 
+// setDefaults registers built-in values before any YAML or env merge.
 func setDefaults(v *viper.Viper) {
 	v.SetDefault("llm.base_url", "https://api.deepseek.com")
 	v.SetDefault("llm.model", "deepseek-v4-pro")

@@ -1,8 +1,10 @@
+// Package config loads and validates ds-code settings (see README.md and docs/CONFIG.md).
 package config
 
 import "time"
 
 // Config is the merged runtime configuration for ds-code.
+// Fields tagged mapstructure:"-" are filled after YAML/CLI merge (paths, API key, CLI-only).
 type Config struct {
 	LLM            LLMConfig            `mapstructure:"llm"`
 	Context          ContextConfig        `mapstructure:"context"`

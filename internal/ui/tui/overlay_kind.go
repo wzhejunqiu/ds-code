@@ -1,6 +1,6 @@
 package tui
 
-// overlayKind is the active full-screen overlay above the chat transcript.
+// overlayKind is which panel is shown below the input (see README.md).
 type overlayKind int
 
 const (

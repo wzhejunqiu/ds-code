@@ -29,12 +29,14 @@ type model struct {
 	overlay     overlayKind
 	overlayText string
 
-	complete       []slash.Command // parallel to completePicker.Items by index
+	// Slash completion: domain rows parallel to completePicker.Items indices.
+	complete       []slash.Command
 	completePicker component.Picker
 
-	resumeSessions []session.Summary // parallel to resumePicker.Items by index
+	// /resume picker: summaries parallel to resumePicker.Items indices.
+	resumeSessions []session.Summary
 	resumePicker   component.Picker
-	resumeFilter   string // last filter; avoids reset on cursor blink
+	resumeFilter   string // skips re-list when only textinput cursor blinked
 
 	prompt *permission.PromptRequest
 

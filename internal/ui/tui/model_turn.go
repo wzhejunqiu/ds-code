@@ -1,3 +1,5 @@
+// Turn lifecycle: cancel/interrupt, streaming chat block assembly, tool rows, metrics.
+// Bubble Tea handlers live in model_update_turn.go; agent bridge in run.go.
 package tui
 
 import (
@@ -62,10 +64,12 @@ func (m *model) appendInterruptBlock() {
 	m.syncChatView()
 }
 
+// turnEventsAllowed gates stream/tool callbacks after Esc (interrupt marker present).
 func (m *model) turnEventsAllowed() bool {
 	return m.running && !m.currentTurnInterrupted()
 }
 
+// currentTurnInterrupted is true if an interrupt block exists after the latest user message.
 func (m *model) currentTurnInterrupted() bool {
 	lastUser := -1
 	for i, b := range m.chat {
@@ -109,6 +113,7 @@ func (m *model) handlePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, m.listenPrompt()
 }
 
+// appendPlanningBlock shows "Planning next moves" between agent sub-rounds.
 func (m *model) appendPlanningBlock() {
 	m.clearPlanningBlock()
 	m.chat = append(m.chat, chatBlock{
@@ -134,6 +139,7 @@ func (m *model) needsPlanningTick() bool {
 	return m.chat[len(m.chat)-1].role == chatRolePlanning
 }
 
+// appendToolBlock starts a tool row; finalizeLastAssistant ends any streaming assistant first.
 func (m *model) appendToolBlock(name, args, command, result string, running, isError bool) {
 	if len(m.chat) > 0 {
 		last := &m.chat[len(m.chat)-1]
@@ -218,6 +224,8 @@ func (m *model) applyTurnMetrics(result *agent.TurnResult) {
 	}
 }
 
+// ensureStreamingAssistant returns the block that receives streamContentMsg / streamReasoningMsg.
+// A new assistant block is created after user, tool, or planning rows — not when merely toggling streaming.
 func (m *model) ensureStreamingAssistant() *chatBlock {
 	needNew := len(m.chat) == 0
 	if !needNew {
@@ -281,6 +289,7 @@ func (m *model) thinkingElapsed() time.Duration {
 	return d
 }
 
+// nextThinkingTickCmd refreshes animated "thinking" / planning labels (fine then coarse interval).
 func (m *model) nextThinkingTickCmd() tea.Cmd {
 	if m.thinkingElapsed() < thinkingFineDuration {
 		return thinkingTickAfter(thinkingFineTick)

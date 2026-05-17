@@ -12,6 +12,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
+// Tab confirms the first slash match (see component.PickerTabSelectFirst).
 var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabSelectFirst}
 
 func (m *model) syncCompleteOverlay() {
@@ -29,6 +30,7 @@ func (m *model) clearCompletePicker() {
 }
 
 func (m *model) handleCompleteKey(msg tea.KeyMsg) bool {
+	// Let updateInput submit a fully typed command (e.g. /context), not pick from the list.
 	if m.completionReadyToSubmit() && msg.Type == tea.KeyEnter {
 		return false
 	}
@@ -85,6 +87,7 @@ func (m *model) completionReadyToSubmit() bool {
 	return val == base || strings.HasPrefix(val, base+" ")
 }
 
+// updateCompletion switches between slash-command list and /resume session picker.
 func (m *model) updateCompletion() {
 	val := m.input.Value()
 	trimmed := strings.TrimSpace(val)

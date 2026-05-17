@@ -1,3 +1,4 @@
+// Project root resolution and <repo>/.ds-code/config.yaml location.
 package config
 
 import (

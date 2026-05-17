@@ -11,7 +11,7 @@ const (
 	envDeepSeek       = "DEEPSEEK_API_KEY"
 )
 
-// LoadAPIKey reads the DeepSeek API key from environment variables only.
+// LoadAPIKey reads the DeepSeek API key from environment only (never YAML/CLI).
 func LoadAPIKey() (string, error) {
 	if k := strings.TrimSpace(os.Getenv(envDSCodeDeepSeek)); k != "" {
 		return k, nil

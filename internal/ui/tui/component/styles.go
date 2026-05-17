@@ -1,3 +1,4 @@
+// List row styles for Picker.View (selected vs normal).
 package component
 
 import (

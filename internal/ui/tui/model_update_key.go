@@ -7,6 +7,7 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.clearExitConfirm()
 	}
 	if m.overlay == overlayResume {
+		// Resume picker: Enter loads session; navigation keys go to handleResumeKey.
 		if msg.Type == tea.KeyEnter && !msg.Alt {
 			if len(m.resumeSessions) > 0 {
 				idx := m.resumePicker.Cursor

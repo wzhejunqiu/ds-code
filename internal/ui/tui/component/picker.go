@@ -8,13 +8,14 @@ import (
 )
 
 // Picker is a keyboard-navigable overlay list (slash completion, /resume, etc.).
+// See README.md in this package for scroll window and HandleKey contract.
 type Picker struct {
 	Header   string
 	Empty    string
 	Items    []string
 	Cursor   int
 	Scroll   int
-	PageSize int // 0 shows all items
+	PageSize int // 0 = show all items; >0 enables scroll window and PgUp/PgDn
 }
 
 // PickerTabBehavior configures Tab key handling for a picker instance.
@@ -81,6 +82,7 @@ func (p *Picker) ClampSelection() {
 	p.ensureScrollVisible()
 }
 
+// Move shifts the selection by delta and keeps the scroll window aligned.
 func (p *Picker) Move(delta int) {
 	if p.Len() == 0 {
 		return
@@ -97,6 +99,9 @@ func (p *Picker) MovePage(pages int) {
 	p.ensureScrollVisible()
 }
 
+// HandleKey processes navigation keys. When handled is true, the caller should
+// not pass the key to the text input. Confirm/cancel actions need domain logic
+// in the TUI (apply completion, resume session, dismiss overlay).
 func (p *Picker) HandleKey(msg tea.KeyMsg, opts PickerKeyOpts) (PickerKeyAction, bool) {
 	switch msg.String() {
 	case "up":
@@ -175,6 +180,7 @@ func (p *Picker) visibleRange() (start, end int) {
 	return start, end
 }
 
+// ensureScrollVisible keeps Cursor inside [Scroll, Scroll+pageSize) and clamps Scroll.
 func (p *Picker) ensureScrollVisible() {
 	total := p.Len()
 	if total == 0 {

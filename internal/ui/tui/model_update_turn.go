@@ -1,3 +1,4 @@
+// Handlers for agent turn tea.Msg values (stream, tools, turn start/done).
 package tui
 
 import (
@@ -8,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// updateStreamContent appends assistant reply deltas from agent.OnContentDelta.
 func (m *model) updateStreamContent(msg streamContentMsg) tea.Cmd {
 	if m.turnEventsAllowed() {
 		m.clearPlanningBlock()
@@ -17,6 +19,7 @@ func (m *model) updateStreamContent(msg streamContentMsg) tea.Cmd {
 	return nil
 }
 
+// updateStreamReasoning appends thinking deltas; starts thinkingTick for live duration label.
 func (m *model) updateStreamReasoning(msg streamReasoningMsg) tea.Cmd {
 	if !m.turnEventsAllowed() {
 		return nil
@@ -64,6 +67,7 @@ func (m *model) updateToolStart(msg toolStartMsg) tea.Cmd {
 	return nil
 }
 
+// updateAssistantSegmentEnd closes the assistant segment at an agent sub-round boundary.
 func (m *model) updateAssistantSegmentEnd() tea.Cmd {
 	if !m.turnEventsAllowed() {
 		return nil
@@ -92,6 +96,7 @@ func (m *model) updateToolEnd(msg toolEndMsg) tea.Cmd {
 	return nil
 }
 
+// updateTurnStarted stores cancel func; honors Esc pressed before RunTurn returned cancel.
 func (m *model) updateTurnStarted(msg turnStartedMsg) tea.Cmd {
 	m.turnCancel = msg.cancel
 	if m.turnEscPending {
@@ -101,6 +106,7 @@ func (m *model) updateTurnStarted(msg turnStartedMsg) tea.Cmd {
 	return nil
 }
 
+// updateTurnDone clears running state, finalizes blocks, applies metrics, persists interrupt marker.
 func (m *model) updateTurnDone(msg turnDoneMsg) tea.Cmd {
 	m.running = false
 	m.turnCancel = nil

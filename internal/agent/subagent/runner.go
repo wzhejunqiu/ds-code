@@ -1,3 +1,4 @@
+// Package subagent runs a short read-only agent loop in an isolated session (see README.md).
 package subagent
 
 import (

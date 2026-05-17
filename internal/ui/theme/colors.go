@@ -1,8 +1,10 @@
+// Package theme holds shared lipgloss colors for terminal UI (TUI, pickers, overlays).
+// Import these instead of hard-coding hex values so chat, input, and lists stay consistent.
 package theme
 
 import "github.com/charmbracelet/lipgloss"
 
-// Claude Code–inspired light palette shared by TUI and overlay components.
+// Claude Code–inspired light palette.
 var (
 	Text      = lipgloss.Color("#3D3D3D")
 	Muted     = lipgloss.Color("#8A8A8A")

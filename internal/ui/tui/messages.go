@@ -8,6 +8,8 @@ import (
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
+// Agent turn messages (produced by runTurnAsync, consumed in model_update_turn.go).
+
 type streamContentMsg struct{ delta string }
 type streamReasoningMsg struct{ delta string }
 type toolStartMsg struct {
@@ -22,9 +24,9 @@ type toolEndMsg struct {
 	result  string
 	isError bool
 }
-type assistantSegmentEndMsg struct{}
-type planningStartMsg struct{}
-type planningEndMsg struct{}
+type assistantSegmentEndMsg struct{} // agent sub-round boundary (before tools / next LLM)
+type planningStartMsg struct{}       // between sub-rounds, before next LLM request
+type planningEndMsg struct{}         // first stream delta of next sub-round
 type turnDoneMsg struct {
 	result *agent.TurnResult
 	err    error
@@ -37,7 +39,7 @@ type contextOverlayMsg struct{ text string }
 type helpOverlayMsg struct{ text string }
 type slashOutputMsg struct{ text string }
 type turnStartedMsg struct {
-	cancel context.CancelFunc
+	cancel context.CancelFunc // passed to Runner.RunTurn context
 }
 type exitConfirmTimeoutMsg struct{}
 
@@ -52,7 +54,7 @@ type sessionResumedMsg struct {
 	err       error
 }
 
-type historyLoadedMsg struct {
+type historyLoadedMsg struct { // loadInitialHistory → updateHistoryLoaded
 	chat []chatBlock
 	err  error
 }

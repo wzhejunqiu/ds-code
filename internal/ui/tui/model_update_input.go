@@ -20,6 +20,7 @@ func (m *model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.updateCompletion()
 
 	if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEnter && !msg.Alt {
+		// Enter for resume is handled in updateKey (session pick or block empty list).
 		if m.overlay == overlayResume {
 			return m, nil
 		}

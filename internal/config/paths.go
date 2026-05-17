@@ -1,3 +1,4 @@
+// Fixed ~/.ds-code layout and per-project data paths (see README.md § Project identity).
 package config
 
 import (

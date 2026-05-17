@@ -19,7 +19,8 @@ type Options struct {
 	SkipProjectDataDir bool
 }
 
-// Load merges defaults, user YAML, project YAML, and cobra flags into Config.
+// Load merges defaults, user YAML, project YAML, env (DS_CODE_*), and cobra flags into Config.
+// See README.md for the full pipeline.
 func Load(cmd *cobra.Command, opts Options) (*Config, error) {
 	if opts.StartDir == "" {
 		wd, err := os.Getwd()

@@ -1,3 +1,4 @@
+// Package agent implements the multi-round LLM + tool agent loop (see README.md).
 package agent
 
 import (
@@ -49,6 +50,7 @@ type TurnResult struct {
 }
 
 // RunTurn handles one user message through sub-rounds until no tool_calls or max turns.
+// Optional cb streams deltas and tool events to the TUI; nil cb writes final text to r.Out only.
 func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *TurnCallbacks) (*TurnResult, error) {
 	logging.L().Info("user turn start", zap.String("session_id", sessionID), zap.Int("chars", len(userText)))
 	expanded, err := r.Context.ExpandUserText(userText)
@@ -73,13 +75,16 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 
 	turnStart := time.Now()
 	result := &TurnResult{}
+	// Each iteration is one LLM request; tool results feed the next iteration.
 	for round := 0; round < r.MaxTurns; round++ {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
+		// Close the prior assistant segment in the UI before tools / next model reply.
 		if round > 0 && cb != nil && cb.OnAssistantSegmentEnd != nil {
 			cb.OnAssistantSegmentEnd()
 		}
+		// Show planning spinner until the next model stream produces content or reasoning.
 		if round > 0 && cb != nil && cb.OnPlanningStart != nil {
 			cb.OnPlanningStart()
 		}
@@ -103,10 +108,10 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			UserID:          cacheScope(sessionID),
 			StrictTools:     r.Cfg.LLM.StrictTools,
 		}
-		var st streamTiming
+		var st streamTiming // reasoning wall clock from stream deltas
 		var roundContent strings.Builder
 		streamedContent := false
-		planningDone := round == 0
+		planningDone := round == 0 // round 0 has no prior OnPlanningStart
 		endPlanning := func() {
 			if planningDone || cb == nil || cb.OnPlanningEnd == nil {
 				return
@@ -192,6 +197,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		}
 
 		if len(resp.ToolCalls) == 0 {
+			// Terminal sub-round: no further LLM calls for this user message.
 			result.FinalContent = resp.Content
 			result.FinalReasoning = resp.ReasoningContent
 			if cb != nil && cb.OnContentDelta != nil && !streamedContent {
@@ -218,6 +224,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			roundText = roundContent.String()
 		}
 
+		// Non-terminal: run tools, append tool messages, loop to next sub-round.
 		for _, tc := range resp.ToolCalls {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()

@@ -8,6 +8,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// chatBlock is one row in the in-memory transcript (rendered by renderChat).
+// Streaming turns mutate the tail assistant block; tools are separate rows between sub-rounds.
 type chatBlock struct {
 	role               chatBlockRole
 	content            strings.Builder

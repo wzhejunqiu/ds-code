@@ -22,6 +22,7 @@ var allowedPermission = []string{"readonly", "ask", "auto"}
 var allowedTruncateBy = []string{"chars", "tokenizer"}
 var allowedRunMode = []string{"agent", "plan"}
 
+// rejectForbiddenKeys blocks secrets and fixed paths from YAML (see docs/CONFIG.md).
 func rejectForbiddenKeys(v *viper.Viper) error {
 	for _, key := range forbiddenYAMLKeys {
 		if v.IsSet(key) {
@@ -31,6 +32,7 @@ func rejectForbiddenKeys(v *viper.Viper) error {
 	return nil
 }
 
+// validate checks enums and numeric bounds after merge.
 func validate(cfg *Config) error {
 	if !slices.Contains(allowedModels, cfg.LLM.Model) {
 		return fmt.Errorf("config: llm.model must be one of %v, got %q", allowedModels, cfg.LLM.Model)

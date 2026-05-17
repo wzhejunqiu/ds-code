@@ -7,6 +7,8 @@ import (
 )
 
 // streamTiming tracks thinking-phase wall time from streaming deltas.
+// Reasoning starts at the first reasoning chunk; ends at the first content chunk
+// (or at duration() if the model never streams content).
 type streamTiming struct {
 	reasoningStart time.Time
 	reasoningEnd   time.Time

@@ -13,8 +13,10 @@ import (
 
 const resumeListMax = 50
 
+// Tab moves down in the session list; Enter is handled in updateKey, not the picker.
 var resumePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabMoveDown}
 
+// resumePageSize picks how many session rows fit in the overlay under the input.
 func (m *model) resumePageSize() int {
 	if m.height <= 0 {
 		return 8
@@ -30,6 +32,7 @@ func (m *model) resumePageSize() int {
 	return n
 }
 
+// syncResumePicker rebuilds picker items from resumeSessions and refreshes overlayText.
 func (m *model) syncResumePicker() {
 	items := make([]string, len(m.resumeSessions))
 	for i, s := range m.resumeSessions {
@@ -46,6 +49,7 @@ func (m *model) syncResumePicker() {
 	m.overlayText = m.resumePicker.View()
 }
 
+// listResumeSessions loads recent sessions and optionally filters by ID/title.
 func (m *model) listResumeSessions(filter string) ([]session.Summary, error) {
 	list, err := m.deps.Store.ListSessions(context.Background(), resumeListMax)
 	if err != nil {
@@ -94,8 +98,9 @@ func (m *model) clearResumePicker() {
 	m.overlayText = ""
 }
 
+// updateResumePicker refreshes the session list for /resume <filter>.
+// textinput emits updates on cursor blink; do not reset selection unless filter changed.
 func (m *model) updateResumePicker(filter string) {
-	// textinput emits updates on cursor blink; do not reset selection unless filter changed.
 	if m.overlay == overlayResume && filter == m.resumeFilter && len(m.resumeSessions) > 0 {
 		return
 	}
@@ -131,6 +136,7 @@ func (m *model) fetchResumeList() tea.Cmd {
 	}
 }
 
+// loadInitialHistory loads persisted messages for the startup session into the chat viewport.
 func (m *model) loadInitialHistory() tea.Cmd {
 	if m.deps == nil || m.deps.Store == nil || m.sessionID == "" {
 		return nil

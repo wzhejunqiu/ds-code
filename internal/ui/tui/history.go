@@ -1,3 +1,5 @@
+// Session history → in-memory chat transcript (history.go).
+// Persisted rows live in session.Store; this package only maps Message → chatBlock.
 package tui
 
 import (
@@ -13,7 +15,14 @@ import (
 )
 
 // chatBlocksFromMessages builds TUI chat blocks from persisted session messages.
-// Tool rows are shown in the main transcript; system rows are omitted.
+//
+// Mapping rules:
+//   - user → chatRoleUser
+//   - assistant (content/reasoning) → chatRoleAssistant; tool_calls expand to chatRoleTool rows
+//   - tool → skipped here (paired via assistant ToolCallsJSON + findToolMessage)
+//   - system → chatRoleInterrupt only when content matches interruptSessionMarker()
+//
+// Orphan tool messages (no matching call id) are ignored. Generic system rows are omitted.
 func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chatBlock {
 	var blocks []chatBlock
 	for i := 0; i < len(msgs); i++ {
@@ -66,6 +75,7 @@ func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chatBl
 	return blocks
 }
 
+// parseToolCalls decodes assistant ToolCallsJSON; empty/invalid → nil.
 func parseToolCalls(raw string) []llm.ToolCall {
 	raw = trimJSON(raw)
 	if raw == "" || raw == "[]" || raw == "null" {
@@ -85,6 +95,7 @@ func trimJSON(s string) string {
 	return s
 }
 
+// findToolMessage scans consecutive tool rows after an assistant message for a call id.
 func findToolMessage(msgs []session.Message, start int, callID string) *session.Message {
 	for i := start; i < len(msgs); i++ {
 		if msgs[i].Role != role.Tool {
@@ -97,6 +108,8 @@ func findToolMessage(msgs []session.Message, start int, callID string) *session.
 	return nil
 }
 
+// loadSessionChat loads all messages for a session and converts them for the TUI.
+// Used on startup (loadInitialHistory) and /resume (resumeSession).
 func loadSessionChat(store session.Store, sessionID string, reasoningOpen bool) ([]chatBlock, error) {
 	msgs, err := store.ListMessages(context.Background(), sessionID)
 	if err != nil {
