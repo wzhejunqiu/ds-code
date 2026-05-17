@@ -103,9 +103,10 @@ func TestRenderAssistantMarkdownHeadings(t *testing.T) {
 	content := "# Title\n\n## Subtitle\n\n### Section\n\nbody"
 	lines := renderAssistantBlock(content, 60)
 	joined := strings.Join(lines, "\n")
-	for _, marker := range []string{"# Title", "## Subtitle", "### Section"} {
-		if strings.Contains(joined, marker) {
-			t.Fatalf("raw heading marker %q in output:\n%s", marker, joined)
+	plain := stripANSI(joined)
+	for _, marker := range []string{"# ", "## ", "### ", "#### "} {
+		if strings.Contains(plain, marker) {
+			t.Fatalf("raw heading marker %q in output:\n%s", marker, plain)
 		}
 	}
 	for _, text := range []string{"Title", "Subtitle", "Section", "body"} {

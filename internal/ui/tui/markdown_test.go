@@ -20,9 +20,10 @@ func TestRenderMarkdownHeadingsStyled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, marker := range []string{"# Title", "## Subtitle", "### Section"} {
-		if strings.Contains(out, marker) {
-			t.Fatalf("raw heading marker %q in output:\n%s", marker, out)
+	plain := stripANSI(out)
+	for _, marker := range []string{"# ", "## ", "### ", "#### "} {
+		if strings.Contains(plain, marker) {
+			t.Fatalf("raw heading marker %q in output:\n%s", marker, plain)
 		}
 	}
 	for _, text := range []string{"Title", "Subtitle", "Section", "body"} {
@@ -43,11 +44,39 @@ func TestRenderMarkdownHeadingEmojiTitle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, "# ") {
-		t.Fatalf("raw heading marker in output:\n%s", out)
+	if strings.Contains(stripANSI(out), "# ") {
+		t.Fatalf("raw heading marker in output:\n%s", stripANSI(out))
 	}
 	if !headingTextPresent(out, "ds-code") || !headingTextPresent(out, "代码变更审查报告") {
 		t.Fatalf("missing heading text:\n%s", out)
+	}
+}
+
+func TestRenderMarkdownCodeBlockNoBackgroundANSI(t *testing.T) {
+	content := "```go\nfunc foo() { x := \"hi\" }\n```"
+	out, err := renderMarkdown(content, 70)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "48;") {
+		t.Fatalf("unexpected background SGR in code block:\n%s", out)
+	}
+}
+
+func TestRenderMarkdownCodeBlockBorder(t *testing.T) {
+	content := "text\n\n```go\nfmt.Println(\"hi\")\n```\n\nmore"
+	out, err := renderMarkdown(content, 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain := stripANSI(out)
+	if !strings.Contains(plain, "Println") || !strings.Contains(plain, "hi") {
+		t.Fatalf("missing code content:\n%s", plain)
+	}
+	for _, border := range []string{"╭", "╮", "╰", "╯", "│"} {
+		if !strings.Contains(plain, border) {
+			t.Fatalf("expected code block border %q in output:\n%s", border, plain)
+		}
 	}
 }
 
