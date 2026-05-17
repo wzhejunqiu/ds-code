@@ -5,6 +5,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/hejunqiu/ds-code/internal/session"
@@ -163,7 +164,7 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 	}
 	for _, turn := range recent {
 		for _, m := range turn.Messages {
-			if m.Role == "system" {
+			if m.Role == role.System {
 				continue // history-only events (e.g. checkpoint rewind)
 			}
 			if m.ID <= sess.CompactUpToMessageID && sess.CompactSummary != "" {

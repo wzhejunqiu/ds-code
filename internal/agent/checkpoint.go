@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hejunqiu/ds-code/internal/checkpoint"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
@@ -54,7 +55,7 @@ func (r *Runner) RewindCheckpoint(ctx context.Context, sessionID string, id int)
 	}
 	return r.Sessions.AppendMessage(ctx, session.Message{
 		SessionID: sessionID,
-		Role:      "system",
+		Role:      role.System,
 		Content:   fmt.Sprintf("[ds-code] Rewound workspace to checkpoint #%d (%s)", id, rec.Tool),
 	})
 }

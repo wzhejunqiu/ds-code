@@ -25,10 +25,10 @@ func TestParse_addAndUpdate(t *testing.T) {
 	if len(changes) != 2 {
 		t.Fatalf("changes = %d", len(changes))
 	}
-	if changes[0].Kind != "add" || changes[0].Path != "new.txt" {
+	if changes[0].Kind != patch.ChangeAdd || changes[0].Path != "new.txt" {
 		t.Fatalf("add: %+v", changes[0])
 	}
-	if changes[1].Kind != "update" || len(changes[1].Chunks) != 1 {
+	if changes[1].Kind != patch.ChangeUpdate || len(changes[1].Chunks) != 1 {
 		t.Fatalf("update: %+v", changes[1])
 	}
 }
@@ -85,7 +85,7 @@ func TestParse_delete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(changes) != 1 || changes[0].Kind != "delete" || changes[0].Path != "old.go" {
+	if len(changes) != 1 || changes[0].Kind != patch.ChangeDelete || changes[0].Path != "old.go" {
 		t.Fatalf("changes = %+v", changes)
 	}
 }

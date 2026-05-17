@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 )
 
 const baseSystemPrompt = `You are ds-code, a coding agent running in the user's project workspace.
@@ -47,7 +48,7 @@ func ToAPIMessages(mergedSystem string, messages []llm.Message) []map[string]any
 	for _, m := range messages {
 		msg := map[string]any{"role": m.Role}
 		switch m.Role {
-		case "assistant":
+		case role.Assistant:
 			if m.Content != "" {
 				msg["content"] = m.Content
 			}
@@ -57,7 +58,7 @@ func ToAPIMessages(mergedSystem string, messages []llm.Message) []map[string]any
 			if len(m.ToolCalls) > 0 {
 				msg["tool_calls"] = serializeToolCalls(m.ToolCalls)
 			}
-		case "tool":
+		case role.Tool:
 			msg["content"] = m.Content
 			msg["tool_call_id"] = m.ToolCallID
 			if m.Name != "" {

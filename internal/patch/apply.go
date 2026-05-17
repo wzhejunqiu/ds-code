@@ -52,7 +52,7 @@ func Apply(workspace string, patchText string, resolve func(rel string) (string,
 	var applied []string
 	for _, ch := range changes {
 		switch ch.Kind {
-		case "add":
+		case ChangeAdd:
 			abs, err := resolve(ch.Path)
 			if err != nil {
 				return "", err
@@ -74,7 +74,7 @@ func Apply(workspace string, patchText string, resolve func(rel string) (string,
 			written = append(written, abs)
 			applied = append(applied, "add "+ch.Path)
 
-		case "delete":
+		case ChangeDelete:
 			abs, err := resolve(ch.Path)
 			if err != nil {
 				return "", err
@@ -90,7 +90,7 @@ func Apply(workspace string, patchText string, resolve func(rel string) (string,
 			written = append(written, abs)
 			applied = append(applied, "delete "+ch.Path)
 
-		case "update":
+		case ChangeUpdate:
 			abs, err := resolve(ch.Path)
 			if err != nil {
 				return "", err

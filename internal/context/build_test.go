@@ -6,6 +6,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
 )
@@ -20,12 +21,12 @@ func TestBuildAPIContext_keepRecentTurns(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		_ = store.AppendMessage(ctx, session.Message{
 			SessionID: sess.ID,
-			Role:      "user",
+			Role:      role.User,
 			Content:   "turn",
 		})
 		_ = store.AppendMessage(ctx, session.Message{
 			SessionID: sess.ID,
-			Role:      "assistant",
+			Role:      role.Assistant,
 			Content:   "ok",
 		})
 	}

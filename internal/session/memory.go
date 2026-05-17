@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/google/uuid"
 )
 
@@ -144,7 +145,7 @@ func (m *MemoryStore) AppendMessage(_ context.Context, msg Message) error {
 	m.messages[msg.SessionID] = append(m.messages[msg.SessionID], msg)
 	s := m.sessions[msg.SessionID]
 	s.UpdatedAt = msg.CreatedAt
-	if msg.Role == "user" && s.Title == "" {
+	if msg.Role == role.User && s.Title == "" {
 		s.Title = truncateTitle(msg.Content, 80)
 	}
 	m.sessions[msg.SessionID] = s

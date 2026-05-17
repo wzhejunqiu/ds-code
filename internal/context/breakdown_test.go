@@ -5,6 +5,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 )
 
@@ -15,9 +16,9 @@ func TestCountBreakdown_invariant(t *testing.T) {
 		ToolsJSON:    `[{"type":"function"}]`,
 		WindowTokens: deepseek.ContextWindowTokens,
 		Messages: []llm.Message{
-			{Role: "user", Content: "hello"},
-			{Role: "assistant", Content: "hi"},
-			{Role: "tool", Name: "task", Content: "subagent result"},
+			{Role: role.User, Content: "hello"},
+			{Role: role.Assistant, Content: "hi"},
+			{Role: role.Tool, Name: "task", Content: "subagent result"},
 		},
 	}
 	bd, err := context.CountBreakdown(view)

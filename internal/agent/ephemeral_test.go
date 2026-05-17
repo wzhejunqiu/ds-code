@@ -9,6 +9,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/hejunqiu/ds-code/internal/llm/mock"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
 )
@@ -20,7 +21,7 @@ func TestRunEphemeral_noToolsNoHistoryWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: "user", Content: "secret"})
+	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: role.User, Content: "secret"})
 
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{{Content: "side answer", FinishReason: "stop"}},

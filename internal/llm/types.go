@@ -1,6 +1,10 @@
 package llm
 
-import "context"
+import (
+	"context"
+
+	"github.com/hejunqiu/ds-code/internal/role"
+)
 
 // Client calls the chat completions API.
 type Client interface {
@@ -9,7 +13,7 @@ type Client interface {
 
 // Message is an OpenAI-compatible chat message.
 type Message struct {
-	Role             string
+	Role             role.Role
 	Content          string
 	ReasoningContent string
 	ToolCalls        []ToolCall

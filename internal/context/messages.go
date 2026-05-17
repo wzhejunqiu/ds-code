@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
 func messageToLLM(m session.Message) llm.Message {
 	switch m.Role {
-	case "user":
-		return llm.Message{Role: "user", Content: m.Content}
-	case "assistant":
+	case role.User:
+		return llm.Message{Role: role.User, Content: m.Content}
+	case role.Assistant:
 		am := llm.Message{
-			Role:             "assistant",
+			Role:             role.Assistant,
 			Content:          m.Content,
 			ReasoningContent: m.ReasoningContent,
 		}
@@ -23,9 +24,9 @@ func messageToLLM(m session.Message) llm.Message {
 			am.ToolCalls = calls
 		}
 		return am
-	case "tool":
+	case role.Tool:
 		return llm.Message{
-			Role:       "tool",
+			Role:       role.Tool,
 			Content:    m.Content,
 			ToolCallID: m.ToolCallID,
 			Name:       m.ToolName,
@@ -37,7 +38,7 @@ func messageToLLM(m session.Message) llm.Message {
 
 func compactSummaryMessage(summary string) llm.Message {
 	return llm.Message{
-		Role:    "assistant",
+		Role:    role.Assistant,
 		Content: "[Conversation summary]\n" + summary,
 	}
 }

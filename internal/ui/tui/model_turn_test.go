@@ -11,9 +11,9 @@ import (
 func TestFinalizeLastAssistant_onlyTouchesTrailingBlock(t *testing.T) {
 	started := time.Now().Add(-30 * time.Second)
 	m := model{chat: []chatBlock{
-		{role: "assistant", reasoningStartedAt: started},
-		{role: "tool", toolName: "read_file"},
-		{role: "assistant", reasoningStartedAt: time.Now().Add(-2 * time.Second), streaming: true},
+		{role: chatRoleAssistant, reasoningStartedAt: started},
+		{role: chatRoleTool, toolName: "read_file"},
+		{role: chatRoleAssistant, reasoningStartedAt: time.Now().Add(-2 * time.Second), streaming: true},
 	}}
 	m.finalizeLastAssistant(time.Now())
 
@@ -27,10 +27,10 @@ func TestFinalizeLastAssistant_onlyTouchesTrailingBlock(t *testing.T) {
 
 func TestApplyTurnMetrics_prefersLastAssistantWithContent(t *testing.T) {
 	m := model{chat: []chatBlock{
-		{role: "user"},
-		{role: "assistant"},
-		{role: "tool", toolName: "read_file"},
-		{role: "assistant"},
+		{role: chatRoleUser},
+		{role: chatRoleAssistant},
+		{role: chatRoleTool, toolName: "read_file"},
+		{role: chatRoleAssistant},
 	}}
 	m.chat[1].content.WriteString("preamble")
 	// Last assistant block is empty; metrics should attach to the reply with content.

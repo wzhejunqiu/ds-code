@@ -835,7 +835,8 @@ panel.Render(snap, bd)
 
 - `context.Context` 贯穿：LLM HTTP、tool Execute、shell 子进程、子代理。
 - TUI 运行中 **Esc** → cancel → 停止流式读取 + `Process.Kill`，对话区显示中断标记。
-- Ctrl+C 在 turn 运行中不取消（提示用 Esc）；空闲时双击退出。
+- Ctrl+C / Ctrl+D 行为一致：turn 运行中不取消（提示用 Esc）；空闲时双击退出。
+- 取消记录以 `system` 消息持久化，`/resume` 可恢复中断标记。
 
 ---
 

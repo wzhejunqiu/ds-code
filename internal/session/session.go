@@ -1,6 +1,10 @@
 package session
 
-import "time"
+import (
+	"time"
+
+	"github.com/hejunqiu/ds-code/internal/role"
+)
 
 // Session holds per-conversation metadata and usage totals.
 type Session struct {
@@ -30,7 +34,7 @@ func BilledTokens(s Session) int {
 type Message struct {
 	ID                   int64
 	SessionID            string
-	Role                 string
+	Role                 role.Role
 	Content              string
 	ReasoningContent     string
 	ReasoningDurationMS  int64 // assistant: thinking phase duration

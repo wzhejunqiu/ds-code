@@ -1,5 +1,7 @@
 package session
 
+import "github.com/hejunqiu/ds-code/internal/role"
+
 // UserTurn is one user message and all following assistant/tool messages until the next user.
 type UserTurn struct {
 	Messages []Message
@@ -10,7 +12,7 @@ func SplitUserTurns(msgs []Message) []UserTurn {
 	var turns []UserTurn
 	var current *UserTurn
 	for _, m := range msgs {
-		if m.Role == "user" {
+		if m.Role == role.User {
 			if current != nil {
 				turns = append(turns, *current)
 			}
@@ -42,7 +44,7 @@ func (t UserTurn) MaxMessageID() int64 {
 // FirstUserContent returns the first user message content in the turn.
 func (t UserTurn) FirstUserContent() string {
 	for _, m := range t.Messages {
-		if m.Role == "user" {
+		if m.Role == role.User {
 			return m.Content
 		}
 	}

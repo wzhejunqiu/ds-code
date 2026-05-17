@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
@@ -15,7 +16,7 @@ func TestResumePickerEnterDoesNotSubmitFilterAsSessionID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: "user", Content: "hi"})
+	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: role.User, Content: "hi"})
 
 	m := model{
 		deps: &Deps{Store: store},
@@ -46,7 +47,7 @@ func TestResumePickerEnterResumesSelectedSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: "user", Content: "hello"})
+	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: role.User, Content: "hello"})
 
 	m := model{
 		deps: &Deps{Store: store},

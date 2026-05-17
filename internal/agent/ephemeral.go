@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 )
 
 // EphemeralOpts configures a /btw side-channel request.
@@ -46,7 +47,7 @@ func (r *Runner) RunEphemeral(ctx context.Context, prompt string, opts Ephemeral
 			messages = append(messages, view.Messages...)
 		}
 	}
-	messages = append(messages, llm.Message{Role: "user", Content: prompt})
+	messages = append(messages, llm.Message{Role: role.User, Content: prompt})
 
 	system := opts.MergedSystem
 	if system == "" {

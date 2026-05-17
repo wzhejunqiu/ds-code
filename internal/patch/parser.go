@@ -17,7 +17,7 @@ const (
 
 // FileChange is one file operation in a Codex-style patch.
 type FileChange struct {
-	Kind     string // add | delete | update
+	Kind     ChangeKind
 	Path     string
 	MoveTo   string
 	AddLines []string
@@ -76,15 +76,15 @@ func Parse(text string) ([]FileChange, error) {
 				}
 				i++
 			}
-			out = append(out, FileChange{Kind: "add", Path: path, AddLines: content})
+			out = append(out, FileChange{Kind: ChangeAdd, Path: path, AddLines: content})
 		case strings.HasPrefix(line, deleteMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, deleteMarker))
-			out = append(out, FileChange{Kind: "delete", Path: path})
+			out = append(out, FileChange{Kind: ChangeDelete, Path: path})
 			i++
 		case strings.HasPrefix(line, updateMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, updateMarker))
 			i++
-			ch := FileChange{Kind: "update", Path: path}
+			ch := FileChange{Kind: ChangeUpdate, Path: path}
 			for i < len(body) {
 				l := strings.TrimSpace(body[i])
 				if isHunkHeader(l) && !strings.HasPrefix(l, "@@") && !strings.HasPrefix(l, moveMarker) {
@@ -208,7 +208,7 @@ func CountChangedLines(text string) (int, error) {
 		for _, ch := range c.Chunks {
 			n += len(ch.Old) + len(ch.New)
 		}
-		if c.Kind == "delete" {
+		if c.Kind == ChangeDelete {
 			n++
 		}
 	}

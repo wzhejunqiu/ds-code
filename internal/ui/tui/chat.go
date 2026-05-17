@@ -9,7 +9,7 @@ import (
 )
 
 type chatBlock struct {
-	role               string // user | assistant | tool | planning
+	role               chatBlockRole
 	content            strings.Builder
 	reasoning          strings.Builder
 	reasoningOpen      bool
@@ -38,7 +38,7 @@ func (b *chatBlock) appendReasoning(s string) {
 
 // finalizeReasoning closes the thinking phase for this assistant segment.
 func (b *chatBlock) finalizeReasoning(at time.Time) {
-	if b.role != "assistant" || b.reasoningStartedAt.IsZero() || !b.reasoningEndedAt.IsZero() {
+	if b.role != chatRoleAssistant || b.reasoningStartedAt.IsZero() || !b.reasoningEndedAt.IsZero() {
 		return
 	}
 	b.reasoningEndedAt = at
@@ -61,6 +61,11 @@ const (
 	interruptLabel   = "Turn cancelled (Esc)"
 )
 
+// interruptSessionMarker is stored as a system row so /resume restores the marker.
+func interruptSessionMarker() string {
+	return "[ds-code] " + interruptLabel
+}
+
 func renderChat(blocks []chatBlock, width int, now time.Time, showToolDetails bool) string {
 	if width < 20 {
 		width = 20
@@ -69,10 +74,10 @@ func renderChat(blocks []chatBlock, width int, now time.Time, showToolDetails bo
 
 	for _, b := range blocks {
 		switch b.role {
-		case "user":
+		case chatRoleUser:
 			lines = append(lines, renderUserBlock(b.content.String(), width)...)
 			lines = append(lines, "")
-		case "assistant":
+		case chatRoleAssistant:
 			indent := lipgloss.Width(assistantBullet)
 			if b.reasoning.Len() > 0 || b.reasoningDuration > 0 || !b.reasoningStartedAt.IsZero() {
 				label := reasoningBlockLabel(b.reasoningOpen, b.reasoningStartedAt, b.reasoningEndedAt, now, b.reasoningDuration)
@@ -90,15 +95,15 @@ func renderChat(blocks []chatBlock, width int, now time.Time, showToolDetails bo
 				lines = append(lines, styleChatTurnMeta.Render(strings.Repeat(" ", indent)+turnDurationLine(b.turnDuration)))
 			}
 			lines = append(lines, "")
-		case "tool":
+		case chatRoleTool:
 			expanded := showToolDetails || b.toolExpanded
 			lines = append(lines, renderToolBlock(b, width, expanded)...)
 			lines = append(lines, "")
-		case "planning":
+		case chatRolePlanning:
 			indent := lipgloss.Width(planningBullet)
 			lines = append(lines, styleChatReason.Render(strings.Repeat(" ", indent)+planningBlockLabel(b.planningStartedAt, now)))
 			lines = append(lines, "")
-		case "interrupt":
+		case chatRoleInterrupt:
 			indent := lipgloss.Width(interruptBullet)
 			lines = append(lines, styleChatInterrupt.Render(strings.Repeat(" ", indent)+interruptBullet+interruptLabel))
 			lines = append(lines, "")

@@ -6,6 +6,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
 )
@@ -17,9 +18,9 @@ func TestBuildAPIContext_skipsSystemEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: "user", Content: "hi"})
-	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: "system", Content: "[ds-code] rewound"})
-	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: "assistant", Content: "ok"})
+	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: role.User, Content: "hi"})
+	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: role.System, Content: "[ds-code] rewound"})
+	_ = store.AppendMessage(ctx, session.Message{SessionID: sess.ID, Role: role.Assistant, Content: "ok"})
 
 	svc := &ctxpkg.Service{
 		Cfg:   &config.Config{Context: config.ContextConfig{KeepRecentTurns: 6, WindowTokens: 1_048_576}},

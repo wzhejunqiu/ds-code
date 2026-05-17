@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
@@ -54,7 +55,7 @@ func TestLazyStore_defersInsertUntilMessage(t *testing.T) {
 
 	if err := store.AppendMessage(ctx, session.Message{
 		SessionID: sess.ID,
-		Role:      "user",
+		Role:      role.User,
 		Content:   "hello",
 	}); err != nil {
 		t.Fatal(err)

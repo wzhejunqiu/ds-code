@@ -10,8 +10,8 @@ import (
 
 func TestRenderChatUserHighlightNoLabels(t *testing.T) {
 	blocks := []chatBlock{
-		{role: "user"},
-		{role: "assistant"},
+		{role: chatRoleUser},
+		{role: chatRoleAssistant},
 	}
 	blocks[0].content.WriteString("你好")
 	blocks[1].content.WriteString("你好！")
@@ -32,7 +32,7 @@ func TestRenderChatUserHighlightNoLabels(t *testing.T) {
 }
 
 func TestRenderChatTurnDuration(t *testing.T) {
-	blocks := []chatBlock{{role: "assistant"}}
+	blocks := []chatBlock{{role: chatRoleAssistant}}
 	blocks[0].content.WriteString("done")
 	blocks[0].turnDuration = 5*time.Second + 200*time.Millisecond
 
@@ -46,7 +46,7 @@ func TestRenderChatThinkingAboveContent(t *testing.T) {
 	started := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	now := started.Add(12 * time.Second)
 
-	blocks := []chatBlock{{role: "assistant", reasoningOpen: true}}
+	blocks := []chatBlock{{role: chatRoleAssistant, reasoningOpen: true}}
 	blocks[0].reasoning.WriteString("plan")
 	blocks[0].content.WriteString("answer")
 	blocks[0].reasoningStartedAt = started
@@ -125,7 +125,7 @@ func TestRenderAssistantMarkdownCodeBlock(t *testing.T) {
 }
 
 func TestRenderChatUserFullWidthBackground(t *testing.T) {
-	blocks := []chatBlock{{role: "user"}}
+	blocks := []chatBlock{{role: chatRoleUser}}
 	blocks[0].content.WriteString("hi")
 
 	out := renderChat(blocks, 30, time.Now(), false)

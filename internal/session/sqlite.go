@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 )
@@ -239,7 +240,7 @@ func (s *SQLiteStore) AppendMessage(_ context.Context, msg Message) error {
 	id, _ := res.LastInsertId()
 	msg.ID = id
 
-	if msg.Role == "user" {
+	if msg.Role == role.User {
 		title := truncateTitle(msg.Content, 80)
 		_, _ = s.db.Exec(`UPDATE sessions SET title=CASE WHEN title='' THEN ? ELSE title END, updated_at=? WHERE id=?`,
 			title, now.Format(time.RFC3339), msg.SessionID)

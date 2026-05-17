@@ -15,10 +15,10 @@ func TestRenderChatMultipleThinkingBlocks(t *testing.T) {
 	r2End := now.Add(-1 * time.Second)
 
 	blocks := []chatBlock{
-		{role: "assistant", reasoningOpen: true},
-		{role: "tool", toolName: "read_file", toolArgs: "path=a.go", toolResult: "ok"},
-		{role: "planning", planningStartedAt: r1End},
-		{role: "assistant", reasoningOpen: true},
+		{role: chatRoleAssistant, reasoningOpen: true},
+		{role: chatRoleTool, toolName: "read_file", toolArgs: "path=a.go", toolResult: "ok"},
+		{role: chatRolePlanning, planningStartedAt: r1End},
+		{role: chatRoleAssistant, reasoningOpen: true},
 	}
 	blocks[0].reasoning.WriteString("plan round 1")
 	blocks[0].reasoningStartedAt = r1Start

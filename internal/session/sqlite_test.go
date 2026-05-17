@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
@@ -23,7 +24,7 @@ func TestSQLiteStore_roundTrip(t *testing.T) {
 	ctx := context.Background()
 	if err := store.AppendMessage(ctx, session.Message{
 		SessionID: sess.ID,
-		Role:      "user",
+		Role:      role.User,
 		Content:   "hello world from test",
 	}); err != nil {
 		t.Fatal(err)
@@ -61,7 +62,7 @@ func TestSQLiteStore_messageDurations(t *testing.T) {
 	ctx := context.Background()
 	if err := store.AppendMessage(ctx, session.Message{
 		SessionID:           sess.ID,
-		Role:                "assistant",
+		Role:                role.Assistant,
 		Content:             "hi",
 		ReasoningContent:    "think",
 		ReasoningDurationMS: 1500,

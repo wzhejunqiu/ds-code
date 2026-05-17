@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/session"
@@ -90,7 +91,7 @@ func (s *Service) summarize(ctx context.Context, sess session.Session, transcrip
 
 	resp, err := s.LLM.Chat(ctx, llm.Request{
 		MergedSystem: "You produce concise technical conversation summaries.",
-		Messages:     []llm.Message{{Role: "user", Content: prompt}},
+		Messages:     []llm.Message{{Role: role.User, Content: prompt}},
 		Model:        sess.Model,
 		MaxTokens:    maxOut,
 		Stream:        false,
@@ -127,13 +128,13 @@ func formatTurnsForCompact(turns []session.UserTurn) string {
 		fmt.Fprintf(&b, "--- Turn %d ---\n", i+1)
 		for _, m := range t.Messages {
 			switch m.Role {
-			case "system":
+			case role.System:
 				continue
-			case "user":
+			case role.User:
 				b.WriteString("User: ")
 				b.WriteString(truncateCompact(m.Content, 8000))
 				b.WriteByte('\n')
-			case "assistant":
+			case role.Assistant:
 				if m.ReasoningContent != "" {
 					b.WriteString("Assistant (reasoning): ")
 					b.WriteString(truncateCompact(m.ReasoningContent, 4000))
@@ -144,7 +145,7 @@ func formatTurnsForCompact(turns []session.UserTurn) string {
 					b.WriteString(truncateCompact(m.Content, 8000))
 					b.WriteByte('\n')
 				}
-			case "tool":
+			case role.Tool:
 				b.WriteString("Tool ")
 				b.WriteString(m.ToolName)
 				b.WriteString(": ")

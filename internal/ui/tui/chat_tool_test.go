@@ -8,7 +8,7 @@ import (
 
 func TestRenderChatToolBlockCollapsed(t *testing.T) {
 	blocks := []chatBlock{{
-		role:        "tool",
+		role:        chatRoleTool,
 		toolName:    "shell",
 		toolArgs:    `{"command":"echo hi"}`,
 		toolCommand: "echo hi",
@@ -29,7 +29,7 @@ func TestRenderChatToolBlockCollapsed(t *testing.T) {
 
 func TestRenderChatToolBlockExpanded(t *testing.T) {
 	blocks := []chatBlock{{
-		role:        "tool",
+		role:        chatRoleTool,
 		toolName:    "shell",
 		toolArgs:    `{"command":"echo hi"}`,
 		toolCommand: "echo hi",
@@ -45,8 +45,8 @@ func TestRenderChatToolBlockExpanded(t *testing.T) {
 
 func TestRenderChatToolBeforeAssistant(t *testing.T) {
 	blocks := []chatBlock{
-		{role: "tool", toolName: "read_file", toolArgs: "path=main.go", toolResult: "package main"},
-		{role: "assistant"},
+		{role: chatRoleTool, toolName: "read_file", toolArgs: "path=main.go", toolResult: "package main"},
+		{role: chatRoleAssistant},
 	}
 	blocks[1].content.WriteString("done")
 

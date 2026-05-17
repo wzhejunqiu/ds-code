@@ -7,6 +7,7 @@ import (
 
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
 )
@@ -18,14 +19,14 @@ func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chatBl
 	for i := 0; i < len(msgs); i++ {
 		msg := msgs[i]
 		switch msg.Role {
-		case "user":
-			b := chatBlock{role: "user"}
+		case role.User:
+			b := chatBlock{role: chatRoleUser}
 			b.content.WriteString(msg.Content)
 			blocks = append(blocks, b)
-		case "assistant":
+		case role.Assistant:
 			calls := parseToolCalls(msg.ToolCallsJSON)
 			if msg.Content != "" || msg.ReasoningContent != "" {
-				b := chatBlock{role: "assistant", reasoningOpen: reasoningOpen}
+				b := chatBlock{role: chatRoleAssistant, reasoningOpen: reasoningOpen}
 				b.content.WriteString(msg.Content)
 				b.reasoning.WriteString(msg.ReasoningContent)
 				if msg.ReasoningDurationMS > 0 {
@@ -45,7 +46,7 @@ func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chatBl
 					}
 					argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments))
 					blocks = append(blocks, chatBlock{
-						role:        "tool",
+						role:        chatRoleTool,
 						toolName:    tc.Name,
 						toolArgs:    argsLine,
 						toolCommand: command,
@@ -54,8 +55,12 @@ func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chatBl
 					})
 				}
 			}
-		case "tool":
+		case role.Tool:
 			// rendered with the preceding assistant tool_calls row
+		case role.System:
+			if msg.Content == interruptSessionMarker() {
+				blocks = append(blocks, chatBlock{role: chatRoleInterrupt})
+			}
 		}
 	}
 	return blocks
@@ -82,7 +87,7 @@ func trimJSON(s string) string {
 
 func findToolMessage(msgs []session.Message, start int, callID string) *session.Message {
 	for i := start; i < len(msgs); i++ {
-		if msgs[i].Role != "tool" {
+		if msgs[i].Role != role.Tool {
 			break
 		}
 		if msgs[i].ToolCallID == callID {

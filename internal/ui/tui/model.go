@@ -15,20 +15,10 @@ import (
 	"github.com/hejunqiu/ds-code/internal/agent"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
-)
-
-type overlayKind int
-
-const (
-	overlayNone overlayKind = iota
-	overlayContext
-	overlayHelp
-	overlayComplete
-	overlayResume
-	overlayPrompt
 )
 
 type model struct {
@@ -200,19 +190,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		switch msg.String() {
-		case "ctrl+c":
-			if m.running {
-				m.clearExitConfirm()
-				m.errLine = runningTurnHint
-				return m, exitConfirmTimeoutTick()
-			}
-			return m.handleExitConfirmKey("ctrl+c")
-		case "ctrl+d":
-			return m.handleExitConfirmKey("ctrl+d")
+		case "ctrl+c", "ctrl+d":
+			return m.handleExitKey(msg.String())
 		case "ctrl+r":
 			m.reasoningAll = !m.reasoningAll
 			for i := range m.chat {
-				if m.chat[i].role == "assistant" {
+				if m.chat[i].role == chatRoleAssistant {
 					m.chat[i].reasoningOpen = m.reasoningAll
 				}
 			}
@@ -248,14 +231,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case streamContentMsg:
-		if m.running {
+		if m.turnEventsAllowed() {
 			m.clearPlanningBlock()
 			m.appendAssistantContent(msg.delta)
 			m.syncChatView()
 		}
 		return m, nil
 	case streamReasoningMsg:
-		if m.running {
+		if m.turnEventsAllowed() {
 			m.clearPlanningBlock()
 			var cmd tea.Cmd
 			if m.appendAssistantReasoning(msg.delta) {
@@ -266,7 +249,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case planningStartMsg:
-		if m.running {
+		if m.turnEventsAllowed() {
 			m.appendPlanningBlock()
 			m.syncChatView()
 			return m, m.nextThinkingTickCmd()
@@ -284,7 +267,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case slashOutputMsg:
 		if msg.text != "" {
-			m.chat = append(m.chat, chatBlock{role: "assistant"})
+			m.chat = append(m.chat, chatBlock{role: chatRoleAssistant})
 			m.chat[len(m.chat)-1].content.WriteString(msg.text)
 		}
 		m.refreshStatus()
@@ -338,19 +321,28 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case toolStartMsg:
+		if !m.turnEventsAllowed() {
+			return m, nil
+		}
 		m.appendToolBlock(msg.name, msg.args, msg.command, "", true, false)
 		m.toolLines = append(m.toolLines, toolLine(msg.name, msg.args, msg.command, "", true, false))
 		m.syncChatView()
 		m.syncToolView()
 		return m, nil
 	case assistantSegmentEndMsg:
+		if !m.turnEventsAllowed() {
+			return m, nil
+		}
 		m.finalizeLastAssistant(time.Now())
 		return m, nil
 	case toolEndMsg:
+		if !m.turnEventsAllowed() {
+			return m, nil
+		}
 		m.finishToolBlock(msg.name, msg.args, msg.command, msg.result, msg.isError)
 		m.toolLines = m.toolLines[:0]
 		for _, b := range m.chat {
-			if b.role == "tool" {
+			if b.role == chatRoleTool {
 				preview := b.toolResult
 				if preview == "" && b.toolRunning {
 					preview = "…"
@@ -386,18 +378,18 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		now := time.Now()
 		m.finalizeLastAssistant(now)
 		for i := range m.chat {
-			if m.chat[i].role == "tool" && m.chat[i].toolRunning {
+			if m.chat[i].role == chatRoleTool && m.chat[i].toolRunning {
 				m.chat[i].toolRunning = false
 			}
 		}
 		m.applyTurnMetrics(msg.result)
-		if msg.err != nil {
-			switch {
-			case m.currentTurnInterrupted():
-				m.errLine = ""
-			case errors.Is(msg.err, context.Canceled):
+		if m.currentTurnInterrupted() {
+			m.errLine = ""
+			m.persistTurnInterrupt()
+		} else if msg.err != nil {
+			if errors.Is(msg.err, context.Canceled) {
 				m.errLine = "turn cancelled"
-			default:
+			} else {
 				m.errLine = msg.err.Error()
 			}
 		} else {
@@ -481,6 +473,15 @@ func exitConfirmHintFor(key string) string {
 	return "Press Ctrl+D again to exit"
 }
 
+func (m *model) handleExitKey(key string) (tea.Model, tea.Cmd) {
+	if m.running {
+		m.clearExitConfirm()
+		m.errLine = runningTurnHint
+		return m, exitConfirmTimeoutTick()
+	}
+	return m.handleExitConfirmKey(key)
+}
+
 func (m *model) handleExitConfirmKey(key string) (tea.Model, tea.Cmd) {
 	if m.exitConfirmPending {
 		if m.exitConfirmKey != key {
@@ -538,20 +539,22 @@ func (m *model) appendInterruptBlock() {
 	m.finalizeLastAssistant(now)
 	m.clearPlanningBlock()
 	for i := range m.chat {
-		if m.chat[i].role == "tool" && m.chat[i].toolRunning {
+		if m.chat[i].role == chatRoleTool && m.chat[i].toolRunning {
 			m.chat[i].toolRunning = false
 		}
 	}
-	m.chat = append(m.chat, chatBlock{role: "interrupt"})
-	if m.width > 0 {
-		m.syncChatView()
-	}
+	m.chat = append(m.chat, chatBlock{role: chatRoleInterrupt})
+	m.syncChatView()
+}
+
+func (m *model) turnEventsAllowed() bool {
+	return m.running && !m.currentTurnInterrupted()
 }
 
 func (m *model) currentTurnInterrupted() bool {
 	lastUser := -1
 	for i, b := range m.chat {
-		if b.role == "user" {
+		if b.role == chatRoleUser {
 			lastUser = i
 		}
 	}
@@ -559,11 +562,22 @@ func (m *model) currentTurnInterrupted() bool {
 		return false
 	}
 	for i := lastUser + 1; i < len(m.chat); i++ {
-		if m.chat[i].role == "interrupt" {
+		if m.chat[i].role == chatRoleInterrupt {
 			return true
 		}
 	}
 	return false
+}
+
+func (m *model) persistTurnInterrupt() {
+	if m.deps == nil || m.deps.Store == nil || m.sessionID == "" {
+		return
+	}
+	_ = m.deps.Store.AppendMessage(context.Background(), session.Message{
+		SessionID: m.sessionID,
+		Role:      role.System,
+		Content:   interruptSessionMarker(),
+	})
 }
 
 func (m *model) clearExitConfirm() {
@@ -723,9 +737,9 @@ func (m *model) submitLine(line string) tea.Cmd {
 		}
 	}
 
-	m.chat = append(m.chat, chatBlock{role: "user"})
+	m.chat = append(m.chat, chatBlock{role: chatRoleUser})
 	m.chat[len(m.chat)-1].content.WriteString(line)
-	m.chat = append(m.chat, chatBlock{role: "assistant", streaming: true, reasoningOpen: m.reasoningAll})
+	m.chat = append(m.chat, chatBlock{role: chatRoleAssistant, streaming: true, reasoningOpen: m.reasoningAll})
 	m.syncChatView()
 	m.running = true
 	m.turnEscPending = false
@@ -750,8 +764,8 @@ func (m *model) showHelpOverlay() tea.Cmd {
 	buf.WriteString("  Ctrl+T       Toggle tool log panel\n")
 	buf.WriteString("  Ctrl+L       Context usage panel\n")
 	buf.WriteString("  Esc          Cancel turn (while running)\n")
-	buf.WriteString("  Ctrl+C       Exit when idle (press twice); while running, use Esc to cancel\n")
-	buf.WriteString("  Ctrl+D       Exit (press twice when idle)\n")
+	buf.WriteString("  Ctrl+C       Exit when idle (press twice); while running, shows Esc hint\n")
+	buf.WriteString("  Ctrl+D       Same as Ctrl+C\n")
 	text := buf.String()
 	return func() tea.Msg {
 		return helpOverlayMsg{text: text}
@@ -827,7 +841,7 @@ func (m *model) showContextJSON() tea.Cmd {
 func (m *model) appendPlanningBlock() {
 	m.clearPlanningBlock()
 	m.chat = append(m.chat, chatBlock{
-		role:              "planning",
+		role:              chatRolePlanning,
 		streaming:         true,
 		planningStartedAt: time.Now(),
 	})
@@ -835,7 +849,7 @@ func (m *model) appendPlanningBlock() {
 
 func (m *model) clearPlanningBlock() {
 	for i := len(m.chat) - 1; i >= 0; i-- {
-		if m.chat[i].role == "planning" {
+		if m.chat[i].role == chatRolePlanning {
 			m.chat = append(m.chat[:i], m.chat[i+1:]...)
 			return
 		}
@@ -846,19 +860,19 @@ func (m *model) needsPlanningTick() bool {
 	if !m.running || len(m.chat) == 0 {
 		return false
 	}
-	return m.chat[len(m.chat)-1].role == "planning"
+	return m.chat[len(m.chat)-1].role == chatRolePlanning
 }
 
 func (m *model) appendToolBlock(name, args, command, result string, running, isError bool) {
 	if len(m.chat) > 0 {
 		last := &m.chat[len(m.chat)-1]
-		if last.role == "assistant" {
+		if last.role == chatRoleAssistant {
 			last.finalizeReasoning(time.Now())
 			last.streaming = false
 		}
 	}
 	m.chat = append(m.chat, chatBlock{
-		role:        "tool",
+		role:        chatRoleTool,
 		toolName:    name,
 		toolArgs:    args,
 		toolCommand: command,
@@ -870,7 +884,7 @@ func (m *model) appendToolBlock(name, args, command, result string, running, isE
 
 func (m *model) finishToolBlock(name, args, command, result string, isError bool) {
 	for i := len(m.chat) - 1; i >= 0; i-- {
-		if m.chat[i].role != "tool" || !m.chat[i].toolRunning {
+		if m.chat[i].role != chatRoleTool || !m.chat[i].toolRunning {
 			continue
 		}
 		m.chat[i].toolName = name
@@ -886,7 +900,7 @@ func (m *model) finishToolBlock(name, args, command, result string, isError bool
 
 func (m *model) finalizeLastAssistant(at time.Time) {
 	for i := len(m.chat) - 1; i >= 0; i-- {
-		if m.chat[i].role != "assistant" {
+		if m.chat[i].role != chatRoleAssistant {
 			continue
 		}
 		m.chat[i].finalizeReasoning(at)
@@ -911,7 +925,7 @@ func (m *model) applyTurnMetrics(result *agent.TurnResult) {
 	}
 	idx := -1
 	for i := len(m.chat) - 1; i >= 0; i-- {
-		if m.chat[i].role != "assistant" {
+		if m.chat[i].role != chatRoleAssistant {
 			continue
 		}
 		if idx < 0 {
@@ -937,9 +951,9 @@ func (m *model) ensureStreamingAssistant() *chatBlock {
 	needNew := len(m.chat) == 0
 	if !needNew {
 		switch m.chat[len(m.chat)-1].role {
-		case "tool", "user", "planning":
+		case chatRoleTool, chatRoleUser, chatRolePlanning:
 			needNew = true
-		case "assistant":
+		case chatRoleAssistant:
 			// Keep streaming into the current assistant until a tool/user/planning
 			// block breaks the segment. Do not split on content+!streaming alone — that
 			// created a trailing empty assistant and hid turn duration on the wrong block.
@@ -948,12 +962,12 @@ func (m *model) ensureStreamingAssistant() *chatBlock {
 		}
 	}
 	if needNew && len(m.chat) > 0 {
-		if prev := &m.chat[len(m.chat)-1]; prev.role == "assistant" {
+		if prev := &m.chat[len(m.chat)-1]; prev.role == chatRoleAssistant {
 			prev.finalizeReasoning(time.Now())
 		}
 	}
 	if needNew {
-		m.chat = append(m.chat, chatBlock{role: "assistant", streaming: true, reasoningOpen: m.reasoningAll})
+		m.chat = append(m.chat, chatBlock{role: chatRoleAssistant, streaming: true, reasoningOpen: m.reasoningAll})
 	}
 	return &m.chat[len(m.chat)-1]
 }
@@ -974,7 +988,7 @@ func (m *model) needsThinkingTick() bool {
 		return false
 	}
 	blk := m.chat[len(m.chat)-1]
-	return blk.role == "assistant" && !blk.reasoningStartedAt.IsZero() && blk.reasoningEndedAt.IsZero()
+	return blk.role == chatRoleAssistant && !blk.reasoningStartedAt.IsZero() && blk.reasoningEndedAt.IsZero()
 }
 
 func (m *model) thinkingElapsed() time.Duration {
@@ -1262,7 +1276,7 @@ func (m *model) View() string {
 		footerLeft += " (on)"
 	}
 	if m.running {
-		footerLeft = "Esc cancel · Ctrl+D exit (twice) · Ctrl+R reasoning · Ctrl+O tool details"
+		footerLeft = "Esc cancel · Ctrl+R reasoning · Ctrl+O tool details"
 		if m.toolDetailsVisible {
 			footerLeft += " (on)"
 		}

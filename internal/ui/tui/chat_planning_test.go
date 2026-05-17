@@ -10,7 +10,7 @@ func TestRenderChatPlanningBlock(t *testing.T) {
 	started := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	now := started.Add(2 * time.Second)
 	blocks := []chatBlock{{
-		role:              "planning",
+		role:              chatRolePlanning,
 		streaming:         true,
 		planningStartedAt: started,
 	}}

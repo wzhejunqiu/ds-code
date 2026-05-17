@@ -18,6 +18,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"go.uber.org/zap"
@@ -56,7 +57,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 	}
 	if err := r.Sessions.AppendMessage(ctx, session.Message{
 		SessionID: sessionID,
-		Role:      "user",
+		Role:      role.User,
 		Content:   expanded,
 	}); err != nil {
 		return nil, err
@@ -174,7 +175,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		reasoningDur := st.duration()
 		assistantMsg := session.Message{
 			SessionID:           sessionID,
-			Role:                "assistant",
+			Role:                role.Assistant,
 			Content:             resp.Content,
 			ReasoningContent:    resp.ReasoningContent,
 			ReasoningDurationMS: durationMS(reasoningDur),
@@ -239,7 +240,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			body = ctxpkg.TruncateToolResult(body, r.Cfg)
 			if err := r.Sessions.AppendMessage(ctx, session.Message{
 				SessionID:  sessionID,
-				Role:       "tool",
+				Role:       role.Tool,
 				Content:    body,
 				ToolCallID: tc.ID,
 				ToolName:   tc.Name,

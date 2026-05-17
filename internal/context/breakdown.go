@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	tokdeepseek "github.com/hejunqiu/ds-code/internal/tokenizer/deepseek"
 )
@@ -96,7 +97,7 @@ func CountBreakdown(view *APIContextView) (ContextBreakdown, error) {
 	var subagentParts, convParts []string
 	for _, m := range view.Messages {
 		s := serializeMessageForCount(m)
-		if m.Role == "tool" && m.Name == "task" {
+		if m.Role == role.Tool && m.Name == "task" {
 			subagentParts = append(subagentParts, s)
 		} else {
 			convParts = append(convParts, s)
@@ -109,7 +110,7 @@ func CountBreakdown(view *APIContextView) (ContextBreakdown, error) {
 
 func serializeMessageForCount(m llm.Message) string {
 	switch m.Role {
-	case "assistant":
+	case role.Assistant:
 		var b strings.Builder
 		if m.ReasoningContent != "" {
 			b.WriteString(m.ReasoningContent)
@@ -122,7 +123,7 @@ func serializeMessageForCount(m llm.Message) string {
 			b.Write(raw)
 		}
 		return b.String()
-	case "tool":
+	case role.Tool:
 		return m.Content
 	default:
 		return m.Content

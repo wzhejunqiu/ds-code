@@ -21,7 +21,7 @@ var (
 )
 
 type markdownPart struct {
-	kind  string // "heading" | "body"
+	kind  markdownPartKind
 	level int
 	text  string
 }
@@ -34,7 +34,7 @@ func renderMarkdown(content string, width int) (string, error) {
 	var b strings.Builder
 	for i, p := range parts {
 		switch p.kind {
-		case "heading":
+		case markdownPartHeading:
 			h := renderChatHeading(p.level, p.text, width)
 			if h == "" {
 				continue
@@ -47,7 +47,7 @@ func renderMarkdown(content string, width int) (string, error) {
 			}
 			b.WriteString(h)
 			b.WriteByte('\n')
-		case "body":
+		case markdownPartBody:
 			text := strings.TrimSpace(p.text)
 			if text == "" {
 				continue
@@ -72,7 +72,7 @@ func splitMarkdownParts(content string) []markdownPart {
 		if body.Len() == 0 {
 			return
 		}
-		parts = append(parts, markdownPart{kind: "body", text: body.String()})
+		parts = append(parts, markdownPart{kind: markdownPartBody, text: body.String()})
 		body.Reset()
 	}
 
@@ -80,7 +80,7 @@ func splitMarkdownParts(content string) []markdownPart {
 		if m := atxHeadingLine.FindStringSubmatch(line); m != nil {
 			flushBody()
 			parts = append(parts, markdownPart{
-				kind:  "heading",
+				kind:  markdownPartHeading,
 				level: len(m[1]),
 				text:  m[2],
 			})

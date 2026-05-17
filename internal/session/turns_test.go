@@ -3,15 +3,16 @@ package session_test
 import (
 	"testing"
 
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
 func TestSplitUserTurns(t *testing.T) {
 	msgs := []session.Message{
-		{ID: 1, Role: "user", Content: "hi"},
-		{ID: 2, Role: "assistant", Content: "hello"},
-		{ID: 3, Role: "tool", ToolName: "read_file", Content: "ok"},
-		{ID: 4, Role: "user", Content: "next"},
+		{ID: 1, Role: role.User, Content: "hi"},
+		{ID: 2, Role: role.Assistant, Content: "hello"},
+		{ID: 3, Role: role.Tool, ToolName: "read_file", Content: "ok"},
+		{ID: 4, Role: role.User, Content: "next"},
 	}
 	turns := session.SplitUserTurns(msgs)
 	if len(turns) != 2 {
