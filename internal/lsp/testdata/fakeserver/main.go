@@ -11,7 +11,7 @@ import (
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
-	writer := os.Stdout
+	writer := bufio.NewWriter(os.Stdout)
 
 	for {
 		msg, err := transport.ReadMessage(reader)

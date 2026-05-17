@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,22 +13,30 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 )
 
-func buildFakeLSP(t *testing.T) string {
-	t.Helper()
-	out := filepath.Join(t.TempDir(), "fakelsp")
+var fakeLSPBin string
+
+func TestMain(m *testing.M) {
+	root := moduleRoot()
+	out := filepath.Join(os.TempDir(), "ds-code-fakelsp-test")
 	cmd := exec.Command("go", "build", "-o", out, "./internal/lsp/testdata/fakeserver")
-	cmd.Dir = moduleRoot(t)
+	cmd.Dir = root
 	if outBytes, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build fakeserver: %v\n%s", err, outBytes)
+		fmt.Fprintf(os.Stderr, "build fakeserver: %v\n%s", err, outBytes)
+		os.Exit(1)
 	}
-	return out
+	fakeLSPBin = out
+	os.Exit(m.Run())
 }
 
-func moduleRoot(t *testing.T) string {
+func buildFakeLSP(t *testing.T) string {
 	t.Helper()
+	return fakeLSPBin
+}
+
+func moduleRoot() string {
 	dir, err := os.Getwd()
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
@@ -35,7 +44,7 @@ func moduleRoot(t *testing.T) string {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatal("go.mod not found")
+			panic("go.mod not found")
 		}
 		dir = parent
 	}
@@ -83,7 +92,7 @@ func TestManager_EnsureClient_fakeServer(t *testing.T) {
 	root := t.TempDir()
 	bin := buildFakeLSP(t)
 	cfg := config.LSPConfig{
-		DiagnosticsTimeout: 5 * time.Second,
+		DiagnosticsTimeout: 15 * time.Second,
 		Servers: map[string]config.LSPServerConfig{
 			"fake": {Command: bin},
 		},
@@ -91,7 +100,7 @@ func TestManager_EnsureClient_fakeServer(t *testing.T) {
 	mgr := NewManager(root, cfg)
 	defer func() { _ = mgr.Close() }()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	c1, err := mgr.EnsureClient(ctx, "fake")

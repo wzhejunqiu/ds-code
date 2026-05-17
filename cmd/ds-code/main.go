@@ -9,6 +9,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
+	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/version"
 	"github.com/hejunqiu/ds-code/internal/versioninfo"
@@ -51,7 +52,7 @@ func newRootCmd() *cobra.Command {
 func runRoot(cmd *cobra.Command, _ []string) error {
 	prompt, _ := cmd.Flags().GetString("prompt")
 	// Interactive TUI and -p both call the LLM; only the non-TTY idle path skips it.
-	requireKey := prompt != "" || permissionIsTTY()
+	requireKey := prompt != "" || permission.IsInteractiveTTY()
 
 	cfg, err := config.Load(cmd, config.Options{RequireAPIKey: requireKey})
 	if err != nil {
@@ -72,20 +73,12 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 		return application.runNonInteractive(cmd)
 	}
 
-	if permissionIsTTY() {
+	if permission.IsInteractiveTTY() {
 		return application.runTUI(cmd, "")
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), "stdin is not a TTY. Use: ds-code -p \"your task\"")
 	return nil
-}
-
-func permissionIsTTY() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return (fi.Mode() & os.ModeCharDevice) != 0
 }
 
 func sessionsCmd() *cobra.Command {

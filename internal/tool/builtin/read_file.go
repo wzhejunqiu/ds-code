@@ -50,7 +50,7 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	if in.Path == "" {
 		return "", fmt.Errorf("path is required")
 	}
-	abs, err := t.Perm.ResolvePath(in.Path)
+	abs, err := t.Perm.CheckReadablePath(in.Path)
 	if err != nil {
 		return "", err
 	}

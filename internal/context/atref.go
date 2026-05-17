@@ -83,10 +83,7 @@ func (e *AtExpander) expandRef(ref string, perFileMax, remaining int) (string, i
 	isDir := strings.HasSuffix(ref, "/")
 	refPath := strings.TrimSuffix(ref, "/")
 
-	if err := e.Perm.Check("read_file", map[string]any{"path": refPath}); err != nil {
-		return "", 0, err
-	}
-	abs, err := e.Perm.ResolvePath(refPath)
+	abs, err := e.Perm.CheckReadablePath(refPath)
 	if err != nil {
 		return "", 0, err
 	}
@@ -157,11 +154,19 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 			}
 			return nil
 		}
-		rel, _ := filepath.Rel(e.Perm.Workspace, path)
+		relWalk, err := filepath.Rel(abs, path)
+		if err != nil {
+			return nil
+		}
+		dirRef := strings.TrimSuffix(strings.TrimSuffix(ref, "/"), "\\")
+		rel := filepath.ToSlash(filepath.Join(dirRef, relWalk))
 		if e.Gitignore != nil && e.Gitignore.Ignored(rel) {
 			return nil
 		}
-		files = append(files, entry{rel: filepath.ToSlash(rel)})
+		if permission.IsSensitiveAbs(path) {
+			return nil
+		}
+		files = append(files, entry{rel: rel})
 		if len(files) >= maxFiles+1 {
 			return errStopAtRef
 		}
@@ -184,8 +189,9 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 			b.WriteString("\n... [remaining files skipped: budget exhausted]")
 			break
 		}
-		full, err := e.Perm.ResolvePath(f.rel)
+		full, err := e.Perm.CheckReadablePath(f.rel)
 		if err != nil {
+			fmt.Fprintf(&b, "\n%s: error: %v\n", f.rel, err)
 			continue
 		}
 		block, n, err := e.expandFile(f.rel, full, perFileMax, remaining-used)

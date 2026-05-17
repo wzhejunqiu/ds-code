@@ -51,6 +51,19 @@ func WriteMessage(w io.Writer, payload any) error {
 	if _, err := hdr.WriteTo(w); err != nil {
 		return err
 	}
-	_, err = w.Write(data)
-	return err
+	if _, err = w.Write(data); err != nil {
+		return err
+	}
+	flushWriter(w)
+	return nil
+}
+
+type writeFlusher interface {
+	Flush() error
+}
+
+func flushWriter(w io.Writer) {
+	if f, ok := w.(writeFlusher); ok {
+		_ = f.Flush()
+	}
 }

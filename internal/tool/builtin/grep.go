@@ -59,7 +59,7 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	if searchPath == "" {
 		searchPath = "."
 	}
-	root, err := t.Perm.ResolvePath(searchPath)
+	root, err := t.Perm.CheckReadablePath(searchPath)
 	if err != nil {
 		return "", err
 	}
@@ -77,6 +77,12 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 			if d.Name() == ".git" {
 				return filepath.SkipDir
 			}
+			if permission.IsSensitiveAbs(path) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if permission.IsSensitiveAbs(path) {
 			return nil
 		}
 		rel, _ := filepath.Rel(t.Perm.Workspace, path)

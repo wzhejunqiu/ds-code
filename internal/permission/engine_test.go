@@ -134,6 +134,18 @@ func TestEngine_check_deniesHighRiskShell(t *testing.T) {
 	}
 }
 
+func TestEngine_checkReadablePath_deniesSensitive(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	e := permission.NewEngine("auto", root, true)
+	_, err := e.CheckReadablePath(".env")
+	if err == nil {
+		t.Fatal("expected sensitive denial")
+	}
+}
+
 func TestEngine_check_applyPatchSensitiveFile(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("KEY=1\n"), 0o644); err != nil {

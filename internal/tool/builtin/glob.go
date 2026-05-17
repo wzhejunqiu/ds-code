@@ -54,7 +54,7 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	if base == "" {
 		base = "."
 	}
-	root, err := t.Perm.ResolvePath(base)
+	root, err := t.Perm.CheckReadablePath(base)
 	if err != nil {
 		return "", err
 	}
@@ -79,6 +79,9 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	for _, m := range matches {
 		if ctx.Err() != nil {
 			return "", ctx.Err()
+		}
+		if permission.IsSensitiveAbs(m) {
+			continue
 		}
 		rel, err := filepath.Rel(root, m)
 		if err != nil {
@@ -117,6 +120,12 @@ func globDoubleStar(root, pattern string, limit int) ([]string, error) {
 			if d.Name() == ".git" {
 				return filepath.SkipDir
 			}
+			if permission.IsSensitiveAbs(path) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if permission.IsSensitiveAbs(path) {
 			return nil
 		}
 		base := filepath.Base(path)

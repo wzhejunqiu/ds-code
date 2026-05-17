@@ -171,14 +171,20 @@ func (e *Engine) isWriteTool(tool string) bool {
 }
 
 func (e *Engine) checkPath(rel string) error {
+	_, err := e.CheckReadablePath(rel)
+	return err
+}
+
+// CheckReadablePath resolves rel under the workspace and denies sensitive paths (S3).
+func (e *Engine) CheckReadablePath(rel string) (string, error) {
 	abs, err := e.ResolvePath(rel)
 	if err != nil {
-		return err
+		return "", err
 	}
-	if e.isSensitive(abs) {
-		return fmt.Errorf("%w: sensitive path %s", ErrDenied, rel)
+	if IsSensitiveAbs(abs) {
+		return "", fmt.Errorf("%w: sensitive path %s", ErrDenied, rel)
 	}
-	return nil
+	return abs, nil
 }
 
 // ResolvePath resolves a path under workspace and blocks escape (S2: symlinks evaluated).
@@ -234,29 +240,10 @@ func (e *Engine) ensureUnderWorkspace(ws, abs, original string) error {
 	return nil
 }
 
-var sensitivePatterns = []string{
-	".env",
-	".ssh",
-	"id_rsa",
-	"id_ed25519",
-	"credentials",
-	"secrets",
-}
-
-func (e *Engine) isSensitive(abs string) bool {
-	lower := strings.ToLower(filepath.ToSlash(abs))
-	for _, p := range sensitivePatterns {
-		if strings.Contains(lower, p) {
-			return true
-		}
-	}
-	return false
-}
-
 func (e *Engine) checkSensitiveShell(cmd string) error {
-	lower := strings.ToLower(cmd)
-	for _, p := range []string{"rm -rf /", "mkfs", ":(){", "curl | sh", "wget | sh"} {
-		if strings.Contains(lower, p) {
+	norm := normalizeShellCmd(cmd)
+	for _, p := range highRiskShellPatterns {
+		if strings.Contains(norm, p) {
 			return fmt.Errorf("%w: high-risk shell command blocked", ErrDenied)
 		}
 	}

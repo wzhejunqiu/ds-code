@@ -46,7 +46,7 @@ func (t *ListDirTool) Execute(ctx context.Context, args json.RawMessage) (string
 	if in.Path == "" {
 		in.Path = "."
 	}
-	root, err := t.Perm.ResolvePath(in.Path)
+	root, err := t.Perm.CheckReadablePath(in.Path)
 	if err != nil {
 		return "", err
 	}
@@ -69,6 +69,10 @@ func (t *ListDirTool) Execute(ctx context.Context, args json.RawMessage) (string
 		}
 		rel := filepath.Join(in.Path, name)
 		if t.Gitignore != nil && t.Gitignore.Ignored(rel) {
+			continue
+		}
+		abs := filepath.Join(root, name)
+		if permission.IsSensitiveAbs(abs) {
 			continue
 		}
 		if e.IsDir() {
