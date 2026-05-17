@@ -11,12 +11,20 @@ func TestIsSensitiveAbs_sensitivePaths(t *testing.T) {
 	cases := []string{
 		"/proj/.env",
 		"/proj/.env.local",
+		"/proj/.envrc",
 		"/proj/.ssh/config",
+		"/proj/.aws/credentials",
+		"/proj/.docker/config.json",
+		"/proj/.kube/config",
+		"/proj/.gnupg/private-keys-v1.d/key",
 		"/proj/credentials/api.json",
 		"/proj/secrets/vault.txt",
 		"/proj/deploy/id_rsa",
 		"/proj/cert/server.pem",
 		"/proj/token.json",
+		"/proj/.npmrc",
+		"/proj/service-account.json",
+		"/proj/kubeconfig",
 	}
 	for _, p := range cases {
 		if !permission.IsSensitiveAbs(p) {

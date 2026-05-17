@@ -241,6 +241,9 @@ func (e *Engine) ensureUnderWorkspace(ws, abs, original string) error {
 }
 
 func (e *Engine) checkSensitiveShell(cmd string) error {
+	if err := e.checkShellDenylistPaths(cmd); err != nil {
+		return err
+	}
 	norm := normalizeShellCmd(cmd)
 	for _, p := range highRiskShellPatterns {
 		if strings.Contains(norm, p) {

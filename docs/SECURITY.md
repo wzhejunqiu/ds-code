@@ -8,7 +8,7 @@
 |------|------|
 | Prompt 注入经 tool 结果覆盖 system | Tool 输出带边界；`mergeSystem` 固定顺序；用户消息不能替换 system |
 | 路径遍历读写工作区外文件 | `permission.ResolvePath`：`..` 拦截、symlink 解析、jail 到 `project_root` |
-| 敏感文件泄露（`.env`、密钥） | 路径段级 denylist（`IsSensitiveAbs`）；读工具与 LSP 统一过滤；compact 摘要脱敏（S12） |
+| 敏感文件泄露（`.env`、密钥） | 路径段级 denylist（`IsSensitiveAbs`）；读工具、LSP、`shell` 统一过滤；`auto` 可读普通文件但仍受 denylist；compact 摘要脱敏（S12） |
 | API Key 进入仓库或配置 | 仅 `DS_CODE_DEEPSEEK_API_KEY` / `DEEPSEEK_API_KEY`；YAML 禁止 `api_key` |
 | SSRF（Web 工具） | `web.fetch_enabled` 默认关；`web.allowlist` 必填 |
 | MCP 写操作绕过权限 | MCP 工具走同一 `permission.Engine`；写工具检测器 |
@@ -21,8 +21,8 @@
 |----|------|------|
 | S1 | `internal/config` | API Key 仅环境变量；日志不打印 key |
 | S2 | `permission.ResolvePath` | 路径逃逸拦截 |
-| S3 | `permission.IsSensitiveAbs` / `CheckReadablePath` | 按路径段匹配：`.env*`、`.ssh`、`credentials/`、`secrets/`、密钥文件名等（启发式，非完备） |
-| S4 | `permission.checkSensitiveShell` | 高危 shell 模式拦截；`context` 取消杀子进程 |
+| S3 | `permission.IsSensitiveAbs` / `CheckReadablePath` | 按路径段匹配：`.env`、`.envrc`、`.env.*`、`.aws`、`.ssh`、`.docker`、`.kube`、`.gnupg`、`credentials/`、`secrets/`、密钥文件名等（启发式，非完备） |
+| S4 | `permission.checkSensitiveShell` | denylist 路径扫描 + 高危 shell 模式；`auto` 下 shell 可读普通文件但不可访问敏感路径；`context` 取消杀子进程 |
 | S5 | `context` tool 格式化 + system merge | 用户不能覆盖 system |
 | S6 | `internal/mcp` + `Perm.Check` | MCP 写操作统一权限 |
 | S7 | `session.OpenDefaultStore` | 按项目分库；`sessions.db` 权限 0600 |

@@ -134,6 +134,40 @@ func TestEngine_check_deniesHighRiskShell(t *testing.T) {
 	}
 }
 
+func TestEngine_auto_deniesShellReadingSensitiveFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("SECRET=1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	e := permission.NewEngine("auto", root, true)
+	cases := []string{
+		"cat .env",
+		"head .envrc",
+		"cat .aws/credentials",
+		`python3 -c 'open(".env").read()'`,
+	}
+	for _, cmd := range cases {
+		err := e.Check("shell", map[string]any{"command": cmd})
+		if err == nil {
+			t.Fatalf("auto mode should deny shell reading sensitive paths: %q", cmd)
+		}
+		if !errors.Is(err, permission.ErrDenied) {
+			t.Fatalf("cmd %q: err = %v, want ErrDenied", cmd, err)
+		}
+	}
+}
+
+func TestEngine_auto_allowsShellBenignRead(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "readme.txt"), []byte("ok\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e := permission.NewEngine("auto", root, true)
+	if err := e.Check("shell", map[string]any{"command": "cat readme.txt"}); err != nil {
+		t.Fatalf("benign shell read should be allowed in auto: %v", err)
+	}
+}
+
 func TestEngine_checkReadablePath_deniesSensitive(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("x"), 0o600); err != nil {

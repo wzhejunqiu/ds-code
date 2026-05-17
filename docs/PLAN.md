@@ -254,9 +254,10 @@ DeepSeek V4（`deepseek-v4-pro` / `deepseek-v4-flash`）：**上下文 1,048,576
 ### 权限沙箱与工作区
 
 - `readonly` / `ask`（默认）/ `auto`（`--dangerously-auto` 或 CI）
+- **`auto` 与 S3**：`auto` 仅省略写/shell 的 TUI 确认，**不**放宽敏感路径；可读工作区内普通文件，但 **S3 denylist 始终生效**（读工具、`@dir`、`shell` 均不可访问 `.env`、`.envrc`、`.aws` 等，见 [SECURITY.md](SECURITY.md)）
 - **工作区（workspace）** = 启动时解析的 **`project_root`**（[CONFIG.md §2.1](CONFIG.md#21-项目运行时目录projectsproject_id)）：所有读写在解析后须落在该目录下（`filepath.Clean` + `..` 拦截 + symlink 解析，S2）
 - **MCP 写操作**与内置 **同一** `Perm.Check(tool, args)` 路径
-- 路径逃逸、敏感文件 denylist（`.env`、`.ssh` 等）、shell 高危拦截、网络 allowlist
+- 路径逃逸、敏感文件 denylist（`.env`、`.envrc`、`.aws`、`.ssh` 等）、`shell` 敏感路径扫描 + 高危模式拦截、网络 allowlist
 - **非 TTY + `ask`**：无法弹窗时 **拒绝**写/shell/网络写类操作并返回明确错误；须显式 `--permission-mode auto` 或 `--dangerously-auto`（见 [非交互模式](#非交互模式-p---json)）
 
 ### 会话、压缩与 Checkpoint
@@ -623,8 +624,8 @@ ds-code/
 |---|--------|----------|
 | S1 | API Key | 仅 `DS_CODE_DEEPSEEK_API_KEY` / `DEEPSEEK_API_KEY`；禁止 YAML/CLI；日志无 key |
 | S2 | 路径逃逸 | `..`、symlink 拦截 |
-| S3 | 敏感文件 | `.env`/`.ssh` 等 deny |
-| S4 | Shell | 高危确认；取消杀子进程 |
+| S3 | 敏感文件 | 段级 denylist（`.env`/`.envrc`/`.aws`/`.ssh` 等）；**与 permission_mode 无关**；`auto` 仍禁止 |
+| S4 | Shell | S3 路径扫描 + 高危模式；`ask` 写操作确认；取消杀子进程 |
 | S5 | Prompt 注入 | tool 边界标记；**user 不能覆盖 system** |
 | S6 | MCP | 用户配置；**写操作走 Perm**；崩溃隔离 |
 | S7 | 会话 | 按 `project_id` 分库；SQLite 权限 0600 |

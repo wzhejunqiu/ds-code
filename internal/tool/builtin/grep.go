@@ -85,7 +85,14 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		if permission.IsSensitiveAbs(path) {
 			return nil
 		}
-		rel, _ := filepath.Rel(t.Perm.Workspace, path)
+		relWalk, err := filepath.Rel(root, path)
+		if err != nil {
+			return nil
+		}
+		rel := filepath.ToSlash(relWalk)
+		if searchPath != "." {
+			rel = filepath.ToSlash(filepath.Join(searchPath, relWalk))
+		}
 		if t.Gitignore != nil && t.Gitignore.Ignored(rel) {
 			return nil
 		}

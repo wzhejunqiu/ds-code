@@ -8,6 +8,10 @@ import (
 // sensitiveDirSegments deny a path segment and its subtree (exact name match).
 var sensitiveDirSegments = map[string]bool{
 	".ssh":        true,
+	".aws":        true,
+	".docker":     true,
+	".kube":       true,
+	".gnupg":      true,
 	"credentials": true,
 	"secrets":     true,
 }
@@ -15,14 +19,17 @@ var sensitiveDirSegments = map[string]bool{
 // isSensitiveBasename reports whether a single path segment (file or directory name) is sensitive.
 func isSensitiveBasename(name string) bool {
 	lower := strings.ToLower(name)
-	if lower == ".env" || strings.HasPrefix(lower, ".env.") {
+	if lower == ".env" || lower == ".envrc" || strings.HasPrefix(lower, ".env.") {
 		return true
 	}
-	if strings.HasPrefix(lower, "id_rsa") || strings.HasPrefix(lower, "id_ed25519") || strings.HasPrefix(lower, "id_ecdsa") {
+	if strings.HasPrefix(lower, "id_rsa") || strings.HasPrefix(lower, "id_ed25519") ||
+		strings.HasPrefix(lower, "id_ecdsa") || strings.HasPrefix(lower, "id_dsa") {
 		return true
 	}
 	switch lower {
-	case "netrc", ".netrc", "token.json", "secrets.json", "credentials.json":
+	case "netrc", ".netrc", ".npmrc", ".pypirc",
+		"token.json", "secrets.json", "credentials.json",
+		"service-account.json", "kubeconfig":
 		return true
 	}
 	if strings.HasSuffix(lower, ".pem") || strings.HasSuffix(lower, ".key") {

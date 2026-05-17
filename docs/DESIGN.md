@@ -767,19 +767,21 @@ src/foo.go:45:1 [warning] unused parameter x
 |------|------|
 | `readonly` | 拒绝一切写/shell |
 | `ask`（默认） | 写/shell/网络 弹 TUI 确认 |
-| `auto` | `--dangerously-auto`；CI 可配置 |
+| `auto` | `--dangerously-auto`；CI 可配置；**无确认**执行写/shell，但 **S3 denylist 始终生效**（含 shell 读敏感路径） |
 
 ### 10.2 Check 流程
 
 ```go
 func (e *Engine) Check(tool string, args map[string]any) error {
     if e.mode == readonly && isWriteTool(tool) { return ErrDenied }
-    if e.isSensitivePath(args) { return ErrDenied }
-    if e.isHighRiskShell(args) { return e.prompt(...) }
+    if e.checkPath / CheckReadablePath(args) { return ErrDenied }  // S3, all modes
+    if tool == shell && e.checkSensitiveShell(cmd) { return ErrDenied }  // S3+S4
+    if e.mode == ask && isWriteTool(tool) { return e.prompt(...) }
     ...
 }
 ```
 
+- **S3 denylist** 与 `permission_mode` 无关：`readonly` / `ask` / `auto` 均禁止读/写/ shell 访问敏感路径；`auto` 仅省略写操作确认，**不**放宽密钥路径。
 - **MCP 写操作**与内置工具**同一** `Check` 入口（S6）。
 - **Workspace** = `project_root`；路径：`filepath.Clean`、禁止 `..` 逃逸、symlink 解析（S2）。
 - 非 TTY + `ask`：返回 `ErrPermissionNeedTTY`，不阻塞。
