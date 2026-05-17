@@ -169,9 +169,7 @@ func unwrapHeredoc(s string) string {
 			s = s[idx+1:]
 		}
 	}
-	if strings.HasSuffix(s, "EOF") {
-		s = strings.TrimSuffix(s, "EOF")
-	}
+	s = strings.TrimSuffix(s, "EOF")
 	return strings.TrimSpace(s)
 }
 

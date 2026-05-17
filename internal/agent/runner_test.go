@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
@@ -14,6 +15,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/hejunqiu/ds-code/internal/llm/mock"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
@@ -217,6 +219,57 @@ func (c *cancelOnNthChat) Chat(ctx context.Context, req llm.Request) (*llm.Respo
 		c.cancel()
 	}
 	return c.inner.Chat(ctx, req)
+}
+
+func TestRunner_permissionDenied(t *testing.T) {
+	cfg := testConfig()
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("deepseek-v4-pro", "max", "enabled", "readonly", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	perm := permission.NewEngine("readonly", dir, false)
+	reg := tool.NewRegistry()
+	reg.Register(&builtin.WriteFileTool{Cfg: cfg, Perm: perm, Strict: false})
+
+	mockLLM := &mock.Client{
+		Responses: []*llm.Response{{
+			ToolCalls: []llm.ToolCall{{
+				ID:        "call_1",
+				Name:      "write_file",
+				Arguments: `{"path":"out.txt","content":"x"}`,
+			}},
+			FinishReason: "tool_calls",
+		}},
+	}
+	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
+	r := &agent.Runner{
+		LLM:      mockLLM,
+		Tools:    reg,
+		Perm:     perm,
+		Sessions: store,
+		Context:  ctxSvc,
+		Cfg:      cfg,
+		MaxTurns: 5,
+	}
+
+	_, err = r.RunTurn(context.Background(), sess.ID, "write", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	msgs, _ := store.ListMessages(context.Background(), sess.ID)
+	var toolMsg string
+	for _, m := range msgs {
+		if m.Role == role.Tool {
+			toolMsg = m.Content
+			break
+		}
+	}
+	if !strings.Contains(strings.ToLower(toolMsg), "permission denied") {
+		t.Fatalf("tool result = %q, want permission denial", toolMsg)
+	}
 }
 
 func testConfig() *config.Config {

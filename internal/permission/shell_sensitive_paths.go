@@ -62,6 +62,11 @@ func (e *Engine) checkPathCandidate(rel string) error {
 	}
 	abs, err := e.ResolvePath(rel)
 	if err != nil {
+		// Block absolute paths and traversal outside workspace; ignore unresolvable
+		// relative tokens (e.g. shell redirection "2>/dev/null").
+		if filepath.IsAbs(rel) || strings.Contains(rel, "..") {
+			return fmt.Errorf("%w: shell path not allowed: %s", ErrDenied, rel)
+		}
 		return nil
 	}
 	if IsSensitiveAbs(abs) {

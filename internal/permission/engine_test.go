@@ -270,3 +270,26 @@ func TestEngine_askInteractive_prompterSummarizesMCPArgs(t *testing.T) {
 		t.Fatal("expected non-empty MCP summary for prompter")
 	}
 }
+
+func TestEngine_auto_deniesShellOutsideWorkspace(t *testing.T) {
+	root := t.TempDir()
+	e := permission.NewEngine("auto", root, true)
+	outside := filepath.Join(t.TempDir(), "readme.txt")
+	if err := os.WriteFile(outside, []byte("secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := e.Check("shell", map[string]any{"command": "cat " + outside})
+	if err == nil {
+		t.Fatal("expected denial for absolute path outside workspace")
+	}
+	if !errors.Is(err, permission.ErrDenied) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestEngine_auto_allowsShellRedirectToken(t *testing.T) {
+	e := permission.NewEngine("auto", t.TempDir(), true)
+	if err := e.Check("shell", map[string]any{"command": "echo hi 2>/dev/null"}); err != nil {
+		t.Fatalf("redirect token should not be blocked: %v", err)
+	}
+}

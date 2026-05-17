@@ -133,7 +133,10 @@ func Apply(workspace string, patchText string, resolve func(rel string) (string,
 			}
 			written = append(written, dest)
 			if ch.MoveTo != "" && dest != abs {
-				_ = os.Remove(abs)
+				if err := os.Remove(abs); err != nil {
+					return "", fmt.Errorf("move remove %s: %w", ch.Path, err)
+				}
+				written = append(written, abs)
 				applied = append(applied, fmt.Sprintf("update %s -> %s", ch.Path, ch.MoveTo))
 			} else {
 				applied = append(applied, "update "+ch.Path)
@@ -198,6 +201,15 @@ func applyChunk(lines []string, chunk Chunk) ([]string, error) {
 }
 
 func findContext(lines []string, ctx string) int {
+	ctx = strings.TrimSpace(ctx)
+	if ctx == "" {
+		return -1
+	}
+	for i, l := range lines {
+		if strings.TrimSpace(l) == ctx {
+			return i
+		}
+	}
 	for i, l := range lines {
 		if strings.Contains(l, ctx) {
 			return i

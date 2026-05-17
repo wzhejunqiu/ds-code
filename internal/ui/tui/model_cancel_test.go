@@ -84,6 +84,7 @@ func TestUpdate_escCancelsRunningTurn(t *testing.T) {
 		},
 	}
 	_, turnCancel = context.WithCancel(context.Background())
+	defer turnCancel()
 
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	m = *next.(*model)
