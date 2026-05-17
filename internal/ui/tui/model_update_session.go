@@ -1,0 +1,66 @@
+package tui
+
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hejunqiu/ds-code/internal/session"
+)
+
+func (m *model) updateSlashOutput(msg slashOutputMsg) tea.Cmd {
+	if msg.text != "" {
+		m.chat = append(m.chat, chatBlock{role: chatRoleAssistant})
+		m.chat[len(m.chat)-1].content.WriteString(msg.text)
+	}
+	m.refreshStatus()
+	m.syncChatView()
+	return nil
+}
+
+func (m *model) updateResumeList(msg resumeListMsg) tea.Cmd {
+	if msg.err != nil {
+		m.errLine = msg.err.Error()
+		m.overlay = overlayNone
+		return nil
+	}
+	m.resumeSessions = msg.sessions
+	m.resumeFilter = ""
+	m.resumeIdx = 0
+	m.resumeScroll = 0
+	if len(m.resumeSessions) == 0 {
+		m.errLine = "No saved sessions."
+		m.overlay = overlayNone
+		return nil
+	}
+	m.overlay = overlayResume
+	m.renderResumeOverlay()
+	return nil
+}
+
+func (m *model) updateSessionResumed(msg sessionResumedMsg) tea.Cmd {
+	if msg.err != nil {
+		m.errLine = msg.err.Error()
+		return nil
+	}
+	session.DropPending(m.deps.Store, m.sessionID)
+	m.sessionID = msg.sessionID
+	m.deps.SessionID = msg.sessionID
+	m.chat = msg.chat
+	m.toolLines = nil
+	m.clearResumePicker()
+	m.errLine = ""
+	m.refreshStatus()
+	m.syncChatView()
+	m.syncToolView()
+	return nil
+}
+
+func (m *model) updateHistoryLoaded(msg historyLoadedMsg) tea.Cmd {
+	if msg.err != nil {
+		m.errLine = msg.err.Error()
+		return nil
+	}
+	if len(msg.chat) > 0 {
+		m.chat = msg.chat
+		m.syncChatView()
+	}
+	return nil
+}

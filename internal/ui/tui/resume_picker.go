@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
@@ -135,4 +136,104 @@ func formatResumeUpdated(t time.Time) string {
 		return "-"
 	}
 	return t.Local().Format("2006-01-02 15:04")
+}
+
+func (m *model) handleResumeKey(msg tea.KeyMsg) bool {
+	switch msg.String() {
+	case "up":
+		m.resumeMoveSelection(-1)
+		return true
+	case "down", "tab":
+		m.resumeMoveSelection(1)
+		return true
+	case "pgup":
+		m.resumePageSelection(-1)
+		return true
+	case "pgdown":
+		m.resumePageSelection(1)
+		return true
+	case "enter":
+		// Handled before handleResumeKey in the KeyMsg block.
+		return true
+	case "esc":
+		m.clearResumePicker()
+		return true
+	}
+	return false
+}
+
+func (m *model) clearResumePicker() {
+	m.overlay = overlayNone
+	m.resumeSessions = nil
+	m.resumeFilter = ""
+	m.resumeIdx = 0
+	m.resumeScroll = 0
+	m.overlayText = ""
+}
+
+func (m *model) updateResumePicker(filter string) {
+	// textinput emits updates on cursor blink; do not reset selection unless filter changed.
+	if m.overlay == overlayResume && filter == m.resumeFilter && len(m.resumeSessions) > 0 {
+		return
+	}
+	filterChanged := m.resumeFilter != filter
+	m.resumeFilter = filter
+
+	list, err := m.listResumeSessions(filter)
+	if err != nil {
+		m.errLine = err.Error()
+		m.clearResumePicker()
+		return
+	}
+	m.resumeSessions = list
+	if filterChanged || len(list) == 0 {
+		m.resumeIdx = 0
+		m.resumeScroll = 0
+	} else if m.resumeIdx >= len(list) {
+		m.resumeIdx = len(list) - 1
+	}
+	if len(list) == 0 {
+		m.overlayText = "No matching sessions."
+		m.overlay = overlayResume
+		return
+	}
+	m.overlay = overlayResume
+	m.renderResumeOverlay()
+}
+
+func (m *model) fetchResumeList() tea.Cmd {
+	d := m.deps
+	return func() tea.Msg {
+		list, err := d.Store.ListSessions(context.Background(), resumeListMax)
+		return resumeListMsg{sessions: list, err: err}
+	}
+}
+
+func (m *model) loadInitialHistory() tea.Cmd {
+	if m.deps == nil || m.deps.Store == nil || m.sessionID == "" {
+		return nil
+	}
+	d := m.deps
+	sid := m.sessionID
+	reasoningOpen := m.reasoningAll
+	return func() tea.Msg {
+		chat, err := loadSessionChat(d.Store, sid, reasoningOpen)
+		return historyLoadedMsg{chat: chat, err: err}
+	}
+}
+
+func (m *model) resumeSession(id string) tea.Cmd {
+	d := m.deps
+	reasoningOpen := m.reasoningAll
+	return func() tea.Msg {
+		ctx := context.Background()
+		if _, err := d.Store.Get(ctx, id); err != nil {
+			return sessionResumedMsg{err: err}
+		}
+		chat, err := loadSessionChat(d.Store, id, reasoningOpen)
+		if err != nil {
+			return sessionResumedMsg{err: err}
+		}
+		return sessionResumedMsg{sessionID: id, chat: chat}
+	}
 }
