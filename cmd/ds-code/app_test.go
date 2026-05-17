@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/hejunqiu/ds-code/internal/config"
 )
 
@@ -43,7 +44,7 @@ func TestApp_createSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sess, err := a.createSession(store)
+	sess, err := slashcmd.CreateSession(cfg, store)
 	if err != nil {
 		t.Fatal(err)
 	}

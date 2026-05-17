@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/hejunqiu/ds-code/internal/agent"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/logging"
@@ -10,6 +12,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/lsp"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	toolsetup "github.com/hejunqiu/ds-code/internal/tool/setup"
@@ -85,6 +88,24 @@ func (a *app) closeLSP() {
 func (a *app) rebindRunnerTools(runner *agent.Runner, ctxSvc *ctxpkg.Service, bundle *toolBundle) {
 	runner.Tools = bundle.reg
 	ctxSvc.Tools = bundle.reg
+}
+
+func (a *app) SetRunMode(ctx context.Context, env *slashcmd.Env, mode string) error {
+	env.Cfg.RunMode = mode
+	if err := env.Store.UpdateSession(ctx, *env.SessionID, func(s *session.Session) error {
+		s.RunMode = mode
+		return nil
+	}); err != nil {
+		return err
+	}
+	gi, _ := tool.LoadGitignore(env.Cfg.ProjectRoot)
+	bundle, err := a.buildTools(ctx, env.Runner.Perm, gi, env.Cfg.LLM.StrictTools, env.Runner.LLM, mode)
+	if err != nil {
+		return err
+	}
+	a.rebindRunnerTools(env.Runner, env.CtxSvc, bundle)
+	fmt.Fprintf(env.Out, "Run mode set to %s (tools updated for this session).\n", mode)
+	return nil
 }
 
 func (a *app) attachMCP(ctx context.Context, strict bool) error {

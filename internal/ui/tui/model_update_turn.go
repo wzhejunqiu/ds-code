@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chattool"
 )
 
 // updateStreamContent appends assistant reply deltas from agent.OnContentDelta.
@@ -61,7 +62,7 @@ func (m *model) updateToolStart(msg toolStartMsg) tea.Cmd {
 		return nil
 	}
 	m.appendToolBlock(msg.name, msg.args, msg.command, "", true, false)
-	m.toolLines = append(m.toolLines, toolLine(msg.name, msg.args, msg.command, "", true, false))
+	m.toolLines = append(m.toolLines, chattool.Line(msg.name, msg.args, msg.command, "", true, false))
 	m.syncChatView()
 	m.syncToolView()
 	return nil
@@ -88,7 +89,7 @@ func (m *model) updateToolEnd(msg toolEndMsg) tea.Cmd {
 			if preview == "" && b.toolRunning {
 				preview = "…"
 			}
-			m.toolLines = append(m.toolLines, toolLine(b.toolName, b.toolArgs, b.toolCommand, preview, b.toolRunning, b.toolError))
+			m.toolLines = append(m.toolLines, chattool.Line(b.toolName, b.toolArgs, b.toolCommand, preview, b.toolRunning, b.toolError))
 		}
 	}
 	m.syncChatView()

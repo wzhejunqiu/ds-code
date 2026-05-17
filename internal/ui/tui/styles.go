@@ -28,15 +28,7 @@ var (
 	styleChatBody   = lipgloss.NewStyle().Foreground(theme.Text)
 	styleChatReason         = lipgloss.NewStyle().Foreground(theme.Muted).Italic(true)
 	styleChatTurnMeta       = lipgloss.NewStyle().Foreground(theme.Muted)
-	styleChatInterrupt      = lipgloss.NewStyle().Foreground(theme.Error).Italic(true)
-	styleChatTool           = lipgloss.NewStyle().Foreground(theme.Muted)
-	styleChatToolTitle      = lipgloss.NewStyle().Foreground(theme.Accent).Bold(true)
-	styleChatToolName       = lipgloss.NewStyle().Foreground(theme.Text).Bold(true)
-	styleChatToolCommand    = lipgloss.NewStyle().Foreground(theme.Muted)
-	styleChatToolMeta       = lipgloss.NewStyle().Foreground(theme.Muted)
-	styleChatToolResult     = lipgloss.NewStyle().Foreground(theme.Muted)
-	styleChatToolExpandHint = lipgloss.NewStyle().Foreground(theme.Muted).Italic(true)
-	styleChatToolError      = lipgloss.NewStyle().Foreground(theme.Error)
+	styleChatInterrupt = lipgloss.NewStyle().Foreground(theme.Error).Italic(true)
 
 	styleOverlay = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

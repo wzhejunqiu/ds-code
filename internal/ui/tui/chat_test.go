@@ -125,6 +125,21 @@ func TestRenderAssistantMarkdownCodeBlock(t *testing.T) {
 	}
 }
 
+func TestRenderChatToolBeforeAssistant(t *testing.T) {
+	blocks := []chatBlock{
+		{role: chatRoleTool, toolName: "read_file", toolArgs: "path=main.go", toolResult: "package main"},
+		{role: chatRoleAssistant},
+	}
+	blocks[1].content.WriteString("done")
+
+	out := renderChat(blocks, 50, time.Now(), false)
+	toolIdx := strings.Index(out, "read_file")
+	contentIdx := strings.Index(out, "done")
+	if toolIdx < 0 || contentIdx < 0 || toolIdx > contentIdx {
+		t.Fatalf("tool should appear before assistant content:\n%s", out)
+	}
+}
+
 func TestRenderChatUserFullWidthBackground(t *testing.T) {
 	blocks := []chatBlock{{role: chatRoleUser}}
 	blocks[0].content.WriteString("hi")

@@ -25,7 +25,8 @@ import (
 	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	uipkg "github.com/hejunqiu/ds-code/internal/ui"
-	"github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
+	uislash "github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -163,12 +164,12 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 		return err
 	}
 
-	sess, err := a.createSession(store)
+	sess, err := slashcmd.CreateSession(a.cfg, store)
 	if err != nil {
 		return err
 	}
 	logging.L().Info("session created", zap.String("session_id", sess.ID), zap.String("model", sess.Model))
-	if err := a.seedGitSnapshot(ctx, store, ctxSvc, sess.ID); err != nil {
+	if err := slashcmd.SeedGitSnapshot(a.cfg, ctx, store, sess.ID); err != nil {
 		return err
 	}
 
@@ -244,11 +245,11 @@ func (a *app) runREPL(cmd *cobra.Command) error {
 		return err
 	}
 
-	sess, err := a.createSession(store)
+	sess, err := slashcmd.CreateSession(a.cfg, store)
 	if err != nil {
 		return err
 	}
-	if err := a.seedGitSnapshot(ctx, store, ctxSvc, sess.ID); err != nil {
+	if err := slashcmd.SeedGitSnapshot(a.cfg, ctx, store, sess.ID); err != nil {
 		return err
 	}
 
@@ -304,19 +305,19 @@ func (a *app) replLoop(ctx context.Context, out io.Writer, runner *agent.Runner,
 }
 
 func (a *app) trySlashLine(ctx context.Context, out io.Writer, runner *agent.Runner, store session.Store, ctxSvc *ctxpkg.Service, sessionID *string, line string) (bool, error) {
-	if _, _, ok := slash.Parse(line); !ok {
+	if _, _, ok := uislash.Parse(line); !ok {
 		return false, nil
 	}
-	env := &slashEnv{
-		ctx:       ctx,
-		out:       out,
-		cfg:       a,
-		runner:    runner,
-		store:     store,
-		ctxSvc:    ctxSvc,
-		sessionID: sessionID,
+	env := &slashcmd.Env{
+		Ctx:       ctx,
+		Out:       out,
+		Cfg:       a.cfg,
+		Runner:    runner,
+		Store:     store,
+		CtxSvc:    ctxSvc,
+		SessionID: sessionID,
 	}
-	return a.handleSlash(env, line)
+	return slashcmd.Handle(env, a, line)
 }
 
 func (a *app) closeMCP() {
@@ -326,12 +327,3 @@ func (a *app) closeMCP() {
 	}
 }
 
-func (a *app) createSession(store session.Store) (session.Session, error) {
-	return store.CreateSession(
-		a.cfg.LLM.Model,
-		a.cfg.LLM.ReasoningEffort,
-		a.cfg.LLM.Thinking.Type,
-		a.cfg.Permission.Mode,
-		a.cfg.RunMode,
-	)
-}

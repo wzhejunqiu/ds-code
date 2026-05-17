@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/ui/tui"
@@ -26,12 +27,12 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 
 	ctx := context.Background()
 	if sessionID == "" {
-		sess, err := a.createSession(store)
+		sess, err := slashcmd.CreateSession(a.cfg, store)
 		if err != nil {
 			return err
 		}
 		sessionID = sess.ID
-		if err := a.seedGitSnapshot(ctx, store, ctxSvc, sessionID); err != nil {
+		if err := slashcmd.SeedGitSnapshot(a.cfg, ctx, store, sessionID); err != nil {
 			return err
 		}
 	} else if _, err := store.Get(ctx, sessionID); err != nil {
@@ -53,11 +54,11 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 		Version:   version.Version,
 		PromptCh:  promptCh,
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line string) (bool, error) {
-			env := &slashEnv{
-				ctx: c, out: w, cfg: a, runner: runner, store: store,
-				ctxSvc: ctxSvc, sessionID: sid,
+			env := &slashcmd.Env{
+				Ctx: c, Out: w, Cfg: a.cfg, Runner: runner, Store: store,
+				CtxSvc: ctxSvc, SessionID: sid,
 			}
-			return a.handleSlash(env, line)
+			return slashcmd.Handle(env, a, line)
 		},
 	}
 
