@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 func TestApp_openStore(t *testing.T) {
 	dir := t.TempDir()
-	a := &app{cfg: &config.Config{ProjectRoot: dir, LLM: config.LLMConfig{Model: "test"}}}
+	a := New(&config.Config{ProjectRoot: dir, LLM: config.LLMConfig{Model: "test"}})
 	store, err := a.openStore()
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +39,7 @@ func TestApp_createSession(t *testing.T) {
 		Permission: config.PermissionConfig{Mode: "readonly"},
 		RunMode:    "agent",
 	}
-	a := &app{cfg: cfg}
+	a := New(cfg)
 	store, err := a.openStore()
 	if err != nil {
 		t.Fatal(err)

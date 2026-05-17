@@ -1,16 +1,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"text/tabwriter"
-	"time"
 
+	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
+	"github.com/hejunqiu/ds-code/cmd/ds-code/commands"
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
-	sessionsqlite "github.com/hejunqiu/ds-code/internal/session/sqlite"
 	"github.com/hejunqiu/ds-code/internal/version"
 	"github.com/hejunqiu/ds-code/internal/versioninfo"
 	"github.com/spf13/cobra"
@@ -42,8 +40,8 @@ func newRootCmd() *cobra.Command {
 		},
 	})
 
-	root.AddCommand(sessionsCmd())
-	root.AddCommand(resumeCmd())
+	root.AddCommand(commands.SessionsCmd())
+	root.AddCommand(commands.ResumeCmd())
 
 	root.RunE = runRoot
 	return root
@@ -67,90 +65,18 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	}
 	defer closeLog()
 
-	application := &app{cfg: cfg}
+	application := app.New(cfg)
 
 	if cfg.Prompt != "" {
-		return application.runNonInteractive(cmd)
+		return application.RunNonInteractive(cmd)
 	}
 
 	if permission.IsInteractiveTTY() {
-		return application.runTUI(cmd, "")
+		return application.RunTUI(cmd, "")
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), "stdin is not a TTY. Use: ds-code -p \"your task\"")
 	return nil
-}
-
-func sessionsCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "sessions",
-		Short: "List saved sessions for the current project",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := config.Load(cmd, config.Options{})
-			if err != nil {
-				return err
-			}
-			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
-				return err
-			}
-			defer logging.TrySetup(logging.Options{
-				ProjectRoot: cfg.ProjectRoot,
-				Verbosity:   cfg.LogVerbosity,
-			})()
-
-			store, err := sessionsqlite.OpenDefault(cfg.ProjectRoot)
-			if err != nil {
-				return err
-			}
-			defer store.Close()
-
-			list, err := store.ListSessions(context.Background(), 50)
-			if err != nil {
-				return err
-			}
-			out := cmd.OutOrStdout()
-			if len(list) == 0 {
-				fmt.Fprintf(out, "No sessions in %s\n", config.DefaultDBPath(cfg.ProjectRoot))
-				return nil
-			}
-			w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "ID\tTITLE\tMODEL\tTOKENS\tUPDATED")
-			for _, s := range list {
-				title := s.Title
-				if len(title) > 40 {
-					title = title[:37] + "..."
-				}
-				fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
-					s.ID, title, s.Model, s.BilledTokens, s.UpdatedAt.Format(time.RFC3339))
-			}
-			return w.Flush()
-		},
-	}
-}
-
-func resumeCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "resume <session_id>",
-		Short: "Resume an interactive session",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load(cmd, config.Options{RequireAPIKey: true})
-			if err != nil {
-				return err
-			}
-			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
-				return err
-			}
-			closeLog, err := setupLogging(cfg)
-			if err != nil {
-				return err
-			}
-			defer closeLog()
-
-			application := &app{cfg: cfg}
-			return application.runTUI(cmd, args[0])
-		},
-	}
 }
 
 func setupLogging(cfg *config.Config) (func(), error) {

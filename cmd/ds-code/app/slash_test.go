@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/session"
 )
 
-func TestApp_trySlashLine_nilSession(t *testing.T) {
+func TestApp_TrySlashLine_nilSession(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &config.Config{
 		ProjectRoot: dir,
@@ -18,10 +18,10 @@ func TestApp_trySlashLine_nilSession(t *testing.T) {
 		Permission:  config.PermissionConfig{Mode: "readonly"},
 		RunMode:     "agent",
 	}
-	a := &app{cfg: cfg}
+	a := New(cfg)
 	store := session.NewMemoryStore()
 	var buf bytes.Buffer
-	handled, err := a.trySlashLine(context.Background(), &buf, nil, store, nil, nil, "/mode")
+	handled, err := a.TrySlashLine(context.Background(), &buf, nil, store, nil, nil, "/mode")
 	if !handled || err == nil || !strings.Contains(err.Error(), "session not set") {
 		t.Fatalf("handled=%v err=%v", handled, err)
 	}

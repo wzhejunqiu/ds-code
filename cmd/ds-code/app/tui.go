@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -13,7 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
+// RunTUI starts the Bubble Tea interactive UI.
+func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 	logging.L().Info("starting TUI", zap.Bool("resume_session", sessionID != ""))
 	if _, err := a.openStore(); err != nil {
 		return err
@@ -27,12 +28,12 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 
 	ctx := context.Background()
 	if sessionID == "" {
-		sess, err := slashcmd.CreateSession(a.cfg, store)
+		sess, err := slashcmd.CreateSession(a.Cfg, store)
 		if err != nil {
 			return err
 		}
 		sessionID = sess.ID
-		if err := slashcmd.SeedGitSnapshot(a.cfg, ctx, store, sessionID); err != nil {
+		if err := slashcmd.SeedGitSnapshot(a.Cfg, ctx, store, sessionID); err != nil {
 			return err
 		}
 	} else if _, err := store.Get(ctx, sessionID); err != nil {
@@ -40,13 +41,13 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 	}
 
 	promptCh := make(chan permission.PromptRequest, 1)
-	if a.cfg.Permission.Mode == "ask" {
+	if a.Cfg.Permission.Mode == "ask" {
 		runner.Perm.Interactive = true
 		runner.Perm.Prompter = permission.TUIPrompter(promptCh)
 	}
 
 	deps := tui.Deps{
-		Cfg:       a.cfg,
+		Cfg:       a.Cfg,
 		Runner:    runner,
 		Store:     store,
 		Context:   ctxSvc,
@@ -55,7 +56,7 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 		PromptCh:  promptCh,
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line string) (bool, error) {
 			env := &slashcmd.Env{
-				Ctx: c, Out: w, Cfg: a.cfg, Runner: runner, Store: store,
+				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,
 				CtxSvc: ctxSvc, SessionID: sid,
 			}
 			return slashcmd.Handle(env, a, line)

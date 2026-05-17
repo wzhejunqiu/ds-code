@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -25,14 +25,14 @@ type toolBundle struct {
 	deps   toolsetup.Deps
 }
 
-func (a *app) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.GitignoreMatcher, strict bool, llmClient llm.Client, runMode string) (*toolBundle, error) {
+func (a *App) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.GitignoreMatcher, strict bool, llmClient llm.Client, runMode string) (*toolBundle, error) {
 	var lspMgr *lsp.Manager
-	if a.cfg.LSP.Enabled {
+	if a.Cfg.LSP.Enabled {
 		if a.lspMgr == nil {
-			a.lspMgr = lsp.NewManager(a.cfg.ProjectRoot, a.cfg.LSP)
+			a.lspMgr = lsp.NewManager(a.Cfg.ProjectRoot, a.Cfg.LSP)
 		}
 		lspMgr = a.lspMgr
-		for _, id := range a.cfg.LSP.WarmupOnStart {
+		for _, id := range a.Cfg.LSP.WarmupOnStart {
 			if _, err := lspMgr.EnsureClient(ctx, id); err != nil {
 				// best-effort warmup
 				_ = err
@@ -46,7 +46,7 @@ func (a *app) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 	}
 
 	deps := toolsetup.Deps{
-		Cfg:       a.cfg,
+		Cfg:       a.Cfg,
 		Perm:      perm,
 		Gitignore: gi,
 		Strict:    strict,
@@ -59,11 +59,11 @@ func (a *app) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 	return &toolBundle{reg: reg, lspMgr: lspMgr, deps: deps}, nil
 }
 
-func (a *app) openShellJobs() (*manager.Manager, error) {
+func (a *App) openShellJobs() (*manager.Manager, error) {
 	if a.shellJobs != nil {
 		return a.shellJobs, nil
 	}
-	mgr, err := manager.Open(a.cfg.ProjectRoot, a.cfg.Tools.Shell)
+	mgr, err := manager.Open(a.Cfg.ProjectRoot, a.Cfg.Tools.Shell)
 	if err != nil {
 		return nil, err
 	}
@@ -71,26 +71,27 @@ func (a *app) openShellJobs() (*manager.Manager, error) {
 	return mgr, nil
 }
 
-func (a *app) closeShellJobs() {
+func (a *App) closeShellJobs() {
 	if a.shellJobs != nil {
 		a.shellJobs.Close()
 		a.shellJobs = nil
 	}
 }
 
-func (a *app) closeLSP() {
+func (a *App) closeLSP() {
 	if a.lspMgr != nil {
 		_ = a.lspMgr.Close()
 		a.lspMgr = nil
 	}
 }
 
-func (a *app) rebindRunnerTools(runner *agent.Runner, ctxSvc *ctxpkg.Service, bundle *toolBundle) {
+func (a *App) rebindRunnerTools(runner *agent.Runner, ctxSvc *ctxpkg.Service, bundle *toolBundle) {
 	runner.Tools = bundle.reg
 	ctxSvc.Tools = bundle.reg
 }
 
-func (a *app) SetRunMode(ctx context.Context, env *slashcmd.Env, mode string) error {
+// SetRunMode implements slashcmd.Host.
+func (a *App) SetRunMode(ctx context.Context, env *slashcmd.Env, mode string) error {
 	env.Cfg.RunMode = mode
 	if err := env.Store.UpdateSession(ctx, *env.SessionID, func(s *session.Session) error {
 		s.RunMode = mode
@@ -108,12 +109,12 @@ func (a *app) SetRunMode(ctx context.Context, env *slashcmd.Env, mode string) er
 	return nil
 }
 
-func (a *app) attachMCP(ctx context.Context, strict bool) error {
-	if len(a.cfg.MCP.Servers) == 0 {
+func (a *App) attachMCP(ctx context.Context, strict bool) error {
+	if len(a.Cfg.MCP.Servers) == 0 {
 		return nil
 	}
 	if a.mcpMgr == nil {
-		mgr, err := mcpsvc.NewManagerFromConfig(ctx, a.cfg.MCP.Servers, strict)
+		mgr, err := mcpsvc.NewManagerFromConfig(ctx, a.Cfg.MCP.Servers, strict)
 		if err != nil {
 			return err
 		}
@@ -122,13 +123,12 @@ func (a *app) attachMCP(ctx context.Context, strict bool) error {
 	return nil
 }
 
-// ensure MCP manager exists before building agent-mode registry.
-func (a *app) ensureMCP(ctx context.Context, perm *permission.Engine, strict bool) error {
-	if len(a.cfg.MCP.Servers) == 0 {
+func (a *App) ensureMCP(ctx context.Context, perm *permission.Engine, strict bool) error {
+	if len(a.Cfg.MCP.Servers) == 0 {
 		logging.L().Debug("MCP disabled (no servers configured)")
 		return nil
 	}
-	logging.L().Info("connecting MCP servers", zap.Int("count", len(a.cfg.MCP.Servers)))
+	logging.L().Info("connecting MCP servers", zap.Int("count", len(a.Cfg.MCP.Servers)))
 	if err := a.attachMCP(ctx, strict); err != nil {
 		logging.L().Error("MCP connect failed", zap.Error(err))
 		return err
