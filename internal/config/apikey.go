@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 const (
@@ -12,10 +13,10 @@ const (
 
 // LoadAPIKey reads the DeepSeek API key from environment variables only.
 func LoadAPIKey() (string, error) {
-	if k := os.Getenv(envDSCodeDeepSeek); k != "" {
+	if k := strings.TrimSpace(os.Getenv(envDSCodeDeepSeek)); k != "" {
 		return k, nil
 	}
-	if k := os.Getenv(envDeepSeek); k != "" {
+	if k := strings.TrimSpace(os.Getenv(envDeepSeek)); k != "" {
 		return k, nil
 	}
 	return "", fmt.Errorf(

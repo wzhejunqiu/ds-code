@@ -27,7 +27,7 @@ func (t *ReadFileTool) Description() string {
 
 func (t *ReadFileTool) Schema() map[string]any {
 	return tool.ObjectSchema(map[string]any{
-		"path":   map[string]any{"type": "string", "description": "Relative path from project root"},
+		"path":   map[string]any{"type": "string", "description": "Path to the file (relative to project root, or absolute if under project root)"},
 		"offset": map[string]any{"type": "integer", "description": "Start line (1-based)"},
 		"limit":  map[string]any{"type": "integer", "description": "Max lines to read"},
 	}, []string{"path"}, t.Strict)

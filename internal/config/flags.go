@@ -64,7 +64,7 @@ func applyChangedFlags(cfg *Config, cmd *cobra.Command) error {
 	return nil
 }
 
-// ApplyCLIDerived sets runtime fields from flags (prompt, json output).
+// ApplyCLIDerived sets runtime fields from flags (prompt, json output, verbosity).
 func ApplyCLIDerived(cfg *Config, cmd *cobra.Command) error {
 	fs := cmd.PersistentFlags()
 	prompt, err := fs.GetString("prompt")
@@ -77,5 +77,10 @@ func ApplyCLIDerived(cfg *Config, cmd *cobra.Command) error {
 		return fmt.Errorf("config: json flag: %w", err)
 	}
 	cfg.JSONOutput = jsonOut
+	verbose, err := fs.GetCount("verbose")
+	if err != nil {
+		return fmt.Errorf("config: verbose flag: %w", err)
+	}
+	cfg.LogVerbosity = verbose
 	return nil
 }

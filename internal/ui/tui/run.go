@@ -28,24 +28,34 @@ func runTurnAsync(d Deps, line string, events chan<- tea.Msg) {
 	// cancel is stored on model via turnStartedMsg - send cancel func
 	events <- turnStartedMsg{cancel: cancel}
 
+	trySend := func(msg tea.Msg) {
+		select {
+		case events <- msg:
+		default:
+		}
+	}
+
 	cb := &agent.TurnCallbacks{
 		OnContentDelta: func(s string) {
-			select {
-			case events <- streamContentMsg{delta: s}:
-			default:
-			}
+			trySend(streamContentMsg{delta: s})
 		},
 		OnReasoningDelta: func(s string) {
-			select {
-			case events <- streamReasoningMsg{delta: s}:
-			default:
-			}
+			trySend(streamReasoningMsg{delta: s})
 		},
-		OnToolStart: func(name string) {
-			events <- toolStartMsg{name: name}
+		OnToolStart: func(name, args, command string) {
+			trySend(toolStartMsg{name: name, args: args, command: command})
 		},
-		OnToolEnd: func(name, preview string) {
-			events <- toolEndMsg{name: name, preview: preview}
+		OnToolEnd: func(name, args, command, result string, isError bool) {
+			trySend(toolEndMsg{name: name, args: args, command: command, result: result, isError: isError})
+		},
+		OnAssistantSegmentEnd: func() {
+			trySend(assistantSegmentEndMsg{})
+		},
+		OnPlanningStart: func() {
+			trySend(planningStartMsg{})
+		},
+		OnPlanningEnd: func() {
+			trySend(planningEndMsg{})
 		},
 	}
 

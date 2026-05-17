@@ -120,4 +120,5 @@ func BindFlags(cmd *cobra.Command) {
 	fs.Bool("audit-log", false, "Enable audit log to project audit.jsonl")
 	fs.StringP("prompt", "p", "", "Non-interactive single prompt")
 	fs.Bool("json", false, "JSON output (with -p)")
+	fs.CountP("verbose", "v", "Log level in project log file (-v INFO, -vv DEBUG)")
 }

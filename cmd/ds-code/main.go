@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/spf13/cobra"
 )
@@ -46,11 +47,9 @@ func newRootCmd() *cobra.Command {
 }
 
 func runRoot(cmd *cobra.Command, _ []string) error {
-	requireKey := false
 	prompt, _ := cmd.Flags().GetString("prompt")
-	if prompt != "" {
-		requireKey = true
-	}
+	// Interactive TUI and -p both call the LLM; only the non-TTY idle path skips it.
+	requireKey := prompt != "" || permissionIsTTY()
 
 	cfg, err := config.Load(cmd, config.Options{RequireAPIKey: requireKey})
 	if err != nil {
@@ -59,6 +58,11 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
 		return err
 	}
+	closeLog, err := setupLogging(cfg)
+	if err != nil {
+		return err
+	}
+	defer closeLog()
 
 	application := &app{cfg: cfg}
 
@@ -91,6 +95,14 @@ func sessionsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
+				return err
+			}
+			defer logging.TrySetup(logging.Options{
+				ProjectRoot: cfg.ProjectRoot,
+				Verbosity:   cfg.LogVerbosity,
+			})()
+
 			store, err := session.OpenDefaultStore(cfg.ProjectRoot)
 			if err != nil {
 				return err
@@ -134,8 +146,21 @@ func resumeCmd() *cobra.Command {
 			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
 				return err
 			}
+			closeLog, err := setupLogging(cfg)
+			if err != nil {
+				return err
+			}
+			defer closeLog()
+
 			application := &app{cfg: cfg}
 			return application.runTUI(cmd, args[0])
 		},
 	}
+}
+
+func setupLogging(cfg *config.Config) (func(), error) {
+	return logging.Setup(logging.Options{
+		ProjectRoot: cfg.ProjectRoot,
+		Verbosity:   cfg.LogVerbosity,
+	})
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
 	"github.com/hejunqiu/ds-code/internal/audit"
@@ -16,6 +17,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/lsp"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
@@ -24,6 +26,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 type app struct {
@@ -39,15 +42,20 @@ func (a *app) openStore() (session.Store, error) {
 	if a.store != nil {
 		return a.store, nil
 	}
-	st, err := session.OpenDefaultStore(a.cfg.ProjectRoot)
+	sqlite, err := session.OpenDefaultStore(a.cfg.ProjectRoot)
 	if err != nil {
 		return nil, err
 	}
-	a.store = st
-	return st, nil
+	a.store = session.NewLazyStore(sqlite)
+	return a.store, nil
 }
 
 func (a *app) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Service, error) {
+	logging.L().Info("building agent runner",
+		zap.String("project_root", a.cfg.ProjectRoot),
+		zap.String("run_mode", a.cfg.RunMode),
+		zap.String("permission", a.cfg.Permission.Mode),
+	)
 	store, err := a.openStore()
 	if err != nil {
 		return nil, nil, nil, err
@@ -137,6 +145,7 @@ func (a *app) openCheckpointStore() (*checkpoint.Store, error) {
 }
 
 func (a *app) runNonInteractive(cmd *cobra.Command) error {
+	logging.L().Info("non-interactive run", zap.Bool("json_output", a.cfg.JSONOutput))
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	defer a.closeMCP()
@@ -157,6 +166,7 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
+	logging.L().Info("session created", zap.String("session_id", sess.ID), zap.String("model", sess.Model))
 	if err := a.seedGitSnapshot(ctx, store, ctxSvc, sess.ID); err != nil {
 		return err
 	}
@@ -170,8 +180,15 @@ func (a *app) runNonInteractive(cmd *cobra.Command) error {
 
 	result, err := runner.RunTurn(ctx, sess.ID, line, nil)
 	if err != nil {
+		logging.L().Error("turn failed", zap.String("session_id", sess.ID), zap.Error(err))
 		return err
 	}
+	logging.L().Info("turn completed",
+		zap.String("session_id", sess.ID),
+		zap.Int("sub_rounds", result.SubRounds),
+		zap.Int("prompt_tokens", result.Usage.PromptTokens),
+		zap.Int("completion_tokens", result.Usage.CompletionTokens),
+	)
 
 	if a.cfg.JSONOutput {
 		enc := json.NewEncoder(out)
@@ -241,11 +258,23 @@ func (a *app) replLoop(ctx context.Context, out io.Writer, runner *agent.Runner,
 	fmt.Fprintf(out, "ds-code REPL (session %s). /help for commands. /exit to quit.\n", sessionID)
 
 	sc := bufio.NewScanner(os.Stdin)
+	exitConfirmPending := false
+	exitConfirmArmedAt := time.Time{}
 	for {
+		if exitConfirmPending && time.Since(exitConfirmArmedAt) >= time.Second {
+			exitConfirmPending = false
+		}
 		fmt.Fprint(out, "> ")
 		if !sc.Scan() {
+			if sc.Err() == nil && !exitConfirmPending {
+				fmt.Fprintln(out, "Press Ctrl+D again to exit.")
+				exitConfirmPending = true
+				exitConfirmArmedAt = time.Now()
+				continue
+			}
 			break
 		}
+		exitConfirmPending = false
 		line := sc.Text()
 		if line == "/exit" || line == "/quit" {
 			break

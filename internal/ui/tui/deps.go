@@ -22,6 +22,7 @@ type Deps struct {
 	Store       session.Store
 	Context     *ctxpkg.Service
 	SessionID   string
+	Version     string
 	HandleSlash SlashFunc
 	PromptCh    chan permission.PromptRequest
 	Events      chan<- tea.Msg

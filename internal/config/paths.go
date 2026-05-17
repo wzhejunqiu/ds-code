@@ -81,6 +81,39 @@ func DefaultCheckpointDir(projectRoot string) string {
 	return filepath.Join(dir, "checkpoints")
 }
 
+// DefaultLogsDir returns ~/.ds-code/projects/<project_id>/logs/.
+func DefaultLogsDir(projectRoot string) string {
+	dir, err := ProjectDataDir(projectRoot)
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "logs")
+}
+
+// DefaultLogPath returns the fixed application log file for a project.
+func DefaultLogPath(projectRoot string) string {
+	dir := DefaultLogsDir(projectRoot)
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, "ds-code.log")
+}
+
+// EnsureLogsDir creates ~/.ds-code/projects/<id>/logs/ with mode 0700.
+func EnsureLogsDir(projectRoot string) (string, error) {
+	if _, err := EnsureProjectDataDir(projectRoot); err != nil {
+		return "", err
+	}
+	dir := DefaultLogsDir(projectRoot)
+	if dir == "" {
+		return "", fmt.Errorf("config: logs dir for %q", projectRoot)
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("config: create logs dir: %w", err)
+	}
+	return dir, nil
+}
+
 // EnsureProjectDataDir creates ~/.ds-code/projects/<id>/ with mode 0700
 // and writes project.meta.json when missing.
 func EnsureProjectDataDir(projectRoot string) (string, error) {

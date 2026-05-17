@@ -5,9 +5,11 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
+	"go.uber.org/zap"
 )
 
 // Service builds API context and prepares requests.
@@ -77,7 +79,10 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 	}
 
 	if s.shouldCompact(ctx, sessionID, sess) {
-		_ = s.CompactAPIContext(ctx, sessionID)
+		logging.L().Info("context compact triggered", zap.String("session_id", sessionID), zap.Int64("prompt_tokens", sess.PromptTokensTotal))
+		if err := s.CompactAPIContext(ctx, sessionID); err != nil {
+			logging.L().Warn("context compact failed", zap.String("session_id", sessionID), zap.Error(err))
+		}
 	}
 
 	view, err := s.BuildAPIContext(ctx, sessionID)

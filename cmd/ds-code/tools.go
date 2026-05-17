@@ -5,6 +5,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/agent"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/hejunqiu/ds-code/internal/lsp"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
@@ -12,6 +13,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	toolsetup "github.com/hejunqiu/ds-code/internal/tool/setup"
+	"go.uber.org/zap"
 )
 
 type toolBundle struct {
@@ -101,11 +103,18 @@ func (a *app) attachMCP(ctx context.Context, strict bool) error {
 
 // ensure MCP manager exists before building agent-mode registry.
 func (a *app) ensureMCP(ctx context.Context, perm *permission.Engine, strict bool) error {
+	if len(a.cfg.MCP.Servers) == 0 {
+		logging.L().Debug("MCP disabled (no servers configured)")
+		return nil
+	}
+	logging.L().Info("connecting MCP servers", zap.Int("count", len(a.cfg.MCP.Servers)))
 	if err := a.attachMCP(ctx, strict); err != nil {
+		logging.L().Error("MCP connect failed", zap.Error(err))
 		return err
 	}
 	if a.mcpMgr != nil {
 		perm.SetWriteToolDetector(a.mcpMgr.IsWriteTool)
+		logging.L().Info("MCP ready")
 	}
 	return nil
 }

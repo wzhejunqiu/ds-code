@@ -13,7 +13,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 // SQLiteStore persists sessions in SQLite (Phase 3+).
 type SQLiteStore struct {
@@ -30,7 +30,7 @@ func OpenSQLite(path string) (*SQLiteStore, error) {
 		return nil, err
 	}
 	s := &SQLiteStore{db: db}
-	if err := s.migrate(); err != nil {
+	if err := s.initSchema(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -44,20 +44,23 @@ func dirOf(path string) string {
 	return "."
 }
 
-func (s *SQLiteStore) migrate() error {
+func (s *SQLiteStore) initSchema() error {
 	var v int
 	err := s.db.QueryRow(`SELECT version FROM schema_version LIMIT 1`).Scan(&v)
-	if err == sql.ErrNoRows {
+	switch {
+	case err == sql.ErrNoRows:
 		return s.applySchema()
-	}
-	if err != nil {
-		// table missing
+	case err != nil:
+		// Fresh or legacy file without schema_version — initialize current schema.
 		return s.applySchema()
+	case v != schemaVersion:
+		return fmt.Errorf(
+			"sessions.db schema version %d (expected %d): delete the database file and restart",
+			v, schemaVersion,
+		)
+	default:
+		return nil
 	}
-	if v < schemaVersion {
-		return s.applySchema()
-	}
-	return nil
 }
 
 func (s *SQLiteStore) applySchema() error {
@@ -88,6 +91,8 @@ func (s *SQLiteStore) applySchema() error {
 			role TEXT NOT NULL,
 			content TEXT NOT NULL,
 			reasoning_content TEXT NOT NULL DEFAULT '',
+			reasoning_duration_ms INTEGER NOT NULL DEFAULT 0,
+			turn_duration_ms INTEGER NOT NULL DEFAULT 0,
 			tool_calls_json TEXT NOT NULL DEFAULT '',
 			tool_call_id TEXT NOT NULL DEFAULT '',
 			tool_name TEXT NOT NULL DEFAULT '',
@@ -102,7 +107,7 @@ func (s *SQLiteStore) applySchema() error {
 	}
 	for _, q := range stmts {
 		if _, err := s.db.Exec(q); err != nil {
-			return fmt.Errorf("migrate: %w", err)
+			return fmt.Errorf("init schema: %w", err)
 		}
 	}
 	return nil
@@ -174,8 +179,12 @@ func scanSession(row *sql.Row) (Session, error) {
 }
 
 func (s *SQLiteStore) ListMessages(_ context.Context, sessionID string) ([]Message, error) {
-	rows, err := s.db.Query(`SELECT id, session_id, role, content, reasoning_content, tool_calls_json,
-		tool_call_id, tool_name, prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
+	rows, err := s.db.Query(`SELECT id, session_id, role, content,
+		COALESCE(reasoning_content, ''),
+		COALESCE(reasoning_duration_ms, 0), COALESCE(turn_duration_ms, 0),
+		COALESCE(tool_calls_json, ''),
+		COALESCE(tool_call_id, ''), COALESCE(tool_name, ''),
+		prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
 		FROM messages WHERE session_id=? ORDER BY id ASC`, sessionID)
 	if err != nil {
 		return nil, err
@@ -196,8 +205,10 @@ func scanMessage(rows *sql.Rows) (Message, error) {
 	var m Message
 	var created string
 	err := rows.Scan(
-		&m.ID, &m.SessionID, &m.Role, &m.Content, &m.ReasoningContent, &m.ToolCallsJSON,
-		&m.ToolCallID, &m.ToolName, &m.PromptTokens, &m.CompletionTokens, &m.PromptCacheHitTokens, &created,
+		&m.ID, &m.SessionID, &m.Role, &m.Content, &m.ReasoningContent,
+		&m.ReasoningDurationMS, &m.TurnDurationMS,
+		&m.ToolCallsJSON, &m.ToolCallID, &m.ToolName,
+		&m.PromptTokens, &m.CompletionTokens, &m.PromptCacheHitTokens, &created,
 	)
 	if err != nil {
 		return Message{}, err
@@ -212,11 +223,14 @@ func (s *SQLiteStore) AppendMessage(_ context.Context, msg Message) error {
 		msg.CreatedAt = now
 	}
 	res, err := s.db.Exec(`INSERT INTO messages (
-		session_id, role, content, reasoning_content, tool_calls_json,
-		tool_call_id, tool_name, prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
-	) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-		msg.SessionID, msg.Role, msg.Content, msg.ReasoningContent, msg.ToolCallsJSON,
-		msg.ToolCallID, msg.ToolName, msg.PromptTokens, msg.CompletionTokens, msg.PromptCacheHitTokens,
+		session_id, role, content, reasoning_content, reasoning_duration_ms, turn_duration_ms,
+		tool_calls_json, tool_call_id, tool_name,
+		prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
+	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		msg.SessionID, msg.Role, msg.Content, msg.ReasoningContent,
+		msg.ReasoningDurationMS, msg.TurnDurationMS,
+		msg.ToolCallsJSON, msg.ToolCallID, msg.ToolName,
+		msg.PromptTokens, msg.CompletionTokens, msg.PromptCacheHitTokens,
 		msg.CreatedAt.Format(time.RFC3339),
 	)
 	if err != nil {
@@ -283,10 +297,12 @@ func (s *SQLiteStore) ListSessions(_ context.Context, limit int) ([]Summary, err
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.db.Query(`SELECT id, title, model,
-		prompt_tokens_total + completion_tokens_total,
-		updated_at, created_at
-		FROM sessions ORDER BY updated_at DESC LIMIT ?`, limit)
+	rows, err := s.db.Query(`SELECT s.id, s.title, s.model,
+		s.prompt_tokens_total + s.completion_tokens_total,
+		s.updated_at, s.created_at
+		FROM sessions s
+		WHERE EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id)
+		ORDER BY s.updated_at DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}

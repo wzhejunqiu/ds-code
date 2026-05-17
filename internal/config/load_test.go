@@ -102,6 +102,21 @@ func TestLoad_rejectsAPIKeyInYAML(t *testing.T) {
 	}
 }
 
+func TestApplyCLIDerived_verboseCount(t *testing.T) {
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	if err := cmd.ParseFlags([]string{"-vv"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{}
+	if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.LogVerbosity != 2 {
+		t.Fatalf("LogVerbosity = %d, want 2", cfg.LogVerbosity)
+	}
+}
+
 func TestLoadAPIKey(t *testing.T) {
 	t.Setenv("DS_CODE_DEEPSEEK_API_KEY", "")
 	t.Setenv("DEEPSEEK_API_KEY", "")
@@ -114,5 +129,11 @@ func TestLoadAPIKey(t *testing.T) {
 	k, err := config.LoadAPIKey()
 	if err != nil || k != "sk-test" {
 		t.Fatalf("key = %q err = %v", k, err)
+	}
+
+	t.Setenv("DS_CODE_DEEPSEEK_API_KEY", "  sk-trimmed  \n")
+	k, err = config.LoadAPIKey()
+	if err != nil || k != "sk-trimmed" {
+		t.Fatalf("trimmed key = %q err = %v", k, err)
 	}
 }

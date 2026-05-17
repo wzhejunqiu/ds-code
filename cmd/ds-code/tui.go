@@ -4,12 +4,15 @@ import (
 	"context"
 	"io"
 
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/ui/tui"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
+	logging.L().Info("starting TUI", zap.Bool("resume_session", sessionID != ""))
 	if _, err := a.openStore(); err != nil {
 		return err
 	}
@@ -46,6 +49,7 @@ func (a *app) runTUI(cmd *cobra.Command, sessionID string) error {
 		Store:     store,
 		Context:   ctxSvc,
 		SessionID: sessionID,
+		Version:   version,
 		PromptCh:  promptCh,
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line string) (bool, error) {
 			env := &slashEnv{

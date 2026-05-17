@@ -181,21 +181,31 @@ func (e *Engine) checkPath(rel string) error {
 	return nil
 }
 
-// ResolvePath resolves rel under workspace and blocks escape (S2: symlinks evaluated).
+// ResolvePath resolves a path under workspace and blocks escape (S2: symlinks evaluated).
+// Relative paths are preferred; absolute paths are accepted when they resolve inside workspace
+// (models often pass full paths under project_root).
 func (e *Engine) ResolvePath(rel string) (string, error) {
-	if filepath.IsAbs(rel) {
-		return "", fmt.Errorf("%w: absolute paths not allowed: %s", ErrDenied, rel)
-	}
-	if strings.Contains(rel, "..") {
-		return "", fmt.Errorf("%w: path traversal: %s", ErrDenied, rel)
-	}
-
 	ws, err := filepath.EvalSymlinks(e.Workspace)
 	if err != nil {
 		ws, err = filepath.Abs(e.Workspace)
 		if err != nil {
 			return "", err
 		}
+	}
+
+	if filepath.IsAbs(rel) {
+		abs := filepath.Clean(rel)
+		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+			abs = resolved
+		}
+		if err := e.ensureUnderWorkspace(ws, abs, rel); err != nil {
+			return "", err
+		}
+		return abs, nil
+	}
+
+	if strings.Contains(rel, "..") {
+		return "", fmt.Errorf("%w: path traversal: %s", ErrDenied, rel)
 	}
 
 	abs := filepath.Join(ws, filepath.Clean(rel))
@@ -210,11 +220,18 @@ func (e *Engine) ResolvePath(rel string) (string, error) {
 		abs = filepath.Join(parent, filepath.Base(abs))
 	}
 
-	relTo, err := filepath.Rel(ws, abs)
-	if err != nil || strings.HasPrefix(relTo, "..") {
-		return "", fmt.Errorf("%w: outside workspace: %s", ErrDenied, rel)
+	if err := e.ensureUnderWorkspace(ws, abs, rel); err != nil {
+		return "", err
 	}
 	return abs, nil
+}
+
+func (e *Engine) ensureUnderWorkspace(ws, abs, original string) error {
+	relTo, err := filepath.Rel(ws, abs)
+	if err != nil || strings.HasPrefix(relTo, "..") || relTo == ".." {
+		return fmt.Errorf("%w: outside workspace: %s", ErrDenied, original)
+	}
+	return nil
 }
 
 var sensitivePatterns = []string{

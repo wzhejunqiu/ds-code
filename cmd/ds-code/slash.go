@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
+	"github.com/hejunqiu/ds-code/internal/agent/subagent"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
+	"go.uber.org/zap"
 )
 
 type slashEnv struct {
@@ -61,6 +67,7 @@ func (a *app) handleSlash(env *slashEnv, line string) (handled bool, err error) 
 		return true, a.slashPermissions(env, args)
 
 	case "clear":
+		session.DropPending(env.store, *env.sessionID)
 		sess, err := a.createSession(env.store)
 		if err != nil {
 			return true, err
@@ -227,7 +234,7 @@ func (a *app) slashPermissions(env *slashEnv, args string) error {
 func (a *app) slashResume(env *slashEnv, args string) error {
 	id := strings.TrimSpace(args)
 	if id == "" {
-		list, err := env.store.ListSessions(env.ctx, 10)
+		list, err := env.store.ListSessions(env.ctx, 50)
 		if err != nil {
 			return err
 		}
@@ -244,6 +251,7 @@ func (a *app) slashResume(env *slashEnv, args string) error {
 	if _, err := env.store.Get(env.ctx, id); err != nil {
 		return err
 	}
+	session.DropPending(env.store, *env.sessionID)
 	*env.sessionID = id
 	fmt.Fprintf(env.out, "Resumed session %s\n", id)
 	return nil
@@ -254,8 +262,152 @@ func (a *app) seedGitSnapshot(ctx context.Context, store session.Store, ctxSvc *
 	if err != nil || snap == "" {
 		return err
 	}
+	logging.L().Debug("git snapshot seeded", zap.String("session_id", sessionID), zap.Int("chars", len(snap)))
 	return store.UpdateSession(ctx, sessionID, func(s *session.Session) error {
 		s.GitSnapshot = snap
 		return nil
 	})
+}
+
+func (a *app) slashRunMode(env *slashEnv, mode string) error {
+	a.cfg.RunMode = mode
+	if err := env.store.UpdateSession(env.ctx, *env.sessionID, func(s *session.Session) error {
+		s.RunMode = mode
+		return nil
+	}); err != nil {
+		return err
+	}
+	gi, _ := tool.LoadGitignore(a.cfg.ProjectRoot)
+	bundle, err := a.buildTools(env.ctx, env.runner.Perm, gi, a.cfg.LLM.StrictTools, env.runner.LLM, mode)
+	if err != nil {
+		return err
+	}
+	a.rebindRunnerTools(env.runner, env.ctxSvc, bundle)
+	fmt.Fprintf(env.out, "Run mode set to %s (tools updated for this session).\n", mode)
+	return nil
+}
+
+func (a *app) slashSkill(env *slashEnv, args string) error {
+	name := strings.TrimSpace(args)
+	if name == "" {
+		names, err := ctxpkg.ListSkillNames(a.cfg.ProjectRoot)
+		if err != nil {
+			return err
+		}
+		if len(names) == 0 {
+			fmt.Fprintln(env.out, "No skills found under .ds-code/skills/ or ~/.ds-code/skills/")
+			return nil
+		}
+		fmt.Fprintln(env.out, "Available skills:")
+		for _, n := range names {
+			mark := ""
+			if n == env.ctxSvc.ActiveSkill {
+				mark = " (active)"
+			}
+			fmt.Fprintf(env.out, "  %s%s\n", n, mark)
+		}
+		return nil
+	}
+	text, err := ctxpkg.LoadSkill(a.cfg.ProjectRoot, name)
+	if err != nil {
+		return err
+	}
+	env.ctxSvc.ActiveSkill = name
+	env.ctxSvc.SkillsText = text
+	fmt.Fprintf(env.out, "Activated skill %q (%d chars) for next requests.\n", name, len(text))
+	return nil
+}
+
+func (a *app) slashTask(env *slashEnv, args string) error {
+	prompt := strings.TrimSpace(args)
+	if prompt == "" {
+		return fmt.Errorf("usage: /task <prompt>")
+	}
+	fmt.Fprintln(env.out, "Running read-only subagent...")
+	gi, _ := tool.LoadGitignore(a.cfg.ProjectRoot)
+	summary, err := subagent.Run(env.ctx, a.cfg, env.runner.LLM, prompt, func(reg *tool.Registry) {
+		builtin.RegisterExploreTools(reg, a.cfg, env.runner.Perm, gi, a.cfg.LLM.StrictTools)
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(env.out, summary)
+	return nil
+}
+
+func (a *app) slashCheckpoint(env *slashEnv, args string) error {
+	args = strings.TrimSpace(args)
+	if args == "" || args == "list" {
+		return a.slashCheckpointList(env)
+	}
+	if strings.HasPrefix(args, "rewind ") {
+		return a.slashCheckpointRewind(env, strings.TrimSpace(strings.TrimPrefix(args, "rewind")))
+	}
+	if n, err := strconv.Atoi(args); err == nil {
+		return a.slashCheckpointRewind(env, strconv.Itoa(n))
+	}
+	return fmt.Errorf("usage: /checkpoint [list|rewind N]")
+}
+
+func (a *app) slashRewind(env *slashEnv, args string) error {
+	args = strings.TrimSpace(args)
+	if args == "" {
+		return fmt.Errorf("usage: /rewind <checkpoint-id>")
+	}
+	return a.slashCheckpointRewind(env, args)
+}
+
+func (a *app) slashCheckpointList(env *slashEnv) error {
+	if env.runner.Checkpoints == nil {
+		return fmt.Errorf("checkpoint store unavailable")
+	}
+	list, err := env.runner.Checkpoints.List(env.ctx, *env.sessionID)
+	if err != nil {
+		return err
+	}
+	if len(list) == 0 {
+		fmt.Fprintln(env.out, "No checkpoints for this session.")
+		return nil
+	}
+	fmt.Fprintln(env.out, "Checkpoints:")
+	for _, m := range list {
+		fmt.Fprintf(env.out, "  #%d  %s  %s  files=%v\n",
+			m.ID, m.CreatedAt.Format("2006-01-02 15:04"), m.Tool, m.Files)
+	}
+	return nil
+}
+
+func (a *app) slashCheckpointRewind(env *slashEnv, idStr string) error {
+	id, err := strconv.Atoi(strings.TrimSpace(idStr))
+	if err != nil || id <= 0 {
+		return fmt.Errorf("invalid checkpoint id %q", idStr)
+	}
+	if err := env.runner.RewindCheckpoint(env.ctx, *env.sessionID, id); err != nil {
+		return err
+	}
+	fmt.Fprintf(env.out, "Rewound workspace to checkpoint #%d.\n", id)
+	return nil
+}
+
+func (a *app) slashBtw(env *slashEnv, args string) error {
+	args = strings.TrimSpace(args)
+	if args == "" {
+		return fmt.Errorf("usage: /btw <question>")
+	}
+	opts := agent.EphemeralOpts{
+		SessionID:          *env.sessionID,
+		IncludeRecentTurns: a.cfg.BTW.IncludeRecentTurns,
+		MaxTokens:          a.cfg.BTW.MaxTokens,
+		CountTowardSession: a.cfg.BTW.CountTowardSession,
+	}
+	res, err := env.runner.RunEphemeral(env.ctx, args, opts)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.out, "[btw]\n%s\n", res.Content)
+	if res.Reasoning != "" {
+		fmt.Fprintf(env.out, "\n(reasoning)\n%s\n", res.Reasoning)
+	}
+	fmt.Fprintf(env.out, "\nbtw tokens: in=%d out=%d\n", res.Usage.PromptTokens, res.Usage.CompletionTokens)
+	return nil
 }

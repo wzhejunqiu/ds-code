@@ -33,6 +33,8 @@ type Message struct {
 	Role                 string
 	Content              string
 	ReasoningContent     string
+	ReasoningDurationMS  int64 // assistant: thinking phase duration
+	TurnDurationMS       int64 // assistant: full user-turn wall time (final reply only)
 	ToolCallsJSON        string
 	ToolCallID           string
 	ToolName             string

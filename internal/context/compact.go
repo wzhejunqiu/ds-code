@@ -8,13 +8,16 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"go.uber.org/zap"
 )
 
 var secretLineRE = regexp.MustCompile(`(?i)(api[_-]?key|secret|password|token)\s*[=:]\s*\S+`)
 
 // CompactAPIContext summarizes older turns via LLM and updates session watermark.
 func (s *Service) CompactAPIContext(ctx context.Context, sessionID string) error {
+	logging.L().Info("compact start", zap.String("session_id", sessionID))
 	sess, err := s.Store.Get(ctx, sessionID)
 	if err != nil {
 		return err
@@ -65,6 +68,11 @@ func (s *Service) CompactAPIContext(ctx context.Context, sessionID string) error
 	if usage.PromptTokens > 0 || usage.CompletionTokens > 0 {
 		_ = s.Store.AddUsage(ctx, sessionID, usage)
 	}
+	logging.L().Info("compact done",
+		zap.String("session_id", sessionID),
+		zap.Int64("watermark", watermark),
+		zap.Int("summary_chars", len(mergedSummary)),
+	)
 	return nil
 }
 

@@ -100,6 +100,9 @@ func (m *MemoryStore) ListSessions(_ context.Context, limit int) ([]Summary, err
 	}
 	var items []item
 	for id, sess := range m.sessions {
+		if len(m.messages[id]) == 0 {
+			continue
+		}
 		title := sess.Title
 		if title == "" {
 			title = "(untitled)"
