@@ -54,9 +54,28 @@ func (m *model) updatePromptRequest(msg promptRequestMsg) tea.Cmd {
 }
 
 func (m *model) updateOverlayClose() tea.Cmd {
-	m.overlay = overlayNone
-	m.overlayText = ""
+	m.dismissOverlay()
 	m.refreshStatus()
 	m.syncChatView()
 	return nil
+}
+
+// dismissOverlay closes the active overlay and clears any associated picker state.
+func (m *model) dismissOverlay() {
+	switch m.overlay {
+	case overlayComplete:
+		m.overlay = overlayNone
+		m.overlayText = ""
+		m.clearCompletePicker()
+	case overlayResume:
+		m.clearResumePicker()
+	case overlayContext, overlayHelp:
+		m.overlay = overlayNone
+		m.overlayText = ""
+	default:
+		if m.overlay != overlayNone {
+			m.overlay = overlayNone
+			m.overlayText = ""
+		}
+	}
 }

@@ -52,6 +52,30 @@ func TestSyncCompleteOverlayHighlightsSelection(t *testing.T) {
 	}
 }
 
+func TestRunningEscDismissesCompleteOverlay(t *testing.T) {
+	m := model{
+		input:   textinput.New(),
+		running: true,
+	}
+	m.overlay = overlayComplete
+	m.complete = []slash.Command{{Name: "clear", Description: "new session"}}
+	m.syncCompleteOverlay()
+
+	_, handled := m.updateKey(tea.KeyMsg{Type: tea.KeyEsc})
+	if !handled {
+		t.Fatal("expected esc to be handled")
+	}
+	if m.overlay != overlayNone {
+		t.Fatalf("overlay = %v, want overlayNone", m.overlay)
+	}
+	if m.complete != nil {
+		t.Fatal("expected complete list to be cleared")
+	}
+	if m.overlayText != "" {
+		t.Fatalf("overlayText = %q, want empty", m.overlayText)
+	}
+}
+
 func TestHandleCompleteKeyTabSelectsFirst(t *testing.T) {
 	m := model{input: textinput.New()}
 	m.complete = []slash.Command{

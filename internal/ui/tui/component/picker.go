@@ -17,10 +17,21 @@ type Picker struct {
 	PageSize int // 0 shows all items
 }
 
+// PickerTabBehavior configures Tab key handling for a picker instance.
+type PickerTabBehavior int
+
+const (
+	// PickerTabDefault leaves Tab to the text input (not handled by the picker).
+	PickerTabDefault PickerTabBehavior = iota
+	// PickerTabSelectFirst confirms the first item (slash completion).
+	PickerTabSelectFirst
+	// PickerTabMoveDown moves the cursor down (resume session list).
+	PickerTabMoveDown
+)
+
 // PickerKeyOpts configures key handling differences between pickers.
 type PickerKeyOpts struct {
-	TabMovesDown    bool // resume: Tab acts like Down
-	TabSelectsFirst bool // slash complete: Tab picks the first item
+	Tab PickerTabBehavior
 }
 
 // PickerKeyAction is returned when a key should close or confirm the picker.
@@ -43,6 +54,7 @@ func (p *Picker) Clear() {
 	p.Items = nil
 	p.Cursor = 0
 	p.Scroll = 0
+	p.PageSize = 0
 }
 
 func (p *Picker) SetItems(items []string) {
@@ -94,17 +106,18 @@ func (p *Picker) HandleKey(msg tea.KeyMsg, opts PickerKeyOpts) (PickerKeyAction,
 		p.Move(1)
 		return PickerKeyNone, true
 	case "tab":
-		if opts.TabSelectsFirst {
+		switch opts.Tab {
+		case PickerTabSelectFirst:
 			if p.Len() > 0 {
 				return PickerKeyConfirmFirst, true
 			}
 			return PickerKeyNone, true
-		}
-		if opts.TabMovesDown {
+		case PickerTabMoveDown:
 			p.Move(1)
 			return PickerKeyNone, true
+		default:
+			return PickerKeyNone, false
 		}
-		return PickerKeyNone, false
 	case "pgup":
 		if p.PageSize > 0 {
 			p.MovePage(-1)

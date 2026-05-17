@@ -1,14 +1,14 @@
 package component
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+	"github.com/hejunqiu/ds-code/internal/ui/theme"
+)
 
 var (
-	colorText   = lipgloss.Color("#3D3D3D")
-	colorUserBg = lipgloss.Color("#E8E6E0")
-
-	styleItem         = lipgloss.NewStyle().Foreground(colorText)
+	styleItem = lipgloss.NewStyle().Foreground(theme.Text)
 	styleItemSelected = lipgloss.NewStyle().
-				Background(colorUserBg).
-				Foreground(colorText).
+				Background(theme.UserBg).
+				Foreground(theme.Text).
 				Bold(true)
 )

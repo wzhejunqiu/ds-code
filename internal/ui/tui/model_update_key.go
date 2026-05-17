@@ -45,8 +45,7 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if m.overlay == overlayContext || m.overlay == overlayHelp {
 		switch msg.String() {
 		case "esc", "q":
-			m.overlay = overlayNone
-			m.overlayText = ""
+			m.dismissOverlay()
 			return nil, true
 		}
 	}
@@ -78,16 +77,14 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	case "esc":
 		if m.running {
 			if m.overlay != overlayNone {
-				m.overlay = overlayNone
-				m.overlayText = ""
+				m.dismissOverlay()
 				return nil, true
 			}
 			m.requestCancelTurn()
 			return nil, true
 		}
 		if m.overlay != overlayNone {
-			m.overlay = overlayNone
-			m.overlayText = ""
+			m.dismissOverlay()
 			return nil, true
 		}
 	}

@@ -80,7 +80,7 @@ func TestPickerHandleKeyTabSelectsFirst(t *testing.T) {
 	p := Picker{Items: []string{"a", "b"}}
 	p.Cursor = 1
 
-	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyTab}, PickerKeyOpts{TabSelectsFirst: true})
+	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyTab}, PickerKeyOpts{Tab: PickerTabSelectFirst})
 	if !handled || action != PickerKeyConfirmFirst {
 		t.Fatalf("action=%v handled=%v", action, handled)
 	}
@@ -90,11 +90,73 @@ func TestPickerHandleKeyTabMovesDown(t *testing.T) {
 	p := Picker{Items: []string{"a", "b"}}
 	p.Cursor = 0
 
-	_, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyTab}, PickerKeyOpts{TabMovesDown: true})
+	_, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyTab}, PickerKeyOpts{Tab: PickerTabMoveDown})
 	if !handled {
 		t.Fatal("expected tab to be handled")
 	}
 	if p.Cursor != 1 {
 		t.Fatalf("cursor = %d, want 1", p.Cursor)
+	}
+}
+
+func TestPickerHandleKeyEscCancel(t *testing.T) {
+	p := Picker{Items: []string{"a"}}
+	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyEsc}, PickerKeyOpts{})
+	if !handled || action != PickerKeyCancel {
+		t.Fatalf("action=%v handled=%v", action, handled)
+	}
+}
+
+func TestPickerHandleKeyEnterConfirm(t *testing.T) {
+	p := Picker{Items: []string{"a", "b"}}
+	p.Cursor = 1
+	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyEnter}, PickerKeyOpts{})
+	if !handled || action != PickerKeyConfirm {
+		t.Fatalf("action=%v handled=%v", action, handled)
+	}
+}
+
+func TestPickerHandleKeyEnterEmptyList(t *testing.T) {
+	p := Picker{}
+	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyEnter}, PickerKeyOpts{})
+	if !handled || action != PickerKeyNone {
+		t.Fatalf("action=%v handled=%v", action, handled)
+	}
+}
+
+func TestPickerHandleKeyPageKeys(t *testing.T) {
+	p := Picker{PageSize: 3}
+	p.SetItems([]string{"1", "2", "3", "4", "5", "6", "7"})
+
+	_, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyPgDown}, PickerKeyOpts{})
+	if !handled {
+		t.Fatal("expected pgdown to be handled")
+	}
+	if p.Cursor != 3 {
+		t.Fatalf("cursor = %d, want 3 after pgdown", p.Cursor)
+	}
+
+	_, handled = p.HandleKey(tea.KeyMsg{Type: tea.KeyPgUp}, PickerKeyOpts{})
+	if !handled {
+		t.Fatal("expected pgup to be handled")
+	}
+	if p.Cursor != 0 {
+		t.Fatalf("cursor = %d, want 0 after pgup", p.Cursor)
+	}
+}
+
+func TestPickerHandleKeyPageKeysIgnoredWithoutPageSize(t *testing.T) {
+	p := Picker{Items: []string{"a", "b", "c"}}
+	_, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyPgDown}, PickerKeyOpts{})
+	if handled {
+		t.Fatal("expected pgdown to be ignored when PageSize is 0")
+	}
+}
+
+func TestPickerClearResetsPageSize(t *testing.T) {
+	p := Picker{PageSize: 8, Items: []string{"a"}}
+	p.Clear()
+	if p.PageSize != 0 {
+		t.Fatalf("PageSize = %d, want 0", p.PageSize)
 	}
 }

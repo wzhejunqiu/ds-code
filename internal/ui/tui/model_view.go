@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/theme"
 )
 
 func contentLineCount(s string) int {
@@ -179,7 +180,7 @@ func (m *model) View() string {
 
 	if m.errLine != "" {
 		b.WriteString("\n")
-		b.WriteString(lipgloss.NewStyle().Foreground(colorError).Render(m.errLine))
+		b.WriteString(lipgloss.NewStyle().Foreground(theme.Error).Render(m.errLine))
 	}
 
 	if m.overlay != overlayNone && m.overlayText != "" {

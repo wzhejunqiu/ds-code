@@ -12,7 +12,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
-var completePickerKeys = component.PickerKeyOpts{TabSelectsFirst: true}
+var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabSelectFirst}
 
 func (m *model) syncCompleteOverlay() {
 	items := make([]string, len(m.complete))
@@ -41,8 +41,7 @@ func (m *model) handleCompleteKey(msg tea.KeyMsg) bool {
 	}
 	switch action {
 	case component.PickerKeyCancel:
-		m.overlay = overlayNone
-		m.clearCompletePicker()
+		m.dismissOverlay()
 	case component.PickerKeyConfirmFirst:
 		m.applyCompletion(0)
 	case component.PickerKeyConfirm:

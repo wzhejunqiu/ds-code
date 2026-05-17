@@ -13,7 +13,7 @@ import (
 
 const resumeListMax = 50
 
-var resumePickerKeys = component.PickerKeyOpts{TabMovesDown: true}
+var resumePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabMoveDown}
 
 func (m *model) resumePageSize() int {
 	if m.height <= 0 {
@@ -79,7 +79,7 @@ func (m *model) handleResumeKey(msg tea.KeyMsg) bool {
 		return false
 	}
 	if action == component.PickerKeyCancel {
-		m.clearResumePicker()
+		m.dismissOverlay()
 		return true
 	}
 	m.syncResumePicker()
