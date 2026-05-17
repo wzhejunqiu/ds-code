@@ -23,15 +23,14 @@ func (m *model) updateResumeList(msg resumeListMsg) tea.Cmd {
 	}
 	m.resumeSessions = msg.sessions
 	m.resumeFilter = ""
-	m.resumeIdx = 0
-	m.resumeScroll = 0
+	m.resumePicker.ResetSelection()
 	if len(m.resumeSessions) == 0 {
 		m.errLine = "No saved sessions."
 		m.overlay = overlayNone
 		return nil
 	}
 	m.overlay = overlayResume
-	m.renderResumeOverlay()
+	m.syncResumePicker()
 	return nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
 type model struct {
@@ -27,13 +28,13 @@ type model struct {
 
 	overlay     overlayKind
 	overlayText string
-	complete    []slash.Command
-	completeIdx int
 
-	resumeSessions []session.Summary
-	resumeIdx      int
-	resumeScroll   int    // first visible row in the session list overlay
-	resumeFilter   string // last filter used for resume picker; avoids reset on cursor blink
+	complete       []slash.Command // parallel to completePicker.Items by index
+	completePicker component.Picker
+
+	resumeSessions []session.Summary // parallel to resumePicker.Items by index
+	resumePicker   component.Picker
+	resumeFilter   string // last filter; avoids reset on cursor blink
 
 	prompt *permission.PromptRequest
 

@@ -9,7 +9,7 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if m.overlay == overlayResume {
 		if msg.Type == tea.KeyEnter && !msg.Alt {
 			if len(m.resumeSessions) > 0 {
-				idx := m.resumeIdx
+				idx := m.resumePicker.Cursor
 				if idx >= len(m.resumeSessions) {
 					idx = len(m.resumeSessions) - 1
 				}

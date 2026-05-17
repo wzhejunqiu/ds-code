@@ -27,7 +27,7 @@ func (m *model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if line != "" {
 			m.input.Reset()
 			m.overlay = overlayNone
-			m.complete = nil
+			m.clearCompletePicker()
 			m.clearResumePicker()
 			return m, m.submitLine(line)
 		}

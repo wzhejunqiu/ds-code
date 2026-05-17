@@ -8,9 +8,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
 const resumeListMax = 50
+
+var resumePickerKeys = component.PickerKeyOpts{TabMovesDown: true}
 
 func (m *model) resumePageSize() int {
 	if m.height <= 0 {
@@ -27,54 +30,20 @@ func (m *model) resumePageSize() int {
 	return n
 }
 
-func (m *model) ensureResumeScrollVisible() {
-	total := len(m.resumeSessions)
-	if total == 0 {
-		m.resumeScroll = 0
-		return
+func (m *model) syncResumePicker() {
+	items := make([]string, len(m.resumeSessions))
+	for i, s := range m.resumeSessions {
+		title := s.Title
+		if title == "" {
+			title = "(untitled)"
+		}
+		items[i] = fmt.Sprintf("%s  %s  %s", s.ID, title, formatResumeUpdated(s.UpdatedAt))
 	}
-	page := m.resumePageSize()
-	if m.resumeIdx < 0 {
-		m.resumeIdx = 0
-	}
-	if m.resumeIdx >= total {
-		m.resumeIdx = total - 1
-	}
-	if m.resumeIdx < m.resumeScroll {
-		m.resumeScroll = m.resumeIdx
-	}
-	if m.resumeIdx >= m.resumeScroll+page {
-		m.resumeScroll = m.resumeIdx - page + 1
-	}
-	maxScroll := total - page
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if m.resumeScroll > maxScroll {
-		m.resumeScroll = maxScroll
-	}
-	if m.resumeScroll < 0 {
-		m.resumeScroll = 0
-	}
-}
-
-func (m *model) resumeMoveSelection(delta int) {
-	if len(m.resumeSessions) == 0 {
-		return
-	}
-	m.resumeIdx += delta
-	m.ensureResumeScrollVisible()
-	m.renderResumeOverlay()
-}
-
-func (m *model) resumePageSelection(pages int) {
-	if len(m.resumeSessions) == 0 {
-		return
-	}
-	page := m.resumePageSize()
-	m.resumeIdx += pages * page
-	m.ensureResumeScrollVisible()
-	m.renderResumeOverlay()
+	m.resumePicker.Header = "Recent sessions (↑↓ scroll, PgUp/PgDn, Enter to resume):"
+	m.resumePicker.Empty = "No matching sessions."
+	m.resumePicker.PageSize = m.resumePageSize()
+	m.resumePicker.SetItems(items)
+	m.overlayText = m.resumePicker.View()
 }
 
 func (m *model) listResumeSessions(filter string) ([]session.Summary, error) {
@@ -97,40 +66,6 @@ func (m *model) listResumeSessions(filter string) ([]session.Summary, error) {
 	return filtered, nil
 }
 
-func (m *model) renderResumeOverlay() {
-	total := len(m.resumeSessions)
-	if total == 0 {
-		m.overlayText = "No matching sessions."
-		return
-	}
-	m.ensureResumeScrollVisible()
-
-	page := m.resumePageSize()
-	end := m.resumeScroll + page
-	if end > total {
-		end = total
-	}
-
-	var b strings.Builder
-	b.WriteString("Recent sessions (↑↓ scroll, PgUp/PgDn, Enter to resume):\n")
-	for i := m.resumeScroll; i < end; i++ {
-		s := m.resumeSessions[i]
-		prefix := "  "
-		if i == m.resumeIdx {
-			prefix = "▸ "
-		}
-		title := s.Title
-		if title == "" {
-			title = "(untitled)"
-		}
-		fmt.Fprintf(&b, "%s%s  %s  %s\n", prefix, s.ID, title, formatResumeUpdated(s.UpdatedAt))
-	}
-	if total > page {
-		fmt.Fprintf(&b, "  — %d–%d of %d —", m.resumeScroll+1, end, total)
-	}
-	m.overlayText = strings.TrimRight(b.String(), "\n")
-}
-
 func formatResumeUpdated(t time.Time) string {
 	if t.IsZero() {
 		return "-"
@@ -139,35 +74,23 @@ func formatResumeUpdated(t time.Time) string {
 }
 
 func (m *model) handleResumeKey(msg tea.KeyMsg) bool {
-	switch msg.String() {
-	case "up":
-		m.resumeMoveSelection(-1)
-		return true
-	case "down", "tab":
-		m.resumeMoveSelection(1)
-		return true
-	case "pgup":
-		m.resumePageSelection(-1)
-		return true
-	case "pgdown":
-		m.resumePageSelection(1)
-		return true
-	case "enter":
-		// Handled before handleResumeKey in the KeyMsg block.
-		return true
-	case "esc":
+	action, handled := m.resumePicker.HandleKey(msg, resumePickerKeys)
+	if !handled {
+		return false
+	}
+	if action == component.PickerKeyCancel {
 		m.clearResumePicker()
 		return true
 	}
-	return false
+	m.syncResumePicker()
+	return true
 }
 
 func (m *model) clearResumePicker() {
 	m.overlay = overlayNone
 	m.resumeSessions = nil
 	m.resumeFilter = ""
-	m.resumeIdx = 0
-	m.resumeScroll = 0
+	m.resumePicker.Clear()
 	m.overlayText = ""
 }
 
@@ -187,18 +110,17 @@ func (m *model) updateResumePicker(filter string) {
 	}
 	m.resumeSessions = list
 	if filterChanged || len(list) == 0 {
-		m.resumeIdx = 0
-		m.resumeScroll = 0
-	} else if m.resumeIdx >= len(list) {
-		m.resumeIdx = len(list) - 1
+		m.resumePicker.ResetSelection()
+	} else {
+		m.resumePicker.ClampSelection()
 	}
 	if len(list) == 0 {
-		m.overlayText = "No matching sessions."
 		m.overlay = overlayResume
+		m.syncResumePicker()
 		return
 	}
 	m.overlay = overlayResume
-	m.renderResumeOverlay()
+	m.syncResumePicker()
 }
 
 func (m *model) fetchResumeList() tea.Cmd {

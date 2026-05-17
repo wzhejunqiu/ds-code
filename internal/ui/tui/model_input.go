@@ -9,41 +9,48 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
-func (m *model) handleCompleteKey(msg tea.KeyMsg) bool {
-	switch msg.String() {
-	case "up":
-		if m.completeIdx > 0 {
-			m.completeIdx--
-		}
-		m.renderCompleteOverlay()
-		return true
-	case "down":
-		if m.completeIdx < len(m.complete)-1 {
-			m.completeIdx++
-		}
-		m.renderCompleteOverlay()
-		return true
-	case "tab":
-		if len(m.complete) > 0 {
-			m.applyCompletion(0)
-		}
-		return true
-	case "enter":
-		if m.completionReadyToSubmit() {
-			return false
-		}
-		if len(m.complete) > 0 {
-			m.applyCompletion(m.completeIdx)
-		}
-		return true
-	case "esc":
-		m.overlay = overlayNone
-		m.complete = nil
-		return true
+var completePickerKeys = component.PickerKeyOpts{TabSelectsFirst: true}
+
+func (m *model) syncCompleteOverlay() {
+	items := make([]string, len(m.complete))
+	for i, c := range m.complete {
+		items[i] = fmt.Sprintf("/%s — %s", c.Name, c.Description)
 	}
-	return false
+	m.completePicker.SetItems(items)
+	m.overlayText = m.completePicker.View()
+}
+
+func (m *model) clearCompletePicker() {
+	m.complete = nil
+	m.completePicker.Clear()
+}
+
+func (m *model) handleCompleteKey(msg tea.KeyMsg) bool {
+	if m.completionReadyToSubmit() && msg.Type == tea.KeyEnter {
+		return false
+	}
+	if len(m.complete) > 0 {
+		m.syncCompleteOverlay()
+	}
+	action, handled := m.completePicker.HandleKey(msg, completePickerKeys)
+	if !handled {
+		return false
+	}
+	switch action {
+	case component.PickerKeyCancel:
+		m.overlay = overlayNone
+		m.clearCompletePicker()
+	case component.PickerKeyConfirmFirst:
+		m.applyCompletion(0)
+	case component.PickerKeyConfirm:
+		m.applyCompletion(m.completePicker.Cursor)
+	default:
+		m.syncCompleteOverlay()
+	}
+	return true
 }
 
 func (m *model) applyCompletion(idx int) {
@@ -60,7 +67,7 @@ func (m *model) applyCompletion(idx int) {
 	m.input.SetValue("/" + c.Name + " ")
 	m.input.CursorEnd()
 	m.overlay = overlayNone
-	m.complete = nil
+	m.clearCompletePicker()
 }
 
 // completionReadyToSubmit reports whether Enter should run the current slash
@@ -92,30 +99,19 @@ func (m *model) updateCompletion() {
 	if !strings.HasPrefix(trimmed, "/") {
 		if m.overlay == overlayComplete {
 			m.overlay = overlayNone
-			m.complete = nil
+			m.clearCompletePicker()
 		}
 		return
 	}
 	m.complete = slash.FilterCommands(val)
-	m.completeIdx = 0
+	m.completePicker.ResetSelection()
 	if len(m.complete) == 0 {
 		m.overlay = overlayNone
+		m.clearCompletePicker()
 		return
 	}
 	m.overlay = overlayComplete
-	m.renderCompleteOverlay()
-}
-
-func (m *model) renderCompleteOverlay() {
-	var b strings.Builder
-	for i, c := range m.complete {
-		prefix := "  "
-		if i == m.completeIdx {
-			prefix = "▸ "
-		}
-		fmt.Fprintf(&b, "%s/%s — %s\n", prefix, c.Name, c.Description)
-	}
-	m.overlayText = strings.TrimRight(b.String(), "\n")
+	m.syncCompleteOverlay()
 }
 
 func (m *model) submitLine(line string) tea.Cmd {

@@ -2,12 +2,35 @@ package tui
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 )
+
+func TestSyncResumePickerHighlightsSelection(t *testing.T) {
+	m := model{height: 40}
+	m.resumeSessions = []session.Summary{
+		{ID: "aaa", Title: "first", UpdatedAt: time.Now()},
+		{ID: "bbb", Title: "second", UpdatedAt: time.Now()},
+	}
+	m.resumePicker.Cursor = 1
+	m.syncResumePicker()
+
+	lines := strings.Split(m.overlayText, "\n")
+	if len(lines) < 3 {
+		t.Fatalf("got %d lines, want at least 3:\n%s", len(lines), m.overlayText)
+	}
+	if lines[1] == lines[2] {
+		t.Fatal("expected selected and unselected session lines to differ visually")
+	}
+	if !strings.Contains(lines[2], "bbb") {
+		t.Fatalf("selected line missing session id: %q", lines[2])
+	}
+}
 
 func TestResumePickerEnterDoesNotSubmitFilterAsSessionID(t *testing.T) {
 	store := session.NewMemoryStore()

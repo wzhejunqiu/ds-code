@@ -13,7 +13,7 @@ func (m *model) updateWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
 	m.syncChatView()
 	m.syncToolView()
 	if m.overlay == overlayResume && len(m.resumeSessions) > 0 {
-		m.renderResumeOverlay()
+		m.syncResumePicker()
 	}
 	return nil
 }

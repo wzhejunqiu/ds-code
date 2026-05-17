@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -30,13 +31,34 @@ func TestCompletionReadyToSubmit(t *testing.T) {
 	}
 }
 
+func TestSyncCompleteOverlayHighlightsSelection(t *testing.T) {
+	m := model{}
+	m.complete = []slash.Command{
+		{Name: "clear", Description: "new session"},
+		{Name: "context", Description: "context panel"},
+	}
+	m.completePicker.Cursor = 1
+	m.syncCompleteOverlay()
+
+	lines := strings.Split(m.overlayText, "\n")
+	if len(lines) != 2 {
+		t.Fatalf("got %d lines, want 2:\n%s", len(lines), m.overlayText)
+	}
+	if lines[0] == lines[1] {
+		t.Fatal("expected selected and unselected lines to differ visually")
+	}
+	if !strings.Contains(lines[1], "context") {
+		t.Fatalf("selected line missing command: %q", lines[1])
+	}
+}
+
 func TestHandleCompleteKeyTabSelectsFirst(t *testing.T) {
 	m := model{input: textinput.New()}
 	m.complete = []slash.Command{
 		{Name: "clear", Description: "new session"},
 		{Name: "compact", Description: "compact context"},
 	}
-	m.completeIdx = 1
+	m.completePicker.Cursor = 1
 	m.overlay = overlayComplete
 
 	if !m.handleCompleteKey(tea.KeyMsg{Type: tea.KeyTab}) {
