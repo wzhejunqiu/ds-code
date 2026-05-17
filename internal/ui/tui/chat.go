@@ -51,12 +51,14 @@ func (b *chatBlock) finalizeReasoning(at time.Time) {
 }
 
 const (
-	userPrompt      = "> "
-	assistantBullet = "● "
-	toolBullet      = "⚙ "
-	toolResultMax   = 2000
-	planningBullet  = "◦ "
-	planningLabel   = "Planning next moves"
+	userPrompt       = "> "
+	assistantBullet  = "● "
+	toolBullet       = "⚙ "
+	toolResultMax    = 2000
+	planningBullet   = "◦ "
+	planningLabel    = "Planning next moves"
+	interruptBullet  = "⏹ "
+	interruptLabel   = "Turn cancelled (Esc)"
 )
 
 func renderChat(blocks []chatBlock, width int, now time.Time, showToolDetails bool) string {
@@ -95,6 +97,10 @@ func renderChat(blocks []chatBlock, width int, now time.Time, showToolDetails bo
 		case "planning":
 			indent := lipgloss.Width(planningBullet)
 			lines = append(lines, styleChatReason.Render(strings.Repeat(" ", indent)+planningBlockLabel(b.planningStartedAt, now)))
+			lines = append(lines, "")
+		case "interrupt":
+			indent := lipgloss.Width(interruptBullet)
+			lines = append(lines, styleChatInterrupt.Render(strings.Repeat(" ", indent)+interruptBullet+interruptLabel))
 			lines = append(lines, "")
 		}
 	}

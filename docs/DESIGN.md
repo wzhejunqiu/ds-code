@@ -834,7 +834,8 @@ panel.Render(snap, bd)
 ### 11.5 取消
 
 - `context.Context` 贯穿：LLM HTTP、tool Execute、shell 子进程、子代理。
-- Ctrl+C → cancel → 停止流式读取 + `Process.Kill`。
+- TUI 运行中 **Esc** → cancel → 停止流式读取 + `Process.Kill`，对话区显示中断标记。
+- Ctrl+C 在 turn 运行中不取消（提示用 Esc）；空闲时双击退出。
 
 ---
 

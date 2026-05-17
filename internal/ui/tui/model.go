@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -54,9 +55,10 @@ type model struct {
 
 	prompt *permission.PromptRequest
 
-	running      bool
-	turnCancel   context.CancelFunc
-	reasoningAll bool
+	running            bool
+	turnCancel         context.CancelFunc
+	turnEscPending     bool // Esc pressed before turnStartedMsg delivered cancel func
+	reasoningAll       bool
 	toolDetailsVisible bool // Ctrl+O: expand tool args/result in chat
 
 	statusRight string
@@ -70,7 +72,10 @@ type model struct {
 	exitConfirmArmedAt time.Time
 }
 
-const exitConfirmTimeout = time.Second
+const (
+	exitConfirmTimeout = time.Second
+	runningTurnHint    = "Press Esc to cancel the current turn"
+)
 
 func newModel(d *Deps) model {
 	ti := textinput.New()
@@ -123,7 +128,7 @@ func exitConfirmTimeoutTick() tea.Cmd {
 }
 
 func (m *model) listenPrompt() tea.Cmd {
-	if m.deps.PromptCh == nil {
+	if m.deps == nil || m.deps.PromptCh == nil {
 		return nil
 	}
 	ch := m.deps.PromptCh
@@ -175,6 +180,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if m.overlay == overlayPrompt && m.prompt != nil {
+			if m.running && msg.String() == "esc" {
+				m.requestCancelTurn()
+				return m, m.listenPrompt()
+			}
 			return m.handlePromptKey(msg)
 		}
 		if m.overlay == overlayComplete {
@@ -192,11 +201,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch msg.String() {
 		case "ctrl+c":
-			if m.running && m.turnCancel != nil {
-				m.turnCancel()
-				m.errLine = "cancelled"
+			if m.running {
 				m.clearExitConfirm()
-				return m, nil
+				m.errLine = runningTurnHint
+				return m, exitConfirmTimeoutTick()
 			}
 			return m.handleExitConfirmKey("ctrl+c")
 		case "ctrl+d":
@@ -223,6 +231,15 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.syncChatView()
 			return m, nil
 		case "esc":
+			if m.running {
+				if m.overlay != overlayNone {
+					m.overlay = overlayNone
+					m.overlayText = ""
+					return m, nil
+				}
+				m.requestCancelTurn()
+				return m, nil
+			}
 			if m.overlay != overlayNone {
 				m.overlay = overlayNone
 				m.overlayText = ""
@@ -346,6 +363,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case turnStartedMsg:
 		m.turnCancel = msg.cancel
+		if m.turnEscPending {
+			m.turnEscPending = false
+			m.cancelTurn()
+		}
 		return m, nil
 
 	case contextOverlayMsg:
@@ -360,6 +381,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case turnDoneMsg:
 		m.running = false
 		m.turnCancel = nil
+		m.turnEscPending = false
 		m.clearPlanningBlock()
 		now := time.Now()
 		m.finalizeLastAssistant(now)
@@ -370,7 +392,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.applyTurnMetrics(msg.result)
 		if msg.err != nil {
-			m.errLine = msg.err.Error()
+			switch {
+			case m.currentTurnInterrupted():
+				m.errLine = ""
+			case errors.Is(msg.err, context.Canceled):
+				m.errLine = "turn cancelled"
+			default:
+				m.errLine = msg.err.Error()
+			}
 		} else {
 			m.errLine = ""
 		}
@@ -386,6 +415,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case exitConfirmTimeoutMsg:
 		if m.exitConfirmPending && time.Since(m.exitConfirmArmedAt) >= exitConfirmTimeout {
 			m.clearExitConfirm()
+		}
+		if m.errLine == runningTurnHint {
+			m.errLine = ""
 		}
 		return m, nil
 
@@ -461,6 +493,77 @@ func (m *model) handleExitConfirmKey(key string) (tea.Model, tea.Cmd) {
 	m.exitConfirmArmedAt = time.Now()
 	m.errLine = exitConfirmHintFor(key)
 	return m, exitConfirmTimeoutTick()
+}
+
+// requestCancelTurn handles Esc: cancels immediately when possible, otherwise
+// records intent and shows the interrupt marker until turnStartedMsg arrives.
+func (m *model) requestCancelTurn() {
+	if m.turnCancel != nil {
+		m.turnEscPending = false
+		m.cancelTurn()
+		return
+	}
+	m.turnEscPending = true
+	m.appendInterruptBlock()
+}
+
+// cancelTurn stops the in-flight agent turn (Esc). An interrupt marker is
+// appended to the chat until turnDoneMsg arrives.
+func (m *model) cancelTurn() {
+	if m.turnCancel != nil {
+		m.turnCancel()
+	}
+	m.dismissPrompt()
+	m.appendInterruptBlock()
+}
+
+func (m *model) dismissPrompt() {
+	if m.prompt == nil {
+		return
+	}
+	select {
+	case m.prompt.Reply <- false:
+	default:
+	}
+	m.prompt = nil
+	m.overlay = overlayNone
+	m.overlayText = ""
+}
+
+func (m *model) appendInterruptBlock() {
+	if m.currentTurnInterrupted() {
+		return
+	}
+	now := time.Now()
+	m.finalizeLastAssistant(now)
+	m.clearPlanningBlock()
+	for i := range m.chat {
+		if m.chat[i].role == "tool" && m.chat[i].toolRunning {
+			m.chat[i].toolRunning = false
+		}
+	}
+	m.chat = append(m.chat, chatBlock{role: "interrupt"})
+	if m.width > 0 {
+		m.syncChatView()
+	}
+}
+
+func (m *model) currentTurnInterrupted() bool {
+	lastUser := -1
+	for i, b := range m.chat {
+		if b.role == "user" {
+			lastUser = i
+		}
+	}
+	if lastUser < 0 {
+		return false
+	}
+	for i := lastUser + 1; i < len(m.chat); i++ {
+		if m.chat[i].role == "interrupt" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *model) clearExitConfirm() {
@@ -625,6 +728,7 @@ func (m *model) submitLine(line string) tea.Cmd {
 	m.chat = append(m.chat, chatBlock{role: "assistant", streaming: true, reasoningOpen: m.reasoningAll})
 	m.syncChatView()
 	m.running = true
+	m.turnEscPending = false
 	m.errLine = ""
 	m.toolLines = nil
 	m.syncToolView()
@@ -645,7 +749,8 @@ func (m *model) showHelpOverlay() tea.Cmd {
 	buf.WriteString("  Ctrl+R       Expand/collapse all reasoning blocks\n")
 	buf.WriteString("  Ctrl+T       Toggle tool log panel\n")
 	buf.WriteString("  Ctrl+L       Context usage panel\n")
-	buf.WriteString("  Ctrl+C       Cancel turn (while running) / exit (press twice when idle)\n")
+	buf.WriteString("  Esc          Cancel turn (while running)\n")
+	buf.WriteString("  Ctrl+C       Exit when idle (press twice); while running, use Esc to cancel\n")
 	buf.WriteString("  Ctrl+D       Exit (press twice when idle)\n")
 	text := buf.String()
 	return func() tea.Msg {
@@ -670,7 +775,7 @@ func (m *model) runSlash(line string) tea.Cmd {
 			}
 			return overlayCloseMsg{}
 		}
-		return slashOutputMsg{text: fmt.Sprintf("Unknown command (try /help)")}
+		return slashOutputMsg{text: "Unknown command (try /help)"}
 	}
 }
 
@@ -949,12 +1054,12 @@ func (m *model) layout() {
 		return
 	}
 	const (
-		footerH         = 1
-		inputFrameH     = 3
-		gapAfterChat    = 1
-		gapAfterTool    = 1
-		gapAfterInput   = 1
-		maxToolLines    = 5
+		footerH       = 1
+		inputFrameH   = 3
+		gapAfterChat  = 1
+		gapAfterTool  = 1
+		gapAfterInput = 1
+		maxToolLines  = 5
 	)
 	innerW := m.width - 2
 	if innerW < 10 {
@@ -1102,6 +1207,9 @@ func (m *model) resumeSession(id string) tea.Cmd {
 }
 
 func (m *model) refreshStatus() {
+	if m.deps == nil || m.deps.Store == nil {
+		return
+	}
 	ctx := context.Background()
 	sess, err := m.deps.Store.Get(ctx, m.sessionID)
 	if err != nil {
@@ -1144,7 +1252,7 @@ func (m *model) View() string {
 
 	inputBody := m.input.View()
 	if m.running {
-		inputBody = styleFooterHint.Render("Working…")
+		inputBody = styleFooterHint.Render("Working… · Esc to cancel")
 	}
 	b.WriteString(renderInputFrame(m.width, inputBody))
 	b.WriteString("\n")
@@ -1154,7 +1262,7 @@ func (m *model) View() string {
 		footerLeft += " (on)"
 	}
 	if m.running {
-		footerLeft = "Ctrl+C cancel · Ctrl+D exit (twice) · Ctrl+R reasoning · Ctrl+O tool details"
+		footerLeft = "Esc cancel · Ctrl+D exit (twice) · Ctrl+R reasoning · Ctrl+O tool details"
 		if m.toolDetailsVisible {
 			footerLeft += " (on)"
 		}

@@ -500,7 +500,7 @@ Conversation      74,640    7.1%     52.4%   ███████████�
 - `/context --json`：导出累计字段 + 六分项 + 阈值。
 - **不**计入 btw；反映**下一次**主对话 API 调用前快照（默认不含输入框未提交草稿）。
 - **CLI**：`ds-code`（交互）、`ds-code -p "..."`（**非交互**）、`ds-code -p "..." --json`（CI/脚本）、`ds-code --plan`
-- **取消**：Ctrl+C → cancel context → 停 LLM 流 + shell 子进程
+- **取消**：TUI 运行中 **Esc** → cancel context → 停 LLM 流 + shell 子进程；Ctrl+C 仅退出（双击），不取消 turn
 
 ### 推荐目录结构
 
