@@ -60,6 +60,11 @@ jobs:
         with:
           version: v2.1.6
 
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+
   vuln:
     runs-on: ubuntu-latest
     steps:

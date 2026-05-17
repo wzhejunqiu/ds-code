@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/google/uuid"
+	"github.com/hejunqiu/ds-code/internal/llm"
 )
 
 // LazyStore delays persisting new sessions until the first store write that

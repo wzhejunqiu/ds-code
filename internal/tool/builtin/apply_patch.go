@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/patch"
+	patchapply "github.com/hejunqiu/ds-code/internal/patch/apply"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/tool"
 )
@@ -49,7 +49,7 @@ func (t *ApplyPatchTool) Execute(ctx context.Context, args json.RawMessage) (str
 		return "", fmt.Errorf("patch is required")
 	}
 	maxLines := t.Cfg.Tools.ApplyPatch.MaxChangedLines
-	summary, err := patch.Apply(t.Perm.Workspace, in.Patch, t.Perm.ResolvePath, patch.ApplyOptions{
+	summary, err := patchapply.Apply(t.Perm.Workspace, in.Patch, t.Perm.ResolvePath, patchapply.Options{
 		MaxChangedLines: maxLines,
 	})
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/lsp/client"
 )
 
 // Manager caches language server clients per server ID.
@@ -17,7 +18,7 @@ type Manager struct {
 	registry map[string]ServerConfig
 
 	mu      sync.Mutex
-	clients map[string]*Client
+	clients map[string]*client.Client
 }
 
 // NewManager creates an LSP manager for a project root.
@@ -26,7 +27,7 @@ func NewManager(root string, cfg config.LSPConfig) *Manager {
 		root:     root,
 		cfg:      cfg,
 		registry: BuildRegistry(cfg),
-		clients:  make(map[string]*Client),
+		clients:  make(map[string]*client.Client),
 	}
 }
 
@@ -45,7 +46,7 @@ func (m *Manager) Close() error {
 }
 
 // EnsureClient returns a started client for serverID.
-func (m *Manager) EnsureClient(ctx context.Context, serverID string) (*Client, error) {
+func (m *Manager) EnsureClient(ctx context.Context, serverID string) (*client.Client, error) {
 	m.mu.Lock()
 	if c, ok := m.clients[serverID]; ok {
 		m.mu.Unlock()
@@ -70,23 +71,23 @@ func (m *Manager) EnsureClient(ctx context.Context, serverID string) (*Client, e
 	}
 	m.mu.Unlock()
 
-	client := NewClient(m.root, m.cfg, srv)
-	if err := client.Start(ctx); err != nil {
+	c := client.NewClient(m.root, m.cfg, srv)
+	if err := c.Start(ctx); err != nil {
 		return nil, err
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if existing, ok := m.clients[serverID]; ok {
-		_ = client.Close()
+		_ = c.Close()
 		return existing, nil
 	}
-	m.clients[serverID] = client
-	go m.idleWatch(serverID, client)
-	return client, nil
+	m.clients[serverID] = c
+	go m.idleWatch(serverID, c)
+	return c, nil
 }
 
-func (m *Manager) idleWatch(serverID string, client *Client) {
+func (m *Manager) idleWatch(serverID string, c *client.Client) {
 	idle := m.cfg.IdleShutdown
 	if idle <= 0 {
 		idle = 120 * time.Second
@@ -94,14 +95,11 @@ func (m *Manager) idleWatch(serverID string, client *Client) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		client.mu.Lock()
-		last := client.lastUsed
-		client.mu.Unlock()
-		if time.Since(last) < idle {
+		if time.Since(c.LastUsedAt()) < idle {
 			continue
 		}
 		m.mu.Lock()
-		if cur, ok := m.clients[serverID]; ok && cur == client {
+		if cur, ok := m.clients[serverID]; ok && cur == c {
 			_ = cur.Close()
 			delete(m.clients, serverID)
 		}

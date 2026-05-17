@@ -13,6 +13,12 @@ func Handle(env *Env, host Host, line string) (handled bool, err error) {
 	if !ok {
 		return false, nil
 	}
+	if env == nil {
+		return true, fmt.Errorf("slashcmd: nil env")
+	}
+	if env.Out == nil {
+		return true, fmt.Errorf("slashcmd: nil output writer")
+	}
 
 	switch cmd {
 	case "help":
@@ -20,6 +26,12 @@ func Handle(env *Env, host Host, line string) (handled bool, err error) {
 		return true, nil
 
 	case "git":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
+		if env.CtxSvc == nil {
+			return true, fmt.Errorf("slashcmd: nil context service")
+		}
 		snap, err := env.CtxSvc.RefreshGitSnapshot(env.Ctx, *env.SessionID, env.Cfg.ProjectRoot)
 		if err != nil {
 			return true, err
@@ -32,18 +44,33 @@ func Handle(env *Env, host Host, line string) (handled bool, err error) {
 		return true, nil
 
 	case "mode":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Mode(env, args)
 
 	case "effort":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Effort(env, args)
 
 	case "thinking":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Thinking(env, args)
 
 	case "permissions":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Permissions(env, args)
 
 	case "clear":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		session.DropPending(env.Store, *env.SessionID)
 		sess, err := CreateSession(env.Cfg, env.Store)
 		if err != nil {
@@ -57,6 +84,12 @@ func Handle(env *Env, host Host, line string) (handled bool, err error) {
 		return true, nil
 
 	case "compact":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
+		if env.CtxSvc == nil {
+			return true, fmt.Errorf("slashcmd: nil context service")
+		}
 		if err := env.CtxSvc.CompactAPIContext(env.Ctx, *env.SessionID); err != nil {
 			return true, err
 		}
@@ -64,30 +97,69 @@ func Handle(env *Env, host Host, line string) (handled bool, err error) {
 		return true, nil
 
 	case "context":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
+		if env.CtxSvc == nil {
+			return true, fmt.Errorf("slashcmd: nil context service")
+		}
 		return true, Context(env, args)
 
 	case "resume":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Resume(env, args)
 
 	case "plan":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
+		if host == nil {
+			return true, fmt.Errorf("slashcmd: nil host")
+		}
 		return true, host.SetRunMode(env.Ctx, env, "plan")
 
 	case "agent":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
+		if host == nil {
+			return true, fmt.Errorf("slashcmd: nil host")
+		}
 		return true, host.SetRunMode(env.Ctx, env, "agent")
 
 	case "skill":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Skill(env, args)
 
 	case "task":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Task(env, args)
 
 	case "checkpoint":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Checkpoint(env, args)
 
 	case "rewind":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
 		return true, Rewind(env, args)
 
 	case "btw":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
+		if env.Runner == nil {
+			return true, fmt.Errorf("slashcmd: nil runner")
+		}
 		return true, Btw(env, args)
 
 	default:

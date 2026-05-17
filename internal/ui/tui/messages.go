@@ -6,6 +6,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/agent"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 // Agent turn messages (produced by runTurnAsync, consumed in model_update_turn.go).
@@ -57,11 +58,11 @@ type resumeListMsg struct {
 
 type sessionResumedMsg struct {
 	sessionID string
-	chat      []chatBlock
+	chat      []chat.Block
 	err       error
 }
 
 type historyLoadedMsg struct { // loadInitialHistory → updateHistoryLoaded
-	chat []chatBlock
+	chat []chat.Block
 	err  error
 }

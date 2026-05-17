@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
@@ -166,9 +167,9 @@ func (m *model) submitLine(line string) tea.Cmd {
 		}
 	}
 
-	m.chat = append(m.chat, chatBlock{role: chatRoleUser})
-	m.chat[len(m.chat)-1].content.WriteString(line)
-	m.chat = append(m.chat, chatBlock{role: chatRoleAssistant, streaming: true, reasoningOpen: m.reasoningAll})
+	m.chat = append(m.chat, chat.Block{Role: chat.RoleUser})
+	m.chat[len(m.chat)-1].Content.WriteString(line)
+	m.chat = append(m.chat, chat.Block{Role: chat.RoleAssistant, Streaming: true, ReasoningOpen: m.reasoningAll})
 	m.syncChatView()
 	m.running = true
 	m.turnEscPending = false

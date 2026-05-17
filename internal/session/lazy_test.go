@@ -7,12 +7,13 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/session/sqlite"
 )
 
 func TestLazyStore_defersInsertUntilMessage(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "sessions.db")
-	inner, err := session.OpenSQLite(path)
+	inner, err := sqlite.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,7 @@
 | 路径遍历读写工作区外文件 | `permission.ResolvePath`：`..` 拦截、symlink 解析、jail 到 `project_root` |
 | 敏感文件泄露（`.env`、密钥） | 路径段级 denylist（`IsSensitiveAbs`）；读工具、LSP、`shell` 统一过滤；`auto` 可读普通文件但仍受 denylist；compact 摘要脱敏（S12） |
 | API Key 进入仓库或配置 | 仅 `DS_CODE_DEEPSEEK_API_KEY` / `DEEPSEEK_API_KEY`；YAML 禁止 `api_key` |
-| SSRF（Web 工具） | `web.fetch_enabled` 默认关；`web.allowlist` 必填 |
+| SSRF（Web 工具） | `web.fetch_enabled` 默认关；`web.allowlist` 必填；通配符 `*.example.com` 仅匹配 `example.com` 及其子域 |
 | MCP 写操作绕过权限 | MCP 工具走同一 `permission.Engine`；写工具检测器 |
 | 子代理提权写盘 | `task` 子 Runner 仅只读工具集（S14） |
 | 会话数据跨项目泄露 | `project_id = sha256(project_root)` 分库；DB/checkpoint/audit 按项目目录隔离 |
@@ -37,12 +37,12 @@
 ## Checkpoint
 
 - 写操作（`apply_patch`、`write_file`）前捕获受影响文件快照至 `~/.ds-code/projects/<id>/checkpoints/<session>/`.
-- `/checkpoint rewind N` 恢复工作区；历史层追加 `role=system` 事件，**不**进入 API `mergeSystem`。
+- `/checkpoint rewind N --yes` 或 `/rewind N --yes` 恢复工作区（无 `--yes` 时仅提示，不执行）；历史层追加 `role=system` 事件，**不**进入 API `mergeSystem`。
 - 单文件快照上限 4 MiB；`shell` 不自动 checkpoint（工作区变更不可可靠还原）。
 
 ## Shell 执行模型
 
-- 同步与后台命令均通过 `$SHELL -c <command>` 执行；在 `permission.mode=auto`（`--dangerously-auto`）下无写操作确认，但 **S3 敏感路径 denylist 与高危命令模式仍会拦截**。
+- 同步与后台命令均通过 `$SHELL -c <command>` 执行；在 `permission.mode=auto`（`--dangerously-auto`）下无写操作确认，但 **S3 敏感路径 denylist 与高危命令模式仍会拦截**（含 `bash -c`、`nc` 反向 shell、`/dev/tcp`、launchctl/crontab 等扩展模式；仍为启发式，非沙箱）。
 - 非 TTY 脚本请勿使用默认 `ask`；应显式 `--permission-mode readonly` 或了解风险后使用 `--dangerously-auto`。
 
 ## Shell 后台任务

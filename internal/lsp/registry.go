@@ -5,17 +5,11 @@ import (
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/lsp/client"
 )
 
 // ServerConfig describes how to launch a language server.
-type ServerConfig struct {
-	ID         string
-	Command    string
-	Args       []string
-	Extensions []string
-	Env        map[string]string
-	Disabled   bool
-}
+type ServerConfig = client.ServerConfig
 
 func defaultServers() map[string]ServerConfig {
 	return map[string]ServerConfig{

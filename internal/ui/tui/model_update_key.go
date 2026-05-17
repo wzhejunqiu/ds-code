@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
@@ -65,8 +66,8 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	case "ctrl+r":
 		m.reasoningAll = !m.reasoningAll
 		for i := range m.chat {
-			if m.chat[i].role == chatRoleAssistant {
-				m.chat[i].reasoningOpen = m.reasoningAll
+			if m.chat[i].Role == chat.RoleAssistant {
+				m.chat[i].ReasoningOpen = m.reasoningAll
 			}
 		}
 		m.syncChatView()

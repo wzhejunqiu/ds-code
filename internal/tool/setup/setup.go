@@ -6,7 +6,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
@@ -20,7 +20,7 @@ type Deps struct {
 	LLM       llm.Client
 	LSP       *lsp.Manager
 	MCP       *mcpsvc.Manager
-	ShellJobs *shelljobs.Manager
+	ShellJobs *manager.Manager
 }
 
 // RegisterReadOnly registers plan-mode and subagent tools.

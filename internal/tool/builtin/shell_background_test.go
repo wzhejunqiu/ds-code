@@ -9,7 +9,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
 
@@ -24,7 +24,7 @@ func TestShellTool_backgroundAndPoll(t *testing.T) {
 			},
 		},
 	}
-	mgr, err := shelljobs.OpenManager(dir, cfg.Tools.Shell)
+	mgr, err := manager.Open(dir, cfg.Tools.Shell)
 	if err != nil {
 		t.Fatal(err)
 	}

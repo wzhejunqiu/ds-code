@@ -10,6 +10,17 @@ func renderOut(b Block, width int, showDetails bool) string {
 	return strings.Join(Render(b, width, showDetails), "\n")
 }
 
+func TestRenderBlockCollapsed_wrapsAtWidth(t *testing.T) {
+	long := strings.Repeat("x", 120)
+	out := renderOut(Block{
+		Name: "shell", Command: "echo",
+		Result: long + "\n",
+	}, 40, false)
+	if strings.Contains(out, long) {
+		t.Fatal("collapsed result should wrap at terminal width")
+	}
+}
+
 func TestRenderBlockCollapsed(t *testing.T) {
 	out := renderOut(Block{
 		Name: "shell", Args: `{"command":"echo hi"}`,

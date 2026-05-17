@@ -6,6 +6,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func TestChatBlocksFromMessages(t *testing.T) {
@@ -21,20 +22,20 @@ func TestChatBlocksFromMessages(t *testing.T) {
 	if len(blocks) != 3 {
 		t.Fatalf("got %d blocks, want 3", len(blocks))
 	}
-	if blocks[0].role != chatRoleUser || blocks[0].content.String() != "hello" {
+	if blocks[0].Role != chat.RoleUser || blocks[0].Content.String() != "hello" {
 		t.Fatalf("user block: %+v", blocks[0])
 	}
-	if blocks[1].role != chatRoleAssistant || blocks[1].content.String() != "hi" || blocks[1].reasoning.String() != "think" {
+	if blocks[1].Role != chat.RoleAssistant || blocks[1].Content.String() != "hi" || blocks[1].Reasoning.String() != "think" {
 		t.Fatalf("assistant block: %+v", blocks[1])
 	}
-	if !blocks[1].reasoningOpen {
+	if !blocks[1].ReasoningOpen {
 		t.Fatal("expected reasoning open")
 	}
-	if blocks[2].role != chatRoleTool || blocks[2].toolName != "read_file" || blocks[2].toolResult != "more" {
+	if blocks[2].Role != chat.RoleTool || blocks[2].ToolName != "read_file" || blocks[2].ToolResult != "more" {
 		t.Fatalf("tool block: %+v", blocks[2])
 	}
-	if blocks[2].toolArgs != "path=a.go" {
-		t.Fatalf("tool args = %q", blocks[2].toolArgs)
+	if blocks[2].ToolArgs != "path=a.go" {
+		t.Fatalf("tool args = %q", blocks[2].ToolArgs)
 	}
 }
 
@@ -47,10 +48,10 @@ func TestChatBlocksFromMessages_reasoningBeforeTools(t *testing.T) {
 	if len(blocks) != 2 {
 		t.Fatalf("got %d blocks, want 2", len(blocks))
 	}
-	if blocks[0].role != chatRoleAssistant || blocks[0].reasoning.String() != "think first" {
+	if blocks[0].Role != chat.RoleAssistant || blocks[0].Reasoning.String() != "think first" {
 		t.Fatalf("assistant block first: %+v", blocks[0])
 	}
-	if blocks[1].role != chatRoleTool {
+	if blocks[1].Role != chat.RoleTool {
 		t.Fatalf("tool block second: %+v", blocks[1])
 	}
 }
@@ -58,14 +59,14 @@ func TestChatBlocksFromMessages_reasoningBeforeTools(t *testing.T) {
 func TestChatBlocksFromMessages_interruptSystemMessage(t *testing.T) {
 	msgs := []session.Message{
 		{Role: role.User, Content: "hello"},
-		{Role: role.System, Content: interruptSessionMarker()},
+		{Role: role.System, Content: chat.InterruptSessionMarker()},
 	}
 	blocks := chatBlocksFromMessages(msgs, true)
 	if len(blocks) != 2 {
 		t.Fatalf("got %d blocks, want 2", len(blocks))
 	}
-	if blocks[1].role != chatRoleInterrupt {
-		t.Fatalf("second block role = %s, want interrupt", blocks[1].role)
+	if blocks[1].Role != chat.RoleInterrupt {
+		t.Fatalf("second block role = %s, want interrupt", blocks[1].Role)
 	}
 }
 
@@ -77,10 +78,10 @@ func TestChatBlocksFromMessages_durations(t *testing.T) {
 	if len(blocks) != 1 {
 		t.Fatalf("got %d blocks", len(blocks))
 	}
-	if blocks[0].reasoningDuration != 1200*time.Millisecond {
-		t.Fatalf("reasoningDuration = %v", blocks[0].reasoningDuration)
+	if blocks[0].ReasoningDuration != 1200*time.Millisecond {
+		t.Fatalf("reasoningDuration = %v", blocks[0].ReasoningDuration)
 	}
-	if blocks[0].turnDuration != 5*time.Second {
-		t.Fatalf("turnDuration = %v", blocks[0].turnDuration)
+	if blocks[0].TurnDuration != 5*time.Second {
+		t.Fatalf("turnDuration = %v", blocks[0].TurnDuration)
 	}
 }

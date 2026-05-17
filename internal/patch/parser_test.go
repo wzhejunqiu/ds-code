@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hejunqiu/ds-code/internal/patch"
+	patchapply "github.com/hejunqiu/ds-code/internal/patch/apply"
 )
 
 func TestParse_addAndUpdate(t *testing.T) {
@@ -48,7 +49,7 @@ func TestApply_roundTrip(t *testing.T) {
 	resolve := func(rel string) (string, error) {
 		return filepath.Join(dir, rel), nil
 	}
-	_, err := patch.Apply(dir, patchText, resolve, patch.ApplyOptions{MaxChangedLines: 100})
+	_, err := patchapply.Apply(dir, patchText, resolve, patchapply.Options{MaxChangedLines: 100})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +212,7 @@ func TestApply_delete(t *testing.T) {
 	resolve := func(rel string) (string, error) {
 		return filepath.Join(dir, rel), nil
 	}
-	summary, err := patch.Apply(dir, patchText, resolve, patch.ApplyOptions{})
+	summary, err := patchapply.Apply(dir, patchText, resolve, patchapply.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +241,7 @@ func TestApply_move(t *testing.T) {
 	resolve := func(rel string) (string, error) {
 		return filepath.Join(dir, rel), nil
 	}
-	_, err := patch.Apply(dir, patchText, resolve, patch.ApplyOptions{})
+	_, err := patchapply.Apply(dir, patchText, resolve, patchapply.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ func TestApply_maxChangedLines(t *testing.T) {
 	resolve := func(rel string) (string, error) {
 		return filepath.Join(dir, rel), nil
 	}
-	_, err := patch.Apply(dir, patchText, resolve, patch.ApplyOptions{MaxChangedLines: 2})
+	_, err := patchapply.Apply(dir, patchText, resolve, patchapply.Options{MaxChangedLines: 2})
 	if err == nil {
 		t.Fatal("expected max changed lines error")
 	}
@@ -293,7 +294,7 @@ func TestApply_contextNotFound(t *testing.T) {
 	resolve := func(rel string) (string, error) {
 		return filepath.Join(dir, rel), nil
 	}
-	_, err := patch.Apply(dir, patchText, resolve, patch.ApplyOptions{})
+	_, err := patchapply.Apply(dir, patchText, resolve, patchapply.Options{})
 	if err == nil {
 		t.Fatal("expected context not found error")
 	}
@@ -311,7 +312,7 @@ func TestApply_addExistingFile(t *testing.T) {
 	resolve := func(rel string) (string, error) {
 		return filepath.Join(dir, rel), nil
 	}
-	_, err := patch.Apply(dir, patchText, resolve, patch.ApplyOptions{})
+	_, err := patchapply.Apply(dir, patchText, resolve, patchapply.Options{})
 	if err == nil {
 		t.Fatal("expected add file exists error")
 	}
@@ -332,7 +333,7 @@ func TestApply_rollbackOnFailure(t *testing.T) {
 	resolve := func(rel string) (string, error) {
 		return filepath.Join(dir, rel), nil
 	}
-	_, err := patch.Apply(dir, bad, resolve, patch.ApplyOptions{})
+	_, err := patchapply.Apply(dir, bad, resolve, patchapply.Options{})
 	if err == nil {
 		t.Fatal("expected apply error")
 	}

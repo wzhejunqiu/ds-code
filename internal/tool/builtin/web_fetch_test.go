@@ -26,6 +26,23 @@ func TestHostAllowed(t *testing.T) {
 	if hostAllowed("example.com", nil) {
 		t.Fatal("empty allowlist should deny")
 	}
+	// Must not match unrelated domains that merely contain the suffix as substring.
+	if hostAllowed("notgithub.io", list) {
+		t.Fatal("notgithub.io should not match *.github.io")
+	}
+	if hostAllowed("evil.github.io.attacker.com", list) {
+		t.Fatal("suffix trick host should be denied")
+	}
+}
+
+func TestHostAllowed_wildcardCo(t *testing.T) {
+	list := []string{"*.co"}
+	if !hostAllowed("foo.co", list) {
+		t.Fatal("expected foo.co")
+	}
+	if hostAllowed("foo.co.uk", list) {
+		t.Fatal("foo.co.uk should not match *.co")
+	}
 }
 
 func TestWebFetch_redirectRevalidatesAllowlist(t *testing.T) {

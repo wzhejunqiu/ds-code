@@ -12,6 +12,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
@@ -23,7 +24,7 @@ type model struct {
 	chatVP    viewport.Model
 	toolVP    viewport.Model
 	input     textinput.Model
-	chat      []chatBlock
+	chat      []chat.Block
 	toolLines []string
 	toolOpen  bool
 

@@ -13,6 +13,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/hejunqiu/ds-code/internal/tool"
 )
 
@@ -20,7 +21,7 @@ import (
 type ShellTool struct {
 	Cfg    *config.Config
 	Perm   *permission.Engine
-	Jobs   *shelljobs.Manager
+	Jobs   *manager.Manager
 	Strict bool
 }
 

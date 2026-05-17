@@ -3,12 +3,13 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func (m *model) updateSlashOutput(msg slashOutputMsg) tea.Cmd {
 	if msg.text != "" {
-		m.chat = append(m.chat, chatBlock{role: chatRoleAssistant})
-		m.chat[len(m.chat)-1].content.WriteString(msg.text)
+		m.chat = append(m.chat, chat.Block{Role: chat.RoleAssistant})
+		m.chat[len(m.chat)-1].Content.WriteString(msg.text)
 	}
 	m.refreshStatus()
 	m.syncChatView()

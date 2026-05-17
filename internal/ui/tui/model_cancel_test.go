@@ -10,16 +10,17 @@ import (
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func TestRenderChat_interruptMarker(t *testing.T) {
-	blocks := []chatBlock{
-		{role: chatRoleUser},
-		{role: chatRoleAssistant},
-		{role: chatRoleInterrupt},
+	blocks := []chat.Block{
+		{Role: chat.RoleUser},
+		{Role: chat.RoleAssistant},
+		{Role: chat.RoleInterrupt},
 	}
-	out := renderChat(blocks, 60, time.Now(), false)
-	if !strings.Contains(out, interruptLabel) {
+	out := chat.Render(blocks, 60, time.Now(), false)
+	if !strings.Contains(out, chat.InterruptLabel()) {
 		t.Fatalf("expected interrupt label in output:\n%s", out)
 	}
 }
@@ -29,9 +30,9 @@ func TestCancelTurn_escShowsInterruptMarker(t *testing.T) {
 	m := model{
 		running:    true,
 		turnCancel: func() { close(cancelled) },
-		chat: []chatBlock{
-			{role: chatRoleUser},
-			{role: chatRoleAssistant, streaming: true},
+		chat: []chat.Block{
+			{Role: chat.RoleUser},
+			{Role: chat.RoleAssistant, Streaming: true},
 		},
 	}
 	m.cancelTurn()
@@ -44,8 +45,8 @@ func TestCancelTurn_escShowsInterruptMarker(t *testing.T) {
 	if !m.currentTurnInterrupted() {
 		t.Fatal("expected interrupt marker in current turn")
 	}
-	out := renderChat(m.chat, 60, time.Now(), false)
-	if !strings.Contains(out, interruptLabel) {
+	out := chat.Render(m.chat, 60, time.Now(), false)
+	if !strings.Contains(out, chat.InterruptLabel()) {
 		t.Fatalf("expected interrupt in chat:\n%s", out)
 	}
 }
@@ -54,13 +55,13 @@ func TestCancelTurn_escOnlyOncePerTurn(t *testing.T) {
 	m := model{
 		running:    true,
 		turnCancel: func() {},
-		chat:       []chatBlock{{role: chatRoleUser}, {role: chatRoleAssistant}},
+		chat:       []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant}},
 	}
 	m.cancelTurn()
 	m.cancelTurn()
 	count := 0
 	for _, b := range m.chat {
-		if b.role == chatRoleInterrupt {
+		if b.Role == chat.RoleInterrupt {
 			count++
 		}
 	}
@@ -78,9 +79,9 @@ func TestUpdate_escCancelsRunningTurn(t *testing.T) {
 				turnCancel()
 			}
 		},
-		chat: []chatBlock{
-			{role: chatRoleUser},
-			{role: chatRoleAssistant, streaming: true},
+		chat: []chat.Block{
+			{Role: chat.RoleUser},
+			{Role: chat.RoleAssistant, Streaming: true},
 		},
 	}
 	_, turnCancel = context.WithCancel(context.Background())
@@ -103,7 +104,7 @@ func TestUpdate_escClosesOverlayBeforeCancel(t *testing.T) {
 		turnCancel:  func() {},
 		overlay:     overlayHelp,
 		overlayText: "help",
-		chat:        []chatBlock{{role: chatRoleUser}, {role: chatRoleAssistant}},
+		chat:        []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant}},
 	}
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	m = *next.(*model)
@@ -120,7 +121,7 @@ func TestUpdate_ctrlCDuringRunningDoesNotCancelTurn(t *testing.T) {
 	m := model{
 		running:    true,
 		turnCancel: func() { close(cancelled) },
-		chat:       []chatBlock{{role: chatRoleUser}, {role: chatRoleAssistant, streaming: true}},
+		chat:       []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant, Streaming: true}},
 	}
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	m = *next.(*model)
@@ -142,7 +143,7 @@ func TestUpdate_escBeforeTurnCancelArrives(t *testing.T) {
 	var cancel context.CancelFunc
 	m := model{
 		running: true,
-		chat:    []chatBlock{{role: chatRoleUser}, {role: chatRoleAssistant, streaming: true}},
+		chat:    []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant, Streaming: true}},
 	}
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	m = *next.(*model)
@@ -164,10 +165,10 @@ func TestUpdate_escBeforeTurnCancelArrives(t *testing.T) {
 
 func TestUpdate_turnDoneMsg_canceledWithInterruptClearsErrLine(t *testing.T) {
 	m := model{
-		chat: []chatBlock{
-			{role: chatRoleUser},
-			{role: chatRoleAssistant},
-			{role: chatRoleInterrupt},
+		chat: []chat.Block{
+			{Role: chat.RoleUser},
+			{Role: chat.RoleAssistant},
+			{Role: chat.RoleInterrupt},
 		},
 	}
 	next, _ := m.Update(turnDoneMsg{err: context.Canceled})
@@ -179,7 +180,7 @@ func TestUpdate_turnDoneMsg_canceledWithInterruptClearsErrLine(t *testing.T) {
 
 func TestUpdate_turnDoneMsg_canceledWithoutInterruptShowsErrLine(t *testing.T) {
 	m := model{
-		chat: []chatBlock{{role: chatRoleUser}, {role: chatRoleAssistant}},
+		chat: []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant}},
 	}
 	next, _ := m.Update(turnDoneMsg{err: context.Canceled})
 	m = *next.(*model)
@@ -195,7 +196,7 @@ func TestUpdate_escDuringPermissionPromptCancelsTurn(t *testing.T) {
 		turnCancel: func() {},
 		overlay:    overlayPrompt,
 		prompt:     &permission.PromptRequest{Tool: "shell", Reply: reply},
-		chat:       []chatBlock{{role: chatRoleUser}, {role: chatRoleAssistant, streaming: true}},
+		chat:       []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant, Streaming: true}},
 	}
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	m = *next.(*model)
@@ -217,7 +218,7 @@ func TestUpdate_ctrlDDuringRunningDoesNotExit(t *testing.T) {
 	m := model{
 		running:    true,
 		turnCancel: func() { close(cancelled) },
-		chat:       []chatBlock{{role: chatRoleUser}, {role: chatRoleAssistant, streaming: true}},
+		chat:       []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant, Streaming: true}},
 	}
 	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
 	m = *next.(*model)
@@ -241,10 +242,10 @@ func TestUpdate_ctrlDDuringRunningDoesNotExit(t *testing.T) {
 func TestUpdate_streamContentAfterInterruptIgnored(t *testing.T) {
 	m := model{
 		running: true,
-		chat: []chatBlock{
-			{role: chatRoleUser},
-			{role: chatRoleAssistant},
-			{role: chatRoleInterrupt},
+		chat: []chat.Block{
+			{Role: chat.RoleUser},
+			{Role: chat.RoleAssistant},
+			{Role: chat.RoleInterrupt},
 		},
 	}
 	next, _ := m.Update(streamContentMsg{delta: "late"})
@@ -252,24 +253,24 @@ func TestUpdate_streamContentAfterInterruptIgnored(t *testing.T) {
 	if len(m.chat) != 3 {
 		t.Fatalf("chat blocks = %d, want 3", len(m.chat))
 	}
-	if m.chat[1].content.String() != "" {
-		t.Fatalf("assistant content = %q, want empty", m.chat[1].content.String())
+	if m.chat[1].Content.String() != "" {
+		t.Fatalf("assistant content = %q, want empty", m.chat[1].Content.String())
 	}
 }
 
 func TestUpdate_toolStartAfterInterruptIgnored(t *testing.T) {
 	m := model{
 		running: true,
-		chat: []chatBlock{
-			{role: chatRoleUser},
-			{role: chatRoleAssistant},
-			{role: chatRoleInterrupt},
+		chat: []chat.Block{
+			{Role: chat.RoleUser},
+			{Role: chat.RoleAssistant},
+			{Role: chat.RoleInterrupt},
 		},
 	}
 	next, _ := m.Update(toolStartMsg{name: "read_file", args: "path=a.go"})
 	m = *next.(*model)
 	for _, b := range m.chat {
-		if b.role == chatRoleTool {
+		if b.Role == chat.RoleTool {
 			t.Fatal("tool block must not be added after interrupt")
 		}
 	}
@@ -285,10 +286,10 @@ func TestUpdate_turnDoneMsg_persistsInterruptToSession(t *testing.T) {
 	m := model{
 		deps:      &Deps{Store: store},
 		sessionID: sess.ID,
-		chat: []chatBlock{
-			{role: chatRoleUser},
-			{role: chatRoleAssistant},
-			{role: chatRoleInterrupt},
+		chat: []chat.Block{
+			{Role: chat.RoleUser},
+			{Role: chat.RoleAssistant},
+			{Role: chat.RoleInterrupt},
 		},
 	}
 	next, _ := m.Update(turnDoneMsg{err: context.Canceled})
@@ -302,7 +303,7 @@ func TestUpdate_turnDoneMsg_persistsInterruptToSession(t *testing.T) {
 	}
 	found := false
 	for _, msg := range msgs {
-		if msg.Role == role.System && msg.Content == interruptSessionMarker() {
+		if msg.Role == role.System && msg.Content == chat.InterruptSessionMarker() {
 			found = true
 			break
 		}

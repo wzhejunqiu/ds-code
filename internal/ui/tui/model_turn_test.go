@@ -6,49 +6,50 @@ import (
 	"time"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func TestFinalizeLastAssistant_onlyTouchesTrailingBlock(t *testing.T) {
 	started := time.Now().Add(-30 * time.Second)
-	m := model{chat: []chatBlock{
-		{role: chatRoleAssistant, reasoningStartedAt: started},
-		{role: chatRoleTool, toolName: "read_file"},
-		{role: chatRoleAssistant, reasoningStartedAt: time.Now().Add(-2 * time.Second), streaming: true},
+	m := model{chat: []chat.Block{
+		{Role: chat.RoleAssistant, ReasoningStartedAt: started},
+		{Role: chat.RoleTool, ToolName: "read_file"},
+		{Role: chat.RoleAssistant, ReasoningStartedAt: time.Now().Add(-2 * time.Second), Streaming: true},
 	}}
 	m.finalizeLastAssistant(time.Now())
 
-	if !m.chat[0].reasoningEndedAt.IsZero() {
+	if !m.chat[0].ReasoningEndedAt.IsZero() {
 		t.Fatal("historical assistant block should not be finalized")
 	}
-	if m.chat[2].reasoningEndedAt.IsZero() || m.chat[2].streaming {
+	if m.chat[2].ReasoningEndedAt.IsZero() || m.chat[2].Streaming {
 		t.Fatal("expected last assistant block finalized and not streaming")
 	}
 }
 
 func TestApplyTurnMetrics_prefersLastAssistantWithContent(t *testing.T) {
-	m := model{chat: []chatBlock{
-		{role: chatRoleUser},
-		{role: chatRoleAssistant},
-		{role: chatRoleTool, toolName: "read_file"},
-		{role: chatRoleAssistant},
+	m := model{chat: []chat.Block{
+		{Role: chat.RoleUser},
+		{Role: chat.RoleAssistant},
+		{Role: chat.RoleTool, ToolName: "read_file"},
+		{Role: chat.RoleAssistant},
 	}}
-	m.chat[1].content.WriteString("preamble")
+	m.chat[1].Content.WriteString("preamble")
 	// Last assistant block is empty; metrics should attach to the reply with content.
-	m.chat[3].reasoning.WriteString("think")
+	m.chat[3].Reasoning.WriteString("think")
 
 	m.applyTurnMetrics(&agent.TurnResult{
 		TurnDuration:           5*time.Second + 200*time.Millisecond,
 		FinalReasoningDuration: 1200 * time.Millisecond,
 	})
 
-	if m.chat[1].turnDuration != 5*time.Second+200*time.Millisecond {
-		t.Fatalf("turnDuration on content block = %v", m.chat[1].turnDuration)
+	if m.chat[1].TurnDuration != 5*time.Second+200*time.Millisecond {
+		t.Fatalf("turnDuration on content block = %v", m.chat[1].TurnDuration)
 	}
-	if m.chat[3].turnDuration != 0 {
-		t.Fatalf("empty trailing block should not get turnDuration: %v", m.chat[3].turnDuration)
+	if m.chat[3].TurnDuration != 0 {
+		t.Fatalf("empty trailing block should not get turnDuration: %v", m.chat[3].TurnDuration)
 	}
 
-	out := renderChat(m.chat, 60, time.Now(), false)
+	out := chat.Render(m.chat, 60, time.Now(), false)
 	if !strings.Contains(out, "task took 5.2s") {
 		t.Fatalf("expected turn duration in output:\n%s", out)
 	}

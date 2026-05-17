@@ -55,7 +55,7 @@ func renderBlock(b Block, width int, expanded bool) []string {
 		return body
 	}
 
-	body = append(body, renderResultCollapsed(b.Result, indent, b.Error)...)
+	body = append(body, renderResultCollapsed(b.Result, indent, width, b.Error)...)
 	return body
 }
 
@@ -128,12 +128,12 @@ func expandHint(moreLines int, truncated bool) string {
 	}
 }
 
-func renderResultCollapsed(result string, indent int, isError bool) []string {
+func renderResultCollapsed(result string, indent, width int, isError bool) []string {
 	preview := buildResultPreview(result)
 	if len(preview.lines) == 0 {
 		return nil
 	}
-	lines := renderResultLines(strings.Join(preview.lines, "\n"), indent, 0, isError)
+	lines := renderResultLines(strings.Join(preview.lines, "\n"), indent, width, isError)
 	if hint := expandHint(preview.moreLines, preview.truncated); hint != "" {
 		connWidth := lipgloss.Width(resultConnector)
 		lines = append(lines, styleToolExpandHint.Render(strings.Repeat(" ", indent+connWidth)+hint))

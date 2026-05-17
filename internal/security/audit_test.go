@@ -8,7 +8,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/session/sqlite"
 )
 
 // Spot checks mapping to PLAN.md security audit S1–S14.
@@ -62,7 +62,7 @@ func TestS4_highRiskShellDenied(t *testing.T) {
 
 func TestS7_sessionDBPermissions(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sessions.db")
-	store, err := session.OpenSQLite(path)
+	store, err := sqlite.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}

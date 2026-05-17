@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/google/uuid"
 )
 
 // MemoryStore is an in-memory session.Store for Phase 1–2.
@@ -146,7 +146,7 @@ func (m *MemoryStore) AppendMessage(_ context.Context, msg Message) error {
 	s := m.sessions[msg.SessionID]
 	s.UpdatedAt = msg.CreatedAt
 	if msg.Role == role.User && s.Title == "" {
-		s.Title = truncateTitle(msg.Content, 80)
+		s.Title = TruncateTitle(msg.Content, 80)
 	}
 	m.sessions[msg.SessionID] = s
 	return nil

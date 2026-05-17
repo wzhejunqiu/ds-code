@@ -98,7 +98,7 @@ func TestResumePickerEnterResumesSelectedSession(t *testing.T) {
 	if len(res.chat) != 1 {
 		t.Fatalf("chat blocks = %d", len(res.chat))
 	}
-	if res.chat[0].content.String() != "hello" {
-		t.Fatalf("chat content = %q", res.chat[0].content.String())
+	if res.chat[0].Content.String() != "hello" {
+		t.Fatalf("chat content = %q", res.chat[0].Content.String())
 	}
 }

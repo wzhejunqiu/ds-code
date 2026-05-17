@@ -95,7 +95,10 @@ func hostAllowed(host string, allowlist []string) bool {
 	if len(allowlist) == 0 {
 		return false
 	}
-	host = strings.ToLower(host)
+	host = strings.ToLower(strings.TrimSpace(host))
+	if host == "" || strings.Contains(host, "/") {
+		return false
+	}
 	for _, entry := range allowlist {
 		entry = strings.ToLower(strings.TrimSpace(entry))
 		if entry == "" {
@@ -105,8 +108,11 @@ func hostAllowed(host string, allowlist []string) bool {
 			return true
 		}
 		if strings.HasPrefix(entry, "*.") {
-			suffix := entry[1:]
-			if strings.HasSuffix(host, suffix) || host == strings.TrimPrefix(entry, "*") {
+			base := entry[2:]
+			if base == "" {
+				continue
+			}
+			if host == base || strings.HasSuffix(host, "."+base) {
 				return true
 			}
 		}

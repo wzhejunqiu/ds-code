@@ -13,7 +13,7 @@ import (
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	toolsetup "github.com/hejunqiu/ds-code/internal/tool/setup"
 	"go.uber.org/zap"
@@ -59,11 +59,11 @@ func (a *app) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 	return &toolBundle{reg: reg, lspMgr: lspMgr, deps: deps}, nil
 }
 
-func (a *app) openShellJobs() (*shelljobs.Manager, error) {
+func (a *app) openShellJobs() (*manager.Manager, error) {
 	if a.shellJobs != nil {
 		return a.shellJobs, nil
 	}
-	mgr, err := shelljobs.OpenManager(a.cfg.ProjectRoot, a.cfg.Tools.Shell)
+	mgr, err := manager.Open(a.cfg.ProjectRoot, a.cfg.Tools.Shell)
 	if err != nil {
 		return nil, err
 	}

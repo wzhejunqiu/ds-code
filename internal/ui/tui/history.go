@@ -12,37 +12,38 @@ import (
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 // chatBlocksFromMessages builds TUI chat blocks from persisted session messages.
 //
 // Mapping rules:
-//   - user → chatRoleUser
-//   - assistant (content/reasoning) → chatRoleAssistant; tool_calls expand to chatRoleTool rows
+//   - user → chat.RoleUser
+//   - assistant (content/reasoning) → chat.RoleAssistant; tool_calls expand to chat.RoleTool rows
 //   - tool → skipped here (paired via assistant ToolCallsJSON + findToolMessage)
-//   - system → chatRoleInterrupt only when content matches interruptSessionMarker()
+//   - system → chat.RoleInterrupt only when content matches chat.InterruptSessionMarker()
 //
 // Orphan tool messages (no matching call id) are ignored. Generic system rows are omitted.
-func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chatBlock {
-	var blocks []chatBlock
+func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chat.Block {
+	var blocks []chat.Block
 	for i := 0; i < len(msgs); i++ {
 		msg := msgs[i]
 		switch msg.Role {
 		case role.User:
-			b := chatBlock{role: chatRoleUser}
-			b.content.WriteString(msg.Content)
+			b := chat.Block{Role: chat.RoleUser}
+			b.Content.WriteString(msg.Content)
 			blocks = append(blocks, b)
 		case role.Assistant:
 			calls := parseToolCalls(msg.ToolCallsJSON)
 			if msg.Content != "" || msg.ReasoningContent != "" {
-				b := chatBlock{role: chatRoleAssistant, reasoningOpen: reasoningOpen}
-				b.content.WriteString(msg.Content)
-				b.reasoning.WriteString(msg.ReasoningContent)
+				b := chat.Block{Role: chat.RoleAssistant, ReasoningOpen: reasoningOpen}
+				b.Content.WriteString(msg.Content)
+				b.Reasoning.WriteString(msg.ReasoningContent)
 				if msg.ReasoningDurationMS > 0 {
-					b.reasoningDuration = time.Duration(msg.ReasoningDurationMS) * time.Millisecond
+					b.ReasoningDuration = time.Duration(msg.ReasoningDurationMS) * time.Millisecond
 				}
 				if msg.TurnDurationMS > 0 {
-					b.turnDuration = time.Duration(msg.TurnDurationMS) * time.Millisecond
+					b.TurnDuration = time.Duration(msg.TurnDurationMS) * time.Millisecond
 				}
 				blocks = append(blocks, b)
 			}
@@ -54,21 +55,21 @@ func chatBlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chatBl
 						result, isError = ctxpkg.UnpackToolBody(toolMsg.Content)
 					}
 					argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments))
-					blocks = append(blocks, chatBlock{
-						role:        chatRoleTool,
-						toolName:    tc.Name,
-						toolArgs:    argsLine,
-						toolCommand: command,
-						toolResult:  result,
-						toolError:   isError,
+					blocks = append(blocks, chat.Block{
+						Role:        chat.RoleTool,
+						ToolName:    tc.Name,
+						ToolArgs:    argsLine,
+						ToolCommand: command,
+						ToolResult:  result,
+						ToolError:   isError,
 					})
 				}
 			}
 		case role.Tool:
 			// rendered with the preceding assistant tool_calls row
 		case role.System:
-			if msg.Content == interruptSessionMarker() {
-				blocks = append(blocks, chatBlock{role: chatRoleInterrupt})
+			if msg.Content == chat.InterruptSessionMarker() {
+				blocks = append(blocks, chat.Block{Role: chat.RoleInterrupt})
 			}
 		}
 	}
@@ -110,7 +111,7 @@ func findToolMessage(msgs []session.Message, start int, callID string) *session.
 
 // loadSessionChat loads all messages for a session and converts them for the TUI.
 // Used on startup (loadInitialHistory) and /resume (resumeSession).
-func loadSessionChat(store session.Store, sessionID string, reasoningOpen bool) ([]chatBlock, error) {
+func loadSessionChat(store session.Store, sessionID string, reasoningOpen bool) ([]chat.Block, error) {
 	msgs, err := store.ListMessages(context.Background(), sessionID)
 	if err != nil {
 		return nil, err

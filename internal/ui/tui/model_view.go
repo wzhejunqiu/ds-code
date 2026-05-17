@@ -10,6 +10,7 @@ import (
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/ui/theme"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func contentLineCount(s string) int {
@@ -25,7 +26,7 @@ func (m *model) chatViewportContent(width int) string {
 		width = 10
 	}
 	header := renderHeader(width, m.deps.Version, m.deps.Cfg, m.headerSessionPtr())
-	chat := renderChat(m.chat, width, time.Now(), m.toolDetailsVisible)
+	chat := chat.Render(m.chat, width, time.Now(), m.toolDetailsVisible)
 	if chat == "" {
 		return header
 	}

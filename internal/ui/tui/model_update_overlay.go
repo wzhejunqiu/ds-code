@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	uipkg "github.com/hejunqiu/ds-code/internal/ui"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func (m *model) updateWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
@@ -50,7 +51,7 @@ func (m *model) updateExitConfirmTimeout() tea.Cmd {
 func (m *model) updatePromptRequest(msg promptRequestMsg) tea.Cmd {
 	m.prompt = &msg.req
 	m.overlay = overlayPrompt
-	m.overlayText = fmt.Sprintf("Allow %s?\n%s\n[y] yes  [n] no", msg.req.Tool, truncate(msg.req.Summary, 300))
+	m.overlayText = fmt.Sprintf("Allow %s?\n%s\n[y] yes  [n] no", msg.req.Tool, chat.Truncate(msg.req.Summary, 300))
 	return m.listenPrompt()
 }
 

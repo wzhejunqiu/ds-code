@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/chattool"
 )
 
@@ -84,12 +85,12 @@ func (m *model) updateToolEnd(msg toolEndMsg) tea.Cmd {
 	m.finishToolBlock(msg.name, msg.args, msg.command, msg.result, msg.isError)
 	m.toolLines = m.toolLines[:0]
 	for _, b := range m.chat {
-		if b.role == chatRoleTool {
-			preview := b.toolResult
-			if preview == "" && b.toolRunning {
+		if b.Role == chat.RoleTool {
+			preview := b.ToolResult
+			if preview == "" && b.ToolRunning {
 				preview = "…"
 			}
-			m.toolLines = append(m.toolLines, chattool.Line(b.toolName, b.toolArgs, b.toolCommand, preview, b.toolRunning, b.toolError))
+			m.toolLines = append(m.toolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError))
 		}
 	}
 	m.syncChatView()
@@ -116,8 +117,8 @@ func (m *model) updateTurnDone(msg turnDoneMsg) tea.Cmd {
 	now := time.Now()
 	m.finalizeLastAssistant(now)
 	for i := range m.chat {
-		if m.chat[i].role == chatRoleTool && m.chat[i].toolRunning {
-			m.chat[i].toolRunning = false
+		if m.chat[i].Role == chat.RoleTool && m.chat[i].ToolRunning {
+			m.chat[i].ToolRunning = false
 		}
 	}
 	m.applyTurnMetrics(msg.result)

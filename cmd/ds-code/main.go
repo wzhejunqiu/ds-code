@@ -10,7 +10,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session"
+	sessionsqlite "github.com/hejunqiu/ds-code/internal/session/sqlite"
 	"github.com/hejunqiu/ds-code/internal/version"
 	"github.com/hejunqiu/ds-code/internal/versioninfo"
 	"github.com/spf13/cobra"
@@ -98,7 +98,7 @@ func sessionsCmd() *cobra.Command {
 				Verbosity:   cfg.LogVerbosity,
 			})()
 
-			store, err := session.OpenDefaultStore(cfg.ProjectRoot)
+			store, err := sessionsqlite.OpenDefault(cfg.ProjectRoot)
 			if err != nil {
 				return err
 			}

@@ -22,7 +22,8 @@ import (
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	sessionsqlite "github.com/hejunqiu/ds-code/internal/session/sqlite"
+	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
@@ -37,14 +38,14 @@ type app struct {
 	mcpMgr       *mcpsvc.Manager
 	lspMgr       *lsp.Manager
 	checkpointSt *checkpoint.Store
-	shellJobs    *shelljobs.Manager
+	shellJobs    *manager.Manager
 }
 
 func (a *app) openStore() (session.Store, error) {
 	if a.store != nil {
 		return a.store, nil
 	}
-	sqlite, err := session.OpenDefaultStore(a.cfg.ProjectRoot)
+	sqlite, err := sessionsqlite.OpenDefault(a.cfg.ProjectRoot)
 	if err != nil {
 		return nil, err
 	}
