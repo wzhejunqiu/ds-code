@@ -53,14 +53,18 @@ func (b *chatBlock) finalizeReasoning(at time.Time) {
 }
 
 const (
-	userPrompt       = "> "
-	assistantBullet  = "● "
-	toolBullet       = "⚙ "
-	toolResultMax    = 2000
-	planningBullet   = "◦ "
-	planningLabel    = "Planning next moves"
-	interruptBullet  = "⏹ "
-	interruptLabel   = "Turn cancelled (Esc)"
+	userPrompt             = "> "
+	assistantBullet        = "● "
+	toolBullet               = "⚙ "
+	toolResultConnector      = "└ "
+	toolResultMax            = 2000
+	toolResultPreviewMax     = 256
+	toolResultPreviewLines   = 3
+	toolTitleArgsMax         = 80
+	planningBullet           = "◦ "
+	planningLabel            = "Planning next moves"
+	interruptBullet          = "⏹ "
+	interruptLabel           = "Turn cancelled (Esc)"
 )
 
 // interruptSessionMarker is stored as a system row so /resume restores the marker.
@@ -131,50 +135,157 @@ func planningBlockLabel(started, now time.Time) string {
 func renderToolBlock(b chatBlock, width int, expanded bool) []string {
 	indent := lipgloss.Width(toolBullet)
 	var body []string
-	title := b.toolName
-	if b.toolRunning {
-		title += " …"
-	} else if b.toolError {
-		title += " (error)"
-	}
-	body = append(body, styleChatToolTitle.Render(toolBullet+title))
 
-	if !expanded {
+	if b.toolRunning {
+		title := b.toolName + " …"
+		body = append(body, styleChatToolTitle.Render(toolBullet+title))
 		switch {
 		case b.toolCommand != "":
 			body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+b.toolCommand))
 		case b.toolArgs != "":
-			body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+truncate(b.toolArgs, 80)))
-		case b.toolRunning:
+			body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+truncate(b.toolArgs, toolTitleArgsMax)))
+		default:
 			body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+"running…"))
 		}
 		return body
 	}
 
-	if b.toolArgs != "" {
-		body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+"args: "+b.toolArgs))
+	body = append(body, renderToolTitleLine(b.toolName, b.toolCommand, b.toolArgs, b.toolError))
+
+	if expanded {
+		if b.toolArgs != "" {
+			body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+"args: "+b.toolArgs))
+		}
+		if b.toolCommand != "" {
+			body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+"command: "+b.toolCommand))
+		}
+		if b.toolResult != "" {
+			body = append(body, renderToolResultLines(truncate(b.toolResult, toolResultMax), indent, width, b.toolError)...)
+		}
+		return body
 	}
-	if b.toolCommand != "" {
-		body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+"command: "+b.toolCommand))
+
+	body = append(body, renderToolResultCollapsed(b.toolResult, indent, b.toolError)...)
+	return body
+}
+
+func renderToolTitleLine(name, command, args string, isError bool) string {
+	parts := []string{styleChatToolName.Render(toolBullet + name)}
+	if paren := toolParenContent(command, args); paren != "" {
+		parts = append(parts, styleChatToolCommand.Render(" ("+paren+")"))
 	}
-	if b.toolRunning {
-		body = append(body, styleChatToolMeta.Render(strings.Repeat(" ", indent)+"running…"))
-	} else if b.toolResult != "" {
-		result := truncate(b.toolResult, toolResultMax)
-		prefix := "result:"
-		for i, line := range strings.Split(wrapText(result, width-indent-len(prefix)-1), "\n") {
-			p := strings.Repeat(" ", indent) + prefix + " "
-			if i > 0 {
-				p = strings.Repeat(" ", indent+len(prefix)+1)
-			}
-			style := styleChatToolResult
-			if b.toolError {
-				style = styleChatToolError
-			}
-			body = append(body, style.Render(p+line))
+	if isError {
+		parts = append(parts, styleChatToolError.Render(" (error)"))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
+}
+
+func toolParenContent(command, args string) string {
+	paren := command
+	if paren == "" {
+		paren = args
+		if len(paren) > toolTitleArgsMax {
+			paren = truncate(paren, toolTitleArgsMax)
 		}
 	}
-	return body
+	return paren
+}
+
+type toolResultPreviewData struct {
+	lines     []string
+	moreLines int
+	truncated bool
+}
+
+func buildToolResultPreview(result string) toolResultPreviewData {
+	if result == "" {
+		return toolResultPreviewData{}
+	}
+	totalLines := countResultLines(result)
+	truncated := len(result) > toolResultPreviewMax
+	s := result
+	if truncated {
+		s = truncateTo(result, toolResultPreviewMax)
+	}
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	shown := len(lines)
+	if shown > toolResultPreviewLines {
+		lines = lines[:toolResultPreviewLines]
+		shown = toolResultPreviewLines
+	}
+	moreLines := totalLines - shown
+	if moreLines < 0 {
+		moreLines = 0
+	}
+	return toolResultPreviewData{lines: lines, moreLines: moreLines, truncated: truncated}
+}
+
+func countResultLines(s string) int {
+	if s == "" {
+		return 0
+	}
+	return len(strings.Split(strings.TrimRight(s, "\n"), "\n"))
+}
+
+func toolExpandHint(moreLines int, truncated bool) string {
+	switch {
+	case moreLines > 0:
+		return fmt.Sprintf("... +%d lines (ctrl+o to expand)", moreLines)
+	case truncated:
+		return "... (ctrl+o to expand)"
+	default:
+		return ""
+	}
+}
+
+func renderToolResultCollapsed(result string, indent int, isError bool) []string {
+	preview := buildToolResultPreview(result)
+	if len(preview.lines) == 0 {
+		return nil
+	}
+	lines := renderToolResultLines(strings.Join(preview.lines, "\n"), indent, 0, isError)
+	if hint := toolExpandHint(preview.moreLines, preview.truncated); hint != "" {
+		connWidth := lipgloss.Width(toolResultConnector)
+		lines = append(lines, styleChatToolExpandHint.Render(strings.Repeat(" ", indent+connWidth)+hint))
+	}
+	return lines
+}
+
+func renderToolResultLines(result string, indent, width int, isError bool) []string {
+	if result == "" {
+		return nil
+	}
+	style := styleChatToolResult
+	if isError {
+		style = styleChatToolError
+	}
+	text := strings.TrimRight(result, "\n")
+	if width > 0 {
+		connWidth := lipgloss.Width(toolResultConnector)
+		text = wrapText(text, width-indent-connWidth)
+	}
+	raw := strings.Split(text, "\n")
+	connWidth := lipgloss.Width(toolResultConnector)
+	out := make([]string, 0, len(raw))
+	for i, line := range raw {
+		pad := strings.Repeat(" ", indent)
+		if i == 0 {
+			out = append(out, style.Render(pad+toolResultConnector+line))
+		} else {
+			out = append(out, style.Render(pad+strings.Repeat(" ", connWidth)+line))
+		}
+	}
+	return out
+}
+
+func truncateTo(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	if max <= 3 {
+		return s[:max]
+	}
+	return s[:max-3] + "..."
 }
 
 func reasoningBlockLabel(open bool, started, ended, now time.Time, fixed time.Duration) string {
