@@ -147,6 +147,9 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 			if path != abs && d.Name() == ".git" {
 				return filepath.SkipDir
 			}
+			if permission.IsSensitiveAbs(path) {
+				return filepath.SkipDir
+			}
 			relToRoot, _ := filepath.Rel(abs, path)
 			depth := strings.Count(filepath.ToSlash(relToRoot), "/") + 1
 			if path != abs && depth > maxDepth {

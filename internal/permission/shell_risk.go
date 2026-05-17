@@ -14,6 +14,8 @@ var highRiskShellPatterns = []string{
 	"wget | bash",
 	"| sh",
 	"| bash",
+	"|sh",
+	"|bash",
 	"> /dev/sd",
 	"dd if=",
 	"chmod 777 /",
@@ -21,19 +23,27 @@ var highRiskShellPatterns = []string{
 }
 
 func normalizeShellCmd(cmd string) string {
+	lower := strings.ToLower(cmd)
 	var b strings.Builder
-	b.Grow(len(cmd))
-	prevSpace := false
-	for _, r := range strings.ToLower(cmd) {
-		if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
-			if !prevSpace && b.Len() > 0 {
+	b.Grow(len(lower) + 16)
+	for i := 0; i < len(lower); i++ {
+		r := lower[i]
+		switch r {
+		case ' ', '\t', '\n', '\r':
+			if b.Len() > 0 && b.String()[b.Len()-1] != ' ' {
 				b.WriteByte(' ')
-				prevSpace = true
 			}
-			continue
+		case '|', '&', ';':
+			if b.Len() > 0 && b.String()[b.Len()-1] != ' ' {
+				b.WriteByte(' ')
+			}
+			b.WriteByte(r)
+			if i+1 < len(lower) && lower[i+1] != ' ' {
+				b.WriteByte(' ')
+			}
+		default:
+			b.WriteByte(r)
 		}
-		b.WriteRune(r)
-		prevSpace = false
 	}
 	return strings.TrimSpace(b.String())
 }

@@ -71,3 +71,61 @@ func TestListDirTool_basic(t *testing.T) {
 		t.Fatalf("unexpected listing: %q", out)
 	}
 }
+
+func TestGlobTool_skipsSensitiveFiles(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("SECRET=1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "ok.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}},
+	}
+	perm := permission.NewEngine("readonly", dir, false)
+	glob := &builtin.GlobTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"pattern": "**/*"})
+	out, err := glob.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, ".env") {
+		t.Fatalf("glob leaked sensitive file: %q", out)
+	}
+	if !strings.Contains(out, "ok.go") {
+		t.Fatalf("expected ok.go: %q", out)
+	}
+}
+
+func TestListDirTool_skipsSensitiveEntries(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}},
+	}
+	perm := permission.NewEngine("readonly", dir, false)
+	list := &builtin.ListDirTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"path": "."})
+	out, err := list.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, ".env") {
+		t.Fatalf("list_dir leaked .env: %q", out)
+	}
+	if !strings.Contains(out, "readme.txt") {
+		t.Fatalf("expected readme.txt: %q", out)
+	}
+}

@@ -101,8 +101,9 @@ func (t *DiagnosticsTool) Execute(ctx context.Context, args json.RawMessage) (st
 			if ctx.Err() != nil {
 				return "", ctx.Err()
 			}
-			abs, err := t.Perm.ResolvePath(rel)
+			abs, err := t.Perm.CheckReadablePath(rel)
 			if err != nil {
+				notes = append(notes, fmt.Sprintf("--- %s: %v", rel, err))
 				continue
 			}
 			content, err := os.ReadFile(abs)
@@ -155,9 +156,10 @@ func (t *DiagnosticsTool) collectFiles(ctx context.Context, paths []string, maxF
 		if ctx.Err() != nil {
 			return nil, nil, ctx.Err()
 		}
-		abs, err := t.Perm.ResolvePath(p)
+		abs, err := t.Perm.CheckReadablePath(p)
 		if err != nil {
-			return nil, nil, err
+			notes = append(notes, fmt.Sprintf("--- %s: %v", p, err))
+			continue
 		}
 		info, err := os.Stat(abs)
 		if err != nil {
@@ -165,26 +167,43 @@ func (t *DiagnosticsTool) collectFiles(ctx context.Context, paths []string, maxF
 			continue
 		}
 		if !info.IsDir() {
-			if t.addFile(seen, &files, p, maxFiles) {
+			if t.tryAddFile(seen, &files, p, maxFiles) {
 				break
 			}
 			continue
 		}
 		_ = filepath.WalkDir(abs, func(path string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
-				if d != nil && d.IsDir() && d.Name() == ".git" {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				if d.Name() == ".git" {
+					return filepath.SkipDir
+				}
+				if permission.IsSensitiveAbs(path) {
 					return filepath.SkipDir
 				}
 				return nil
 			}
-			rel, _ := filepath.Rel(t.Perm.Workspace, path)
+			if permission.IsSensitiveAbs(path) {
+				return nil
+			}
+			relWalk, err := filepath.Rel(abs, path)
+			if err != nil {
+				return nil
+			}
+			rel := relWalk
+			if p != "." {
+				rel = filepath.Join(p, relWalk)
+			}
+			rel = filepath.ToSlash(rel)
 			if t.Gitignore != nil && t.Gitignore.Ignored(rel) {
 				return nil
 			}
 			if lsp.ServerForExt(t.LSP.Registry(), lsp.NormalizeExt(rel)) == "" {
 				return nil
 			}
-			if t.addFile(seen, &files, rel, maxFiles) {
+			if t.tryAddFile(seen, &files, rel, maxFiles) {
 				return filepath.SkipAll
 			}
 			return nil
@@ -193,7 +212,10 @@ func (t *DiagnosticsTool) collectFiles(ctx context.Context, paths []string, maxF
 	return files, notes, nil
 }
 
-func (t *DiagnosticsTool) addFile(seen map[string]struct{}, files *[]string, rel string, max int) bool {
+func (t *DiagnosticsTool) tryAddFile(seen map[string]struct{}, files *[]string, rel string, max int) bool {
+	if _, err := t.Perm.CheckReadablePath(rel); err != nil {
+		return len(*files) >= max
+	}
 	if _, ok := seen[rel]; ok {
 		return len(*files) >= max
 	}
