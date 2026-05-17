@@ -30,6 +30,20 @@ var highRiskShellPatterns = []string{
 	"tee /etc/",
 	"chmod +s",
 	"chown root",
+	"python -c",
+	"python3 -c",
+	"perl -e",
+	"node -e",
+	"nodejs -e",
+	"ruby -e",
+}
+
+// highRiskShellInfixes match elevated-privilege commands not at line start.
+var highRiskShellInfixes = []string{
+	"; sudo ",
+	"&& sudo ",
+	"|| sudo ",
+	"| sudo ",
 }
 
 var highRiskShellPrefixes = []string{
@@ -46,6 +60,11 @@ func matchHighRiskShell(norm string) error {
 		}
 	}
 	for _, p := range highRiskShellPatterns {
+		if strings.Contains(norm, p) {
+			return fmt.Errorf("%w: high-risk shell command blocked", ErrDenied)
+		}
+	}
+	for _, p := range highRiskShellInfixes {
 		if strings.Contains(norm, p) {
 			return fmt.Errorf("%w: high-risk shell command blocked", ErrDenied)
 		}

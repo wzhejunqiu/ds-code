@@ -9,6 +9,9 @@ func TestCheckSensitiveShell_highRiskPatterns(t *testing.T) {
 		"eval $(echo rm)",
 		"sudo rm -rf /tmp",
 		"echo x | base64 -d | sh",
+		"python3 -c 'import os'",
+		"node -e 'require(\"child_process\")'",
+		"true; sudo cat /etc/passwd",
 	}
 	for _, cmd := range cases {
 		if err := e.checkSensitiveShell(cmd); err == nil {

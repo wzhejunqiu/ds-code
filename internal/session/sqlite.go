@@ -26,6 +26,17 @@ func OpenSQLite(path string) (*SQLiteStore, error) {
 	if err := os.MkdirAll(dirOf(path), 0o700); err != nil {
 		return nil, err
 	}
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			if err := os.WriteFile(path, nil, 0o600); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else if err := os.Chmod(path, 0o600); err != nil {
+		return nil, fmt.Errorf("chmod sessions.db: %w", err)
+	}
 	db, err := sql.Open("sqlite", path+"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)")
 	if err != nil {
 		return nil, err

@@ -61,7 +61,7 @@ func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	if err != nil {
 		return "", err
 	}
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := newWebFetchClient(t.Cfg.Web.Allowlist)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -73,6 +73,22 @@ func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	}
 	out := fmt.Sprintf("HTTP %d\n%s", resp.StatusCode, string(body))
 	return ctxpkg.TruncateToolResult(out, t.Cfg), nil
+}
+
+func newWebFetchClient(allowlist []string) *http.Client {
+	return &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("web_fetch: too many redirects")
+			}
+			host := req.URL.Hostname()
+			if !hostAllowed(host, allowlist) {
+				return fmt.Errorf("redirect host %q is not in web.allowlist", host)
+			}
+			return nil
+		},
+	}
 }
 
 func hostAllowed(host string, allowlist []string) bool {
