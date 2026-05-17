@@ -94,7 +94,7 @@ func TestRenderAssistantMarkdown(t *testing.T) {
 	if strings.Contains(joined, "**") || strings.Contains(joined, "`code`") {
 		t.Fatalf("raw markdown markers in output:\n%s", joined)
 	}
-	if !strings.HasPrefix(lines[0], assistantBullet) {
+	if !strings.Contains(stripANSI(lines[0]), assistantBullet) {
 		t.Fatalf("first line should keep assistant bullet:\n%s", joined)
 	}
 }

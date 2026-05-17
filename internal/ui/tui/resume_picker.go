@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	resumeListMax        = 50
-	resumeFilterDebounce = 150 * time.Millisecond
+	resumeListMax         = 50
+	resumeFilterDebounce  = 150 * time.Millisecond
+	resumeLoadingOverlay  = "Loading sessions…"
 )
 
 // Tab moves down in the session list; Enter is handled in updateKey, not the picker.
@@ -102,6 +103,7 @@ func (m *model) clearResumePicker() {
 	m.resumeFilter = ""
 	m.resumePicker.Clear()
 	m.overlayText = ""
+	m.resumePending = false
 }
 
 // scheduleResumeFilter debounces Store access while typing /resume <filter>.
@@ -110,6 +112,11 @@ func (m *model) scheduleResumeFilter(filter string) tea.Cmd {
 		return nil
 	}
 	m.overlay = overlayResume
+	m.complete = nil
+	m.completePicker.Clear()
+	if len(m.resumeSessions) == 0 {
+		m.overlayText = resumeLoadingOverlay
+	}
 	m.resumeFilterSeq++
 	seq := m.resumeFilterSeq
 	return tea.Tick(resumeFilterDebounce, func(time.Time) tea.Msg {

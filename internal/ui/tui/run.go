@@ -12,8 +12,8 @@ func Run(deps Deps) error {
 	events := make(chan tea.Msg, 64)
 	deps.Events = events
 	d := deps
-	m := newModel(&d)
-	p := tea.NewProgram(&m, tea.WithAltScreen())
+	m := newSafeModel(&d)
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithoutCatchPanics())
 	go func() {
 		for msg := range events {
 			p.Send(msg)

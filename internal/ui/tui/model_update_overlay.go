@@ -5,6 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 )
 
 func (m *model) updateWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
@@ -37,7 +38,7 @@ func (m *model) updateStatusRefresh() tea.Cmd {
 }
 
 func (m *model) updateExitConfirmTimeout() tea.Cmd {
-	if m.exitConfirmPending && time.Since(m.exitConfirmArmedAt) >= exitConfirmTimeout {
+	if m.exitConfirmPending && time.Since(m.exitConfirmArmedAt) >= uipkg.ExitConfirmTimeout {
 		m.clearExitConfirm()
 	}
 	if m.errLine == runningTurnHint {

@@ -24,6 +24,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/tool"
+	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -261,7 +262,7 @@ func (a *app) replLoop(ctx context.Context, out io.Writer, runner *agent.Runner,
 	exitConfirmPending := false
 	exitConfirmArmedAt := time.Time{}
 	for {
-		if exitConfirmPending && time.Since(exitConfirmArmedAt) >= time.Second {
+		if exitConfirmPending && time.Since(exitConfirmArmedAt) >= uipkg.ExitConfirmTimeout {
 			exitConfirmPending = false
 		}
 		fmt.Fprint(out, "> ")

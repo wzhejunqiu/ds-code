@@ -35,6 +35,7 @@ func (m *model) updateResumeList(msg resumeListMsg) tea.Cmd {
 
 // updateSessionResumed switches session id and transcript after /resume selection.
 func (m *model) updateSessionResumed(msg sessionResumedMsg) tea.Cmd {
+	m.resumePending = false
 	if msg.err != nil {
 		m.errLine = msg.err.Error()
 		return nil

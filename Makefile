@@ -12,6 +12,10 @@ endif
 build:
 	go build -ldflags "$(LDFLAGS)" -o bin/ds-code ./cmd/ds-code
 
+# Debug binary: /debug-panic and other dev-only hooks (see debug_panic_debug.go).
+build-debug:
+	go build -tags debug -ldflags "$(LDFLAGS)" -o bin/ds-code ./cmd/ds-code
+
 install:
 	go install -ldflags "$(LDFLAGS)" ./cmd/ds-code
 

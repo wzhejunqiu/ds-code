@@ -1,6 +1,10 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if !isExitConfirmKey(msg.String()) {
@@ -9,6 +13,9 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if m.overlay == overlayResume {
 		// Resume picker: Enter loads session; navigation keys go to handleResumeKey.
 		if msg.Type == tea.KeyEnter && !msg.Alt {
+			if m.resumePending {
+				return nil, true
+			}
 			if len(m.resumeSessions) > 0 {
 				idx := m.resumePicker.Cursor
 				if idx >= len(m.resumeSessions) {
@@ -20,10 +27,11 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 				id := m.resumeSessions[idx].ID
 				m.input.Reset()
 				m.clearResumePicker()
+				m.resumePending = true
 				return m.resumeSession(id), true
 			}
-			// Picker open with no matches — do not treat filter text as a session id.
-			return nil, true
+			// No rows yet — fetch immediately (do not treat filter text as a session id).
+			return m.fetchResumeSessions(m.resumeFilter, m.resumeFilterSeq), true
 		}
 		if m.handleResumeKey(msg) {
 			return nil, true
@@ -76,6 +84,10 @@ func (m *model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.syncChatView()
 		return nil, true
 	case "esc":
+		if m.errLine != "" && strings.HasPrefix(m.errLine, "TUI ") {
+			m.errLine = ""
+			return nil, true
+		}
 		if m.running {
 			if m.overlay != overlayNone {
 				m.dismissOverlay()

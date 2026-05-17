@@ -52,8 +52,8 @@ func TestResumePickerEnterDoesNotSubmitFilterAsSessionID(t *testing.T) {
 	updated, cmd := m.Update(enter)
 	m2 := updated.(*model)
 
-	if cmd != nil {
-		t.Fatal("expected no cmd when picker has no matches")
+	if cmd == nil {
+		t.Fatal("expected fetch cmd when picker has no matches")
 	}
 	if m2.errLine != "" {
 		t.Fatalf("unexpected error: %q", m2.errLine)

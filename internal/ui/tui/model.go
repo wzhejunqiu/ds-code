@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	uipkg "github.com/hejunqiu/ds-code/internal/ui"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
@@ -39,6 +40,7 @@ type model struct {
 	resumePicker    component.Picker
 	resumeFilter    string // last applied filter (cursor blink skip)
 	resumeFilterSeq uint64 // ignores stale async list responses
+	resumePending   bool   // /resume session load in flight (ignore duplicate Enter)
 
 	prompt *permission.PromptRequest
 
@@ -59,10 +61,7 @@ type model struct {
 	exitConfirmArmedAt time.Time
 }
 
-const (
-	exitConfirmTimeout = time.Second
-	runningTurnHint    = "Press Esc to cancel the current turn"
-)
+const runningTurnHint = "Press Esc to cancel the current turn"
 
 const (
 	thinkingFineTick   = 100 * time.Millisecond
@@ -111,7 +110,7 @@ func thinkingTickAfter(interval time.Duration) tea.Cmd {
 }
 
 func exitConfirmTimeoutTick() tea.Cmd {
-	return tea.Tick(exitConfirmTimeout, func(time.Time) tea.Msg { return exitConfirmTimeoutMsg{} })
+	return tea.Tick(uipkg.ExitConfirmTimeout, func(time.Time) tea.Msg { return exitConfirmTimeoutMsg{} })
 }
 
 func (m *model) listenPrompt() tea.Cmd {

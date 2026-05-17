@@ -6,6 +6,7 @@ import (
 
 // Update handles Bubble Tea messages for the root model.
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	debugBeforeUpdate()
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m, m.updateWindowSize(msg)

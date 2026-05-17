@@ -10,7 +10,7 @@ type Command struct {
 
 // All returns the canonical command registry (single source of truth).
 func All() []Command {
-	return []Command{
+	cmds := []Command{
 		{Name: "help", Description: "Show all slash commands"},
 		{Name: "context", Args: "", Description: "Show session usage and next-request token breakdown"},
 		{Name: "mode", Args: "[deepseek-v4-pro|flash]", Description: "View or switch model (per-session)"},
@@ -29,6 +29,7 @@ func All() []Command {
 		{Name: "skill", Args: "[name]", Description: "List or activate a skill"},
 		{Name: "task", Args: "<prompt…>", Description: "Dispatch read-only subagent (direct)"},
 	}
+	return append(cmds, devCommands()...)
 }
 
 // Lookup returns a command by name.

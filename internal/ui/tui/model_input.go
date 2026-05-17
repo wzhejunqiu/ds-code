@@ -144,6 +144,9 @@ func (m *model) submitLine(line string) tea.Cmd {
 		return tea.Quit
 	}
 	if cmd, args, ok := slash.Parse(line); ok {
+		if c, handled := m.trySubmitDevSlash(cmd, args); handled {
+			return c
+		}
 		switch cmd {
 		case "help":
 			return m.showHelpOverlay()
