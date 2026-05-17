@@ -11,7 +11,10 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 )
 
-const resumeListMax = 50
+const (
+	resumeListMax        = 50
+	resumeFilterDebounce = 150 * time.Millisecond
+)
 
 // Tab moves down in the session list; Enter is handled in updateKey, not the picker.
 var resumePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabMoveDown}
@@ -49,14 +52,9 @@ func (m *model) syncResumePicker() {
 	m.overlayText = m.resumePicker.View()
 }
 
-// listResumeSessions loads recent sessions and optionally filters by ID/title.
-func (m *model) listResumeSessions(filter string) ([]session.Summary, error) {
-	list, err := m.deps.Store.ListSessions(context.Background(), resumeListMax)
-	if err != nil {
-		return nil, err
-	}
+func filterResumeSessions(list []session.Summary, filter string) []session.Summary {
 	if filter == "" {
-		return list, nil
+		return list
 	}
 	var filtered []session.Summary
 	lower := strings.ToLower(filter)
@@ -67,7 +65,15 @@ func (m *model) listResumeSessions(filter string) ([]session.Summary, error) {
 			filtered = append(filtered, s)
 		}
 	}
-	return filtered, nil
+	return filtered
+}
+
+func listResumeSessionsFromStore(store session.Store, filter string) ([]session.Summary, error) {
+	list, err := store.ListSessions(context.Background(), resumeListMax)
+	if err != nil {
+		return nil, err
+	}
+	return filterResumeSessions(list, filter), nil
 }
 
 func formatResumeUpdated(t time.Time) string {
@@ -98,42 +104,51 @@ func (m *model) clearResumePicker() {
 	m.overlayText = ""
 }
 
-// updateResumePicker refreshes the session list for /resume <filter>.
-// textinput emits updates on cursor blink; do not reset selection unless filter changed.
-func (m *model) updateResumePicker(filter string) {
+// scheduleResumeFilter debounces Store access while typing /resume <filter>.
+func (m *model) scheduleResumeFilter(filter string) tea.Cmd {
 	if m.overlay == overlayResume && filter == m.resumeFilter && len(m.resumeSessions) > 0 {
-		return
+		return nil
 	}
+	m.overlay = overlayResume
+	m.resumeFilterSeq++
+	seq := m.resumeFilterSeq
+	return tea.Tick(resumeFilterDebounce, func(time.Time) tea.Msg {
+		return resumeFilterTickMsg{filter: filter, seq: seq}
+	})
+}
+
+func (m *model) updateResumeFilterTick(msg resumeFilterTickMsg) tea.Cmd {
+	if msg.seq != m.resumeFilterSeq {
+		return nil
+	}
+	return m.fetchResumeSessions(msg.filter, msg.seq)
+}
+
+func (m *model) applyResumeSessions(filter string, list []session.Summary) {
 	filterChanged := m.resumeFilter != filter
 	m.resumeFilter = filter
-
-	list, err := m.listResumeSessions(filter)
-	if err != nil {
-		m.errLine = err.Error()
-		m.clearResumePicker()
-		return
-	}
 	m.resumeSessions = list
 	if filterChanged || len(list) == 0 {
 		m.resumePicker.ResetSelection()
 	} else {
 		m.resumePicker.ClampSelection()
 	}
-	if len(list) == 0 {
-		m.overlay = overlayResume
-		m.syncResumePicker()
-		return
-	}
 	m.overlay = overlayResume
 	m.syncResumePicker()
 }
 
-func (m *model) fetchResumeList() tea.Cmd {
+func (m *model) fetchResumeSessions(filter string, seq uint64) tea.Cmd {
 	d := m.deps
 	return func() tea.Msg {
-		list, err := d.Store.ListSessions(context.Background(), resumeListMax)
-		return resumeListMsg{sessions: list, err: err}
+		list, err := listResumeSessionsFromStore(d.Store, filter)
+		return resumeListMsg{filter: filter, seq: seq, sessions: list, err: err}
 	}
+}
+
+func (m *model) fetchResumeList() tea.Cmd {
+	m.resumeFilterSeq++
+	seq := m.resumeFilterSeq
+	return m.fetchResumeSessions("", seq)
 }
 
 // loadInitialHistory loads persisted messages for the startup session into the chat viewport.

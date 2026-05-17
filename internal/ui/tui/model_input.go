@@ -87,33 +87,56 @@ func (m *model) completionReadyToSubmit() bool {
 	return val == base || strings.HasPrefix(val, base+" ")
 }
 
+func slashCommandsEqual(a, b []slash.Command) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Name != b[i].Name {
+			return false
+		}
+	}
+	return true
+}
+
 // updateCompletion switches between slash-command list and /resume session picker.
-func (m *model) updateCompletion() {
+func (m *model) updateCompletion() tea.Cmd {
 	val := m.input.Value()
 	trimmed := strings.TrimSpace(val)
 	if cmd, args, ok := slash.Parse(trimmed); ok && cmd == "resume" {
-		m.updateResumePicker(strings.TrimSpace(args))
-		return
+		return m.scheduleResumeFilter(strings.TrimSpace(args))
 	}
 	if m.overlay == overlayResume {
 		m.clearResumePicker()
 	}
 	if !strings.HasPrefix(trimmed, "/") {
+		m.completeFilterKey = ""
 		if m.overlay == overlayComplete {
 			m.overlay = overlayNone
 			m.clearCompletePicker()
 		}
-		return
+		return nil
 	}
-	m.complete = slash.FilterCommands(val)
-	m.completePicker.ResetSelection()
+	filtered := slash.FilterCommands(val)
+	if m.overlay == overlayComplete && val == m.completeFilterKey && slashCommandsEqual(m.complete, filtered) {
+		return nil
+	}
+	filterChanged := val != m.completeFilterKey
+	m.completeFilterKey = val
+	m.complete = filtered
+	if filterChanged || len(filtered) == 0 {
+		m.completePicker.ResetSelection()
+	} else {
+		m.completePicker.ClampSelection()
+	}
 	if len(m.complete) == 0 {
 		m.overlay = overlayNone
 		m.clearCompletePicker()
-		return
+		return nil
 	}
 	m.overlay = overlayComplete
 	m.syncCompleteOverlay()
+	return nil
 }
 
 func (m *model) submitLine(line string) tea.Cmd {

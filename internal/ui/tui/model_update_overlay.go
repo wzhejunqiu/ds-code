@@ -69,6 +69,8 @@ func (m *model) dismissOverlay() {
 		m.clearCompletePicker()
 	case overlayResume:
 		m.clearResumePicker()
+	case overlayPrompt:
+		m.dismissPrompt()
 	case overlayContext, overlayHelp:
 		m.overlay = overlayNone
 		m.overlayText = ""

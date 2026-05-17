@@ -43,7 +43,14 @@ type turnStartedMsg struct {
 }
 type exitConfirmTimeoutMsg struct{}
 
+type resumeFilterTickMsg struct {
+	filter string
+	seq    uint64
+}
+
 type resumeListMsg struct {
+	filter   string
+	seq      uint64
 	sessions []session.Summary
 	err      error
 }

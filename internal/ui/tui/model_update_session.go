@@ -16,21 +16,20 @@ func (m *model) updateSlashOutput(msg slashOutputMsg) tea.Cmd {
 }
 
 func (m *model) updateResumeList(msg resumeListMsg) tea.Cmd {
+	if msg.seq != 0 && msg.seq != m.resumeFilterSeq {
+		return nil
+	}
 	if msg.err != nil {
 		m.errLine = msg.err.Error()
-		m.overlay = overlayNone
+		m.clearResumePicker()
 		return nil
 	}
-	m.resumeSessions = msg.sessions
-	m.resumeFilter = ""
-	m.resumePicker.ResetSelection()
-	if len(m.resumeSessions) == 0 {
+	if msg.filter == "" && len(msg.sessions) == 0 {
 		m.errLine = "No saved sessions."
-		m.overlay = overlayNone
+		m.clearResumePicker()
 		return nil
 	}
-	m.overlay = overlayResume
-	m.syncResumePicker()
+	m.applyResumeSessions(msg.filter, msg.sessions)
 	return nil
 }
 

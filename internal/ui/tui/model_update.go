@@ -26,6 +26,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.updateThinkingTick()
 	case slashOutputMsg:
 		return m, m.updateSlashOutput(msg)
+	case resumeFilterTickMsg:
+		return m, m.updateResumeFilterTick(msg)
 	case resumeListMsg:
 		return m, m.updateResumeList(msg)
 	case sessionResumedMsg:

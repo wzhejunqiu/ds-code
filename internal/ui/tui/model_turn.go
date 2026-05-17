@@ -99,16 +99,25 @@ func (m *model) persistTurnInterrupt() {
 	})
 }
 
+func (m *model) replyPrompt(allow bool) {
+	if m.prompt == nil {
+		return
+	}
+	select {
+	case m.prompt.Reply <- allow:
+	default:
+	}
+	m.prompt = nil
+	m.overlay = overlayNone
+	m.overlayText = ""
+}
+
 func (m *model) handlePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch strings.ToLower(msg.String()) {
 	case "y", "yes":
-		m.prompt.Reply <- true
-		m.prompt = nil
-		m.overlay = overlayNone
+		m.replyPrompt(true)
 	case "n", "no", "esc":
-		m.prompt.Reply <- false
-		m.prompt = nil
-		m.overlay = overlayNone
+		m.replyPrompt(false)
 	}
 	return m, m.listenPrompt()
 }

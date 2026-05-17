@@ -20,46 +20,40 @@ func Run(deps Deps) error {
 		}
 	}()
 	_, err := p.Run()
+	close(events)
 	return err
 }
 
 // runTurnAsync runs agent.RunTurn on a goroutine and forwards TurnCallbacks to the UI.
-// Must not block on a full events channel — streaming uses trySend (drops if UI lags).
+// Stream deltas may be dropped when the channel is full; lifecycle messages are retried.
 func runTurnAsync(d Deps, line string, events chan<- tea.Msg) {
 	ctx, cancel := context.WithCancel(context.Background())
-	events <- turnStartedMsg{cancel: cancel} // model stores cancel for Esc
-
-	trySend := func(msg tea.Msg) {
-		select {
-		case events <- msg:
-		default: // backpressure: skip delta rather than stall the agent
-		}
-	}
+	sendAgentEvent(events, turnStartedMsg{cancel: cancel}, true)
 
 	cb := &agent.TurnCallbacks{
 		OnContentDelta: func(s string) {
-			trySend(streamContentMsg{delta: s})
+			sendAgentEvent(events, streamContentMsg{delta: s}, false)
 		},
 		OnReasoningDelta: func(s string) {
-			trySend(streamReasoningMsg{delta: s})
+			sendAgentEvent(events, streamReasoningMsg{delta: s}, false)
 		},
 		OnToolStart: func(name, args, command string) {
-			trySend(toolStartMsg{name: name, args: args, command: command})
+			sendAgentEvent(events, toolStartMsg{name: name, args: args, command: command}, false)
 		},
 		OnToolEnd: func(name, args, command, result string, isError bool) {
-			trySend(toolEndMsg{name: name, args: args, command: command, result: result, isError: isError})
+			sendAgentEvent(events, toolEndMsg{name: name, args: args, command: command, result: result, isError: isError}, false)
 		},
 		OnAssistantSegmentEnd: func() {
-			trySend(assistantSegmentEndMsg{})
+			sendAgentEvent(events, assistantSegmentEndMsg{}, false)
 		},
 		OnPlanningStart: func() {
-			trySend(planningStartMsg{})
+			sendAgentEvent(events, planningStartMsg{}, false)
 		},
 		OnPlanningEnd: func() {
-			trySend(planningEndMsg{})
+			sendAgentEvent(events, planningEndMsg{}, false)
 		},
 	}
 
 	result, err := d.Runner.RunTurn(ctx, d.SessionID, line, cb)
-	events <- turnDoneMsg{result: result, err: err}
+	sendAgentEvent(events, turnDoneMsg{result: result, err: err}, true)
 }

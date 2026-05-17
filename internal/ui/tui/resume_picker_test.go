@@ -22,7 +22,7 @@ func TestResumePageSizeBounds(t *testing.T) {
 	}
 }
 
-func TestUpdateResumePickerSkipsWhenFilterUnchanged(t *testing.T) {
+func TestScheduleResumeFilterSkipsWhenFilterUnchanged(t *testing.T) {
 	m := model{}
 	m.overlay = overlayResume
 	m.resumeFilter = "foo"
@@ -30,7 +30,9 @@ func TestUpdateResumePickerSkipsWhenFilterUnchanged(t *testing.T) {
 	m.resumePicker.Cursor = 0
 	m.overlayText = "cached overlay"
 
-	m.updateResumePicker("foo")
+	if cmd := m.scheduleResumeFilter("foo"); cmd != nil {
+		t.Fatal("expected no debounce cmd when filter and sessions unchanged")
+	}
 	if m.overlayText != "cached overlay" {
 		t.Fatalf("overlay re-rendered on cursor blink: %q", m.overlayText)
 	}

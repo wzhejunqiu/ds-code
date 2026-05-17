@@ -30,13 +30,15 @@ type model struct {
 	overlayText string
 
 	// Slash completion: domain rows parallel to completePicker.Items indices.
-	complete       []slash.Command
-	completePicker component.Picker
+	complete          []slash.Command
+	completePicker    component.Picker
+	completeFilterKey string // last input used for slash.FilterCommands (cursor blink skip)
 
 	// /resume picker: summaries parallel to resumePicker.Items indices.
-	resumeSessions []session.Summary
-	resumePicker   component.Picker
-	resumeFilter   string // skips re-list when only textinput cursor blinked
+	resumeSessions  []session.Summary
+	resumePicker    component.Picker
+	resumeFilter    string // last applied filter (cursor blink skip)
+	resumeFilterSeq uint64 // ignores stale async list responses
 
 	prompt *permission.PromptRequest
 
