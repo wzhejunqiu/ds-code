@@ -5,6 +5,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/header"
 )
 
 func TestHeaderWidths(t *testing.T) {
@@ -17,7 +18,7 @@ func TestHeaderWidths(t *testing.T) {
 					t.Fatalf("width %d panic: %v", w, r)
 				}
 			}()
-			_ = renderHeader(w, "v", cfg, sess)
+			_ = header.Render(w, "v", cfg, sess)
 		}()
 	}
 }

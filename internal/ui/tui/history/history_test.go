@@ -1,0 +1,87 @@
+package history
+
+import (
+	"testing"
+	"time"
+
+	"github.com/hejunqiu/ds-code/internal/role"
+	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
+)
+
+func TestBlocksFromMessages(t *testing.T) {
+	msgs := []session.Message{
+		{Role: role.User, Content: "hello"},
+		{Role: role.Assistant, Content: "hi", ReasoningContent: "think"},
+		{Role: role.Tool, Content: "<tool_result name=\"read_file\" id=\"1\">\noutput\n</tool_result>", ToolName: "read_file", ToolCallID: "1"},
+		{Role: role.System, Content: "rewound"},
+		{Role: role.Assistant, Content: "", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"path\":\"a.go\"}"}]`},
+		{Role: role.Tool, Content: "<tool_result name=\"read_file\" id=\"1\">\nmore\n</tool_result>", ToolName: "read_file", ToolCallID: "1"},
+	}
+	blocks := BlocksFromMessages(msgs, true)
+	if len(blocks) != 3 {
+		t.Fatalf("got %d blocks, want 3", len(blocks))
+	}
+	if blocks[0].Role != chat.RoleUser || blocks[0].Content.String() != "hello" {
+		t.Fatalf("user block: %+v", blocks[0])
+	}
+	if blocks[1].Role != chat.RoleAssistant || blocks[1].Content.String() != "hi" || blocks[1].Reasoning.String() != "think" {
+		t.Fatalf("assistant block: %+v", blocks[1])
+	}
+	if !blocks[1].ReasoningOpen {
+		t.Fatal("expected reasoning open")
+	}
+	if blocks[2].Role != chat.RoleTool || blocks[2].ToolName != "read_file" || blocks[2].ToolResult != "more" {
+		t.Fatalf("tool block: %+v", blocks[2])
+	}
+	if blocks[2].ToolArgs != "path=a.go" {
+		t.Fatalf("tool args = %q", blocks[2].ToolArgs)
+	}
+}
+
+func TestBlocksFromMessages_reasoningBeforeTools(t *testing.T) {
+	msgs := []session.Message{
+		{Role: role.Assistant, ReasoningContent: "think first", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"path\":\"a.go\"}"}]`},
+		{Role: role.Tool, Content: "body", ToolName: "read_file", ToolCallID: "1"},
+	}
+	blocks := BlocksFromMessages(msgs, true)
+	if len(blocks) != 2 {
+		t.Fatalf("got %d blocks, want 2", len(blocks))
+	}
+	if blocks[0].Role != chat.RoleAssistant || blocks[0].Reasoning.String() != "think first" {
+		t.Fatalf("assistant block first: %+v", blocks[0])
+	}
+	if blocks[1].Role != chat.RoleTool {
+		t.Fatalf("tool block second: %+v", blocks[1])
+	}
+}
+
+func TestBlocksFromMessages_interruptSystemMessage(t *testing.T) {
+	msgs := []session.Message{
+		{Role: role.User, Content: "hello"},
+		{Role: role.System, Content: chat.InterruptSessionMarker()},
+	}
+	blocks := BlocksFromMessages(msgs, true)
+	if len(blocks) != 2 {
+		t.Fatalf("got %d blocks, want 2", len(blocks))
+	}
+	if blocks[1].Role != chat.RoleInterrupt {
+		t.Fatalf("second block role = %s, want interrupt", blocks[1].Role)
+	}
+}
+
+func TestBlocksFromMessages_durations(t *testing.T) {
+	msgs := []session.Message{
+		{Role: role.Assistant, Content: "hi", ReasoningContent: "think", ReasoningDurationMS: 1200, TurnDurationMS: 5000},
+	}
+	blocks := BlocksFromMessages(msgs, false)
+	if len(blocks) != 1 {
+		t.Fatalf("got %d blocks", len(blocks))
+	}
+	if blocks[0].ReasoningDuration != 1200*time.Millisecond {
+		t.Fatalf("reasoningDuration = %v", blocks[0].ReasoningDuration)
+	}
+	if blocks[0].TurnDuration != 5*time.Second {
+		t.Fatalf("turnDuration = %v", blocks[0].TurnDuration)
+	}
+}

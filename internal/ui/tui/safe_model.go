@@ -6,17 +6,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hejunqiu/ds-code/internal/ui/theme"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/model"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
 )
 
-// safeModel wraps the TUI model and recovers from render/update panics so the
-// program stays running instead of exiting the process.
+// safeModel wraps the TUI model and recovers from render/update panics.
 type safeModel struct {
-	inner *model
+	inner *model.Model
 }
 
 func newSafeModel(d *Deps) *safeModel {
-	m := newModel(d)
-	return &safeModel{inner: &m}
+	return &safeModel{inner: model.New(d)}
 }
 
 func (s *safeModel) Init() tea.Cmd {
@@ -34,12 +34,12 @@ func (s *safeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.inner.errLine = formatRecoveredError("update", r)
+				s.inner.State.ErrLine = formatRecoveredError("update", r)
 				cmd = nil
 			}
 		}()
 		updated, c := s.inner.Update(msg)
-		if m, ok := updated.(*model); ok {
+		if m, ok := updated.(*model.Model); ok {
 			s.inner = m
 		}
 		cmd = c
@@ -49,13 +49,13 @@ func (s *safeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (s *safeModel) View() string {
 	if s == nil || s.inner == nil {
-		return styleApp.Render("TUI internal error\n")
+		return style.App.Render("TUI internal error\n")
 	}
 	var view string
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.inner.errLine = formatRecoveredError("render", r)
+				s.inner.State.ErrLine = formatRecoveredError("render", r)
 				view = s.fallbackView()
 			}
 		}()
@@ -69,10 +69,10 @@ func (s *safeModel) View() string {
 
 func (s *safeModel) fallbackView() string {
 	msg := "TUI render error"
-	if s.inner != nil && s.inner.errLine != "" {
-		msg = s.inner.errLine
+	if s.inner != nil && s.inner.State.ErrLine != "" {
+		msg = s.inner.State.ErrLine
 	}
-	return styleApp.Render(
+	return style.App.Render(
 		lipgloss.NewStyle().Foreground(theme.Error).Render(msg) +
 			"\n\nPress Esc to clear this message.",
 	)

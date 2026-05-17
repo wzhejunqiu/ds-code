@@ -8,40 +8,9 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 )
-
-func TestResumeDoubleEnterIgnoredWhilePending(t *testing.T) {
-	store := session.NewMemoryStore()
-	sess, err := store.CreateSession("m", "max", "enabled", "ask", "agent")
-	if err != nil {
-		t.Fatal(err)
-	}
-	m := model{
-		deps:           &Deps{Store: store},
-		resumeSessions: []session.Summary{{ID: sess.ID}},
-	}
-	m.overlay = overlayResume
-	m.syncResumePicker()
-
-	enter := tea.KeyMsg{Type: tea.KeyEnter}
-	updated, cmd1 := m.Update(enter)
-	m1 := updated.(*model)
-	if cmd1 == nil {
-		t.Fatal("expected resume cmd")
-	}
-	if !m1.resumePending {
-		t.Fatal("expected resumePending after first enter")
-	}
-
-	updated2, cmd2 := m1.Update(enter)
-	m2 := updated2.(*model)
-	if cmd2 != nil {
-		t.Fatal("second enter should be ignored while resume is pending")
-	}
-	if !m2.resumePending {
-		t.Fatal("resumePending should stay true until sessionResumedMsg")
-	}
-}
 
 func TestViewWithWidthBeforeWindowSizeMsg(t *testing.T) {
 	sm := newSafeModel(&Deps{
@@ -50,9 +19,9 @@ func TestViewWithWidthBeforeWindowSizeMsg(t *testing.T) {
 		Version:   "v",
 		Cfg:       &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}},
 	})
-	sm.inner.width = 80
-	sm.inner.height = 24
-	sm.inner.syncChatView()
+	sm.inner.State.Width = 80
+	sm.inner.State.Height = 24
+	sm.inner.TestSyncChatView()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -60,6 +29,38 @@ func TestViewWithWidthBeforeWindowSizeMsg(t *testing.T) {
 		}
 	}()
 	_ = sm.View()
+}
+
+func TestResumeDoubleEnterIgnoredWhilePending(t *testing.T) {
+	store := session.NewMemoryStore()
+	sess, err := store.CreateSession("m", "max", "enabled", "ask", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sm := newSafeModel(&Deps{Store: store})
+	m := sm.inner
+	m.ResumeSessions = []session.Summary{{ID: sess.ID}}
+	m.Overlay = state.OverlayResume
+	m.TestSyncResumePicker()
+
+	enter := tea.KeyMsg{Type: tea.KeyEnter}
+	updated, cmd1 := sm.Update(enter)
+	sm = updated.(*safeModel)
+	if cmd1 == nil {
+		t.Fatal("expected resume cmd")
+	}
+	if !sm.inner.ResumePending {
+		t.Fatal("expected resumePending after first enter")
+	}
+
+	updated2, cmd2 := sm.Update(enter)
+	sm = updated2.(*safeModel)
+	if cmd2 != nil {
+		t.Fatal("second enter should be ignored while resume is pending")
+	}
+	if !sm.inner.ResumePending {
+		t.Fatal("resumePending should stay true until sessionResumedMsg")
+	}
 }
 
 func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
@@ -78,12 +79,12 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 
 	cfg := &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}}
 	sm := newSafeModel(&Deps{Store: store, SessionID: sess.ID, Version: "test", Cfg: cfg})
-	sm.inner.width = 120
-	sm.inner.height = 40
-	sm.inner.input.SetValue("/resume")
-	sm.inner.overlay = overlayResume
-	sm.inner.resumeSessions = []session.Summary{{ID: sess.ID, Title: "hello"}}
-	sm.inner.syncResumePicker()
+	sm.inner.State.Width = 120
+	sm.inner.State.Height = 40
+	sm.inner.TestInputSetValue("/resume")
+	sm.inner.Overlay = state.OverlayResume
+	sm.inner.ResumeSessions = []session.Summary{{ID: sess.ID, Title: "hello"}}
+	sm.inner.TestSyncResumePicker()
 
 	enter := tea.KeyMsg{Type: tea.KeyEnter}
 	for i := 0; i < 2; i++ {
@@ -99,8 +100,9 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 				}
 			}
 		}
-		sm.inner.width = 80
-		sm.inner.syncChatView()
-		_ = sm.View()
 	}
+	_ = sm.View()
 }
+
+// silence deps import
+var _ = deps.Deps{}
