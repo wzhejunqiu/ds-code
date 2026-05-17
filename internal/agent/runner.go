@@ -5,10 +5,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/hejunqiu/ds-code/internal/audit"
@@ -16,7 +14,6 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/role"
@@ -95,12 +92,11 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			return nil, err
 		}
 
-		toolDefs := r.Tools.Definitions()
 		req := llm.Request{
 			MergedSystem:    view.MergedSystem(),
 			Messages:        view.Messages,
 			Model:           sess.Model,
-			Tools:           toolDefs,
+			Tools:           r.Tools.Definitions(),
 			MaxTokens:       maxTokens,
 			Stream:          true,
 			ThinkingType:    sess.ThinkingType,
@@ -108,35 +104,8 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			UserID:          cacheScope(sessionID),
 			StrictTools:     r.Cfg.LLM.StrictTools,
 		}
-		var st streamTiming // reasoning wall clock from stream deltas
-		var roundContent strings.Builder
-		streamedContent := false
-		planningDone := round == 0 // round 0 has no prior OnPlanningStart
-		endPlanning := func() {
-			if planningDone || cb == nil || cb.OnPlanningEnd == nil {
-				return
-			}
-			planningDone = true
-			cb.OnPlanningEnd()
-		}
-		if cb != nil {
-			req.OnStream = func(d llm.StreamDelta) {
-				st.observe(d)
-				if d.Content != "" || d.Reasoning != "" {
-					endPlanning()
-				}
-				if d.Content != "" {
-					roundContent.WriteString(d.Content)
-					if cb.OnContentDelta != nil {
-						streamedContent = true
-						cb.OnContentDelta(d.Content)
-					}
-				}
-				if d.Reasoning != "" && cb.OnReasoningDelta != nil {
-					cb.OnReasoningDelta(d.Reasoning)
-				}
-			}
-		}
+		stream := &subRoundStream{planningDone: round == 0}
+		req.OnStream = r.attachStreamHandlers(cb, round, stream)
 
 		logging.L().Info("LLM request",
 			zap.String("session_id", sessionID),
@@ -145,27 +114,17 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			zap.Int("messages", len(req.Messages)),
 			zap.Int("tools", len(req.Tools)),
 		)
-		resp, err := r.LLM.Chat(ctx, req)
-		if err != nil && deepseek.IsContextTooLong(err) {
-			logging.L().Info("context too long, compacting", zap.String("session_id", sessionID))
-			if compactErr := r.Context.CompactAPIContext(ctx, sessionID); compactErr != nil {
-				return nil, fmt.Errorf("context too long; compact failed: %w", compactErr)
-			}
-			view, maxTokens, prepErr := r.Context.PrepareRequest(ctx, sessionID)
-			if prepErr != nil {
-				return nil, prepErr
-			}
-			req.Messages = view.Messages
-			req.MergedSystem = view.MergedSystem()
-			req.MaxTokens = maxTokens
-			resp, err = r.LLM.Chat(ctx, req)
-		}
+		resp, err := r.chatWithCompactRetry(ctx, sessionID, req)
 		if err != nil {
-			endPlanning()
+			if !stream.planningDone && cb != nil && cb.OnPlanningEnd != nil {
+				cb.OnPlanningEnd()
+			}
 			logging.L().Error("LLM request failed", zap.String("session_id", sessionID), zap.Error(err))
 			return nil, err
 		}
-		endPlanning()
+		if !stream.planningDone && cb != nil && cb.OnPlanningEnd != nil {
+			cb.OnPlanningEnd()
+		}
 		logging.L().Debug("LLM response",
 			zap.String("session_id", sessionID),
 			zap.Int("tool_calls", len(resp.ToolCalls)),
@@ -176,90 +135,14 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		result.Usage = resp.Usage
 		result.SubRounds = round + 1
 
-		tcJSON, _ := json.Marshal(resp.ToolCalls)
-		reasoningDur := st.duration()
-		assistantMsg := session.Message{
-			SessionID:           sessionID,
-			Role:                role.Assistant,
-			Content:             resp.Content,
-			ReasoningContent:    resp.ReasoningContent,
-			ReasoningDurationMS: durationMS(reasoningDur),
-			ToolCallsJSON:       string(tcJSON),
-		}
 		if len(resp.ToolCalls) == 0 {
-			turnDur := time.Since(turnStart)
-			assistantMsg.TurnDurationMS = durationMS(turnDur)
-			result.TurnDuration = turnDur
-			result.FinalReasoningDuration = reasoningDur
+			return r.finishTerminalRound(ctx, sessionID, resp, stream, turnStart, result, cb)
 		}
-		if err := r.Sessions.AppendMessage(ctx, assistantMsg); err != nil {
+		if err := r.appendAssistantWithTools(ctx, sessionID, resp, stream); err != nil {
 			return nil, err
 		}
-
-		if len(resp.ToolCalls) == 0 {
-			// Terminal sub-round: no further LLM calls for this user message.
-			result.FinalContent = resp.Content
-			result.FinalReasoning = resp.ReasoningContent
-			if cb != nil && cb.OnContentDelta != nil && !streamedContent {
-				content := resp.Content
-				if roundContent.Len() > 0 {
-					content = roundContent.String()
-				}
-				if content != "" {
-					cb.OnContentDelta(content)
-				}
-			}
-			logging.L().Info("user turn done (no tools)",
-				zap.String("session_id", sessionID),
-				zap.Int("rounds", round+1),
-			)
-			if cb == nil && r.Out != nil && resp.Content != "" {
-				_, _ = io.WriteString(r.Out, resp.Content)
-			}
-			return result, nil
-		}
-
-		roundText := resp.Content
-		if roundContent.Len() > 0 {
-			roundText = roundContent.String()
-		}
-
-		// Non-terminal: run tools, append tool messages, loop to next sub-round.
-		for _, tc := range resp.ToolCalls {
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-			logging.L().Info("tool execute",
-				zap.String("session_id", sessionID),
-				zap.String("tool", tc.Name),
-				zap.String("call_id", tc.ID),
-			)
-			rawArgs := []byte(tc.Arguments)
-			argsLine, command := tool.DisplaySummary(tc.Name, rawArgs)
-			if cb != nil && cb.OnToolStart != nil {
-				cb.OnToolStart(tc.Name, argsLine, command)
-			}
-			body := r.executeTool(ctx, sessionID, tc)
-			displayResult, isError := ctxpkg.UnpackToolBody(body)
-			if cb != nil && cb.OnToolEnd != nil {
-				cb.OnToolEnd(tc.Name, argsLine, command, displayResult, isError)
-			}
-			body = ctxpkg.TruncateToolResult(body, r.Cfg)
-			if err := r.Sessions.AppendMessage(ctx, session.Message{
-				SessionID:  sessionID,
-				Role:       role.Tool,
-				Content:    body,
-				ToolCallID: tc.ID,
-				ToolName:   tc.Name,
-			}); err != nil {
-				return nil, err
-			}
-		}
-		if cb != nil && cb.OnContentDelta != nil && roundText != "" && !streamedContent {
-			cb.OnContentDelta(roundText)
-		}
-		if cb != nil && cb.OnAssistantSegmentEnd != nil {
-			cb.OnAssistantSegmentEnd()
+		if err := r.runToolCalls(ctx, sessionID, resp.ToolCalls, resp, stream, cb); err != nil {
+			return nil, err
 		}
 	}
 	logging.L().Warn("exceeded max sub-rounds", zap.String("session_id", sessionID), zap.Int("max", r.MaxTurns))

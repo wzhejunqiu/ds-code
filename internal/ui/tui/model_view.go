@@ -111,8 +111,7 @@ func (m *model) headerSessionPtr() *session.Session {
 	if !m.hasSession {
 		return nil
 	}
-	s := m.headerSession
-	return &s
+	return &m.headerSession
 }
 
 func (m *model) refreshStatus() {

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -9,13 +10,16 @@ import (
 	"github.com/charmbracelet/glamour/ansi"
 	glamourStyles "github.com/charmbracelet/glamour/styles"
 	"github.com/charmbracelet/lipgloss"
+	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/hejunqiu/ds-code/internal/ui/theme"
+	"github.com/muesli/termenv"
 )
 
 var (
 	mdMu       sync.Mutex
 	mdRenderer *glamour.TermRenderer
 	mdWidth    int
+	mdProfile  termenv.Profile
 
 	// codeBlockBoxStyle frames fenced code blocks in the chat pane.
 	codeBlockBoxStyle = lipgloss.NewStyle().
@@ -78,7 +82,8 @@ func renderMarkdownSegment(content string, width int) (string, error) {
 func markdownRenderer(width int) (*glamour.TermRenderer, error) {
 	mdMu.Lock()
 	defer mdMu.Unlock()
-	if mdRenderer != nil && mdWidth == width {
+	profile := lipgloss.ColorProfile()
+	if mdRenderer != nil && mdWidth == width && mdProfile == profile {
 		return mdRenderer, nil
 	}
 	r, err := glamour.NewTermRenderer(
@@ -91,6 +96,7 @@ func markdownRenderer(width int) (*glamour.TermRenderer, error) {
 	}
 	mdRenderer = r
 	mdWidth = width
+	mdProfile = profile
 	return r, nil
 }
 
@@ -180,41 +186,16 @@ func codeBlockChromaStyles() *ansi.Chroma {
 }
 
 func clearChromaBackgrounds(c *ansi.Chroma) {
-	clearStyleBackground(&c.Text)
-	clearStyleBackground(&c.Error)
-	clearStyleBackground(&c.Comment)
-	clearStyleBackground(&c.CommentPreproc)
-	clearStyleBackground(&c.Keyword)
-	clearStyleBackground(&c.KeywordReserved)
-	clearStyleBackground(&c.KeywordNamespace)
-	clearStyleBackground(&c.KeywordType)
-	clearStyleBackground(&c.Operator)
-	clearStyleBackground(&c.Punctuation)
-	clearStyleBackground(&c.Name)
-	clearStyleBackground(&c.NameBuiltin)
-	clearStyleBackground(&c.NameTag)
-	clearStyleBackground(&c.NameAttribute)
-	clearStyleBackground(&c.NameClass)
-	clearStyleBackground(&c.NameConstant)
-	clearStyleBackground(&c.NameDecorator)
-	clearStyleBackground(&c.NameException)
-	clearStyleBackground(&c.NameFunction)
-	clearStyleBackground(&c.NameOther)
-	clearStyleBackground(&c.Literal)
-	clearStyleBackground(&c.LiteralNumber)
-	clearStyleBackground(&c.LiteralDate)
-	clearStyleBackground(&c.LiteralString)
-	clearStyleBackground(&c.LiteralStringEscape)
-	clearStyleBackground(&c.GenericDeleted)
-	clearStyleBackground(&c.GenericEmph)
-	clearStyleBackground(&c.GenericInserted)
-	clearStyleBackground(&c.GenericStrong)
-	clearStyleBackground(&c.GenericSubheading)
-	clearStyleBackground(&c.Background)
-}
-
-func clearStyleBackground(p *ansi.StylePrimitive) {
-	p.BackgroundColor = nil
+	v := reflect.ValueOf(c).Elem()
+	primType := reflect.TypeOf(ansi.StylePrimitive{})
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i)
+		if f.Type() != primType {
+			continue
+		}
+		sp := f.Addr().Interface().(*ansi.StylePrimitive)
+		sp.BackgroundColor = nil
+	}
 }
 
 func mdBool(v bool) *bool { return &v }
@@ -228,35 +209,66 @@ func splitMarkdownByFences(content string) []markdownPart {
 	for {
 		start := strings.Index(rest, "```")
 		if start < 0 {
-			parts = append(parts, markdownPart{text: rest})
+			if rest != "" {
+				parts = append(parts, markdownPart{text: rest})
+			}
 			break
 		}
 		if start > 0 {
 			parts = append(parts, markdownPart{text: rest[:start]})
 		}
-		rest = rest[start+3:]
-		langLine, after, ok := strings.Cut(rest, "\n")
+		afterOpen := rest[start+3:]
+		langLine, codeBody, ok := strings.Cut(afterOpen, "\n")
 		if !ok {
-			parts = append(parts, markdownPart{text: "```" + langLine})
+			parts = append(parts, markdownPart{text: rest[start:]})
 			break
 		}
 		lang := strings.TrimSpace(langLine)
-		end := strings.Index(after, "```")
-		if end < 0 {
-			parts = append(parts, markdownPart{text: "```" + langLine + "\n" + after})
+		closeAt := findClosingFenceLine(codeBody)
+		if closeAt < 0 {
+			parts = append(parts, markdownPart{text: rest[start:]})
 			break
 		}
-		parts = append(parts, markdownPart{
-			fenced: true,
-			lang:   lang,
-			code:   after[:end],
-		})
-		rest = after[end+3:]
-		if rest == "" {
-			break
+		code := codeBody[:closeAt]
+		if strings.HasSuffix(code, "\n") {
+			code = strings.TrimSuffix(code, "\n")
+		}
+		parts = append(parts, markdownPart{fenced: true, lang: lang, code: code})
+		rest = codeBody[closeAt:]
+		if afterClose, ok := strings.CutPrefix(rest, "```"); ok {
+			rest = afterClose
+			if nl := strings.Index(rest, "\n"); nl >= 0 {
+				rest = rest[nl+1:]
+			} else {
+				rest = ""
+			}
 		}
 	}
 	return parts
+}
+
+// findClosingFenceLine returns the byte index of a line that is only ``` (optional spaces).
+func findClosingFenceLine(s string) int {
+	offset := 0
+	for {
+		nl := strings.Index(s[offset:], "\n")
+		var line string
+		lineStart := offset
+		if nl < 0 {
+			line = s[offset:]
+			offset = len(s)
+		} else {
+			line = s[offset : offset+nl]
+			offset += nl + 1
+		}
+		if strings.TrimSpace(line) == "```" {
+			return lineStart
+		}
+		if nl < 0 {
+			break
+		}
+	}
+	return -1
 }
 
 func fencedMarkdown(lang, code string) string {
@@ -305,17 +317,7 @@ func normalizeMarkdownOutput(s string) string {
 }
 
 func stripANSI(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\x1b' {
-			for i < len(s) && s[i] != 'm' {
-				i++
-			}
-			continue
-		}
-		b.WriteByte(s[i])
-	}
-	return b.String()
+	return xansi.Strip(s)
 }
 
 func renderMarkdownPrefixedBlock(prefix string, prefixStyle lipgloss.Style, content string, width, indent int) []string {

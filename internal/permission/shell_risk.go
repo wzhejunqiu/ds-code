@@ -1,6 +1,9 @@
 package permission
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 var highRiskShellPatterns = []string{
 	"rm -rf /",
@@ -20,6 +23,34 @@ var highRiskShellPatterns = []string{
 	"dd if=",
 	"chmod 777 /",
 	"chmod -r 777",
+	"base64 -d",
+	"base64 --decode",
+	"openssl enc",
+	"> /etc/",
+	"tee /etc/",
+	"chmod +s",
+	"chown root",
+}
+
+var highRiskShellPrefixes = []string{
+	"sudo ",
+	"doas ",
+	"eval ",
+	"exec ",
+}
+
+func matchHighRiskShell(norm string) error {
+	for _, p := range highRiskShellPrefixes {
+		if strings.HasPrefix(norm, p) {
+			return fmt.Errorf("%w: high-risk shell command blocked", ErrDenied)
+		}
+	}
+	for _, p := range highRiskShellPatterns {
+		if strings.Contains(norm, p) {
+			return fmt.Errorf("%w: high-risk shell command blocked", ErrDenied)
+		}
+	}
+	return nil
 }
 
 func normalizeShellCmd(cmd string) string {

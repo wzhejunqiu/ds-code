@@ -1,4 +1,4 @@
-.PHONY: build test lint vet vuln install
+.PHONY: build test lint vet staticcheck vuln install
 
 GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null)
 _VERSION_FILE := $(shell sed -n 's/^var Version = "\(.*\)"/\1/p' internal/version/version.go)
@@ -30,6 +30,10 @@ vet:
 
 lint:
 	golangci-lint run ./...
+
+staticcheck:
+	@command -v staticcheck >/dev/null 2>&1 || go install honnef.co/go/tools/cmd/staticcheck@latest
+	staticcheck ./...
 
 vuln:
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...

@@ -15,6 +15,22 @@ func TestTokenizeShellCmd(t *testing.T) {
 	}
 }
 
+func TestCheckPathCandidate_ignoresShellRedirection(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, false)
+	if err := e.checkPathCandidate("2>/dev/null"); err != nil {
+		t.Fatalf("redirection token should be ignored: %v", err)
+	}
+}
+
+func TestCheckPathCandidate_blocksAbsoluteOutsideWorkspace(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, false)
+	if err := e.checkPathCandidate("/etc/passwd"); err == nil {
+		t.Fatal("expected deny for absolute path outside workspace")
+	}
+}
+
 func TestCheckShellDenylistPaths_embeddedLiteral(t *testing.T) {
 	root := t.TempDir()
 	e := NewEngine("auto", root, true)

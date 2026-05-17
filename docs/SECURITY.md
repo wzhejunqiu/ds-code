@@ -40,6 +40,11 @@
 - `/checkpoint rewind N` 恢复工作区；历史层追加 `role=system` 事件，**不**进入 API `mergeSystem`。
 - 单文件快照上限 4 MiB；`shell` 不自动 checkpoint（工作区变更不可可靠还原）。
 
+## Shell 执行模型
+
+- 同步与后台命令均通过 `$SHELL -c <command>` 执行；在 `permission.mode=auto`（`--dangerously-auto`）下无写操作确认，但 **S3 敏感路径 denylist 与高危命令模式仍会拦截**。
+- 非 TTY 脚本请勿使用默认 `ask`；应显式 `--permission-mode readonly` 或了解风险后使用 `--dangerously-auto`。
+
 ## Shell 后台任务
 
 - 后台命令在 `project_root` 下执行，输出写入 `~/.ds-code/projects/<id>/shell-jobs/<job_id>/`。

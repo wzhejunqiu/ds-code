@@ -272,6 +272,51 @@ func TestRunner_permissionDenied(t *testing.T) {
 	}
 }
 
+func TestRunner_exceededMaxSubRounds(t *testing.T) {
+	cfg := testConfig()
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("deepseek-v4-pro", "max", "enabled", "auto", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	toolResp := &llm.Response{
+		ToolCalls: []llm.ToolCall{{
+			ID:        "call_1",
+			Name:      "read_file",
+			Arguments: `{"path":"missing.txt"}`,
+		}},
+		FinishReason: "tool_calls",
+	}
+	responses := make([]*llm.Response, 0, 4)
+	for range 4 {
+		responses = append(responses, toolResp)
+	}
+	mockLLM := &mock.Client{Responses: responses}
+
+	perm := permission.NewEngine("auto", t.TempDir(), false)
+	reg := tool.NewRegistry()
+	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
+	r := &agent.Runner{
+		LLM:      mockLLM,
+		Tools:    reg,
+		Perm:     perm,
+		Sessions: store,
+		Context:  ctxSvc,
+		Cfg:      cfg,
+		MaxTurns: 3,
+	}
+
+	_, err = r.RunTurn(context.Background(), sess.ID, "loop", nil)
+	if err == nil {
+		t.Fatal("expected max sub-rounds error")
+	}
+	if !strings.Contains(err.Error(), "exceeded max sub-rounds") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
 func testConfig() *config.Config {
 	return &config.Config{
 		LLM: config.LLMConfig{MaxTokens: 4096, StrictTools: false},

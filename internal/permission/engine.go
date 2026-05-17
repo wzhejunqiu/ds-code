@@ -244,11 +244,8 @@ func (e *Engine) checkSensitiveShell(cmd string) error {
 	if err := e.checkShellDenylistPaths(cmd); err != nil {
 		return err
 	}
-	norm := normalizeShellCmd(cmd)
-	for _, p := range highRiskShellPatterns {
-		if strings.Contains(norm, p) {
-			return fmt.Errorf("%w: high-risk shell command blocked", ErrDenied)
-		}
+	if err := matchHighRiskShell(normalizeShellCmd(cmd)); err != nil {
+		return err
 	}
 	return nil
 }

@@ -35,6 +35,10 @@ func OpenSQLite(path string) (*SQLiteStore, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := os.Chmod(path, 0o600); err != nil && !os.IsNotExist(err) {
+		db.Close()
+		return nil, fmt.Errorf("chmod sessions.db: %w", err)
+	}
 	return s, nil
 }
 

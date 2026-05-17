@@ -63,6 +63,32 @@ func TestRenderMarkdownCodeBlockNoBackgroundANSI(t *testing.T) {
 	}
 }
 
+func TestSplitMarkdownByFences_codeWithInlineBackticks(t *testing.T) {
+	content := "before\n\n```go\ns := \"```not a fence\"\nfmt.Println(1)\n```\n\nafter"
+	parts := splitMarkdownByFences(content)
+	if len(parts) != 3 {
+		t.Fatalf("parts = %d, want 3", len(parts))
+	}
+	if !parts[1].fenced || !strings.Contains(parts[1].code, "not a fence") {
+		t.Fatalf("unexpected fenced part: %+v", parts[1])
+	}
+}
+
+func TestSplitMarkdownByFences_unclosedFence(t *testing.T) {
+	content := "text\n```go\nunclosed"
+	parts := splitMarkdownByFences(content)
+	if len(parts) < 2 {
+		t.Fatalf("expected prose + unclosed fence as plain text, got %+v", parts)
+	}
+	if parts[0].fenced || parts[0].text != "text\n" {
+		t.Fatalf("first part = %+v", parts[0])
+	}
+	last := parts[len(parts)-1]
+	if last.fenced || !strings.Contains(last.text, "```go") || !strings.Contains(last.text, "unclosed") {
+		t.Fatalf("unclosed fence should remain plain text: %+v", last)
+	}
+}
+
 func TestRenderMarkdownCodeBlockBorder(t *testing.T) {
 	content := "text\n\n```go\nfmt.Println(\"hi\")\n```\n\nmore"
 	out, err := renderMarkdown(content, 60)
