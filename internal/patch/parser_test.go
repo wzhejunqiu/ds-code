@@ -129,6 +129,76 @@ func TestParse_invalidChangeLine(t *testing.T) {
 	}
 }
 
+func TestParse_addLineWithoutPlus(t *testing.T) {
+	text := `*** Begin Patch
+*** Add File: x.txt
+not prefixed
+*** End Patch`
+	_, err := patch.Parse(text)
+	if err == nil {
+		t.Fatal("expected error for line without '+'")
+	}
+}
+
+func TestParse_updateUnexpectedLine(t *testing.T) {
+	text := `*** Begin Patch
+*** Update File: f.go
+garbage
+*** End Patch`
+	_, err := patch.Parse(text)
+	if err == nil {
+		t.Fatal("expected error for unexpected update line")
+	}
+}
+
+func TestParse_duplicatePath(t *testing.T) {
+	text := `*** Begin Patch
+*** Add File: dup.txt
++a
+*** Update File: dup.txt
+@@
+-x
++y
+*** End Patch`
+	_, err := patch.Parse(text)
+	if err == nil {
+		t.Fatal("expected duplicate path error")
+	}
+}
+
+func TestParse_heredocCustomDelimiter(t *testing.T) {
+	text := `<<'PATCH'
+*** Begin Patch
+*** Add File: x.txt
++line
+*** End Patch
+PATCH`
+	changes, err := patch.Parse(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(changes) != 1 || changes[0].Path != "x.txt" {
+		t.Fatalf("changes = %+v", changes)
+	}
+}
+
+func TestCountChangedLines_contextNotDoubleCounted(t *testing.T) {
+	text := `*** Begin Patch
+*** Update File: f.txt
+@@ ctx
+ context
+-old
++new
+*** End Patch`
+	n, err := patch.CountChangedLines(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("changed lines = %d, want 2", n)
+	}
+}
+
 func TestApply_delete(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "remove.me")

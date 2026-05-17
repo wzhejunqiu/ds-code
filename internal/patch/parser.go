@@ -30,6 +30,8 @@ type Chunk struct {
 	Old     []string
 	New     []string
 	EOF     bool
+	Added   int // lines starting with '+'
+	Removed int // lines starting with '-'
 }
 
 // Parse parses a Codex apply_patch document.
@@ -54,6 +56,7 @@ func Parse(text string) ([]FileChange, error) {
 	}
 	body := lines[start : end+1]
 	var out []FileChange
+	seenPaths := make(map[string]struct{})
 	i := 0
 	for i < len(body) {
 		line := strings.TrimSpace(body[i])
@@ -64,25 +67,41 @@ func Parse(text string) ([]FileChange, error) {
 		switch {
 		case strings.HasPrefix(line, addMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, addMarker))
+			if err := registerPath(seenPaths, path); err != nil {
+				return nil, err
+			}
 			i++
 			var content []string
 			for i < len(body) {
 				l := body[i]
-				if isHunkHeader(strings.TrimSpace(l)) {
+				trim := strings.TrimSpace(l)
+				if isHunkHeader(trim) {
 					break
+				}
+				if trim == "" {
+					i++
+					continue
 				}
 				if strings.HasPrefix(l, "+") {
 					content = append(content, strings.TrimPrefix(l, "+"))
+				} else {
+					return nil, fmt.Errorf("add file %s: line must start with '+': %q", path, l)
 				}
 				i++
 			}
 			out = append(out, FileChange{Kind: ChangeAdd, Path: path, AddLines: content})
 		case strings.HasPrefix(line, deleteMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, deleteMarker))
+			if err := registerPath(seenPaths, path); err != nil {
+				return nil, err
+			}
 			out = append(out, FileChange{Kind: ChangeDelete, Path: path})
 			i++
 		case strings.HasPrefix(line, updateMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, updateMarker))
+			if err := registerPath(seenPaths, path); err != nil {
+				return nil, err
+			}
 			i++
 			ch := FileChange{Kind: ChangeUpdate, Path: path}
 			for i < len(body) {
@@ -91,7 +110,11 @@ func Parse(text string) ([]FileChange, error) {
 					break
 				}
 				if strings.HasPrefix(l, moveMarker) {
-					ch.MoveTo = strings.TrimSpace(strings.TrimPrefix(l, moveMarker))
+					moveTo := strings.TrimSpace(strings.TrimPrefix(l, moveMarker))
+					if err := registerPath(seenPaths, moveTo); err != nil {
+						return nil, err
+					}
+					ch.MoveTo = moveTo
 					i++
 					continue
 				}
@@ -125,14 +148,17 @@ func Parse(text string) ([]FileChange, error) {
 						}
 						if len(raw) == 0 {
 							chunk.Old = append(chunk.Old, "")
+							chunk.Removed++
 							i++
 							continue
 						}
 						switch raw[0] {
 						case '-':
 							chunk.Old = append(chunk.Old, raw[1:])
+							chunk.Removed++
 						case '+':
 							chunk.New = append(chunk.New, raw[1:])
+							chunk.Added++
 						case ' ':
 							line := raw[1:]
 							chunk.Old = append(chunk.Old, line)
@@ -144,6 +170,9 @@ func Parse(text string) ([]FileChange, error) {
 					}
 					ch.Chunks = append(ch.Chunks, chunk)
 					continue
+				}
+				if l != "" {
+					return nil, fmt.Errorf("update %s: unexpected line: %q", path, body[i])
 				}
 				i++
 			}
@@ -164,13 +193,32 @@ func isHunkHeader(line string) bool {
 
 func unwrapHeredoc(s string) string {
 	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "<<") {
-		if idx := strings.Index(s, "\n"); idx >= 0 {
-			s = s[idx+1:]
-		}
+	if !strings.HasPrefix(s, "<<") {
+		return s
 	}
-	s = strings.TrimSuffix(s, "EOF")
-	return strings.TrimSpace(s)
+	idx := strings.Index(s, "\n")
+	if idx < 0 {
+		return strings.TrimSpace(strings.TrimPrefix(s, "<<"))
+	}
+	delimLine := strings.TrimSpace(s[:idx])
+	delim := strings.TrimPrefix(delimLine, "<<")
+	delim = strings.Trim(delim, "'\"")
+	body := s[idx+1:]
+	if delim != "" {
+		body = strings.TrimSuffix(body, delim)
+	}
+	return strings.TrimSpace(body)
+}
+
+func registerPath(seen map[string]struct{}, path string) error {
+	if path == "" {
+		return fmt.Errorf("empty path in patch")
+	}
+	if _, ok := seen[path]; ok {
+		return fmt.Errorf("duplicate path in patch: %s", path)
+	}
+	seen[path] = struct{}{}
+	return nil
 }
 
 // Paths returns all relative paths referenced by the patch.
@@ -204,7 +252,7 @@ func CountChangedLines(text string) (int, error) {
 	for _, c := range changes {
 		n += len(c.AddLines)
 		for _, ch := range c.Chunks {
-			n += len(ch.Old) + len(ch.New)
+			n += ch.Added + ch.Removed
 		}
 		if c.Kind == ChangeDelete {
 			n++
