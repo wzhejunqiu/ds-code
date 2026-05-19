@@ -15,6 +15,8 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/header"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/layout"
+	subagentui "github.com/hejunqiu/ds-code/internal/ui/tui/model/subagent"
+	"github.com/hejunqiu/ds-code/internal/session/usageagg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
 )
@@ -38,6 +40,11 @@ func ChatViewportContent(s *state.State, width int) string {
 		sess = &s.HeaderSession
 	}
 	hdr := header.Render(width, s.Deps.Version, s.Deps.Cfg, sess)
+	if s.SubagentNav == state.SubagentNavDetail {
+		if crumb := subagentui.DetailBreadcrumb(s); crumb != "" {
+			hdr += "\n" + style.FooterHint.Render(crumb+"  (← back to list)")
+		}
+	}
 	body := chat.Render(s.Chat, width, time.Now(), s.ToolDetailsVisible)
 	if body == "" {
 		return hdr
@@ -146,8 +153,12 @@ func RefreshStatus(s *state.State) {
 			}
 		}
 	}
+	snap, err := usageagg.TotalForSession(ctx, s.Deps.Store, s.Deps.Subagent, s.SessionID)
+	if err != nil {
+		snap = session.UsageSnapshotFromSession(sess)
+	}
 	s.StatusRight = fmt.Sprintf("in %d · out %d · cache %d%s",
-		sess.PromptTokensTotal, sess.CompletionTokensTotal, sess.PromptCacheHitTokensTotal, next)
+		snap.PromptTokensTotal, snap.CompletionTokensTotal, snap.PromptCacheHitTokensTotal, next)
 }
 
 func Render(s *state.State, chatVP, toolVP *viewport.Model, input textinput.Model) string {
@@ -173,12 +184,16 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input textinput.Mode
 	b.WriteString(layout.InputFrame(s.Width, inputBody))
 	b.WriteString("\n")
 
-	footerLeft := "? for shortcuts · Ctrl+O tool details"
+	footerLeft := "? for shortcuts · ↓ subagents · Ctrl+O tool details"
 	if s.ToolDetailsVisible {
 		footerLeft += " (on)"
 	}
-	if s.Running {
-		footerLeft = "Esc cancel · Ctrl+R reasoning · Ctrl+O tool details"
+	if s.SubagentNav == state.SubagentNavDetail {
+		footerLeft = "← back · ↓ list · Ctrl+O tool details"
+	} else if s.SubagentNav == state.SubagentNavList {
+		footerLeft = "↑↓ select · Enter view · ← back"
+	} else if s.Running {
+		footerLeft = "Esc cancel · ↓ subagents · Ctrl+R reasoning · Ctrl+O tool details"
 		if s.ToolDetailsVisible {
 			footerLeft += " (on)"
 		}

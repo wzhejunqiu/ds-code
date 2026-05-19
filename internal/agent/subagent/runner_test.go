@@ -12,6 +12,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/hejunqiu/ds-code/internal/llm/mock"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
@@ -49,10 +50,17 @@ func TestRun_readOnlySummary(t *testing.T) {
 		},
 	}
 
+	sub := subagentstore.NewMemoryStore()
+	run, err := sub.CreateRun(context.Background(), subagentstore.CreateRunParams{
+		ParentSessionID: "test", ParentToolCallID: "tc-1", Prompt: "inspect main.go",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	summary, err := subagent.Run(context.Background(), cfg, mockLLM, "inspect main.go", func(reg *tool.Registry) {
 		perm := permission.NewEngine("readonly", dir, false)
 		builtin.RegisterExploreTools(reg, cfg, perm, nil, false)
-	})
+	}, sub, run, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

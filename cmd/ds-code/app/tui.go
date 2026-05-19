@@ -46,10 +46,12 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 		runner.Perm.Prompter = permission.TUIPrompter(promptCh)
 	}
 
+	subStore, _ := a.openSubagentStore()
 	deps := tui.Deps{
 		Cfg:       a.Cfg,
 		Runner:    runner,
 		Store:     store,
+		Subagent:  subStore,
 		Context:   ctxSvc,
 		SessionID: sessionID,
 		Version:   version.Version,

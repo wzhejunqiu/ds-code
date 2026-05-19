@@ -79,6 +79,9 @@ func HandleKey(s *state.State, msg tea.KeyMsg, d KeyDeps) (tea.Cmd, bool) {
 		d.SyncChat()
 		return nil, true
 	case "esc":
+		if s.SubagentNav == state.SubagentNavDetail || s.SubagentNav == state.SubagentNavList {
+			return nil, false
+		}
 		if s.ErrLine != "" && strings.HasPrefix(s.ErrLine, "TUI ") {
 			s.ErrLine = ""
 			return nil, true

@@ -45,6 +45,10 @@ func (a *App) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 		return nil, err
 	}
 
+	subStore, err := a.openSubagentStore()
+	if err != nil {
+		return nil, err
+	}
 	deps := toolsetup.Deps{
 		Cfg:       a.Cfg,
 		Perm:      perm,
@@ -54,6 +58,7 @@ func (a *App) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 		LSP:       lspMgr,
 		MCP:       a.mcpMgr,
 		ShellJobs: shellMgr,
+		Subagent:  subStore,
 	}
 	reg := toolsetup.BuildRegistry(runMode, deps)
 	return &toolBundle{reg: reg, lspMgr: lspMgr, deps: deps}, nil

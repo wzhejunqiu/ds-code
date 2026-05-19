@@ -10,6 +10,7 @@ import (
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 )
 
 // SlashFunc handles a slash command line; writes output to out.
@@ -20,6 +21,7 @@ type Deps struct {
 	Cfg         *config.Config
 	Runner      *agent.Runner
 	Store       session.Store
+	Subagent    subagentstore.Store
 	Context     *ctxpkg.Service
 	SessionID   string
 	Version     string

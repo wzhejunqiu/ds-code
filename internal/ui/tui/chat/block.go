@@ -18,6 +18,7 @@ type Block struct {
 	TurnDuration       time.Duration
 	Streaming          bool
 	ToolName           string
+	ToolCallID         string
 	ToolArgs           string
 	ToolCommand        string
 	ToolResult         string

@@ -11,7 +11,7 @@ import (
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
 	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
 )
 
@@ -19,17 +19,22 @@ import (
 type RegisterFunc func(reg *tool.Registry)
 
 // Run executes a read-only sub-agent exploration and returns a summary string.
-func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt string, register RegisterFunc) (string, error) {
+// run must already exist in subStore (created by the task tool). Optional cb streams
+// nested tool events to the parent turn UI.
+func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt string, register RegisterFunc, subStore subagentstore.Store, run subagentstore.Run, cb *agent.TurnCallbacks) (string, error) {
 	if prompt == "" {
 		return "", fmt.Errorf("subagent: empty prompt")
+	}
+	if subStore == nil {
+		return "", fmt.Errorf("subagent: store is required")
 	}
 
 	perm := permission.NewEngine("readonly", cfg.ProjectRoot, false)
 	reg := tool.NewRegistry()
 	register(reg)
 
-	store := session.NewMemoryStore()
-	sess, err := store.NewSession(cfg.LLM.Model, cfg.LLM.ReasoningEffort, cfg.LLM.Thinking.Type, "readonly", "agent")
+	store := newSessionStore(subStore, run)
+	sess, err := store.CreateSession(cfg.LLM.Model, cfg.LLM.ReasoningEffort, cfg.LLM.Thinking.Type, "readonly", "agent")
 	if err != nil {
 		return "", err
 	}
@@ -61,7 +66,7 @@ func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt s
 		Out:      io.Discard,
 	}
 
-	result, err := runner.RunTurn(ctx, sess.ID, prompt, nil)
+	result, err := runner.RunTurn(ctx, sess.ID, prompt, cb)
 	if err != nil {
 		return "", err
 	}

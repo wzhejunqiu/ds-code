@@ -39,6 +39,13 @@ func DisplaySummary(name string, rawArgs []byte) (argsLine, command string) {
 			}
 			return "patch", ""
 		}
+	case "task":
+		if d, _ := args["description"].(string); d != "" {
+			return d, ""
+		}
+		if p, _ := args["prompt"].(string); p != "" {
+			return truncateOneLine(p, 120), ""
+		}
 	default:
 		if strings.HasPrefix(name, "mcp__") {
 			return formatArgsJSON(rawArgs), ""
@@ -48,6 +55,14 @@ func DisplaySummary(name string, rawArgs []byte) (argsLine, command string) {
 		return formatArgsJSON(rawArgs), ""
 	}
 	return "", ""
+}
+
+func truncateOneLine(s string, max int) string {
+	s = strings.TrimSpace(strings.ReplaceAll(s, "\n", " "))
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
 }
 
 func formatArgsJSON(raw []byte) string {

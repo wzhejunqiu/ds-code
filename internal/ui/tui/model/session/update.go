@@ -7,6 +7,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 func UpdateSlashOutput(s *state.State, m msg.SlashOutputMsg, syncChat func()) tea.Cmd {
@@ -45,8 +46,15 @@ func UpdateSessionResumed(s *state.State, m msg.SessionResumedMsg, picker *compo
 	session.DropPending(s.Deps.Store, s.SessionID)
 	s.SessionID = m.SessionID
 	s.Deps.SessionID = m.SessionID
-	s.Chat = m.Chat
+	s.BindMainChat(m.Chat)
 	s.ToolLines = nil
+	if m.Subagents.Len() > 0 {
+		s.Subagents = m.Subagents
+	} else {
+		s.Subagents = subagent.Registry{}
+	}
+	s.SubagentNav = state.SubagentNavMain
+	s.ViewingSubagentID = ""
 	ClearResumePicker(s, picker)
 	s.ErrLine = ""
 	syncChat()
@@ -60,8 +68,11 @@ func UpdateHistoryLoaded(s *state.State, m msg.HistoryLoadedMsg, syncChat func()
 		return nil
 	}
 	if len(m.Chat) > 0 {
-		s.Chat = m.Chat
+		s.BindMainChat(m.Chat)
 		syncChat()
+	}
+	if m.Subagents.Len() > 0 {
+		s.Subagents = m.Subagents
 	}
 	return nil
 }

@@ -49,6 +49,9 @@ type TurnResult struct {
 // RunTurn handles one user message through sub-rounds until no tool_calls or max turns.
 // Optional cb streams deltas and tool events to the TUI; nil cb writes final text to r.Out only.
 func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *TurnCallbacks) (*TurnResult, error) {
+	if cb != nil {
+		ctx = WithTurnCallbacks(ctx, cb)
+	}
 	logging.L().Info("user turn start", zap.String("session_id", sessionID), zap.Int("chars", len(userText)))
 	expanded, err := r.Context.ExpandUserText(userText)
 	if err != nil {
@@ -162,7 +165,7 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 	if r.Audit != nil {
 		_ = r.Audit.Log(tc.Name, rawArgs)
 	}
-	out, err := r.Tools.Execute(ctx, tc.Name, rawArgs)
+	out, err := r.Tools.Execute(WithToolInvocation(ctx, sessionID, tc.ID), tc.Name, rawArgs)
 	if err != nil {
 		logging.L().Info("tool error", zap.String("session_id", sessionID), zap.String("tool", tc.Name), zap.Error(err))
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)

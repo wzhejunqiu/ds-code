@@ -16,7 +16,7 @@ func Context(env *Env, args string) error {
 	if err != nil {
 		return err
 	}
-	panel, err := uipkg.BuildContextPanelData(env.Cfg, sess, view)
+	panel, err := uipkg.BuildContextPanelData(env.Ctx, env.Cfg, env.Store, env.CtxSvc.Subagent, sess, view)
 	if err != nil {
 		return err
 	}

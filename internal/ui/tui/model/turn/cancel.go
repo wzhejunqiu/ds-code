@@ -47,15 +47,17 @@ func AppendInterruptBlock(s *state.State, syncView func()) {
 	if CurrentTurnInterrupted(s) {
 		return
 	}
-	now := time.Now()
-	FinalizeLastAssistant(s, now)
-	ClearPlanningBlock(s)
-	for i := range s.Chat {
-		if s.Chat[i].Role == chat.RoleTool && s.Chat[i].ToolRunning {
-			s.Chat[i].ToolRunning = false
+	withMainChat(s, func() {
+		now := time.Now()
+		FinalizeLastAssistant(s, now)
+		ClearPlanningBlock(s)
+		for i := range s.Chat {
+			if s.Chat[i].Role == chat.RoleTool && s.Chat[i].ToolRunning {
+				s.Chat[i].ToolRunning = false
+			}
 		}
-	}
-	s.Chat = append(s.Chat, chat.Block{Role: chat.RoleInterrupt})
+		s.Chat = append(s.Chat, chat.Block{Role: chat.RoleInterrupt})
+	})
 	syncView()
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 type StreamContentMsg struct{ Delta string }
@@ -18,6 +19,23 @@ type ToolStartMsg struct {
 type ToolEndMsg struct {
 	Name, Args, Command, Result string
 	IsError                     bool
+}
+type SubagentStartMsg struct {
+	ID, Label, Prompt string
+}
+type SubagentEndMsg struct {
+	ID      string
+	Summary string
+	Err     error
+}
+type SubagentToolStartMsg struct {
+	SubagentID          string
+	Name, Args, Command string
+}
+type SubagentToolEndMsg struct {
+	SubagentID                    string
+	Name, Args, Command, Result string
+	IsError                       bool
 }
 type AssistantSegmentEndMsg struct{}
 type PlanningStartMsg struct{}
@@ -53,10 +71,12 @@ type ResumeListMsg struct {
 type SessionResumedMsg struct {
 	SessionID string
 	Chat      []chat.Block
+	Subagents subagent.Registry
 	Err       error
 }
 
 type HistoryLoadedMsg struct {
-	Chat []chat.Block
-	Err  error
+	Chat      []chat.Block
+	Subagents subagent.Registry
+	Err       error
 }

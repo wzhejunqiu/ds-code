@@ -31,7 +31,8 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg) {
 			sendAgentEvent(events, msg.ToolStartMsg{Name: name, Args: args, Command: command}, false)
 		},
 		OnToolEnd: func(name, args, command, result string, isError bool) {
-			sendAgentEvent(events, msg.ToolEndMsg{Name: name, Args: args, Command: command, Result: result, IsError: isError}, false)
+			// Critical: dropping ToolEnd leaves the TUI stuck on a running tool block.
+			sendAgentEvent(events, msg.ToolEndMsg{Name: name, Args: args, Command: command, Result: result, IsError: isError}, true)
 		},
 		OnAssistantSegmentEnd: func() {
 			sendAgentEvent(events, msg.AssistantSegmentEndMsg{}, false)
@@ -41,6 +42,20 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg) {
 		},
 		OnPlanningEnd: func() {
 			sendAgentEvent(events, msg.PlanningEndMsg{}, false)
+		},
+		OnSubagentStart: func(id, label, prompt string) {
+			sendAgentEvent(events, msg.SubagentStartMsg{ID: id, Label: label, Prompt: prompt}, true)
+		},
+		OnSubagentEnd: func(id, summary string, err error) {
+			sendAgentEvent(events, msg.SubagentEndMsg{ID: id, Summary: summary, Err: err}, true)
+		},
+		OnSubagentToolStart: func(id, name, args, command string) {
+			sendAgentEvent(events, msg.SubagentToolStartMsg{SubagentID: id, Name: name, Args: args, Command: command}, false)
+		},
+		OnSubagentToolEnd: func(id, name, args, command, result string, isError bool) {
+			sendAgentEvent(events, msg.SubagentToolEndMsg{
+				SubagentID: id, Name: name, Args: args, Command: command, Result: result, IsError: isError,
+			}, true)
 		},
 	}
 

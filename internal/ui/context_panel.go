@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -9,19 +10,23 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/hejunqiu/ds-code/internal/session/usageagg"
 )
 
 // ContextPanelData holds inputs for /context rendering.
 type ContextPanelData struct {
-	Session   session.Session
-	Snapshot  session.UsageSnapshot
-	Breakdown ctxpkg.ContextBreakdown
-	Threshold int
-	Estimated bool
+	Session      session.Session
+	MainSnapshot session.UsageSnapshot
+	SubSnapshot  session.UsageSnapshot
+	Snapshot     session.UsageSnapshot
+	Breakdown    ctxpkg.ContextBreakdown
+	Threshold    int
+	Estimated    bool
 }
 
 // BuildContextPanelData assembles panel data for the current session.
-func BuildContextPanelData(cfg *config.Config, sess session.Session, view *ctxpkg.APIContextView) (ContextPanelData, error) {
+func BuildContextPanelData(ctx context.Context, cfg *config.Config, main session.Store, sub subagentstore.Store, sess session.Session, view *ctxpkg.APIContextView) (ContextPanelData, error) {
 	bd, err := ctxpkg.CountBreakdown(view)
 	if err != nil {
 		return ContextPanelData{}, err
@@ -31,12 +36,23 @@ func BuildContextPanelData(cfg *config.Config, sess session.Session, view *ctxpk
 		ratio = 0.80
 	}
 	threshold := int(float64(bd.Window) * ratio)
+	mainSnap := session.UsageSnapshotFromSession(sess)
+	subSnap, err := usageagg.SubagentOnly(ctx, sub, sess.ID)
+	if err != nil {
+		return ContextPanelData{}, err
+	}
+	total, err := usageagg.TotalForSession(ctx, main, sub, sess.ID)
+	if err != nil {
+		return ContextPanelData{}, err
+	}
 	return ContextPanelData{
-		Session:   sess,
-		Snapshot:  session.UsageSnapshotFromSession(sess),
-		Breakdown: bd,
-		Threshold: threshold,
-		Estimated: bd.Estimated,
+		Session:      sess,
+		MainSnapshot: mainSnap,
+		SubSnapshot:  subSnap,
+		Snapshot:     total,
+		Breakdown:    bd,
+		Threshold:    threshold,
+		Estimated:    bd.Estimated,
 	}, nil
 }
 
@@ -49,6 +65,12 @@ func FormatContextPanel(d ContextPanelData) string {
 	fmt.Fprintf(&b, "  prompt in      %d\n", d.Snapshot.PromptTokensTotal)
 	fmt.Fprintf(&b, "  completion out %d\n", d.Snapshot.CompletionTokensTotal)
 	fmt.Fprintf(&b, "  cache hit      %d\n", d.Snapshot.PromptCacheHitTokensTotal)
+	fmt.Fprintf(&b, "  (main agent)   in %d · out %d\n",
+		d.MainSnapshot.PromptTokensTotal, d.MainSnapshot.CompletionTokensTotal)
+	if d.SubSnapshot.Billed > 0 {
+		fmt.Fprintf(&b, "  (subagent runs) in %d · out %d\n",
+			d.SubSnapshot.PromptTokensTotal, d.SubSnapshot.CompletionTokensTotal)
+	}
 	fmt.Fprintf(&b, "Compact: prompt_total >= %d → B; next est >= %d → A\n\n",
 		d.Threshold, d.Threshold)
 

@@ -17,6 +17,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabSelectFirst}
@@ -169,13 +170,23 @@ func SubmitLine(s *state.State, line string, syncChat, syncTool func()) tea.Cmd 
 		}
 	}
 
-	s.Chat = append(s.Chat, chat.Block{Role: chat.RoleUser})
-	s.Chat[len(s.Chat)-1].Content.WriteString(line)
-	s.Chat = append(s.Chat, chat.Block{Role: chat.RoleAssistant, Streaming: true, ReasoningOpen: s.ReasoningAll})
+	if s.MainChat == nil {
+		s.MainChat = s.Chat
+	}
+	s.MainChat = append(s.MainChat, chat.Block{Role: chat.RoleUser})
+	s.MainChat[len(s.MainChat)-1].Content.WriteString(line)
+	s.MainChat = append(s.MainChat, chat.Block{Role: chat.RoleAssistant, Streaming: true, ReasoningOpen: s.ReasoningAll})
+	s.Subagents = subagent.Registry{}
+	s.SubagentNav = state.SubagentNavMain
+	s.ViewingSubagentID = ""
+	s.Overlay = state.OverlayNone
+	s.OverlayText = ""
+	s.BindMainChat(s.MainChat)
 	syncChat()
 	s.Running = true
 	s.TurnEscPending = false
 	s.ErrLine = ""
+	s.MainToolLines = nil
 	s.ToolLines = nil
 	syncTool()
 
@@ -196,6 +207,8 @@ func ShowHelp() tea.Cmd {
 	buf.WriteString("  Ctrl+R       Expand/collapse all reasoning blocks\n")
 	buf.WriteString("  Ctrl+T       Toggle tool log panel\n")
 	buf.WriteString("  Ctrl+L       Context usage panel\n")
+	buf.WriteString("  ↓            Subagent list (when task subagents exist)\n")
+	buf.WriteString("  ←            Back from subagent list/detail\n")
 	buf.WriteString("  Esc          Cancel turn (while running)\n")
 	buf.WriteString("  Ctrl+C       Exit when idle (press twice); while running, shows Esc hint\n")
 	buf.WriteString("  Ctrl+D       Same as Ctrl+C\n")
@@ -235,7 +248,7 @@ func ShowContext(s *state.State) tea.Cmd {
 		if err != nil {
 			return msg.TurnDoneMsg{Err: err}
 		}
-		panel, err := uipkg.BuildContextPanelData(d.Cfg, sess, view)
+		panel, err := uipkg.BuildContextPanelData(ctx, d.Cfg, d.Store, d.Subagent, sess, view)
 		if err != nil {
 			return msg.TurnDoneMsg{Err: err}
 		}
@@ -255,7 +268,7 @@ func ShowContextJSON(s *state.State) tea.Cmd {
 		if err != nil {
 			return msg.TurnDoneMsg{Err: err}
 		}
-		panel, err := uipkg.BuildContextPanelData(d.Cfg, sess, view)
+		panel, err := uipkg.BuildContextPanelData(ctx, d.Cfg, d.Store, d.Subagent, sess, view)
 		if err != nil {
 			return msg.TurnDoneMsg{Err: err}
 		}

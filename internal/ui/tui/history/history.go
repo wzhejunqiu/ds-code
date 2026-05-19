@@ -49,6 +49,7 @@ func BlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chat.Block
 					blocks = append(blocks, chat.Block{
 						Role:        chat.RoleTool,
 						ToolName:    tc.Name,
+						ToolCallID:  tc.ID,
 						ToolArgs:    argsLine,
 						ToolCommand: command,
 						ToolResult:  result,

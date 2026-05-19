@@ -9,6 +9,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"go.uber.org/zap"
 )
@@ -17,6 +18,7 @@ import (
 type Service struct {
 	Cfg        *config.Config
 	Store      session.Store
+	Subagent   subagentstore.Store
 	Tools      *tool.Registry
 	LLM        llm.Client
 	AgentsMD   string
@@ -99,7 +101,7 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 
 func (s *Service) shouldCompact(ctx context.Context, sessionID string, sess session.Session) bool {
 	threshold := s.compactThreshold()
-	if int(sess.PromptTokensTotal) >= threshold {
+	if s.sessionPromptTotal(ctx, sessionID, sess) >= threshold {
 		return true
 	}
 	if !s.userTurnCounted {
@@ -175,4 +177,16 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 	}
 	view.Messages = apiMsgs
 	return view, nil
+}
+
+func (s *Service) sessionPromptTotal(ctx context.Context, sessionID string, sess session.Session) int {
+	total := int(sess.PromptTokensTotal)
+	if s.Subagent == nil {
+		return total
+	}
+	u, err := s.Subagent.SumUsage(ctx, sessionID)
+	if err != nil {
+		return total
+	}
+	return total + u.PromptTokens
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 func (s *Store) initSchema() error {
 	var v int
@@ -67,6 +67,43 @@ func (s *Store) applySchema() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id, id)`,
 		`CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(session_id, created_at)`,
+		`CREATE TABLE IF NOT EXISTS subagent_runs (
+			id TEXT PRIMARY KEY,
+			parent_session_id TEXT NOT NULL,
+			parent_tool_call_id TEXT NOT NULL,
+			label TEXT NOT NULL DEFAULT '',
+			prompt TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'running',
+			error TEXT NOT NULL DEFAULT '',
+			model TEXT NOT NULL DEFAULT '',
+			reasoning_effort TEXT NOT NULL DEFAULT '',
+			thinking_type TEXT NOT NULL DEFAULT '',
+			prompt_tokens_total INTEGER NOT NULL DEFAULT 0,
+			completion_tokens_total INTEGER NOT NULL DEFAULT 0,
+			prompt_cache_hit_tokens_total INTEGER NOT NULL DEFAULT 0,
+			created_at TEXT NOT NULL,
+			ended_at TEXT NOT NULL DEFAULT ''
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_subagent_runs_parent ON subagent_runs(parent_session_id, created_at)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_subagent_runs_tool_call ON subagent_runs(parent_session_id, parent_tool_call_id)`,
+		`CREATE TABLE IF NOT EXISTS subagent_messages (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			run_id TEXT NOT NULL,
+			role TEXT NOT NULL,
+			content TEXT NOT NULL,
+			reasoning_content TEXT NOT NULL DEFAULT '',
+			reasoning_duration_ms INTEGER NOT NULL DEFAULT 0,
+			turn_duration_ms INTEGER NOT NULL DEFAULT 0,
+			tool_calls_json TEXT NOT NULL DEFAULT '',
+			tool_call_id TEXT NOT NULL DEFAULT '',
+			tool_name TEXT NOT NULL DEFAULT '',
+			prompt_tokens INTEGER NOT NULL DEFAULT 0,
+			completion_tokens INTEGER NOT NULL DEFAULT 0,
+			prompt_cache_hit_tokens INTEGER NOT NULL DEFAULT 0,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (run_id) REFERENCES subagent_runs(id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_subagent_messages_run ON subagent_messages(run_id, id)`,
 	}
 	for _, q := range stmts {
 		if _, err := s.db.Exec(q); err != nil {

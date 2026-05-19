@@ -55,9 +55,11 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		return nil, nil, nil, err
 	}
 
+	subStore, _ := a.openSubagentStore()
 	ctxSvc := &ctxpkg.Service{
 		Cfg:      a.Cfg,
 		Store:    store,
+		Subagent: subStore,
 		Tools:    bundle.reg,
 		LLM:      llmClient,
 		AgentsMD: agentsMD,

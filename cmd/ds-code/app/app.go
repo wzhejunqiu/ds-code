@@ -6,6 +6,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/lsp"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	sessionsqlite "github.com/hejunqiu/ds-code/internal/session/sqlite"
 	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 )
@@ -14,6 +15,8 @@ import (
 type App struct {
 	Cfg          *config.Config
 	store        session.Store
+	subStore     subagentstore.Store
+	sqliteDB     *sessionsqlite.Store
 	mcpMgr       *mcpsvc.Manager
 	lspMgr       *lsp.Manager
 	checkpointSt *checkpoint.Store
@@ -33,8 +36,17 @@ func (a *App) openStore() (session.Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	a.sqliteDB = sqlite
+	a.subStore = sqlite.SubagentStore()
 	a.store = session.NewLazyStore(sqlite)
 	return a.store, nil
+}
+
+func (a *App) openSubagentStore() (subagentstore.Store, error) {
+	if _, err := a.openStore(); err != nil {
+		return nil, err
+	}
+	return a.subStore, nil
 }
 
 func (a *App) openCheckpointStore() (*checkpoint.Store, error) {

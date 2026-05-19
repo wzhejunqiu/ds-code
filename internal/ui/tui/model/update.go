@@ -8,6 +8,7 @@ import (
 	tuimsg "github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/overlay"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
+	subagentui "github.com/hejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
 )
@@ -51,6 +52,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, turn.UpdateAssistantSegmentEnd(&m.State)
 	case tuimsg.ToolEndMsg:
 		return m, turn.UpdateToolEnd(&m.State, msg, m.syncChatView, m.syncToolView)
+	case tuimsg.SubagentStartMsg:
+		return m, subagentui.UpdateStart(&m.State, msg, m.syncChatView)
+	case tuimsg.SubagentEndMsg:
+		return m, subagentui.UpdateEnd(&m.State, msg, m.syncChatView)
+	case tuimsg.SubagentToolStartMsg:
+		return m, subagentui.UpdateToolStart(&m.State, msg, m.syncChatView)
+	case tuimsg.SubagentToolEndMsg:
+		return m, subagentui.UpdateToolEnd(&m.State, msg, m.syncChatView)
 	case tuimsg.TurnStartedMsg:
 		return m, turn.UpdateTurnStarted(&m.State, msg, m.syncChatView)
 	case tuimsg.ContextOverlayMsg:
@@ -73,6 +82,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+	if cmd, handled := subagentui.HandleNavKey(&m.State, msg, &m.subagentPicker, m.syncChatView); handled {
+		return cmd, true
+	}
 	return overlay.HandleKey(&m.State, msg, overlay.KeyDeps{
 		HandleResumeEnter: func() (tea.Cmd, bool) {
 			if m.ResumePending {

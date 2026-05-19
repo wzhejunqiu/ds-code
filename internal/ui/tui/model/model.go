@@ -9,6 +9,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
+	subagentui "github.com/hejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/view"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
@@ -22,6 +23,7 @@ type Model struct {
 	input          textinput.Model
 	completePicker component.Picker
 	resumePicker   component.Picker
+	subagentPicker component.Picker
 }
 
 // New builds a Model from runtime dependencies.
@@ -83,6 +85,9 @@ func (m *Model) syncAllViews() {
 	m.syncToolView()
 	if m.Overlay == state.OverlayResume && len(m.ResumeSessions) > 0 {
 		session.SyncResumePicker(&m.State, &m.resumePicker)
+	}
+	if m.Overlay == state.OverlaySubagentList && m.Subagents.Len() > 0 {
+		subagentui.SyncListPicker(&m.State, &m.subagentPicker)
 	}
 }
 

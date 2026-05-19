@@ -234,6 +234,7 @@ DeepSeek V4（`deepseek-v4-pro` / `deepseek-v4-flash`）：**上下文 1,048,576
 - `internal/agent/subagent`：只读 Runner，**无 write/shell**；受 S3 同一敏感路径 denylist。
 - 主 Runner 仅通过内置 **`task` 工具** 或 TUI `/task` 派发；并发上限 `tools.task.max_parallel`（默认 3）。
 - **Canonical 回注**：摘要作为 `role=tool`、`tool` 名 `task` 写入 API `Messages` 与历史层；摘要 ≤ `tools.task.summary_max_chars`。
+- **持久化**：完整 subagent transcript 在 `subagent_runs` / `subagent_messages`（schema v3）；主 `BuildAPIContext` 不读子表；用量按需 `usageagg` 聚合。
 - 对标 Claude Code `Task` / explore subagent。
 
 ### 同一 assistant 多条 `tool_calls`

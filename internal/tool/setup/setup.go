@@ -6,6 +6,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
@@ -20,7 +21,8 @@ type Deps struct {
 	LLM       llm.Client
 	LSP       *lsp.Manager
 	MCP       *mcpsvc.Manager
-	ShellJobs *manager.Manager
+	ShellJobs  *manager.Manager
+	Subagent   subagentstore.Store
 }
 
 // RegisterReadOnly registers plan-mode and subagent tools.
@@ -44,7 +46,7 @@ func RegisterWrite(reg *tool.Registry, d Deps) {
 // RegisterAgentExtras registers task, web_search, and MCP for full agent mode.
 func RegisterAgentExtras(reg *tool.Registry, d Deps) {
 	if d.LLM != nil {
-		reg.Register(builtin.NewTaskTool(d.Cfg, d.Perm, d.LLM, d.Strict))
+		reg.Register(builtin.NewTaskTool(d.Cfg, d.Perm, d.LLM, d.Strict, d.Subagent))
 	}
 	if d.Cfg.Web.SearchEnabled {
 		reg.Register(&builtin.WebSearchTool{Cfg: d.Cfg, Strict: d.Strict})

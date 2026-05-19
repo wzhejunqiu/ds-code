@@ -19,8 +19,10 @@ type StatusTickFn func() tea.Cmd
 
 func UpdateStreamContent(s *state.State, m msg.StreamContentMsg, sync SyncFn) tea.Cmd {
 	if EventsAllowed(s) {
-		ClearPlanningBlock(s)
-		AppendAssistantContent(s, m.Delta)
+		withMainChat(s, func() {
+			ClearPlanningBlock(s)
+			AppendAssistantContent(s, m.Delta)
+		})
 		sync()
 	}
 	return nil
@@ -30,11 +32,13 @@ func UpdateStreamReasoning(s *state.State, m msg.StreamReasoningMsg, sync SyncFn
 	if !EventsAllowed(s) {
 		return nil
 	}
-	ClearPlanningBlock(s)
 	var cmd tea.Cmd
-	if AppendAssistantReasoning(s, m.Delta) {
-		cmd = nextTick()
-	}
+	withMainChat(s, func() {
+		ClearPlanningBlock(s)
+		if AppendAssistantReasoning(s, m.Delta) {
+			cmd = nextTick()
+		}
+	})
 	sync()
 	return cmd
 }
@@ -43,7 +47,7 @@ func UpdatePlanningStart(s *state.State, sync SyncFn, nextTick NextThinkingTickF
 	if !EventsAllowed(s) {
 		return nil
 	}
-	AppendPlanningBlock(s)
+	withMainChat(s, func() { AppendPlanningBlock(s) })
 	sync()
 	return nextTick()
 }
@@ -66,8 +70,10 @@ func UpdateToolStart(s *state.State, m msg.ToolStartMsg, syncChat, syncTool Sync
 	if !EventsAllowed(s) {
 		return nil
 	}
-	AppendToolBlock(s, m.Name, m.Args, m.Command, "", true, false)
-	s.ToolLines = append(s.ToolLines, chattool.Line(m.Name, m.Args, m.Command, "", true, false))
+	withMainChat(s, func() {
+		AppendToolBlock(s, m.Name, m.Args, m.Command, "", true, false)
+		s.ToolLines = append(s.ToolLines, chattool.Line(m.Name, m.Args, m.Command, "", true, false))
+	})
 	syncChat()
 	syncTool()
 	return nil
@@ -85,17 +91,19 @@ func UpdateToolEnd(s *state.State, m msg.ToolEndMsg, syncChat, syncTool SyncFn) 
 	if !EventsAllowed(s) {
 		return nil
 	}
-	FinishToolBlock(s, m.Name, m.Args, m.Command, m.Result, m.IsError)
-	s.ToolLines = s.ToolLines[:0]
-	for _, b := range s.Chat {
-		if b.Role == chat.RoleTool {
-			preview := b.ToolResult
-			if preview == "" && b.ToolRunning {
-				preview = "…"
+	withMainChat(s, func() {
+		FinishToolBlock(s, m.Name, m.Args, m.Command, m.Result, m.IsError)
+		s.ToolLines = s.ToolLines[:0]
+		for _, b := range s.Chat {
+			if b.Role == chat.RoleTool {
+				preview := b.ToolResult
+				if preview == "" && b.ToolRunning {
+					preview = "…"
+				}
+				s.ToolLines = append(s.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError))
 			}
-			s.ToolLines = append(s.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError))
 		}
-	}
+	})
 	syncChat()
 	syncTool()
 	return nil
@@ -114,15 +122,17 @@ func UpdateTurnDone(s *state.State, m msg.TurnDoneMsg, sync SyncFn, refreshStatu
 	s.Running = false
 	s.TurnCancel = nil
 	s.TurnEscPending = false
-	ClearPlanningBlock(s)
-	now := time.Now()
-	FinalizeLastAssistant(s, now)
-	for i := range s.Chat {
-		if s.Chat[i].Role == chat.RoleTool && s.Chat[i].ToolRunning {
-			s.Chat[i].ToolRunning = false
+	withMainChat(s, func() {
+		ClearPlanningBlock(s)
+		now := time.Now()
+		FinalizeLastAssistant(s, now)
+		for i := range s.Chat {
+			if s.Chat[i].Role == chat.RoleTool && s.Chat[i].ToolRunning {
+				s.Chat[i].ToolRunning = false
+			}
 		}
-	}
-	ApplyTurnMetrics(s, m.Result)
+		ApplyTurnMetrics(s, m.Result)
+	})
 	if CurrentTurnInterrupted(s) {
 		s.ErrLine = ""
 		PersistInterrupt(s)

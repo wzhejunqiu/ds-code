@@ -165,7 +165,11 @@ func LoadInitialHistory(s *state.State) tea.Cmd {
 	reasoningOpen := s.ReasoningAll
 	return func() tea.Msg {
 		chat, err := history.LoadSessionChat(d.Store, sid, reasoningOpen)
-		return msg.HistoryLoadedMsg{Chat: chat, Err: err}
+		if err != nil {
+			return msg.HistoryLoadedMsg{Err: err}
+		}
+		reg, err := history.LoadSubagentRegistry(context.Background(), d.Subagent, sid, reasoningOpen)
+		return msg.HistoryLoadedMsg{Chat: chat, Subagents: reg, Err: err}
 	}
 }
 
@@ -181,6 +185,10 @@ func ResumeSession(s *state.State, id string) tea.Cmd {
 		if err != nil {
 			return msg.SessionResumedMsg{Err: err}
 		}
-		return msg.SessionResumedMsg{SessionID: id, Chat: chat}
+		reg, err := history.LoadSubagentRegistry(ctx, d.Subagent, id, reasoningOpen)
+		if err != nil {
+			return msg.SessionResumedMsg{Err: err}
+		}
+		return msg.SessionResumedMsg{SessionID: id, Chat: chat, Subagents: reg}
 	}
 }

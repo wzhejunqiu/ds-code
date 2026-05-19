@@ -64,6 +64,7 @@ func UpdateClose(s *state.State, syncChat func(), refreshStatus func()) tea.Cmd 
 
 // Dismiss closes the active overlay (state fields only; widgets cleared by caller).
 func Dismiss(s *state.State) {
+	prev := s.Overlay
 	switch s.Overlay {
 	case state.OverlayComplete:
 		s.Overlay = state.OverlayNone
@@ -78,7 +79,7 @@ func Dismiss(s *state.State) {
 		s.OverlayText = ""
 	case state.OverlayPrompt:
 		DismissPrompt(s)
-	case state.OverlayContext, state.OverlayHelp:
+	case state.OverlayContext, state.OverlayHelp, state.OverlaySubagentList:
 		s.Overlay = state.OverlayNone
 		s.OverlayText = ""
 	default:
@@ -86,6 +87,10 @@ func Dismiss(s *state.State) {
 			s.Overlay = state.OverlayNone
 			s.OverlayText = ""
 		}
+	}
+	if prev == state.OverlaySubagentList {
+		s.SubagentNav = state.SubagentNavMain
+		s.SyncDisplayedChat()
 	}
 }
 

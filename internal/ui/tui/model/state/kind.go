@@ -10,4 +10,14 @@ const (
 	OverlayComplete
 	OverlayResume
 	OverlayPrompt
+	OverlaySubagentList
+)
+
+// SubagentNav is the subagent manager view stack (main → list → detail).
+type SubagentNav int
+
+const (
+	SubagentNavMain SubagentNav = iota
+	SubagentNavList
+	SubagentNavDetail
 )
