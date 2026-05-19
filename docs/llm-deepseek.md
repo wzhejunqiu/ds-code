@@ -376,11 +376,11 @@ Go SDK：`thinking` 放请求体顶层或 `extra_body`（与 [官方 Python 样�
 
 | 机制 | 默认策略 | 目的 |
 |------|----------|------|
-| `read_file` | `limit` 默认 500 行；单次返回 ≤ `tool_result_max_chars` | 避免一次读入巨型文件 |
+| `read_file` | `start`/`end` 闭区间 + `max_lines`（默认 500）+ `max_bytes`（默认 2MiB） | 按行扫描，避免整文件读入 |
 | `grep` | `head_limit` 默认 200 条匹配 | 限制搜索结果体积 |
 | `@` 引用 | 单文件 + 总计 ≤ `at_reference_max_chars` | 预加载不撑爆 prompt |
 | `apply_patch` | 拒绝单 patch 变更行数超阈值（可配置） | 防止超大 diff 回注 |
-| tool 结果 | 超长截断 + 提示「已截断，可用 offset/limit 续读」 | 边界内可审计 |
+| tool 结果 | 超长截断 + 提示「已截断，可调整 start/end 续读」 | 边界内可审计 |
 | 子代理 | 摘要 ≤ 4K tokens 量级 | 主会话省窗口 |
 | 自动 compact | `PrepareRequest`：条件 A 或 B（阈值默认 **838,861**） | 摘要写入 session；**messages 历史不变**；API 层 = 摘要 + 近 N **用户轮** |
 | `/compact` | 用户手动 | 同自动 compact，仅 API 层 |

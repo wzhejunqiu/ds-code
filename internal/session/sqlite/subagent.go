@@ -20,10 +20,10 @@ type subagentSQLite struct {
 	db *sql.DB
 }
 
-func (st *subagentSQLite) CreateRun(_ context.Context, p subagentstore.CreateRunParams) (subagentstore.Run, error) {
+func (st *subagentSQLite) CreateRun(ctx context.Context, p subagentstore.CreateRunParams) (subagentstore.Run, error) {
 	now := time.Now().UTC()
 	id := "sa-" + uuid.NewString()
-	_, err := st.db.Exec(`INSERT INTO subagent_runs (
+	_, err := st.db.ExecContext(ctx, `INSERT INTO subagent_runs (
 		id, parent_session_id, parent_tool_call_id, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
@@ -51,16 +51,16 @@ func (st *subagentSQLite) CreateRun(_ context.Context, p subagentstore.CreateRun
 	}, nil
 }
 
-func (st *subagentSQLite) FinishRun(_ context.Context, runID string, status subagentstore.Status, errMsg string) error {
+func (st *subagentSQLite) FinishRun(ctx context.Context, runID string, status subagentstore.Status, errMsg string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := st.db.Exec(`UPDATE subagent_runs SET status=?, error=?, ended_at=? WHERE id=?`,
+	_, err := st.db.ExecContext(ctx, `UPDATE subagent_runs SET status=?, error=?, ended_at=? WHERE id=?`,
 		string(status), errMsg, now, runID,
 	)
 	return err
 }
 
-func (st *subagentSQLite) ListRuns(_ context.Context, parentSessionID string) ([]subagentstore.Run, error) {
-	rows, err := st.db.Query(`SELECT id, parent_session_id, parent_tool_call_id, label, prompt, status, error,
+func (st *subagentSQLite) ListRuns(ctx context.Context, parentSessionID string) ([]subagentstore.Run, error) {
+	rows, err := st.db.QueryContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		created_at, ended_at
@@ -72,8 +72,8 @@ func (st *subagentSQLite) ListRuns(_ context.Context, parentSessionID string) ([
 	return scanRuns(rows)
 }
 
-func (st *subagentSQLite) GetRun(_ context.Context, runID string) (subagentstore.Run, error) {
-	row := st.db.QueryRow(`SELECT id, parent_session_id, parent_tool_call_id, label, prompt, status, error,
+func (st *subagentSQLite) GetRun(ctx context.Context, runID string) (subagentstore.Run, error) {
+	row := st.db.QueryRowContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		created_at, ended_at
@@ -81,8 +81,8 @@ func (st *subagentSQLite) GetRun(_ context.Context, runID string) (subagentstore
 	return scanRun(row)
 }
 
-func (st *subagentSQLite) GetRunByToolCall(_ context.Context, parentSessionID, parentToolCallID string) (subagentstore.Run, error) {
-	row := st.db.QueryRow(`SELECT id, parent_session_id, parent_tool_call_id, label, prompt, status, error,
+func (st *subagentSQLite) GetRunByToolCall(ctx context.Context, parentSessionID, parentToolCallID string) (subagentstore.Run, error) {
+	row := st.db.QueryRowContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		created_at, ended_at
@@ -92,12 +92,12 @@ func (st *subagentSQLite) GetRunByToolCall(_ context.Context, parentSessionID, p
 	return scanRun(row)
 }
 
-func (st *subagentSQLite) AppendMessage(_ context.Context, msg subagentstore.Message) error {
+func (st *subagentSQLite) AppendMessage(ctx context.Context, msg subagentstore.Message) error {
 	now := time.Now().UTC()
 	if !msg.CreatedAt.IsZero() {
 		now = msg.CreatedAt
 	}
-	_, err := st.db.Exec(`INSERT INTO subagent_messages (
+	_, err := st.db.ExecContext(ctx, `INSERT INTO subagent_messages (
 		run_id, role, content, reasoning_content, reasoning_duration_ms, turn_duration_ms,
 		tool_calls_json, tool_call_id, tool_name,
 		prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
@@ -110,8 +110,8 @@ func (st *subagentSQLite) AppendMessage(_ context.Context, msg subagentstore.Mes
 	return err
 }
 
-func (st *subagentSQLite) ListMessages(_ context.Context, runID string) ([]subagentstore.Message, error) {
-	rows, err := st.db.Query(`SELECT id, run_id, role, content,
+func (st *subagentSQLite) ListMessages(ctx context.Context, runID string) ([]subagentstore.Message, error) {
+	rows, err := st.db.QueryContext(ctx, `SELECT id, run_id, role, content,
 		COALESCE(reasoning_content, ''),
 		COALESCE(reasoning_duration_ms, 0), COALESCE(turn_duration_ms, 0),
 		COALESCE(tool_calls_json, ''),
@@ -133,8 +133,8 @@ func (st *subagentSQLite) ListMessages(_ context.Context, runID string) ([]subag
 	return out, rows.Err()
 }
 
-func (st *subagentSQLite) AddUsage(_ context.Context, runID string, u llm.Usage) error {
-	_, err := st.db.Exec(`UPDATE subagent_runs SET
+func (st *subagentSQLite) AddUsage(ctx context.Context, runID string, u llm.Usage) error {
+	_, err := st.db.ExecContext(ctx, `UPDATE subagent_runs SET
 		prompt_tokens_total = prompt_tokens_total + ?,
 		completion_tokens_total = completion_tokens_total + ?,
 		prompt_cache_hit_tokens_total = prompt_cache_hit_tokens_total + ?
@@ -144,8 +144,8 @@ func (st *subagentSQLite) AddUsage(_ context.Context, runID string, u llm.Usage)
 	return err
 }
 
-func (st *subagentSQLite) SumUsage(_ context.Context, parentSessionID string) (llm.Usage, error) {
-	row := st.db.QueryRow(`SELECT
+func (st *subagentSQLite) SumUsage(ctx context.Context, parentSessionID string) (llm.Usage, error) {
+	row := st.db.QueryRowContext(ctx, `SELECT
 		COALESCE(SUM(prompt_tokens_total), 0),
 		COALESCE(SUM(completion_tokens_total), 0),
 		COALESCE(SUM(prompt_cache_hit_tokens_total), 0)

@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/hejunqiu/ds-code/internal/permission"
@@ -45,6 +46,7 @@ type State struct {
 	Prompt *permission.PromptRequest
 
 	Running            bool
+	TurnWG             sync.WaitGroup
 	TurnCancel         context.CancelFunc
 	TurnEscPending     bool
 	ReasoningAll       bool

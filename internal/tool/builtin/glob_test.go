@@ -101,6 +101,32 @@ func TestGlobTool_skipsSensitiveFiles(t *testing.T) {
 	}
 }
 
+func TestGlobTool_rejectsOutsideWorkspace(t *testing.T) {
+	dir := t.TempDir()
+	outside := t.TempDir()
+	secret := filepath.Join(outside, "secret.txt")
+	if err := os.WriteFile(secret, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "escape")
+	if err := os.Symlink(secret, link); err != nil {
+		t.Skip("symlink not supported")
+	}
+
+	cfg := &config.Config{ProjectRoot: dir, Tools: config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}}}
+	perm := permission.NewEngine("readonly", dir, false)
+	glob := &builtin.GlobTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"pattern": "escape"})
+	_, err := glob.Execute(context.Background(), args)
+	if err == nil {
+		t.Fatal("expected error for symlink outside workspace")
+	}
+	if !strings.Contains(err.Error(), "outside workspace") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestListDirTool_skipsSensitiveEntries(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("x"), 0o600); err != nil {

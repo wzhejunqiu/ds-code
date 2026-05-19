@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -9,20 +10,27 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 )
 
+type materializeState struct {
+	once sync.Once
+	err  error
+}
+
 // LazyStore delays persisting new sessions until the first store write that
 // requires durable storage (e.g. AppendMessage). CreateSession only allocates an
 // in-memory session with a new ID so opening the app does not insert empty rows.
 type LazyStore struct {
-	inner   Store
-	pending map[string]Session
-	mu      sync.RWMutex
+	inner         Store
+	pending       map[string]Session
+	materializing map[string]*materializeState
+	mu            sync.RWMutex
 }
 
 // NewLazyStore wraps inner with lazy session creation.
 func NewLazyStore(inner Store) *LazyStore {
 	return &LazyStore{
-		inner:   inner,
-		pending: make(map[string]Session),
+		inner:         inner,
+		pending:       make(map[string]Session),
+		materializing: make(map[string]*materializeState),
 	}
 }
 
@@ -40,6 +48,7 @@ func (l *LazyStore) dropPending(id string) {
 	}
 	l.mu.Lock()
 	delete(l.pending, id)
+	delete(l.materializing, id)
 	l.mu.Unlock()
 }
 
@@ -64,6 +73,7 @@ func (l *LazyStore) CreateSession(model, effort, thinking, permMode, runMode str
 func (l *LazyStore) Create(ctx context.Context, s Session) error {
 	l.mu.Lock()
 	delete(l.pending, s.ID)
+	delete(l.materializing, s.ID)
 	l.mu.Unlock()
 	return l.inner.Create(ctx, s)
 }
@@ -119,17 +129,67 @@ func (l *LazyStore) UpdateSession(ctx context.Context, sessionID string, fn func
 }
 
 func (l *LazyStore) ListSessions(ctx context.Context, limit int) ([]Summary, error) {
-	return l.inner.ListSessions(ctx, limit)
+	list, err := l.inner.ListSessions(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	seen := make(map[string]bool, len(list))
+	for _, s := range list {
+		seen[s.ID] = true
+	}
+	for id, sess := range l.pending {
+		if seen[id] {
+			continue
+		}
+		list = append(list, Summary{
+			ID:        sess.ID,
+			Title:     sess.Title,
+			Model:     sess.Model,
+			UpdatedAt: sess.UpdatedAt,
+			CreatedAt: sess.CreatedAt,
+		})
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].UpdatedAt.After(list[j].UpdatedAt)
+	})
+	if limit > 0 && len(list) > limit {
+		list = list[:limit]
+	}
+	return list, nil
 }
 
 func (l *LazyStore) materialize(ctx context.Context, id string) error {
 	l.mu.Lock()
-	sess, ok := l.pending[id]
-	if !ok {
+	if _, ok := l.pending[id]; !ok {
 		l.mu.Unlock()
 		return nil
 	}
-	delete(l.pending, id)
+	st, ok := l.materializing[id]
+	if !ok {
+		st = &materializeState{}
+		l.materializing[id] = st
+	}
 	l.mu.Unlock()
-	return l.inner.Create(ctx, sess)
+
+	st.once.Do(func() {
+		l.mu.Lock()
+		sess, ok := l.pending[id]
+		if !ok {
+			l.mu.Unlock()
+			return
+		}
+		delete(l.pending, id)
+		l.mu.Unlock()
+
+		st.err = l.inner.Create(ctx, sess)
+		if st.err != nil {
+			l.mu.Lock()
+			l.pending[id] = sess
+			delete(l.materializing, id)
+			l.mu.Unlock()
+		}
+	})
+	return st.err
 }

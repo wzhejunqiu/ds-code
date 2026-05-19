@@ -65,8 +65,11 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 
 	var matches []string
 	if strings.Contains(in.Pattern, "**") {
-		matches, err = globDoubleStar(root, in.Pattern, limit)
+		matches, err = globDoubleStar(root, in.Pattern, limit*4)
 		if err != nil {
+			return "", err
+		}
+		if err := t.validateGlobMatches(matches, in.Pattern); err != nil {
 			return "", err
 		}
 	} else {
@@ -74,6 +77,9 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		if err != nil {
 			return "", err
 		}
+	}
+	if err := t.validateGlobMatches(matches, in.Pattern); err != nil {
+		return "", err
 	}
 	var lines []string
 	for _, m := range matches {
@@ -104,6 +110,19 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		return "No files matched.", nil
 	}
 	return strings.Join(lines, "\n"), nil
+}
+
+func (t *GlobTool) validateGlobMatches(matches []string, pattern string) error {
+	for _, m := range matches {
+		abs := filepath.Clean(m)
+		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+			abs = resolved
+		}
+		if err := t.Perm.EnsureAbsUnderWorkspace(abs, pattern); err != nil {
+			return permission.GlobOutsideWorkspaceError(abs, pattern)
+		}
+	}
+	return nil
 }
 
 func globDoubleStar(root, pattern string, limit int) ([]string, error) {

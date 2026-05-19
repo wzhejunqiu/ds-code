@@ -68,6 +68,10 @@ func Load(cmd *cobra.Command, opts Options) (*Config, error) {
 		return nil, err
 	}
 
+	if err := rejectPermissionAuto(cmd, projectRoot, &cfg); err != nil {
+		return nil, err
+	}
+
 	cfg.ProjectRoot = projectRoot
 	cfg.ProjectID = ProjectID(projectRoot)
 	if opts.SkipProjectDataDir {

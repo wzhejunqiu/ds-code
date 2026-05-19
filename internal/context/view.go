@@ -1,6 +1,9 @@
 package context
 
-import "github.com/hejunqiu/ds-code/internal/llm"
+import (
+	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/prompt"
+)
 
 // APIContextView is the snapshot for the next API request.
 type APIContextView struct {
@@ -16,5 +19,5 @@ type APIContextView struct {
 
 // MergedSystem returns the single system string for the API.
 func (v *APIContextView) MergedSystem() string {
-	return mergeSystem(v.SystemPrompt, v.AgentsMD, v.Rules, v.Skills, v.GitSnapshot)
+	return prompt.MergeSystem(v.SystemPrompt, v.AgentsMD, v.Rules, v.Skills, v.GitSnapshot)
 }

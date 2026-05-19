@@ -15,7 +15,7 @@ import (
 )
 
 // BlocksFromMessages builds TUI chat blocks from persisted session messages.
-func BlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chat.Block {
+func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace string) []chat.Block {
 	var blocks []chat.Block
 	for i := 0; i < len(msgs); i++ {
 		msg := msgs[i]
@@ -45,7 +45,7 @@ func BlocksFromMessages(msgs []session.Message, reasoningOpen bool) []chat.Block
 					if toolMsg != nil {
 						result, isError = ctxpkg.UnpackToolBody(toolMsg.Content)
 					}
-					argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments))
+					argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments), workspace)
 					blocks = append(blocks, chat.Block{
 						Role:        chat.RoleTool,
 						ToolName:    tc.Name,
@@ -99,10 +99,10 @@ func findToolMessage(msgs []session.Message, start int, callID string) *session.
 }
 
 // LoadSessionChat loads all messages for a session and converts them for the TUI.
-func LoadSessionChat(store session.Store, sessionID string, reasoningOpen bool) ([]chat.Block, error) {
+func LoadSessionChat(store session.Store, sessionID string, reasoningOpen bool, workspace string) ([]chat.Block, error) {
 	msgs, err := store.ListMessages(context.Background(), sessionID)
 	if err != nil {
 		return nil, err
 	}
-	return BlocksFromMessages(msgs, reasoningOpen), nil
+	return BlocksFromMessages(msgs, reasoningOpen, workspace), nil
 }

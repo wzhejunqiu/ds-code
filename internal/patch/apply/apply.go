@@ -3,6 +3,7 @@ package apply
 import (
 	"fmt"
 	"github.com/hejunqiu/ds-code/internal/patch"
+	wspkg "github.com/hejunqiu/ds-code/internal/workspace"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,12 +22,12 @@ type fileBackup struct {
 // Apply parses and applies a patch under workspace with backup/rollback on failure.
 // resolve must return absolute paths; each result is verified to lie under workspace.
 func Apply(workspace string, patchText string, resolve func(rel string) (string, error), opts Options) (summary string, err error) {
-	changes, err := patch.Parse(patchText)
+	changes, err := patch.Parse(patchText, workspace)
 	if err != nil {
 		return "", err
 	}
 	if opts.MaxChangedLines > 0 {
-		n, err := patch.CountChangedLines(patchText)
+		n, err := patch.CountChangedLines(patchText, workspace)
 		if err != nil {
 			return "", err
 		}
@@ -60,7 +61,7 @@ func Apply(workspace string, patchText string, resolve func(rel string) (string,
 		if err != nil {
 			return "", err
 		}
-		if err := ensureUnderWorkspace(workspace, abs); err != nil {
+		if err := wspkg.EnsureAbsUnder(workspace, abs); err != nil {
 			return "", err
 		}
 		return abs, nil
@@ -170,30 +171,6 @@ func Apply(workspace string, patchText string, resolve func(rel string) (string,
 		}
 	}
 	return strings.Join(applied, "; "), nil
-}
-
-func ensureUnderWorkspace(workspace, abs string) error {
-	ws, err := filepath.Abs(workspace)
-	if err != nil {
-		return err
-	}
-	if resolved, err := filepath.EvalSymlinks(ws); err == nil {
-		ws = resolved
-	}
-	target, err := filepath.Abs(abs)
-	if err != nil {
-		return err
-	}
-	if resolved, err := filepath.EvalSymlinks(target); err == nil {
-		target = resolved
-	} else if parent, err := filepath.EvalSymlinks(filepath.Dir(target)); err == nil {
-		target = filepath.Join(parent, filepath.Base(target))
-	}
-	rel, err := filepath.Rel(ws, target)
-	if err != nil || strings.HasPrefix(rel, "..") {
-		return fmt.Errorf("path outside workspace: %s", abs)
-	}
-	return nil
 }
 
 func readFileBackup(abs string) ([]byte, os.FileMode, error) {

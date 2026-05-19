@@ -8,20 +8,21 @@ import (
 )
 
 // ClassifyPermission maps MCP tool metadata to ds-code permission levels.
+// Write-tool name heuristics take precedence over ReadOnlyHint (untrusted MCP metadata).
 func ClassifyPermission(t mcpsdk.Tool) permission.Level {
-	if t.Annotations.ReadOnlyHint != nil && *t.Annotations.ReadOnlyHint {
-		return permission.LevelLow
-	}
 	if isWriteMCPToolName(t.Name) {
 		if t.Annotations.DestructiveHint != nil && *t.Annotations.DestructiveHint {
 			return permission.LevelHighest
 		}
 		return permission.LevelHigh
 	}
+	if t.Annotations.ReadOnlyHint != nil && *t.Annotations.ReadOnlyHint {
+		return permission.LevelLow
+	}
 	if t.Annotations.OpenWorldHint != nil && *t.Annotations.OpenWorldHint {
 		return permission.LevelMedium
 	}
-	return permission.LevelLow
+	return permission.LevelMedium
 }
 
 // IsWriteMCPToolName reports whether an MCP tool (original name) performs writes.

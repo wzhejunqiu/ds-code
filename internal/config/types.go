@@ -1,7 +1,10 @@
 // Package config loads and validates ds-code settings (see README.md and docs/CONFIG.md).
 package config
 
-import "time"
+import (
+	"regexp"
+	"time"
+)
 
 // Config is the merged runtime configuration for ds-code.
 // Fields tagged mapstructure:"-" are filled after YAML/CLI merge (paths, API key, CLI-only).
@@ -70,6 +73,7 @@ type ToolsConfig struct {
 
 type ReadFileToolConfig struct {
 	MaxLines int `mapstructure:"max_lines"`
+	MaxBytes int `mapstructure:"max_bytes"`
 }
 
 type GrepToolConfig struct {
@@ -88,6 +92,8 @@ type ShellToolConfig struct {
 	Timeout                  time.Duration `mapstructure:"timeout"`
 	MaxBackground            int           `mapstructure:"max_background"`
 	BackgroundOutputMaxBytes int           `mapstructure:"background_output_max_bytes"`
+	EnvBlacklist             []string      `mapstructure:"env_blacklist"`
+	EnvBlacklistCompiled     []*regexp.Regexp `mapstructure:"-"`
 }
 
 type TaskToolConfig struct {

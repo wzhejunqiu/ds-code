@@ -10,7 +10,6 @@ import (
 
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
@@ -27,7 +26,7 @@ type subRoundStream struct {
 
 func (r *Runner) chatWithCompactRetry(ctx context.Context, sessionID string, req llm.Request) (*llm.Response, error) {
 	resp, err := r.LLM.Chat(ctx, req)
-	if err == nil || !deepseek.IsContextTooLong(err) {
+	if err == nil || !llm.IsContextTooLong(err) {
 		return resp, err
 	}
 	logging.L().Info("context too long, compacting", zap.String("session_id", sessionID))
@@ -137,7 +136,7 @@ func (r *Runner) runToolCalls(
 			zap.String("call_id", tc.ID),
 		)
 		rawArgs := []byte(tc.Arguments)
-		argsLine, command := tool.DisplaySummary(tc.Name, rawArgs)
+		argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
 		if cb != nil && cb.OnToolStart != nil {
 			cb.OnToolStart(tc.Name, argsLine, command)
 		}
@@ -177,7 +176,10 @@ func (r *Runner) appendAssistantWithTools(
 	resp *llm.Response,
 	stream *subRoundStream,
 ) error {
-	tcJSON, _ := json.Marshal(resp.ToolCalls)
+	tcJSON, err := json.Marshal(resp.ToolCalls)
+	if err != nil {
+		return fmt.Errorf("marshal tool_calls: %w", err)
+	}
 	assistantMsg := session.Message{
 		SessionID:           sessionID,
 		Role:                role.Assistant,

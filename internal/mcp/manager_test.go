@@ -31,7 +31,7 @@ func stubServer(name string, tools []mcpsdk.Tool) *Server {
 }
 
 func TestNewManagerFromConfig_empty(t *testing.T) {
-	m, err := NewManagerFromConfig(context.Background(), nil, false)
+	m, err := NewManagerFromConfig(context.Background(), nil, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestNewManagerFromConfig_empty(t *testing.T) {
 }
 
 func TestNewManager_empty(t *testing.T) {
-	m, err := NewManager(context.Background(), nil)
+	m, err := NewManager(context.Background(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestNewManager_empty(t *testing.T) {
 func TestNewManager_invalidServerName(t *testing.T) {
 	_, err := NewManager(context.Background(), []config.MCPServerConfig{
 		{Name: "Bad-Name", Command: "true"},
-	})
+	}, nil)
 	if err == nil {
 		t.Fatal("expected invalid server name error")
 	}
@@ -66,7 +66,7 @@ func TestNewManager_duplicateServerName(t *testing.T) {
 	_, err := NewManager(context.Background(), []config.MCPServerConfig{
 		{Name: "fs", Command: "true"},
 		{Name: "fs", Command: "true"},
-	})
+	}, nil)
 	if err == nil {
 		t.Fatal("expected duplicate server name error")
 	}
@@ -75,7 +75,7 @@ func TestNewManager_duplicateServerName(t *testing.T) {
 func TestNewManager_missingCommand(t *testing.T) {
 	_, err := NewManager(context.Background(), []config.MCPServerConfig{
 		{Name: "fs"},
-	})
+	}, nil)
 	if err == nil {
 		t.Fatal("expected missing command error")
 	}
@@ -222,7 +222,7 @@ func TestAdapterTool_execute(t *testing.T) {
 	if out == "" {
 		t.Fatal("expected non-empty result")
 	}
-	if ad.PermissionLevel() != permission.LevelLow {
+	if ad.PermissionLevel() != permission.LevelMedium {
 		t.Fatalf("level = %v", ad.PermissionLevel())
 	}
 }

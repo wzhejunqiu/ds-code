@@ -8,6 +8,17 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/view"
 )
 
+// QuitAfterWait cancels any active turn, waits for agent goroutines, then quits.
+func QuitAfterWait(s *state.State) tea.Cmd {
+	return tea.Sequence(
+		func() tea.Msg {
+			s.WaitTurnsOnExit()
+			return nil
+		},
+		tea.Quit,
+	)
+}
+
 func IsExitConfirmKey(s string) bool {
 	return s == "ctrl+c" || s == "ctrl+d"
 }
@@ -33,7 +44,7 @@ func HandleExitConfirmKey(s *state.State, key string, exitTimeout func() tea.Cmd
 		if s.ExitConfirmKey != key {
 			return nil
 		}
-		return tea.Quit
+		return QuitAfterWait(s)
 	}
 	s.ExitConfirmPending = true
 	s.ExitConfirmKey = key

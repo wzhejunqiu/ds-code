@@ -37,8 +37,8 @@ func TestHostAllowed(t *testing.T) {
 
 func TestHostAllowed_wildcardCo(t *testing.T) {
 	list := []string{"*.co"}
-	if !hostAllowed("foo.co", list) {
-		t.Fatal("expected foo.co")
+	if hostAllowed("foo.co", list) {
+		t.Fatal("short TLD wildcard *.co should be rejected")
 	}
 	if hostAllowed("foo.co.uk", list) {
 		t.Fatal("foo.co.uk should not match *.co")
@@ -78,12 +78,9 @@ func TestWebFetch_redirectRevalidatesAllowlist(t *testing.T) {
 		t.Fatalf("err = %v, want allowlist denial", err)
 	}
 
-	out, err := tool.Execute(context.Background(), json.RawMessage(`{"url":"`+allowed.URL+`/ok"}`))
-	if err != nil {
-		t.Fatalf("allowed fetch: %v", err)
-	}
-	if !strings.Contains(out, "ok") {
-		t.Fatalf("body = %q", out)
+	// httptest binds to 127.0.0.1; loopback must stay blocked even if allowlisted.
+	if hostAllowed(parsed.Hostname(), []string{parsed.Hostname()}) {
+		t.Fatalf("loopback host %q should be blocked by SSRF policy", parsed.Hostname())
 	}
 }
 

@@ -164,11 +164,11 @@ func LoadInitialHistory(s *state.State) tea.Cmd {
 	sid := s.SessionID
 	reasoningOpen := s.ReasoningAll
 	return func() tea.Msg {
-		chat, err := history.LoadSessionChat(d.Store, sid, reasoningOpen)
+		chat, err := history.LoadSessionChat(d.Store, sid, reasoningOpen, d.Cfg.ProjectRoot)
 		if err != nil {
 			return msg.HistoryLoadedMsg{Err: err}
 		}
-		reg, err := history.LoadSubagentRegistry(context.Background(), d.Subagent, sid, reasoningOpen)
+		reg, err := history.LoadSubagentRegistry(context.Background(), d.Subagent, sid, reasoningOpen, d.Cfg.ProjectRoot)
 		return msg.HistoryLoadedMsg{Chat: chat, Subagents: reg, Err: err}
 	}
 }
@@ -181,11 +181,11 @@ func ResumeSession(s *state.State, id string) tea.Cmd {
 		if _, err := d.Store.Get(ctx, id); err != nil {
 			return msg.SessionResumedMsg{Err: err}
 		}
-		chat, err := history.LoadSessionChat(d.Store, id, reasoningOpen)
+		chat, err := history.LoadSessionChat(d.Store, id, reasoningOpen, d.Cfg.ProjectRoot)
 		if err != nil {
 			return msg.SessionResumedMsg{Err: err}
 		}
-		reg, err := history.LoadSubagentRegistry(ctx, d.Subagent, id, reasoningOpen)
+		reg, err := history.LoadSubagentRegistry(ctx, d.Subagent, id, reasoningOpen, d.Cfg.ProjectRoot)
 		if err != nil {
 			return msg.SessionResumedMsg{Err: err}
 		}

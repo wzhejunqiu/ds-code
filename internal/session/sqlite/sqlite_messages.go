@@ -10,8 +10,8 @@ import (
 	"github.com/hejunqiu/ds-code/internal/role"
 )
 
-func (s *Store) ListMessages(_ context.Context, sessionID string) ([]session.Message, error) {
-	rows, err := s.db.Query(`SELECT id, session_id, role, content,
+func (s *Store) ListMessages(ctx context.Context, sessionID string) ([]session.Message, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, role, content,
 		COALESCE(reasoning_content, ''),
 		COALESCE(reasoning_duration_ms, 0), COALESCE(turn_duration_ms, 0),
 		COALESCE(tool_calls_json, ''),
@@ -52,12 +52,12 @@ func scanMessage(rows *sql.Rows) (session.Message, error) {
 	return m, nil
 }
 
-func (s *Store) AppendMessage(_ context.Context, msg session.Message) error {
+func (s *Store) AppendMessage(ctx context.Context, msg session.Message) error {
 	now := time.Now().UTC()
 	if msg.CreatedAt.IsZero() {
 		msg.CreatedAt = now
 	}
-	res, err := s.db.Exec(`INSERT INTO messages (
+	res, err := s.db.ExecContext(ctx, `INSERT INTO messages (
 		session_id, role, content, reasoning_content, reasoning_duration_ms, turn_duration_ms,
 		tool_calls_json, tool_call_id, tool_name,
 		prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
@@ -76,10 +76,14 @@ func (s *Store) AppendMessage(_ context.Context, msg session.Message) error {
 
 	if msg.Role == role.User {
 		title := session.TruncateTitle(msg.Content, 80)
-		_, _ = s.db.Exec(`UPDATE sessions SET title=CASE WHEN title='' THEN ? ELSE title END, updated_at=? WHERE id=?`,
-			title, now.Format(time.RFC3339), msg.SessionID)
+		if _, err := s.db.ExecContext(ctx, `UPDATE sessions SET title=CASE WHEN title='' THEN ? ELSE title END, updated_at=? WHERE id=?`,
+			title, now.Format(time.RFC3339), msg.SessionID); err != nil {
+			return fmt.Errorf("update session title: %w", err)
+		}
 	} else {
-		_, _ = s.db.Exec(`UPDATE sessions SET updated_at=? WHERE id=?`, now.Format(time.RFC3339), msg.SessionID)
+		if _, err := s.db.ExecContext(ctx, `UPDATE sessions SET updated_at=? WHERE id=?`, now.Format(time.RFC3339), msg.SessionID); err != nil {
+			return fmt.Errorf("update session timestamp: %w", err)
+		}
 	}
 	return nil
 }

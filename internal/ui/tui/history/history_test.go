@@ -18,7 +18,7 @@ func TestBlocksFromMessages(t *testing.T) {
 		{Role: role.Assistant, Content: "", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"path\":\"a.go\"}"}]`},
 		{Role: role.Tool, Content: "<tool_result name=\"read_file\" id=\"1\">\nmore\n</tool_result>", ToolName: "read_file", ToolCallID: "1"},
 	}
-	blocks := BlocksFromMessages(msgs, true)
+	blocks := BlocksFromMessages(msgs, true, "")
 	if len(blocks) != 3 {
 		t.Fatalf("got %d blocks, want 3", len(blocks))
 	}
@@ -44,7 +44,7 @@ func TestBlocksFromMessages_reasoningBeforeTools(t *testing.T) {
 		{Role: role.Assistant, ReasoningContent: "think first", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"path\":\"a.go\"}"}]`},
 		{Role: role.Tool, Content: "body", ToolName: "read_file", ToolCallID: "1"},
 	}
-	blocks := BlocksFromMessages(msgs, true)
+	blocks := BlocksFromMessages(msgs, true, "")
 	if len(blocks) != 2 {
 		t.Fatalf("got %d blocks, want 2", len(blocks))
 	}
@@ -61,7 +61,7 @@ func TestBlocksFromMessages_interruptSystemMessage(t *testing.T) {
 		{Role: role.User, Content: "hello"},
 		{Role: role.System, Content: chat.InterruptSessionMarker()},
 	}
-	blocks := BlocksFromMessages(msgs, true)
+	blocks := BlocksFromMessages(msgs, true, "")
 	if len(blocks) != 2 {
 		t.Fatalf("got %d blocks, want 2", len(blocks))
 	}
@@ -74,7 +74,7 @@ func TestBlocksFromMessages_durations(t *testing.T) {
 	msgs := []session.Message{
 		{Role: role.Assistant, Content: "hi", ReasoningContent: "think", ReasoningDurationMS: 1200, TurnDurationMS: 5000},
 	}
-	blocks := BlocksFromMessages(msgs, false)
+	blocks := BlocksFromMessages(msgs, false, "")
 	if len(blocks) != 1 {
 		t.Fatalf("got %d blocks", len(blocks))
 	}

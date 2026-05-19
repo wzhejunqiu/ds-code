@@ -41,7 +41,7 @@ func TestFormatToolResult_nil(t *testing.T) {
 }
 
 func TestConnectServer_missingCommand(t *testing.T) {
-	_, err := ConnectServer(context.Background(), config.MCPServerConfig{Name: "fs"})
+	_, err := ConnectServer(context.Background(), config.MCPServerConfig{Name: "fs"}, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}

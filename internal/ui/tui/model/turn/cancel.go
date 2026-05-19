@@ -96,7 +96,9 @@ func PersistInterrupt(s *state.State) {
 	if s.Deps == nil || s.Deps.Store == nil || s.SessionID == "" {
 		return
 	}
-	_ = s.Deps.Store.AppendMessage(context.Background(), session.Message{
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = s.Deps.Store.AppendMessage(ctx, session.Message{
 		SessionID: s.SessionID,
 		Role:      role.System,
 		Content:   chat.InterruptSessionMarker(),

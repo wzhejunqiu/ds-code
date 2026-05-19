@@ -43,6 +43,9 @@ tools:
     timeout: 120s
     max_background: 5
     background_output_max_bytes: 262144
+    # Regex patterns matched against subprocess env var names (OR with built-in secret key filter).
+    env_blacklist:
+      - "^AWS_"
   task:
     max_parallel: 3
     summary_max_chars: 16000

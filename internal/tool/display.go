@@ -9,7 +9,7 @@ import (
 )
 
 // DisplaySummary formats tool arguments for the TUI (args line and optional command).
-func DisplaySummary(name string, rawArgs []byte) (argsLine, command string) {
+func DisplaySummary(name string, rawArgs []byte, workspace string) (argsLine, command string) {
 	args := ArgsMap(rawArgs)
 	switch name {
 	case "shell":
@@ -23,17 +23,17 @@ func DisplaySummary(name string, rawArgs []byte) (argsLine, command string) {
 	case "read_file":
 		if p, _ := args["path"].(string); p != "" {
 			line := "path=" + p
-			if off, ok := args["offset"].(float64); ok && off > 0 {
-				line += fmt.Sprintf(", offset=%d", int(off))
+			if st, ok := args["start"].(float64); ok && st > 0 {
+				line += fmt.Sprintf(", start=%d", int(st))
 			}
-			if lim, ok := args["limit"].(float64); ok && lim > 0 {
-				line += fmt.Sprintf(", limit=%d", int(lim))
+			if en, ok := args["end"].(float64); ok && en > 0 {
+				line += fmt.Sprintf(", end=%d", int(en))
 			}
 			return line, ""
 		}
 	case "apply_patch":
 		if p, _ := args["patch"].(string); p != "" {
-			paths, err := patch.Paths(p)
+			paths, err := patch.Paths(p, workspace)
 			if err == nil {
 				return "files: " + strings.Join(paths, ", "), ""
 			}

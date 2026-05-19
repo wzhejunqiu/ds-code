@@ -5,6 +5,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/prompt"
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
@@ -142,7 +143,7 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 	toolDefs := s.Tools.Definitions()
 	skills := s.SkillsText
 	view := &APIContextView{
-		SystemPrompt: defaultSystemBase,
+		SystemPrompt: prompt.DefaultSystemBase,
 		AgentsMD:     s.AgentsMD,
 		Rules:        s.Rules,
 		Skills:       skills,

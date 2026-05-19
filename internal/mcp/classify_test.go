@@ -16,8 +16,8 @@ func TestClassifyPermission_readOnlyHint(t *testing.T) {
 			ReadOnlyHint: &ro,
 		},
 	}
-	if mcp.ClassifyPermission(tool) != permission.LevelLow {
-		t.Fatal("expected low for readOnlyHint")
+	if mcp.ClassifyPermission(tool) != permission.LevelHigh {
+		t.Fatal("readOnlyHint must not downgrade write_file to low")
 	}
 }
 
@@ -54,10 +54,10 @@ func TestClassifyPermission_openWorld(t *testing.T) {
 	}
 }
 
-func TestClassifyPermission_defaultLow(t *testing.T) {
+func TestClassifyPermission_defaultMedium(t *testing.T) {
 	tool := mcpsdk.Tool{Name: "read_file"}
-	if mcp.ClassifyPermission(tool) != permission.LevelLow {
-		t.Fatalf("got %v, want LevelLow", mcp.ClassifyPermission(tool))
+	if mcp.ClassifyPermission(tool) != permission.LevelMedium {
+		t.Fatalf("got %v, want LevelMedium", mcp.ClassifyPermission(tool))
 	}
 }
 

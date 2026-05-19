@@ -49,7 +49,7 @@ func captureOne(workspace string, resolve func(rel string) (string, error), rel 
 }
 
 // PathsFromTool extracts affected relative paths for checkpoint capture.
-func PathsFromTool(tool string, args map[string]any) ([]string, error) {
+func PathsFromTool(tool string, workspace string, args map[string]any) ([]string, error) {
 	switch tool {
 	case "write_file":
 		if p, _ := args["path"].(string); p != "" {
@@ -57,7 +57,7 @@ func PathsFromTool(tool string, args map[string]any) ([]string, error) {
 		}
 	case "apply_patch":
 		if patchText, _ := args["patch"].(string); patchText != "" {
-			return patch.Paths(patchText)
+			return patch.Paths(patchText, workspace)
 		}
 	}
 	return nil, nil

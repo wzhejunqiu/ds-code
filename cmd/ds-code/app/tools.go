@@ -119,7 +119,7 @@ func (a *App) attachMCP(ctx context.Context, strict bool) error {
 		return nil
 	}
 	if a.mcpMgr == nil {
-		mgr, err := mcpsvc.NewManagerFromConfig(ctx, a.Cfg.MCP.Servers, strict)
+		mgr, err := mcpsvc.NewManagerFromConfig(ctx, a.Cfg.MCP.Servers, strict, a.Cfg.Tools.Shell.EnvBlacklistCompiled)
 		if err != nil {
 			return err
 		}

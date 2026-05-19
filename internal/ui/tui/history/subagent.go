@@ -9,7 +9,7 @@ import (
 )
 
 // LoadSubagentRegistry rebuilds in-memory subagent UI state from persisted runs.
-func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSessionID string, reasoningOpen bool) (subagent.Registry, error) {
+func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSessionID string, reasoningOpen bool, workspace string) (subagent.Registry, error) {
 	var reg subagent.Registry
 	if sub == nil || parentSessionID == "" {
 		return reg, nil
@@ -42,7 +42,7 @@ func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSe
 				CreatedAt:            m.CreatedAt,
 			}
 		}
-		chat := BlocksFromMessages(sessMsgs, reasoningOpen)
+		chat := BlocksFromMessages(sessMsgs, reasoningOpen, workspace)
 		rec := &subagent.Record{
 			ID:                 run.ID,
 			Label:              run.Label,

@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"github.com/hejunqiu/ds-code/internal/security"
 	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"os"
 	"os/exec"
@@ -22,6 +23,7 @@ func (m *Manager) Start(command string) (shelljobs.Job, error) {
 	if maxBg <= 0 {
 		maxBg = 5
 	}
+
 	m.mu.Lock()
 	running := 0
 	for _, j := range m.jobs {
@@ -29,25 +31,39 @@ func (m *Manager) Start(command string) (shelljobs.Job, error) {
 			running++
 		}
 	}
-	m.mu.Unlock()
 	if running >= maxBg {
+		m.mu.Unlock()
 		return shelljobs.Job{}, fmt.Errorf("shell: max background jobs (%d) reached", maxBg)
 	}
 
 	id := uuid.NewString()[:8]
+	placeholder := &runningJob{
+		Job: shelljobs.Job{
+			ID:        id,
+			Command:   command,
+			Status:    shelljobs.StatusRunning,
+			StartedAt: time.Now().UTC(),
+		},
+	}
+	m.jobs[id] = placeholder
+	m.mu.Unlock()
+
 	jobDir := filepath.Join(m.jobsDir, id)
 	if err := os.MkdirAll(jobDir, 0o700); err != nil {
+		m.removeJob(id)
 		return shelljobs.Job{}, err
 	}
 	stdoutPath := filepath.Join(jobDir, "stdout.log")
 	stderrPath := filepath.Join(jobDir, "stderr.log")
 	stdoutFile, err := os.Create(stdoutPath)
 	if err != nil {
+		m.removeJob(id)
 		return shelljobs.Job{}, err
 	}
 	stderrFile, err := os.Create(stderrPath)
 	if err != nil {
 		_ = stdoutFile.Close()
+		m.removeJob(id)
 		return shelljobs.Job{}, err
 	}
 
@@ -57,12 +73,14 @@ func (m *Manager) Start(command string) (shelljobs.Job, error) {
 	}
 	cmd := exec.Command(shell, "-c", command)
 	cmd.Dir = m.workspace
+	cmd.Env = security.SafeSubprocessEnv(nil, m.cfg.EnvBlacklistCompiled)
 	cmd.Stdout = stdoutFile
 	cmd.Stderr = stderrFile
 
 	if err := cmd.Start(); err != nil {
 		_ = stdoutFile.Close()
 		_ = stderrFile.Close()
+		m.removeJob(id)
 		return shelljobs.Job{}, err
 	}
 	_ = stdoutFile.Close()
@@ -79,16 +97,23 @@ func (m *Manager) Start(command string) (shelljobs.Job, error) {
 	}
 	if err := m.writeMeta(job); err != nil {
 		_ = cmd.Process.Kill()
+		m.removeJob(id)
 		return shelljobs.Job{}, err
 	}
 
-	rj := &runningJob{Job: job, cmd: cmd}
 	m.mu.Lock()
+	rj := &runningJob{Job: job, cmd: cmd}
 	m.jobs[id] = rj
 	m.mu.Unlock()
 
 	go m.waitJob(id, cmd)
 	return job, nil
+}
+
+func (m *Manager) removeJob(id string) {
+	m.mu.Lock()
+	delete(m.jobs, id)
+	m.mu.Unlock()
 }
 
 func (m *Manager) waitJob(id string, cmd *exec.Cmd) {

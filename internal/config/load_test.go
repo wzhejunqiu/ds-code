@@ -3,6 +3,7 @@ package config_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hejunqiu/ds-code/internal/config"
@@ -114,6 +115,89 @@ func TestApplyCLIDerived_verboseCount(t *testing.T) {
 	}
 	if cfg.LogVerbosity != 2 {
 		t.Fatalf("LogVerbosity = %d, want 2", cfg.LogVerbosity)
+	}
+}
+
+func TestLoad_rejectsProjectAutoPermission(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dsCode := filepath.Join(dir, ".ds-code")
+	if err := os.Mkdir(dsCode, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := `permission:
+  mode: auto
+`
+	if err := os.WriteFile(filepath.Join(dsCode, "config.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	_, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err == nil || !strings.Contains(err.Error(), "cannot set permission.mode to auto") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestLoad_rejectsEnvAutoWithoutCLI(t *testing.T) {
+	dir := t.TempDir()
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	t.Setenv("DS_CODE_PERMISSION_MODE", "auto")
+	t.Cleanup(func() { t.Setenv("DS_CODE_PERMISSION_MODE", "") })
+
+	_, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err == nil || !strings.Contains(err.Error(), "requires --dangerously-auto") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestLoad_allowsEnvAutoWithCLI(t *testing.T) {
+	dir := t.TempDir()
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	if err := cmd.ParseFlags([]string{"--dangerously-auto"}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DS_CODE_PERMISSION_MODE", "auto")
+	t.Cleanup(func() { t.Setenv("DS_CODE_PERMISSION_MODE", "") })
+
+	cfg, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Permission.Mode != "auto" {
+		t.Fatalf("mode = %q", cfg.Permission.Mode)
+	}
+}
+
+func TestLoad_rejectsInvalidEnvBlacklistPattern(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dsCode := filepath.Join(dir, ".ds-code")
+	if err := os.Mkdir(dsCode, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := `tools:
+  shell:
+    env_blacklist:
+      - "[invalid"
+`
+	if err := os.WriteFile(filepath.Join(dsCode, "config.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	_, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err == nil || !strings.Contains(err.Error(), "env_blacklist") {
+		t.Fatalf("err = %v", err)
 	}
 }
 

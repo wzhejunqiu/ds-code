@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -53,8 +54,8 @@ func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return "", fmt.Errorf("only http and https are supported")
 	}
-	if !hostAllowed(u.Hostname(), t.Cfg.Web.Allowlist) {
-		return "", fmt.Errorf("host %q is not in web.allowlist", u.Hostname())
+	if err := validateFetchURLHost(u.Hostname(), t.Cfg.Web.Allowlist); err != nil {
+		return "", err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
@@ -76,46 +77,49 @@ func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (strin
 }
 
 func newWebFetchClient(allowlist []string) *http.Client {
+	dialer := &net.Dialer{Timeout: 30 * time.Second}
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			if err := validateResolvedFetchHost(host); err != nil {
+				return nil, err
+			}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(host, port))
+		},
+	}
 	return &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   30 * time.Second,
+		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("web_fetch: too many redirects")
 			}
 			host := req.URL.Hostname()
-			if !hostAllowed(host, allowlist) {
-				return fmt.Errorf("redirect host %q is not in web.allowlist", host)
+			if err := validateFetchURLHost(host, allowlist); err != nil {
+				return fmt.Errorf("redirect: %w", err)
 			}
 			return nil
 		},
 	}
 }
 
-func hostAllowed(host string, allowlist []string) bool {
-	if len(allowlist) == 0 {
-		return false
+// validateResolvedFetchHost checks host/IP at dial time (after DNS resolution).
+func validateResolvedFetchHost(host string) error {
+	if isBlockedFetchHost(host) {
+		return fmt.Errorf("web_fetch: blocked host %q", host)
 	}
-	host = strings.ToLower(strings.TrimSpace(host))
-	if host == "" || strings.Contains(host, "/") {
-		return false
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return fmt.Errorf("web_fetch: dns lookup failed for %q: %w", host, err)
 	}
-	for _, entry := range allowlist {
-		entry = strings.ToLower(strings.TrimSpace(entry))
-		if entry == "" {
-			continue
-		}
-		if entry == host {
-			return true
-		}
-		if strings.HasPrefix(entry, "*.") {
-			base := entry[2:]
-			if base == "" {
-				continue
-			}
-			if host == base || strings.HasSuffix(host, "."+base) {
-				return true
-			}
+	for _, ip := range ips {
+		if isPrivateOrMetadataIP(ip) {
+			return fmt.Errorf("web_fetch: blocked IP %s for host %q", ip, host)
 		}
 	}
-	return false
+	return nil
 }
+

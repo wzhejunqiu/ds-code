@@ -8,7 +8,7 @@ import (
 
 func TestDisplaySummary_shell(t *testing.T) {
 	args := `{"command":"ls -la"}`
-	line, cmd := tool.DisplaySummary("shell", []byte(args))
+	line, cmd := tool.DisplaySummary("shell", []byte(args), "")
 	if cmd != "ls -la" {
 		t.Fatalf("command = %q", cmd)
 	}
@@ -18,12 +18,12 @@ func TestDisplaySummary_shell(t *testing.T) {
 }
 
 func TestDisplaySummary_readFile(t *testing.T) {
-	args := `{"path":"foo.go","offset":10,"limit":20}`
-	line, cmd := tool.DisplaySummary("read_file", []byte(args))
+	args := `{"path":"foo.go","start":10,"end":20}`
+	line, cmd := tool.DisplaySummary("read_file", []byte(args), "")
 	if cmd != "" {
 		t.Fatalf("unexpected command: %q", cmd)
 	}
-	if line != "path=foo.go, offset=10, limit=20" {
+	if line != "path=foo.go, start=10, end=20" {
 		t.Fatalf("line = %q", line)
 	}
 }

@@ -16,7 +16,7 @@ func (r *Runner) recordCheckpoint(ctx context.Context, sessionID, toolName strin
 	if !isCheckpointTool(toolName) {
 		return nil
 	}
-	paths, err := checkpoint.PathsFromTool(toolName, args)
+	paths, err := checkpoint.PathsFromTool(toolName, r.Perm.Workspace, args)
 	if err != nil {
 		return err
 	}

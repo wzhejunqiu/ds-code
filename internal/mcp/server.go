@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
+	"regexp"
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/security"
 	mcpclient "github.com/mark3labs/mcp-go/client"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
@@ -24,7 +25,7 @@ type Server struct {
 }
 
 // ConnectServer starts and initializes an MCP server from config.
-func ConnectServer(ctx context.Context, cfg config.MCPServerConfig) (*Server, error) {
+func ConnectServer(ctx context.Context, cfg config.MCPServerConfig, envBlacklist []*regexp.Regexp) (*Server, error) {
 	if err := ValidateServerName(cfg.Name); err != nil {
 		return nil, err
 	}
@@ -32,10 +33,7 @@ func ConnectServer(ctx context.Context, cfg config.MCPServerConfig) (*Server, er
 		return nil, fmt.Errorf("mcp: server %q: command is required", cfg.Name)
 	}
 
-	env := os.Environ()
-	for k, v := range cfg.Env {
-		env = append(env, k+"="+v)
-	}
+	env := security.SafeSubprocessEnv(cfg.Env, envBlacklist)
 
 	c, err := mcpclient.NewStdioMCPClient(cfg.Command, env, cfg.Args...)
 	if err != nil {

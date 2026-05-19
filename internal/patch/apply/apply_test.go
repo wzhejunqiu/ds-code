@@ -16,7 +16,7 @@ func TestPaths(t *testing.T) {
 +x
 *** Delete File: old.go
 *** End Patch`
-	paths, err := patch.Paths(text)
+	paths, err := patch.Paths(text, "")
 	if err != nil {
 		t.Fatal(err)
 	}

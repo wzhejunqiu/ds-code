@@ -51,6 +51,9 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	if in.Pattern == "" {
 		return "", fmt.Errorf("pattern is required")
 	}
+	if len(in.Pattern) > 512 {
+		return "", fmt.Errorf("pattern too long (max 512)")
+	}
 	re, err := regexp.Compile(in.Pattern)
 	if err != nil {
 		return "", fmt.Errorf("invalid regex: %w", err)
@@ -106,6 +109,9 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		}
 		lines := strings.Split(string(b), "\n")
 		for i, line := range lines {
+			if len(line) > 64*1024 {
+				continue
+			}
 			if re.MatchString(line) {
 				matches = append(matches, fmt.Sprintf("%s:%d:%s", filepath.ToSlash(rel), i+1, strings.TrimSpace(line)))
 				if len(matches) >= limit {

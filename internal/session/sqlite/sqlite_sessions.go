@@ -10,8 +10,8 @@ import (
 	"github.com/hejunqiu/ds-code/internal/llm"
 )
 
-func (s *Store) Get(_ context.Context, id string) (session.Session, error) {
-	row := s.db.QueryRow(`SELECT id, title, model, reasoning_effort, thinking_type, permission_mode, run_mode,
+func (s *Store) Get(ctx context.Context, id string) (session.Session, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, title, model, reasoning_effort, thinking_type, permission_mode, run_mode,
 		compact_summary, compact_up_to_message_id,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		git_snapshot, created_at, updated_at FROM sessions WHERE id=?`, id)
@@ -41,8 +41,8 @@ func scanSession(row *sql.Row) (session.Session, error) {
 	return sess, nil
 }
 
-func (s *Store) AddUsage(_ context.Context, sessionID string, u llm.Usage) error {
-	_, err := s.db.Exec(`UPDATE sessions SET
+func (s *Store) AddUsage(ctx context.Context, sessionID string, u llm.Usage) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE sessions SET
 		prompt_tokens_total = prompt_tokens_total + ?,
 		completion_tokens_total = completion_tokens_total + ?,
 		prompt_cache_hit_tokens_total = prompt_cache_hit_tokens_total + ?,
@@ -54,8 +54,8 @@ func (s *Store) AddUsage(_ context.Context, sessionID string, u llm.Usage) error
 	return err
 }
 
-func (s *Store) UpdateSession(_ context.Context, sessionID string, fn func(*session.Session) error) error {
-	sess, err := s.Get(context.Background(), sessionID)
+func (s *Store) UpdateSession(ctx context.Context, sessionID string, fn func(*session.Session) error) error {
+	sess, err := s.Get(ctx, sessionID)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (s *Store) UpdateSession(_ context.Context, sessionID string, fn func(*sess
 		return err
 	}
 	sess.UpdatedAt = time.Now().UTC()
-	_, err = s.db.Exec(`UPDATE sessions SET
+	_, err = s.db.ExecContext(ctx, `UPDATE sessions SET
 		title=?, model=?, reasoning_effort=?, thinking_type=?, permission_mode=?, run_mode=?,
 		compact_summary=?, compact_up_to_message_id=?,
 		prompt_tokens_total=?, completion_tokens_total=?, prompt_cache_hit_tokens_total=?,
@@ -77,11 +77,11 @@ func (s *Store) UpdateSession(_ context.Context, sessionID string, fn func(*sess
 	return err
 }
 
-func (s *Store) ListSessions(_ context.Context, limit int) ([]session.Summary, error) {
+func (s *Store) ListSessions(ctx context.Context, limit int) ([]session.Summary, error) {
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.db.Query(`SELECT s.id, s.title, s.model,
+	rows, err := s.db.QueryContext(ctx, `SELECT s.id, s.title, s.model,
 		s.prompt_tokens_total + s.completion_tokens_total,
 		s.updated_at, s.created_at
 		FROM sessions s

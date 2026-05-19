@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/patch"
+	wspkg "github.com/hejunqiu/ds-code/internal/workspace"
 )
 
 // ErrDenied is returned when an operation is not allowed.
@@ -54,7 +54,7 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 	if tool == "apply_patch" {
 		patchText, _ := args["patch"].(string)
 		if patchText != "" {
-			paths, err := patch.Paths(patchText)
+			paths, err := patch.Paths(patchText, e.Workspace)
 			if err != nil {
 				return fmt.Errorf("%w: invalid patch: %v", ErrDenied, err)
 			}
@@ -92,7 +92,7 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 		if e.Prompter == nil {
 			return fmt.Errorf("%w: no prompter configured for ask mode", ErrDenied)
 		}
-		ok, err := e.Prompter(tool, summarizeArgs(tool, args))
+		ok, err := e.Prompter(tool, e.summarizeArgs(tool, args))
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 	return nil
 }
 
-func summarizeArgs(tool string, args map[string]any) string {
+func (e *Engine) summarizeArgs(tool string, args map[string]any) string {
 	switch tool {
 	case "shell":
 		if c, _ := args["command"].(string); c != "" {
@@ -115,7 +115,7 @@ func summarizeArgs(tool string, args map[string]any) string {
 		}
 	case "apply_patch":
 		if p, _ := args["patch"].(string); p != "" {
-			paths, err := patch.Paths(p)
+			paths, err := patch.Paths(p, e.Workspace)
 			if err == nil {
 				return "files: " + strings.Join(paths, ", ")
 			}
@@ -191,53 +191,11 @@ func (e *Engine) CheckReadablePath(rel string) (string, error) {
 // Relative paths are preferred; absolute paths are accepted when they resolve inside workspace
 // (models often pass full paths under project_root).
 func (e *Engine) ResolvePath(rel string) (string, error) {
-	ws, err := filepath.EvalSymlinks(e.Workspace)
+	abs, err := wspkg.ResolveRel(e.Workspace, rel)
 	if err != nil {
-		ws, err = filepath.Abs(e.Workspace)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	if filepath.IsAbs(rel) {
-		abs := filepath.Clean(rel)
-		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-			abs = resolved
-		}
-		if err := e.ensureUnderWorkspace(ws, abs, rel); err != nil {
-			return "", err
-		}
-		return abs, nil
-	}
-
-	if strings.Contains(rel, "..") {
-		return "", fmt.Errorf("%w: path traversal: %s", ErrDenied, rel)
-	}
-
-	abs := filepath.Join(ws, filepath.Clean(rel))
-	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-		abs = resolved
-	} else if _, statErr := os.Stat(abs); statErr != nil {
-		// New file: resolve parent directory
-		parent, err := filepath.EvalSymlinks(filepath.Dir(abs))
-		if err != nil {
-			return "", fmt.Errorf("%w: cannot resolve parent of %s", ErrDenied, rel)
-		}
-		abs = filepath.Join(parent, filepath.Base(abs))
-	}
-
-	if err := e.ensureUnderWorkspace(ws, abs, rel); err != nil {
-		return "", err
+		return "", fmt.Errorf("%w: %v", ErrDenied, err)
 	}
 	return abs, nil
-}
-
-func (e *Engine) ensureUnderWorkspace(ws, abs, original string) error {
-	relTo, err := filepath.Rel(ws, abs)
-	if err != nil || strings.HasPrefix(relTo, "..") || relTo == ".." {
-		return fmt.Errorf("%w: outside workspace: %s", ErrDenied, original)
-	}
-	return nil
 }
 
 func (e *Engine) checkSensitiveShell(cmd string) error {

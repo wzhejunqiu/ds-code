@@ -139,7 +139,9 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			zap.Int("content_chars", len(resp.Content)),
 		)
 
-		_ = r.Sessions.AddUsage(ctx, sessionID, resp.Usage)
+		if err := r.Sessions.AddUsage(ctx, sessionID, resp.Usage); err != nil {
+			logging.L().Warn("add usage failed", zap.String("session_id", sessionID), zap.Error(err))
+		}
 		result.Usage = resp.Usage
 		result.SubRounds = round + 1
 

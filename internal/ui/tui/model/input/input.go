@@ -11,7 +11,6 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/overlay"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
@@ -145,7 +144,7 @@ func UpdateCompletion(s *state.State, inputValue string, picker *component.Picke
 
 func SubmitLine(s *state.State, line string, syncChat, syncTool func()) tea.Cmd {
 	if line == "/exit" || line == "/quit" {
-		return tea.Quit
+		return overlay.QuitAfterWait(s)
 	}
 	if cmd, args, ok := slash.Parse(line); ok {
 		if c, handled := trySubmitDevSlash(cmd, args); handled {
@@ -194,7 +193,7 @@ func SubmitLine(s *state.State, line string, syncChat, syncTool func()) tea.Cmd 
 	d.SessionID = s.SessionID
 	events := s.Deps.Events
 	return func() tea.Msg {
-		go turn.RunAsync(d, line, events)
+		go turn.RunAsync(d, line, events, &s.TurnWG)
 		return nil
 	}
 }
@@ -278,11 +277,4 @@ func ShowContextJSON(s *state.State) tea.Cmd {
 		}
 		return msg.ContextOverlayMsg{Text: text}
 	}
-}
-
-// DepsLine copies deps with current session id for async turn.
-func DepsLine(d *deps.Deps, sessionID, line string, events chan<- tea.Msg) {
-	dd := *d
-	dd.SessionID = sessionID
-	go turn.RunAsync(dd, line, events)
 }

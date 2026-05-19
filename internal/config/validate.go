@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -62,5 +64,29 @@ func validate(cfg *Config) error {
 	if !slices.Contains(allowedRunMode, cfg.RunMode) {
 		return fmt.Errorf("config: run_mode must be agent or plan, got %q", cfg.RunMode)
 	}
+	compiled, err := compileEnvBlacklist(cfg.Tools.Shell.EnvBlacklist)
+	if err != nil {
+		return err
+	}
+	cfg.Tools.Shell.EnvBlacklistCompiled = compiled
 	return nil
+}
+
+func compileEnvBlacklist(patterns []string) ([]*regexp.Regexp, error) {
+	if len(patterns) == 0 {
+		return nil, nil
+	}
+	out := make([]*regexp.Regexp, 0, len(patterns))
+	for _, p := range patterns {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		re, err := regexp.Compile(p)
+		if err != nil {
+			return nil, fmt.Errorf("config: tools.shell.env_blacklist: invalid pattern %q: %w", p, err)
+		}
+		out = append(out, re)
+	}
+	return out, nil
 }

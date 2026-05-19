@@ -12,6 +12,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/security"
 	"github.com/hejunqiu/ds-code/internal/shelljobs"
 	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/hejunqiu/ds-code/internal/tool"
@@ -183,6 +184,7 @@ func (t *ShellTool) runSync(ctx context.Context, command string) (string, error)
 	}
 	cmd := exec.CommandContext(runCtx, shell, "-c", command)
 	cmd.Dir = t.Perm.Workspace
+	cmd.Env = security.SafeSubprocessEnv(nil, t.Cfg.Tools.Shell.EnvBlacklistCompiled)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

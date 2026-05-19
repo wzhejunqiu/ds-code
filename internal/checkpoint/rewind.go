@@ -5,19 +5,26 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/hejunqiu/ds-code/internal/patch"
 )
 
 // ApplyRewind restores workspace files from a checkpoint record.
 func ApplyRewind(workspace string, rec Record) error {
-	for _, f := range rec.Files {
-		abs := filepath.Join(workspace, filepath.Clean(f.RelPath))
-		ws, err := filepath.Abs(workspace)
+	ws, err := filepath.EvalSymlinks(workspace)
+	if err != nil {
+		ws, err = filepath.Abs(workspace)
 		if err != nil {
 			return err
 		}
-		abs, err = filepath.Abs(abs)
-		if err != nil {
+	}
+	for _, f := range rec.Files {
+		if err := patch.ValidatePath(workspace, f.RelPath); err != nil {
 			return err
+		}
+		abs := filepath.Join(ws, filepath.Clean(f.RelPath))
+		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+			abs = resolved
 		}
 		rel, err := filepath.Rel(ws, abs)
 		if err != nil || strings.HasPrefix(rel, "..") {

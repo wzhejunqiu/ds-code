@@ -67,3 +67,12 @@ func (a *App) closeMCP() {
 		a.mcpMgr = nil
 	}
 }
+
+func (a *App) closeStore() {
+	if a.sqliteDB != nil {
+		_ = a.sqliteDB.Close()
+		a.sqliteDB = nil
+		a.store = nil
+		a.subStore = nil
+	}
+}

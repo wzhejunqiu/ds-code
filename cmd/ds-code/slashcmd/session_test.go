@@ -64,6 +64,30 @@ func TestResume_listAndSwitch(t *testing.T) {
 	_ = id
 }
 
+func TestPermissions_autoRequiresYes(t *testing.T) {
+	env, _ := testEnv(t, session.NewMemoryStore())
+	var buf bytes.Buffer
+	env.Out = &buf
+
+	if err := Permissions(env, "auto"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "--yes") {
+		t.Fatalf("expected confirmation hint: %q", buf.String())
+	}
+	if env.Runner.Perm.Mode == "auto" {
+		t.Fatal("auto should not apply without --yes")
+	}
+
+	buf.Reset()
+	if err := Permissions(env, "auto --yes"); err != nil {
+		t.Fatal(err)
+	}
+	if env.Runner.Perm.Mode != "auto" {
+		t.Fatalf("mode = %q", env.Runner.Perm.Mode)
+	}
+}
+
 func TestMode_invalid(t *testing.T) {
 	env, _ := testEnv(t, session.NewMemoryStore())
 	err := Mode(env, "not-a-model")

@@ -6,7 +6,7 @@ import (
 
 // Run starts the interactive Bubble Tea UI.
 func Run(deps Deps) error {
-	events := make(chan tea.Msg, 64)
+	events := make(chan tea.Msg, 256)
 	deps.Events = events
 	d := deps
 	m := newSafeModel(&d)

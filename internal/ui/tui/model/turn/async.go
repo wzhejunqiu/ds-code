@@ -2,6 +2,7 @@ package turn
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,26 +16,106 @@ const (
 	agentEventMaxRetries    = 200
 )
 
+type streamBuffer struct {
+	mu               sync.Mutex
+	pendingContent   string
+	pendingReasoning string
+}
+
+func (b *streamBuffer) appendContent(delta string) {
+	b.mu.Lock()
+	b.pendingContent += delta
+	b.mu.Unlock()
+}
+
+func (b *streamBuffer) appendReasoning(delta string) {
+	b.mu.Lock()
+	b.pendingReasoning += delta
+	b.mu.Unlock()
+}
+
+func (b *streamBuffer) trySendContent(events chan<- tea.Msg) {
+	b.mu.Lock()
+	if b.pendingContent == "" {
+		b.mu.Unlock()
+		return
+	}
+	payload := b.pendingContent
+	b.mu.Unlock()
+	select {
+	case events <- msg.StreamContentMsg{Delta: payload}:
+		b.mu.Lock()
+		if len(b.pendingContent) >= len(payload) {
+			b.pendingContent = b.pendingContent[len(payload):]
+		}
+		b.mu.Unlock()
+	default:
+	}
+}
+
+func (b *streamBuffer) trySendReasoning(events chan<- tea.Msg) {
+	b.mu.Lock()
+	if b.pendingReasoning == "" {
+		b.mu.Unlock()
+		return
+	}
+	payload := b.pendingReasoning
+	b.mu.Unlock()
+	select {
+	case events <- msg.StreamReasoningMsg{Delta: payload}:
+		b.mu.Lock()
+		if len(b.pendingReasoning) >= len(payload) {
+			b.pendingReasoning = b.pendingReasoning[len(payload):]
+		}
+		b.mu.Unlock()
+	default:
+	}
+}
+
+func (b *streamBuffer) flush(events chan<- tea.Msg) {
+	b.mu.Lock()
+	c := b.pendingContent
+	r := b.pendingReasoning
+	b.pendingContent = ""
+	b.pendingReasoning = ""
+	b.mu.Unlock()
+	if c != "" {
+		sendAgentEvent(events, msg.StreamContentMsg{Delta: c}, false)
+	}
+	if r != "" {
+		sendAgentEvent(events, msg.StreamReasoningMsg{Delta: r}, false)
+	}
+}
+
 // RunAsync runs agent.RunTurn on a goroutine and forwards TurnCallbacks to the UI.
-func RunAsync(d deps.Deps, line string, events chan<- tea.Msg) {
+func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGroup) {
+	if wg != nil {
+		wg.Add(1)
+		defer wg.Done()
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	sendAgentEvent(events, msg.TurnStartedMsg{Cancel: cancel}, true)
 
+	var buf streamBuffer
+
 	cb := &agent.TurnCallbacks{
 		OnContentDelta: func(s string) {
-			sendAgentEvent(events, msg.StreamContentMsg{Delta: s}, false)
+			buf.appendContent(s)
+			buf.trySendContent(events)
 		},
 		OnReasoningDelta: func(s string) {
-			sendAgentEvent(events, msg.StreamReasoningMsg{Delta: s}, false)
+			buf.appendReasoning(s)
+			buf.trySendReasoning(events)
 		},
 		OnToolStart: func(name, args, command string) {
+			buf.flush(events)
 			sendAgentEvent(events, msg.ToolStartMsg{Name: name, Args: args, Command: command}, false)
 		},
 		OnToolEnd: func(name, args, command, result string, isError bool) {
-			// Critical: dropping ToolEnd leaves the TUI stuck on a running tool block.
 			sendAgentEvent(events, msg.ToolEndMsg{Name: name, Args: args, Command: command, Result: result, IsError: isError}, true)
 		},
 		OnAssistantSegmentEnd: func() {
+			buf.flush(events)
 			sendAgentEvent(events, msg.AssistantSegmentEndMsg{}, false)
 		},
 		OnPlanningStart: func() {
@@ -60,6 +141,7 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg) {
 	}
 
 	result, err := d.Runner.RunTurn(ctx, d.SessionID, line, cb)
+	buf.flush(events)
 	sendAgentEvent(events, msg.TurnDoneMsg{Result: result, Err: err}, true)
 }
 

@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sync"
 
 	"github.com/hejunqiu/ds-code/internal/config"
@@ -19,7 +20,7 @@ type Manager struct {
 }
 
 // NewManager connects all configured MCP servers and discovers tools.
-func NewManager(ctx context.Context, cfgs []config.MCPServerConfig) (*Manager, error) {
+func NewManager(ctx context.Context, cfgs []config.MCPServerConfig, envBlacklist []*regexp.Regexp) (*Manager, error) {
 	if len(cfgs) == 0 {
 		return &Manager{byName: make(map[string]*adapterTool)}, nil
 	}
@@ -38,7 +39,7 @@ func NewManager(ctx context.Context, cfgs []config.MCPServerConfig) (*Manager, e
 		}
 		names[cfg.Name] = struct{}{}
 
-		srv, err := ConnectServer(ctx, cfg)
+		srv, err := ConnectServer(ctx, cfg, envBlacklist)
 		if err != nil {
 			m.Close()
 			return nil, err
@@ -50,8 +51,8 @@ func NewManager(ctx context.Context, cfgs []config.MCPServerConfig) (*Manager, e
 }
 
 // NewManagerFromConfig connects servers and discovers tools.
-func NewManagerFromConfig(ctx context.Context, cfgs []config.MCPServerConfig, strict bool) (*Manager, error) {
-	m, err := NewManager(ctx, cfgs)
+func NewManagerFromConfig(ctx context.Context, cfgs []config.MCPServerConfig, strict bool, envBlacklist []*regexp.Regexp) (*Manager, error) {
+	m, err := NewManager(ctx, cfgs, envBlacklist)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +113,7 @@ func (m *Manager) IsWriteTool(name string) bool {
 		case permission.LevelHigh, permission.LevelHighest:
 			return true
 		default:
-			return false
+			return IsWriteTool(name)
 		}
 	}
 	return IsWriteTool(name)

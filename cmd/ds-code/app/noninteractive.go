@@ -20,6 +20,7 @@ func (a *App) RunNonInteractive(cmd *cobra.Command) error {
 	logging.L().Info("non-interactive run", zap.Bool("json_output", a.Cfg.JSONOutput))
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	defer a.closeStore()
 	defer a.closeMCP()
 	defer a.closeLSP()
 	defer a.closeShellJobs()

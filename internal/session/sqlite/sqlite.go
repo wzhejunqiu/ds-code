@@ -39,6 +39,7 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	s := &Store{db: db}
+	db.SetMaxOpenConns(1)
 	if err := s.initSchema(); err != nil {
 		db.Close()
 		return nil, err
@@ -82,8 +83,8 @@ func (s *Store) CreateSession(model, effort, thinking, permMode, runMode string)
 	return sess, nil
 }
 
-func (s *Store) Create(_ context.Context, sess session.Session) error {
-	_, err := s.db.Exec(`INSERT INTO sessions (
+func (s *Store) Create(ctx context.Context, sess session.Session) error {
+	_, err := s.db.ExecContext(ctx, `INSERT INTO sessions (
 		id, title, model, reasoning_effort, thinking_type, permission_mode, run_mode,
 		compact_summary, compact_up_to_message_id,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,

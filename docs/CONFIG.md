@@ -248,6 +248,8 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 |----|------|------|-----|------|
 | `permission.mode` | string | **`ask`** | `--permission-mode`、`--dangerously-auto` | `readonly` \| `ask` \| `auto` |
 
+用户级与项目级 YAML **均不得**将 `permission.mode` 设为 `auto`。`auto` **仅能**通过 CLI `--permission-mode auto` 或 `--dangerously-auto`（flag 须显式传入）启用；环境变量 `DS_CODE_PERMISSION_MODE=auto` 在无上述 CLI 时也会被拒绝。TUI 中 `/permissions auto` 需加 `--yes` 确认。
+
 内置工具与 MCP 写操作均走 `permission.Engine`（[DESIGN.md §10](DESIGN.md#10-权限引擎internalpermission)）。
 
 ### 5.4 项目运行时数据（固定路径，非配置项）
@@ -305,11 +307,13 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | 键 | 类型 | 默认 | 说明 |
 |----|------|------|------|
 | `tools.parallel_tool_calls` | bool | **false** | 同一 assistant 多条 `tool_calls` 是否并行执行 |
-| `tools.read_file.max_lines` | int | **500** | 单次 `read_file` 默认行上限 |
+| `tools.read_file.max_lines` | int | **500** | 单次 `read_file` 默认行上限（`start`/`end` 闭区间亦受此限） |
+| `tools.read_file.max_bytes` | int | **2097152** (2MiB) | 文件总大小上限；超限拒绝整次读取 |
 | `tools.grep.head_limit` | int | **200** | `grep` 默认匹配条数上限 |
 | `tools.glob.max_results` | int | **200** | `glob` / `list_dir` 结果条数上限 |
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |
 | `tools.shell.timeout` | duration | **120s** | `shell` 同步执行超时 |
+| `tools.shell.env_blacklist` | []string | `[]` | 子进程环境变量名正则黑名单（与内置 secret 键名过滤为 OR）；作用于 `shell`、后台 job、MCP stdio |
 | `tools.task.max_parallel` | int | **3** | 子代理 `task` 并发上限 |
 | `tools.task.summary_max_chars` | int | **16000** | 子代理摘要字符上限（约 4K tokens 量级） |
 
