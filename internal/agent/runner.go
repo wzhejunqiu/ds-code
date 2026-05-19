@@ -84,8 +84,8 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		if round > 0 && cb != nil && cb.OnAssistantSegmentEnd != nil {
 			cb.OnAssistantSegmentEnd()
 		}
-		// Show planning spinner until the next model stream produces content or reasoning.
-		if round > 0 && cb != nil && cb.OnPlanningStart != nil {
+		// Show planning label until the model stream produces content or reasoning.
+		if cb != nil && cb.OnPlanningStart != nil {
 			cb.OnPlanningStart()
 		}
 
@@ -107,7 +107,7 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			UserID:          cacheScope(sessionID),
 			StrictTools:     r.Cfg.LLM.StrictTools,
 		}
-		stream := &subRoundStream{planningDone: round == 0}
+		stream := &subRoundStream{}
 		req.OnStream = r.attachStreamHandlers(cb, round, stream)
 
 		logging.L().Info("LLM request",

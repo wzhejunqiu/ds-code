@@ -152,6 +152,9 @@ func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			input.ClearCompletePicker(&m.State, &m.completePicker)
 			session.ClearResumePicker(&m.State, &m.resumePicker)
 			cmds = append(cmds, input.SubmitLine(&m.State, line, m.syncChatView, m.syncToolView))
+			if turn.NeedsPlanningTick(&m.State) {
+				cmds = append(cmds, m.nextThinkingTickCmd())
+			}
 		}
 	}
 

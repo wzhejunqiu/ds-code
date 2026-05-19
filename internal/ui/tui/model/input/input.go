@@ -175,13 +175,13 @@ func SubmitLine(s *state.State, line string, syncChat, syncTool func()) tea.Cmd 
 	}
 	s.MainChat = append(s.MainChat, chat.Block{Role: chat.RoleUser})
 	s.MainChat[len(s.MainChat)-1].Content.WriteString(line)
-	s.MainChat = append(s.MainChat, chat.Block{Role: chat.RoleAssistant, Streaming: true, ReasoningOpen: s.ReasoningAll})
 	s.Subagents = subagent.Registry{}
 	s.SubagentNav = state.SubagentNavMain
 	s.ViewingSubagentID = ""
 	s.Overlay = state.OverlayNone
 	s.OverlayText = ""
 	s.BindMainChat(s.MainChat)
+	turn.AppendPlanningBlock(s)
 	syncChat()
 	s.Running = true
 	s.TurnEscPending = false

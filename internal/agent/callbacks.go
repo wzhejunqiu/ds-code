@@ -9,9 +9,9 @@ type TurnCallbacks struct {
 	OnToolStart           func(name, args, command string)
 	OnToolEnd             func(name, args, command, result string, isError bool)
 	OnAssistantSegmentEnd func() // end of one assistant segment (before tools or next sub-round)
-	// OnPlanningStart: round>0, after tools, before the next LLM HTTP request.
+	// OnPlanningStart: before each LLM HTTP request (until stream content/reasoning).
 	OnPlanningStart func()
-	// OnPlanningEnd: first content/reasoning delta, or LLM error/complete without stream.
+	// OnPlanningEnd: first content/reasoning delta, or LLM complete/error without stream.
 	OnPlanningEnd func()
 	// Subagent hooks (task tool): nested exploration UI, separate from main chat tools.
 	OnSubagentStart     func(id, label, prompt string)
