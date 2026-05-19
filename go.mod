@@ -17,6 +17,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	go.uber.org/zap v1.28.0
 	golang.org/x/sys v0.38.0
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.37.0
 )
 
@@ -65,7 +66,6 @@ require (
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.9.1 // indirect

@@ -29,7 +29,7 @@ func All() []Command {
 		{Name: "skill", Args: "[name]", Description: "List or activate a skill"},
 		{Name: "task", Args: "<prompt…>", Description: "Dispatch read-only subagent (direct)"},
 	}
-	return append(cmds, devCommands()...)
+	return append(append(cmds, devCommands()...), tuitestCommands()...)
 }
 
 // Lookup returns a command by name.

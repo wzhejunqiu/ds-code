@@ -150,6 +150,9 @@ func SubmitLine(s *state.State, line string, syncChat, syncTool func()) tea.Cmd 
 		if c, handled := trySubmitDevSlash(cmd, args); handled {
 			return c
 		}
+		if c, handled := trySubmitTUITestSlash(cmd, args, s, syncChat, syncTool); handled {
+			return c
+		}
 		switch cmd {
 		case "help":
 			return ShowHelp()

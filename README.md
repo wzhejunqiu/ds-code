@@ -67,6 +67,8 @@ CGO_ENABLED=1 go run -tags cgo ./cmd/count-tokens -text "hello"
 
 ```bash
 make test    # 单元测试（默认无 CGO）
+make test-tui   # TUI 集成测（-tags=tuitest，见 docs/TUI_INTEGRATION_TEST.md）
+make build-tui-test && ./bin/ds-code-tui-test   # 交互式 TUI harness（内置 /tcase 场景）
 make test-integration  # LSP 集成测（需 gopls：go install golang.org/x/tools/gopls@latest）
 make vet
 make lint    # 需本地安装 golangci-lint
