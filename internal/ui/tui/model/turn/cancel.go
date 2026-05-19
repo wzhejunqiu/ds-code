@@ -65,9 +65,18 @@ func EventsAllowed(s *state.State) bool {
 	return s.Running && !CurrentTurnInterrupted(s)
 }
 
+// mainTranscript returns the primary session blocks (interrupt markers live here).
+func mainTranscript(s *state.State) []chat.Block {
+	if s.MainChat != nil {
+		return s.MainChat
+	}
+	return s.Chat
+}
+
 func CurrentTurnInterrupted(s *state.State) bool {
+	blocks := mainTranscript(s)
 	lastUser := -1
-	for i, b := range s.Chat {
+	for i, b := range blocks {
 		if b.Role == chat.RoleUser {
 			lastUser = i
 		}
@@ -75,8 +84,8 @@ func CurrentTurnInterrupted(s *state.State) bool {
 	if lastUser < 0 {
 		return false
 	}
-	for i := lastUser + 1; i < len(s.Chat); i++ {
-		if s.Chat[i].Role == chat.RoleInterrupt {
+	for i := lastUser + 1; i < len(blocks); i++ {
+		if blocks[i].Role == chat.RoleInterrupt {
 			return true
 		}
 	}

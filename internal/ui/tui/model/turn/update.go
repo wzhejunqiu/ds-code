@@ -18,13 +18,14 @@ type ListenPromptFn func() tea.Cmd
 type StatusTickFn func() tea.Cmd
 
 func UpdateStreamContent(s *state.State, m msg.StreamContentMsg, sync SyncFn) tea.Cmd {
-	if EventsAllowed(s) {
-		withMainChat(s, func() {
-			ClearPlanningBlock(s)
-			AppendAssistantContent(s, m.Delta)
-		})
-		sync()
+	if !EventsAllowed(s) {
+		return nil
 	}
+	withMainChat(s, func() {
+		ClearPlanningBlock(s)
+		AppendAssistantContent(s, m.Delta)
+	})
+	sync()
 	return nil
 }
 

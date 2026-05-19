@@ -54,6 +54,24 @@ func TestUpdatePlanningEnd_clearsMainChatWhileViewingSubagent(t *testing.T) {
 	}
 }
 
+func TestUpdatePlanningEnd_skippedWhenInterrupted(t *testing.T) {
+	s := &state.State{
+		Running: true,
+		MainChat: []chat.Block{
+			{Role: chat.RoleUser},
+			{Role: chat.RolePlanning, Streaming: true},
+			{Role: chat.RoleInterrupt},
+		},
+	}
+	s.Chat = s.MainChat
+
+	UpdatePlanningEnd(s, func() {})
+
+	if !hasPlanningRole(s.MainChat) {
+		t.Fatalf("MainChat planning cleared while interrupted: %+v", s.MainChat)
+	}
+}
+
 func TestUpdatePlanningEnd_skippedWhenNotRunning(t *testing.T) {
 	s := &state.State{
 		Running:  false,
