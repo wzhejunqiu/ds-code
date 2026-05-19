@@ -53,7 +53,10 @@ func UpdatePlanningStart(s *state.State, sync SyncFn, nextTick NextThinkingTickF
 }
 
 func UpdatePlanningEnd(s *state.State, sync SyncFn) tea.Cmd {
-	ClearPlanningBlock(s)
+	if !EventsAllowed(s) {
+		return nil
+	}
+	withMainChat(s, func() { ClearPlanningBlock(s) })
 	sync()
 	return nil
 }

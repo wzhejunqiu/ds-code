@@ -2,16 +2,7 @@ package agent
 
 import (
 	"context"
-	"fmt"
-	"sync/atomic"
 )
-
-var subagentSeq atomic.Uint64
-
-// NewSubagentID returns a unique id for a task subagent run (TUI registry key).
-func NewSubagentID() string {
-	return fmt.Sprintf("sa-%d", subagentSeq.Add(1))
-}
 
 type turnCallbacksKey struct{}
 

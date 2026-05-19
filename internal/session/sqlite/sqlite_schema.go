@@ -1,3 +1,13 @@
+// This file defines the schema and initialization logic for session storage using SQLite.
+//
+// Responsibilities:
+// 1. Maintain the schema version (schemaVersion) for sessions.db to ensure table structure compatibility with code expectations.
+// 2. Provide a method (initSchema) for schema initialization, which checks the current schema version and runs migrations or creates tables as needed.
+// 3. Provide a method (applySchema) to execute SQL statements that set up all required tables and schema_version bookkeeping.
+// 4. Ensure that when the schema changes, schemaVersion is incremented and users are warned in case of mismatches, preventing structural incompatibilities and data errors.
+
+// Currently in the development phase and not yet released; if the table structure is upgraded, migration logic for existing data is not required.
+
 package sqlite
 
 import (
@@ -5,6 +15,7 @@ import (
 	"fmt"
 )
 
+// The schema version number for sessions.db, which must be incremented whenever the table structure is modified.
 const schemaVersion = 3
 
 func (s *Store) initSchema() error {

@@ -32,8 +32,8 @@ func (s *sessionStore) Create(_ context.Context, sess session.Session) error {
 	return fmt.Errorf("subagent session store: create not supported")
 }
 
-func (s *sessionStore) Get(_ context.Context, _ string) (session.Session, error) {
-	r, err := s.sub.GetRun(context.Background(), s.runID)
+func (s *sessionStore) Get(ctx context.Context, _ string) (session.Session, error) {
+	r, err := s.sub.GetRun(ctx, s.runID)
 	if err != nil {
 		return session.Session{}, err
 	}
