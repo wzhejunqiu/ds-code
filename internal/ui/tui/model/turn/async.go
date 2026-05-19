@@ -38,10 +38,10 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg) {
 			sendAgentEvent(events, msg.AssistantSegmentEndMsg{}, false)
 		},
 		OnPlanningStart: func() {
-			sendAgentEvent(events, msg.PlanningStartMsg{}, false)
+			sendAgentEvent(events, msg.PlanningStartMsg{}, true)
 		},
 		OnPlanningEnd: func() {
-			sendAgentEvent(events, msg.PlanningEndMsg{}, false)
+			sendAgentEvent(events, msg.PlanningEndMsg{}, true)
 		},
 		OnSubagentStart: func(id, label, prompt string) {
 			sendAgentEvent(events, msg.SubagentStartMsg{ID: id, Label: label, Prompt: prompt}, true)

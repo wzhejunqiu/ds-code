@@ -90,7 +90,7 @@ Esc：`turnStartedMsg` 到达后 `requestCancelTurn` 调用 `cancel()`；否则�
 | `chatRoleUser` | `submitLine` |
 | `chatRoleAssistant` | `streamContentMsg`、`streamReasoningMsg`；工具开始、分段结束、回合结束时 finalize |
 | `chatRoleTool` | `toolStartMsg` / `toolEndMsg` |
-| `chatRolePlanning` | `planningStartMsg` / `planningEndMsg`（agent 子轮次间隙） |
+| `chatRolePlanning` | `submitLine` 提交时；`planningStartMsg` / `planningEndMsg` 在后续 LLM 子轮次（round>0）与流式输出间隙 |
 | `chatRoleInterrupt` | Esc 取消 |
 
 `ensureStreamingAssistant`（`model_turn.go`）决定追加到最后一个 assistant 块还是新建一块。工具行会**切断**分段，多轮子轮次呈现为：assistant → tool → assistant → …

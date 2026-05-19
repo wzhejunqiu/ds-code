@@ -31,7 +31,7 @@
 
 **子轮次** = 上述循环中的一次 LLM 请求。单条用户消息常包含多轮子轮次（例如读文件 → 改文件 → 回复）。
 
-子轮次之间（`round > 0`）：
+首轮 planning 由 TUI 在 `submitLine` 时插入；子轮次之间（`round > 0`）由 agent 触发：
 
 - `OnPlanningStart` / `OnPlanningEnd` — TUI 显示「Planning next moves」，直到下一段流式输出开始。
 - `OnAssistantSegmentEnd` — TUI 在工具行之前结束当前可见的 assistant 分段。

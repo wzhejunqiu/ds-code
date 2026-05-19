@@ -9,7 +9,8 @@ type TurnCallbacks struct {
 	OnToolStart           func(name, args, command string)
 	OnToolEnd             func(name, args, command, result string, isError bool)
 	OnAssistantSegmentEnd func() // end of one assistant segment (before tools or next sub-round)
-	// OnPlanningStart: before each LLM HTTP request (until stream content/reasoning).
+	// OnPlanningStart: before each LLM HTTP request after the first (round>0).
+	// Round 0 planning is owned by the TUI on user submit.
 	OnPlanningStart func()
 	// OnPlanningEnd: first content/reasoning delta, or LLM complete/error without stream.
 	OnPlanningEnd func()

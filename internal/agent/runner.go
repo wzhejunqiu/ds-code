@@ -84,14 +84,19 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		if round > 0 && cb != nil && cb.OnAssistantSegmentEnd != nil {
 			cb.OnAssistantSegmentEnd()
 		}
-		// Show planning label until the model stream produces content or reasoning.
-		if cb != nil && cb.OnPlanningStart != nil {
+		// Round 0 planning is shown by the TUI on submit; later rounds start here.
+		planningFromAgent := false
+		if round > 0 && cb != nil && cb.OnPlanningStart != nil {
 			cb.OnPlanningStart()
+			planningFromAgent = true
 		}
 
 		logging.L().Debug("agent sub-round", zap.String("session_id", sessionID), zap.Int("round", round+1))
 		view, maxTokens, err := r.Context.PrepareRequest(ctx, sessionID)
 		if err != nil {
+			if planningFromAgent && cb.OnPlanningEnd != nil {
+				cb.OnPlanningEnd()
+			}
 			return nil, err
 		}
 

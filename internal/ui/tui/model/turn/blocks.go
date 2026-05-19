@@ -8,6 +8,9 @@ import (
 )
 
 func AppendPlanningBlock(s *state.State) {
+	if len(s.Chat) > 0 && s.Chat[len(s.Chat)-1].Role == chat.RolePlanning {
+		return
+	}
 	ClearPlanningBlock(s)
 	s.Chat = append(s.Chat, chat.Block{
 		Role:              chat.RolePlanning,
