@@ -6,3 +6,4 @@ third_party/tokenizers/*.tar.gz
 .code-review-graph/
 bin/
 /ds-code
+.vscode/
