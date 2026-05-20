@@ -13,6 +13,12 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
+// TCaseItem is one harness integration scenario row (name + short description).
+type TCaseItem struct {
+	Name string
+	Desc string
+}
+
 // State holds mutable TUI model fields shared across model subpackages.
 type State struct {
 	Deps      *deps.Deps
@@ -42,6 +48,8 @@ type State struct {
 	ResumeFilter    string
 	ResumeFilterSeq uint64
 	ResumePending   bool
+
+	TCaseItems []TCaseItem // harness: /tcase picker rows (name + description)
 
 	Prompt *permission.PromptRequest
 

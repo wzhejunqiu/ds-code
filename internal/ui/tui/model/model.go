@@ -10,6 +10,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
 	subagentui "github.com/hejunqiu/ds-code/internal/ui/tui/model/subagent"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/model/tcase"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/view"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
@@ -24,6 +25,7 @@ type Model struct {
 	completePicker component.Picker
 	resumePicker   component.Picker
 	subagentPicker component.Picker
+	tcasePicker    component.Picker
 }
 
 // New builds a Model from runtime dependencies.
@@ -88,6 +90,9 @@ func (m *Model) syncAllViews() {
 	}
 	if m.Overlay == state.OverlaySubagentList && m.Subagents.Len() > 0 {
 		subagentui.SyncListPicker(&m.State, &m.subagentPicker)
+	}
+	if m.Overlay == state.OverlayTCase && len(m.TCaseItems) > 0 {
+		tcase.SyncPicker(&m.State, &m.tcasePicker)
 	}
 }
 

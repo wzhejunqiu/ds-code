@@ -3,6 +3,7 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/patch"
@@ -22,14 +23,7 @@ func DisplaySummary(name string, rawArgs []byte, workspace string) (argsLine, co
 		}
 	case "read_file":
 		if p, _ := args["path"].(string); p != "" {
-			line := "path=" + p
-			if st, ok := args["start"].(float64); ok && st > 0 {
-				line += fmt.Sprintf(", start=%d", int(st))
-			}
-			if en, ok := args["end"].(float64); ok && en > 0 {
-				line += fmt.Sprintf(", end=%d", int(en))
-			}
-			return line, ""
+			return FormatReadFileDisplay(p, 0, 0), ""
 		}
 	case "apply_patch":
 		if p, _ := args["patch"].(string); p != "" {
@@ -55,6 +49,74 @@ func DisplaySummary(name string, rawArgs []byte, workspace string) (argsLine, co
 		return formatArgsJSON(rawArgs), ""
 	}
 	return "", ""
+}
+
+// ReadFileLineRange parses "N|..." lines from read_file tool output.
+func ReadFileLineRange(result string) (start, end int, ok bool) {
+	for _, line := range strings.Split(result, "\n") {
+		i := strings.IndexByte(line, '|')
+		if i <= 0 {
+			continue
+		}
+		n, err := strconv.Atoi(line[:i])
+		if err != nil || n <= 0 {
+			continue
+		}
+		if !ok {
+			start, end = n, n
+			ok = true
+			continue
+		}
+		if n < start {
+			start = n
+		}
+		if n > end {
+			end = n
+		}
+	}
+	return start, end, ok
+}
+
+// FormatReadFileDisplay formats a human-readable read_file label for the TUI.
+func FormatReadFileDisplay(path string, start, end int) string {
+	line := "Read " + path
+	if start > 0 && end >= start {
+		line += fmt.Sprintf(" L%d-%d", start, end)
+	}
+	return line
+}
+
+// AppendReadFileLineRange updates a read_file display line with the actual line range.
+func AppendReadFileLineRange(argsLine string, start, end int) string {
+	path := readFilePathFromDisplay(argsLine)
+	if path == "" {
+		return argsLine
+	}
+	return FormatReadFileDisplay(path, start, end)
+}
+
+func readFilePathFromDisplay(line string) string {
+	line = strings.TrimSpace(line)
+	if strings.HasPrefix(line, "Read ") {
+		rest := strings.TrimPrefix(line, "Read ")
+		if i := strings.Index(rest, " L"); i >= 0 {
+			rest = rest[:i]
+		}
+		return strings.TrimSpace(rest)
+	}
+	if strings.HasPrefix(line, "path=") {
+		return strings.TrimPrefix(line, "path=")
+	}
+	return ""
+}
+
+// HumanToolTitle returns a single-line TUI label when the tool uses a non-function style.
+// Empty means use the default "tool_name (args)" rendering.
+func HumanToolTitle(name, args, command string) string {
+	if name == "read_file" && args != "" {
+		return args
+	}
+	return ""
 }
 
 func truncateOneLine(s string, max int) string {

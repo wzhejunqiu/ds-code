@@ -13,6 +13,8 @@ type KeyDeps struct {
 	HandleResumeEnter   func() (tea.Cmd, bool)
 	HandleResumeKey     func(tea.KeyMsg) bool
 	HandleCompleteKey   func(tea.KeyMsg) bool
+	HandleTCaseEnter    func() (tea.Cmd, bool)
+	HandleTCaseKey      func(tea.KeyMsg) bool
 	HandlePromptKey     func(tea.KeyMsg) tea.Cmd
 	ListenPrompt        func() tea.Cmd
 	RequestCancelTurn   func()
@@ -45,6 +47,16 @@ func HandleKey(s *state.State, msg tea.KeyMsg, d KeyDeps) (tea.Cmd, bool) {
 	}
 	if s.Overlay == state.OverlayComplete {
 		if d.HandleCompleteKey(msg) {
+			return nil, true
+		}
+	}
+	if s.Overlay == state.OverlayTCase {
+		if msg.Type == tea.KeyEnter && !msg.Alt && d.HandleTCaseEnter != nil {
+			if cmd, ok := d.HandleTCaseEnter(); ok {
+				return cmd, true
+			}
+		}
+		if d.HandleTCaseKey != nil && d.HandleTCaseKey(msg) {
 			return nil, true
 		}
 	}

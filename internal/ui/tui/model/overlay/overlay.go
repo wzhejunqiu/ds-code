@@ -79,7 +79,7 @@ func Dismiss(s *state.State) {
 		s.OverlayText = ""
 	case state.OverlayPrompt:
 		DismissPrompt(s)
-	case state.OverlayContext, state.OverlayHelp, state.OverlaySubagentList:
+	case state.OverlayContext, state.OverlayHelp, state.OverlaySubagentList, state.OverlayTCase:
 		s.Overlay = state.OverlayNone
 		s.OverlayText = ""
 	default:

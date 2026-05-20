@@ -8,6 +8,7 @@ import (
 	tuimsg "github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/overlay"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
+	"github.com/hejunqiu/ds-code/internal/ui/tui/model/tcase"
 	subagentui "github.com/hejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
@@ -66,6 +67,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, overlay.UpdateContext(&m.State, msg)
 	case tuimsg.HelpOverlayMsg:
 		return m, overlay.UpdateHelp(&m.State, msg)
+	case tuimsg.TCasePickerMsg:
+		return m, tcase.UpdatePicker(&m.State, msg, &m.tcasePicker)
 	case tuimsg.TurnDoneMsg:
 		return m, turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt, statusTick)
 	case tuimsg.StatusRefreshMsg:
@@ -112,6 +115,12 @@ func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		HandleCompleteKey: func(k tea.KeyMsg) bool {
 			return input.HandleCompleteKey(&m.State, k, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd)
 		},
+		HandleTCaseEnter: func() (tea.Cmd, bool) {
+			return tcase.ConfirmSelection(&m.State, &m.tcasePicker, m.syncChatView, m.syncToolView)
+		},
+		HandleTCaseKey: func(k tea.KeyMsg) bool {
+			return tcase.HandleKey(&m.State, &m.tcasePicker, k)
+		},
 		HandlePromptKey: func(k tea.KeyMsg) tea.Cmd {
 			return turn.HandlePromptKey(&m.State, k.String(), m.listenPrompt)
 		},
@@ -142,7 +151,7 @@ func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if key, ok := msg.(tea.KeyMsg); ok && key.Type == tea.KeyEnter && !key.Alt {
-		if m.Overlay == state.OverlayResume {
+		if m.Overlay == state.OverlayResume || m.Overlay == state.OverlayTCase {
 			return m, tea.Batch(cmds...)
 		}
 		line := strings.TrimSpace(m.input.Value())

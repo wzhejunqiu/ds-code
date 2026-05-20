@@ -22,6 +22,16 @@ func planningBlockLabel(started, now time.Time) string {
 	return planningBullet + planningLabel
 }
 
+// reasoningExpanded reports whether the thinking trace body should be visible.
+// Active thinking is always expanded; completed thinking follows ReasoningOpen (e.g. Ctrl+R).
+func reasoningExpanded(b Block) bool {
+	if b.Role != RoleAssistant {
+		return false
+	}
+	activelyThinking := !b.ReasoningStartedAt.IsZero() && b.ReasoningEndedAt.IsZero()
+	return b.ReasoningOpen || activelyThinking
+}
+
 func reasoningBlockLabel(open bool, started, ended, now time.Time, fixed time.Duration) string {
 	arrow := "▸"
 	if open {

@@ -142,6 +142,11 @@ func (r *Runner) runToolCalls(
 		}
 		body := r.executeTool(ctx, sessionID, tc)
 		displayResult, isError := ctxpkg.UnpackToolBody(body)
+		if tc.Name == "read_file" && !isError {
+			if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
+				argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
+			}
+		}
 		if cb != nil && cb.OnToolEnd != nil {
 			cb.OnToolEnd(tc.Name, argsLine, command, displayResult, isError)
 		}

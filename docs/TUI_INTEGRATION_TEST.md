@@ -34,9 +34,12 @@ make build-tui-test
 在 TUI 中：
 
 ```
-/tcase list
-/tcase run stream-basic
+/tcase              # 打开可键盘选择的场景列表
+/tcase list         # 同上
+/tcase run stream-basic   # 直接运行（仍可手动输入）
 ```
+
+场景列表：**↑↓** 移动、**Enter** 运行选中项、**Esc** 关闭。
 
 ## CI
 
@@ -71,12 +74,14 @@ ds-code-tui-test
 
 若环境已有 API Key，harness **尊重已有值**。
 
-## 内置场景
+## 内置场景与剧本
+
+每个场景的 **Prompt、Turn、SSE chunk、tool 参数、期望 UI** 在 **[TUI_TCASE_SCRIPTS.md](./TUI_TCASE_SCRIPTS.md)** 维护（与 `internal/tuitest/scenarios/all.go` 同步）。
 
 | 场景 | 说明 |
 |------|------|
 | `stream-basic` | 分片 content 流式 |
-| `stream-reasoning` | reasoning + content |
+| `stream-reasoning` | reasoning + content 流式 |
 | `tool-read` | `read_file` 两轮 |
 | `tool-grep` | `grep` 两轮 |
 | `tool-patch` | `apply_patch` 两轮 |
@@ -90,8 +95,8 @@ ds-code-tui-test
 ## 新增场景
 
 1. 在 [`internal/tuitest/scenarios/`](../internal/tuitest/scenarios/) 增加 `*Scenario` 并注册到 `All()`。
-2. 每个 `Turn` 定义 SSE chunk、`ToolCalls` 或 `HTTPStatus`/`ErrBody`。
-3. `/tcase run <name>` 会 `registry.SetActive(name)` 并提交场景的 `Prompt`。
+2. 在 **[TUI_TCASE_SCRIPTS.md](./TUI_TCASE_SCRIPTS.md)** 补充该场景的剧本说明（Turn、chunk、特殊 registry 行为）。
+3. `/tcase` 或 `/tcase list` 打开交互式 Picker；**Enter** 或 `/tcase run <name>` 会 `registry.SetActive(name)` 并提交场景的 `Prompt`。
 4. 本地：`make test-tui` 或 `make build-tui-test` 手动验证。
 
 ## 目录索引
@@ -100,7 +105,8 @@ ds-code-tui-test
 |------|------|
 | `cmd/ds-code-tui-test/` | 交互入口（仅 `tuitest` 构建） |
 | `internal/tuitest/mockserver/` | Mock LLM HTTP + SSE |
-| `internal/tuitest/scenarios/` | 场景脚本 |
+| `internal/tuitest/scenarios/` | 场景脚本（实现） |
+| `docs/TUI_TCASE_SCRIPTS.md` | `/tcase` 场景剧本（文档） |
 | `internal/tuitest/stack.go` | 统一组装 app + runner |
 | `cmd/ds-code/app/tui_tuitest.go` | `RunTUIHarness` |
 | `internal/ui/tui/model/input/submit_hook_*.go` | `/tcase` 挂钩 |

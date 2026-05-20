@@ -23,7 +23,22 @@ func TestDisplaySummary_readFile(t *testing.T) {
 	if cmd != "" {
 		t.Fatalf("unexpected command: %q", cmd)
 	}
-	if line != "path=foo.go, start=10, end=20" {
+	if line != "Read foo.go" {
 		t.Fatalf("line = %q", line)
+	}
+}
+
+func TestReadFileLineRange(t *testing.T) {
+	result := "9|nine\n10|ten\n20|twenty"
+	start, end, ok := tool.ReadFileLineRange(result)
+	if !ok || start != 9 || end != 20 {
+		t.Fatalf("range = %d-%d ok=%v", start, end, ok)
+	}
+	got := tool.AppendReadFileLineRange("Read foo.go", start, end)
+	if got != "Read foo.go L9-20" {
+		t.Fatalf("got %q", got)
+	}
+	if tool.FormatReadFileDisplay("sample.go", 1, 3) != "Read sample.go L1-3" {
+		t.Fatal("FormatReadFileDisplay mismatch")
 	}
 }

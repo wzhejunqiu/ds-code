@@ -29,6 +29,46 @@ func TestRenderUserHighlightNoLabels(t *testing.T) {
 	}
 }
 
+func TestRenderReasoningExpandedWhileThinking(t *testing.T) {
+	started := time.Now().Add(-500 * time.Millisecond)
+	blocks := []Block{{
+		Role:               RoleAssistant,
+		ReasoningOpen:      false,
+		ReasoningStartedAt: started,
+		Streaming:          true,
+	}}
+	blocks[0].Reasoning.WriteString("think step")
+
+	out := Render(blocks, 60, time.Now(), false)
+	if !strings.Contains(out, "think step") {
+		t.Fatalf("expected reasoning body while thinking:\n%s", out)
+	}
+	if !strings.Contains(out, "▾") {
+		t.Fatalf("expected expanded thinking label:\n%s", out)
+	}
+}
+
+func TestRenderReasoningCollapsedAfterThinking(t *testing.T) {
+	ended := time.Now().Add(-1 * time.Second)
+	started := ended.Add(-2 * time.Second)
+	blocks := []Block{{
+		Role:               RoleAssistant,
+		ReasoningOpen:      false,
+		ReasoningStartedAt: started,
+		ReasoningEndedAt:   ended,
+	}}
+	blocks[0].Reasoning.WriteString("think step")
+	blocks[0].Content.WriteString("answer")
+
+	out := Render(blocks, 60, time.Now(), false)
+	if strings.Contains(out, "think step") {
+		t.Fatalf("expected reasoning body hidden after thinking:\n%s", out)
+	}
+	if !strings.Contains(out, "thought for") {
+		t.Fatalf("expected collapsed thought label:\n%s", out)
+	}
+}
+
 func TestRenderTurnDuration(t *testing.T) {
 	blocks := []Block{{Role: RoleAssistant}}
 	blocks[0].Content.WriteString("done")

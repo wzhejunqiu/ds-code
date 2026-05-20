@@ -7,7 +7,7 @@ func tuitestCommands() []Command {
 		{
 			Name:        "tcase",
 			Args:        "[list|run <name>]",
-			Description: "Run built-in TUI integration test scenario (harness only)",
+			Description: "Pick or run built-in TUI integration scenario (harness only)",
 		},
 	}
 }

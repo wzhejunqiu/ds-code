@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hejunqiu/ds-code/internal/tool"
 )
 
 const (
@@ -27,7 +28,7 @@ func renderBlock(b Block, width int, expanded bool) []string {
 	var body []string
 
 	if b.Running {
-		title := b.Name + " …"
+		title := toolRunningTitle(b.Name, b.Args, b.Command)
 		body = append(body, styleToolTitle.Render(bullet+title))
 		switch {
 		case b.Command != "":
@@ -60,6 +61,13 @@ func renderBlock(b Block, width int, expanded bool) []string {
 }
 
 func renderTitleLine(name, command, args string, isError bool) string {
+	if human := tool.HumanToolTitle(name, args, command); human != "" {
+		parts := []string{styleToolName.Render(bullet + human)}
+		if isError {
+			parts = append(parts, styleToolError.Render(" (error)"))
+		}
+		return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
+	}
 	parts := []string{styleToolName.Render(bullet + name)}
 	if paren := parenContent(command, args); paren != "" {
 		parts = append(parts, styleToolCommand.Render(" ("+paren+")"))
@@ -68,6 +76,13 @@ func renderTitleLine(name, command, args string, isError bool) string {
 		parts = append(parts, styleToolError.Render(" (error)"))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
+}
+
+func toolRunningTitle(name, args, command string) string {
+	if human := tool.HumanToolTitle(name, args, command); human != "" {
+		return human + " …"
+	}
+	return name + " …"
 }
 
 func parenContent(command, args string) string {

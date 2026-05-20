@@ -50,6 +50,15 @@ type PromptRequestMsg struct{ Req permission.PromptRequest }
 type OverlayCloseMsg struct{}
 type ContextOverlayMsg struct{ Text string }
 type HelpOverlayMsg struct{ Text string }
+
+// TCasePickerItem is one row in the /tcase scenario picker (harness only).
+type TCasePickerItem struct {
+	Name string
+	Desc string
+}
+
+// TCasePickerMsg opens an interactive scenario list (harness only).
+type TCasePickerMsg struct{ Items []TCasePickerItem }
 type SlashOutputMsg struct{ Text string }
 type TurnStartedMsg struct {
 	Cancel context.CancelFunc

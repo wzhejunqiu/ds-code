@@ -26,6 +26,31 @@ func All() []*Scenario {
 	}
 }
 
+// streamDemoDelay spaces SSE chunks so the harness TUI can repaint between deltas.
+const streamDemoDelay = 120 * time.Millisecond
+
+func reasoningParts(parts ...string) []StreamChunk {
+	chunks := make([]StreamChunk, len(parts))
+	for i, p := range parts {
+		chunks[i] = StreamChunk{Reasoning: p}
+		if i > 0 {
+			chunks[i].Delay = streamDemoDelay
+		}
+	}
+	return chunks
+}
+
+func contentParts(parts ...string) []StreamChunk {
+	chunks := make([]StreamChunk, len(parts))
+	for i, p := range parts {
+		chunks[i] = StreamChunk{Content: p}
+		if i > 0 {
+			chunks[i].Delay = streamDemoDelay
+		}
+	}
+	return chunks
+}
+
 func streamBasic() *Scenario {
 	return &Scenario{
 		Name:   "stream-basic",
@@ -33,8 +58,8 @@ func streamBasic() *Scenario {
 		Turns: []Turn{{
 			Chunks: []StreamChunk{
 				{Content: "hel"},
-				{Content: "lo "},
-				{Content: "world"},
+				{Content: "lo ", Delay: streamDemoDelay},
+				{Content: "world", Delay: streamDemoDelay},
 			},
 			FinishReason: "stop",
 		}},
@@ -42,14 +67,18 @@ func streamBasic() *Scenario {
 }
 
 func streamReasoning() *Scenario {
+	chunks := reasoningParts(
+		"Let ", "me ", "walk ", "through ", "this ", "step ", "by ", "step.\n\n",
+		"First, ", "check ", "the ", "▾ ", "label ", "stays ", "open.\n",
+		"Next, ", "watch ", "tiny ", "reasoning ", "chunks ", "stream ", "in.\n",
+		"Then ", "content ", "starts; ", "thinking ", "collapses.\n",
+	)
+	chunks = append(chunks, contentParts("ans", "wer")...)
 	return &Scenario{
 		Name:   "stream-reasoning",
 		Prompt: "reasoning stream test",
 		Turns: []Turn{{
-			Chunks: []StreamChunk{
-				{Reasoning: "think"},
-				{Content: "answer"},
-			},
+			Chunks:       chunks,
 			FinishReason: "stop",
 		}},
 	}

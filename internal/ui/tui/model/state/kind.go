@@ -11,6 +11,7 @@ const (
 	OverlayResume
 	OverlayPrompt
 	OverlaySubagentList
+	OverlayTCase // harness: /tcase scenario picker (tuitest build)
 )
 
 // SubagentNav is the subagent manager view stack (main → list → detail).

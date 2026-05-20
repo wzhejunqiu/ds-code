@@ -7,3 +7,4 @@ third_party/tokenizers/*.tar.gz
 bin/
 /ds-code
 .vscode/
+__debug_bin*

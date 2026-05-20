@@ -3,7 +3,6 @@
 package tuitest
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -41,14 +40,12 @@ func NewTCaseSubmit(reg *mockserver.Registry) func(s *state.State, args string, 
 
 func listScenarios(reg *mockserver.Registry) tea.Cmd {
 	return func() tea.Msg {
-		var buf bytes.Buffer
-		buf.WriteString("TUI integration scenarios:\n\n")
+		var items []msg.TCasePickerItem
 		for _, name := range reg.List() {
 			if sc, ok := reg.Get(name); ok {
-				fmt.Fprintf(&buf, "  %-18s %s\n", name, sc.Prompt)
+				items = append(items, msg.TCasePickerItem{Name: name, Desc: sc.Prompt})
 			}
 		}
-		buf.WriteString("\nRun: /tcase run <name>\n")
-		return msg.HelpOverlayMsg{Text: buf.String()}
+		return msg.TCasePickerMsg{Items: items}
 	}
 }

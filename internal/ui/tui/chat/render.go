@@ -24,9 +24,10 @@ func Render(blocks []Block, width int, now time.Time, showToolDetails bool) stri
 		case RoleAssistant:
 			indent := lipgloss.Width(assistantBullet)
 			if b.Reasoning.Len() > 0 || b.ReasoningDuration > 0 || !b.ReasoningStartedAt.IsZero() {
-				label := reasoningBlockLabel(b.ReasoningOpen, b.ReasoningStartedAt, b.ReasoningEndedAt, now, b.ReasoningDuration)
+				expanded := reasoningExpanded(b)
+				label := reasoningBlockLabel(expanded, b.ReasoningStartedAt, b.ReasoningEndedAt, now, b.ReasoningDuration)
 				lines = append(lines, styleReason.Render(strings.Repeat(" ", indent)+label))
-				if b.ReasoningOpen && b.Reasoning.Len() > 0 {
+				if expanded && b.Reasoning.Len() > 0 {
 					lines = append(lines, styleReason.Render(markdown.WrapText(b.Reasoning.String(), width-indent)))
 				}
 			}
