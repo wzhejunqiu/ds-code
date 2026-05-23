@@ -170,7 +170,7 @@ func (r *Runner) runToolCalls(
 				}
 			}
 			if tc.Name == "grep" && !isError {
-				argsLine = tool.AppendGrepResultSuffix(argsLine, displayResult)
+				argsLine = tool.AppendGrepResultSuffix(argsLine, rawArgs, displayResult)
 			}
 			if (tc.Name == "glob" || tc.Name == "list_dir") && !isError {
 				argsLine = tool.AppendPathResultSuffix(argsLine, displayResult)

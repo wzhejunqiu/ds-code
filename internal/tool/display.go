@@ -296,16 +296,78 @@ func readFilePathFromDisplay(line string) string {
 	return ""
 }
 
-// AppendGrepResultSuffix appends match count to a grep title.
-func AppendGrepResultSuffix(argsLine, result string) string {
-	if strings.Contains(result, builtin.ResultGrepNoMatches) {
-		return argsLine + " · 0 matches"
+// AppendGrepResultSuffix appends grep result stats to a grep title (mode from rawArgs).
+func AppendGrepResultSuffix(argsLine string, rawArgs []byte, result string) string {
+	mode, err := builtin.ParseGrepOutputMode(parseGrepOutputModeArg(rawArgs))
+	if err != nil {
+		mode = builtin.GrepOutputFilesWithMatches
 	}
-	n := countNonEmptyLines(result)
-	if n > 0 {
+	switch mode {
+	case builtin.GrepOutputCount:
+		n := grepCountResult(result)
 		return argsLine + fmt.Sprintf(" · %d matches", n)
+	case builtin.GrepOutputContent:
+		n := countGrepContentLines(result)
+		if strings.Contains(result, builtin.ResultGrepNoMatches) {
+			return argsLine + " · 0 matches"
+		}
+		return argsLine + fmt.Sprintf(" · %d matches", n)
+	default:
+		if strings.Contains(result, builtin.ResultGrepNoMatches) {
+			return argsLine + " · 0 paths"
+		}
+		n := countGrepPathLines(result)
+		return argsLine + fmt.Sprintf(" · %d paths", n)
 	}
-	return argsLine
+}
+
+func parseGrepOutputModeArg(rawArgs []byte) string {
+	if len(rawArgs) == 0 {
+		return ""
+	}
+	var args map[string]any
+	if err := json.Unmarshal(rawArgs, &args); err != nil {
+		return ""
+	}
+	if s, ok := args["output_mode"].(string); ok {
+		return s
+	}
+	return ""
+}
+
+func grepCountResult(result string) int {
+	if strings.Contains(result, builtin.ResultGrepNoMatches) {
+		return 0
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(result))
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
+}
+
+func countGrepContentLines(result string) int {
+	return countGrepResultLines(result)
+}
+
+func countGrepPathLines(result string) int {
+	return countGrepResultLines(result)
+}
+
+func countGrepResultLines(result string) int {
+	n := 0
+	for _, line := range strings.Split(result, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || isGrepTruncationLine(line) {
+			continue
+		}
+		n++
+	}
+	return n
+}
+
+func isGrepTruncationLine(line string) bool {
+	return strings.HasPrefix(line, "... 已截断")
 }
 
 // AppendPathResultSuffix appends path count for glob/list_dir.

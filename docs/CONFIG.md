@@ -356,7 +356,7 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.parallel_tool_calls` | bool | **false** | 同一 assistant 多条 `tool_calls` 是否并行执行 |
 | `tools.read_file.max_lines` | int | **500** | 单次 `read_file` 默认行上限（`start`/`end` 闭区间亦受此限） |
 | `tools.read_file.max_bytes` | int | **2097152** (2MiB) | 文件总大小上限；超限拒绝整次读取 |
-| `tools.grep.head_limit` | int | **200** | `grep` 默认匹配条数上限 |
+| `tools.grep.head_limit` | int | **200** | `grep` 在 `content`（匹配行）与 `files_with_matches`（文件数）模式下的上限；`count` 模式忽略 |
 | `tools.glob.max_results` | int | **200** | `glob` / `list_dir` 结果条数上限 |
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |
 | `tools.shell.timeout` | duration | **120s** | `shell` 同步执行超时 |

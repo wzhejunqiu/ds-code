@@ -157,7 +157,7 @@ TUI 工具块标题由 `internal/tool.DisplaySummary` 生成人类可读单行�
 | `task` / `web_fetch` | `Task: …` / `Fetch https://…` |
 | `mcp__*` | `MCP server · tool` |
 
-`grep`/`glob`/`list_dir` 结束时可能追加 `· N matches` / `· N paths`。持久化会话中的 `ToolCallsJSON` 仍为原始 JSON；仅展示层变化。
+`grep` 结束时按 `output_mode` 追加：`files_with_matches`（默认）为 `· N paths`，`content` / `count` 为 `· N matches`。`glob` / `list_dir` 为 `· N paths`。持久化会话中的 `ToolCallsJSON` 仍为原始 JSON；仅展示层变化。
 
 ## 不可复制类型（传参与遍历）
 

@@ -55,7 +55,7 @@ func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace st
 							}
 						}
 						if tc.Name == "grep" && !isError {
-							argsLine = tool.AppendGrepResultSuffix(argsLine, result)
+							argsLine = tool.AppendGrepResultSuffix(argsLine, []byte(tc.Arguments), result)
 						}
 						if (tc.Name == "glob" || tc.Name == "list_dir") && !isError {
 							argsLine = tool.AppendPathResultSuffix(argsLine, result)

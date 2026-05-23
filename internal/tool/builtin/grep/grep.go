@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,14 @@ const (
 	maxWorkers   = 8
 )
 
+type outputMode string
+
+const (
+	modeContent          outputMode = builtin.GrepOutputContent
+	modeFilesWithMatches outputMode = builtin.GrepOutputFilesWithMatches
+	modeCount            outputMode = builtin.GrepOutputCount
+)
+
 // GrepTool searches file contents with a regex.
 type GrepTool struct {
 	Cfg       *config.Config
@@ -43,6 +52,15 @@ func (t *GrepTool) Schema() map[string]any {
 	return tool.ObjectSchema(map[string]any{
 		"pattern": map[string]any{"type": "string", "description": SchemaRegexPattern},
 		"path":    map[string]any{"type": "string", "description": SchemaGrepPath},
+		"output_mode": map[string]any{
+			"type": "string",
+			"enum": []string{
+				builtin.GrepOutputContent,
+				builtin.GrepOutputFilesWithMatches,
+				builtin.GrepOutputCount,
+			},
+			"description": SchemaOutputMode,
+		},
 	}, []string{"pattern"}, t.Strict)
 }
 
@@ -54,13 +72,30 @@ type fileCandidate struct {
 	modTime time.Time
 }
 
+type lineHit struct {
+	lineNum int
+	text    string
+}
+
+type fileHits struct {
+	rel  string
+	hits []lineHit
+}
+
+type searchResult struct {
+	lines      []string
+	totalCount int
+	truncated  bool
+}
+
 func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
 	var in struct {
-		Pattern string `json:"pattern"`
-		Path    string `json:"path"`
+		Pattern    string `json:"pattern"`
+		Path       string `json:"path"`
+		OutputMode string `json:"output_mode"`
 	}
 	if err := json.Unmarshal(args, &in); err != nil {
 		return "", err
@@ -71,6 +106,12 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	if len(in.Pattern) > 512 {
 		return "", fmt.Errorf("%s", builtin.ErrPatternTooLong)
 	}
+	modeStr, err := builtin.ParseGrepOutputMode(in.OutputMode)
+	if err != nil {
+		return "", err
+	}
+	mode := outputMode(modeStr)
+
 	re, err := regexp.Compile(in.Pattern)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", builtin.ErrInvalidRegex, err)
@@ -81,19 +122,33 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	}
 
 	limit := t.Cfg.Tools.Grep.HeadLimit
+	if limit <= 0 {
+		limit = 200
+	}
+	searchLimit := limit
+	if mode == modeCount {
+		searchLimit = 0
+	}
+
 	candidates, err := t.collectCandidates(ctx, searchPath)
 	if err != nil {
 		return "", err
 	}
-	matches := t.searchCandidates(ctx, candidates, re, limit)
-	if len(matches) == 0 {
-		return builtin.ResultGrepNoMatches, nil
+	res := t.searchCandidates(ctx, candidates, re, mode, searchLimit)
+
+	switch mode {
+	case modeCount:
+		return strconv.Itoa(res.totalCount), nil
+	default:
+		if len(res.lines) == 0 {
+			return builtin.ResultGrepNoMatches, nil
+		}
+		out := strings.Join(res.lines, "\n")
+		if res.truncated {
+			out += fmt.Sprintf("\n"+builtin.TruncatedAtMatches, limit)
+		}
+		return out, nil
 	}
-	out := strings.Join(matches, "\n")
-	if len(matches) >= limit {
-		out += fmt.Sprintf("\n"+builtin.TruncatedAtMatches, limit)
-	}
-	return out, nil
 }
 
 func (t *GrepTool) collectCandidates(ctx context.Context, searchPath string) ([]fileCandidate, error) {
@@ -187,8 +242,19 @@ func (t *GrepTool) makeCandidate(absPath string) *fileCandidate {
 	if !textfile.IsSearchable(absPath) {
 		return nil
 	}
-	rel, err := filepath.Rel(t.Perm.Workspace, absPath)
+	ws, err := filepath.Abs(t.Perm.Workspace)
 	if err != nil {
+		return nil
+	}
+	if resolved, err := filepath.EvalSymlinks(ws); err == nil {
+		ws = resolved
+	}
+	abs := absPath
+	if resolved, err := filepath.EvalSymlinks(absPath); err == nil {
+		abs = resolved
+	}
+	rel, err := filepath.Rel(ws, abs)
+	if err != nil || strings.HasPrefix(rel, "..") {
 		return nil
 	}
 	return &fileCandidate{
@@ -211,7 +277,7 @@ func (t *GrepTool) validateGlobMatches(matches []string, pattern string) error {
 	return nil
 }
 
-func (t *GrepTool) searchCandidates(ctx context.Context, candidates []fileCandidate, re *regexp.Regexp, limit int) []string {
+func (t *GrepTool) searchCandidates(ctx context.Context, candidates []fileCandidate, re *regexp.Regexp, mode outputMode, limit int) searchResult {
 	sort.Slice(candidates, func(i, j int) bool {
 		if !candidates[i].modTime.Equal(candidates[j].modTime) {
 			return candidates[i].modTime.After(candidates[j].modTime)
@@ -227,17 +293,37 @@ func (t *GrepTool) searchCandidates(ctx context.Context, candidates []fileCandid
 		workers = 1
 	}
 
-	var matches []string
-	for i := 0; i < len(candidates) && len(matches) < limit; {
+	var res searchResult
+	stopAfter := 0
+	if mode == modeFilesWithMatches {
+		stopAfter = 1
+	}
+
+	for i := 0; i < len(candidates); {
 		if err := ctx.Err(); err != nil {
 			break
 		}
+		if mode != modeCount && limit > 0 {
+			switch mode {
+			case modeContent:
+				if len(res.lines) >= limit {
+					res.truncated = true
+					return res
+				}
+			case modeFilesWithMatches:
+				if len(res.lines) >= limit {
+					res.truncated = true
+					return res
+				}
+			}
+		}
+
 		end := i + workers
 		if end > len(candidates) {
 			end = len(candidates)
 		}
 		batch := candidates[i:end]
-		batchMatches := make([][]string, len(batch))
+		batchHits := make([]fileHits, len(batch))
 		var wg sync.WaitGroup
 		for j, c := range batch {
 			wg.Add(1)
@@ -246,39 +332,61 @@ func (t *GrepTool) searchCandidates(ctx context.Context, candidates []fileCandid
 				if ctx.Err() != nil {
 					return
 				}
-				batchMatches[j] = grepFile(c.absPath, c.rel, re)
+				batchHits[j] = grepFile(c.absPath, c.rel, re, stopAfter)
 			}(j, c)
 		}
 		wg.Wait()
-		for _, lines := range batchMatches {
-			for _, line := range lines {
-				matches = append(matches, line)
-				if len(matches) >= limit {
-					return matches
+
+		for _, fh := range batchHits {
+			if len(fh.hits) == 0 {
+				continue
+			}
+			switch mode {
+			case modeCount:
+				res.totalCount += len(fh.hits)
+			case modeFilesWithMatches:
+				res.lines = append(res.lines, fh.rel)
+				if limit > 0 && len(res.lines) >= limit {
+					res.truncated = end < len(candidates)
+					return res
+				}
+			case modeContent:
+				for hi, h := range fh.hits {
+					res.lines = append(res.lines, fmt.Sprintf("%s:%d:%s", fh.rel, h.lineNum, h.text))
+					if limit > 0 && len(res.lines) >= limit {
+						res.truncated = end < len(candidates) || hi < len(fh.hits)-1
+						return res
+					}
 				}
 			}
 		}
 		i = end
 	}
-	return matches
+	return res
 }
 
-func grepFile(absPath, rel string, re *regexp.Regexp) []string {
+func grepFile(absPath, rel string, re *regexp.Regexp, stopAfter int) fileHits {
 	b, err := os.ReadFile(absPath)
 	if err != nil {
-		return nil
+		return fileHits{rel: rel}
 	}
-	var matches []string
+	var hits []lineHit
 	lines := strings.Split(string(b), "\n")
 	for i, line := range lines {
 		if len(line) > maxLineBytes {
 			continue
 		}
 		if re.MatchString(line) {
-			matches = append(matches, fmt.Sprintf("%s:%d:%s", rel, i+1, strings.TrimSpace(line)))
+			hits = append(hits, lineHit{
+				lineNum: i + 1,
+				text:    strings.TrimSpace(line),
+			})
+			if stopAfter > 0 && len(hits) >= stopAfter {
+				break
+			}
 		}
 	}
-	return matches
+	return fileHits{rel: rel, hits: hits}
 }
 
 var _ tool.Tool = (*GrepTool)(nil)

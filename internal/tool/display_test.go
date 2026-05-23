@@ -1,7 +1,6 @@
 package tool_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/hejunqiu/ds-code/internal/tool"
@@ -103,8 +102,41 @@ func TestReadFileLineRange(t *testing.T) {
 }
 
 func TestAppendGrepResultSuffix(t *testing.T) {
-	line := tool.AppendGrepResultSuffix("Grepped foo in bar", builtin.ResultGrepNoMatches)
-	if !strings.Contains(line, "0 matches") {
-		t.Fatalf("got %q", line)
-	}
+	t.Run("files_with_matches_no_match", func(t *testing.T) {
+		args := []byte(`{"pattern":"foo","path":"."}`)
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, builtin.ResultGrepNoMatches)
+		if line != "Grepped foo in bar · 0 paths" {
+			t.Fatalf("got %q", line)
+		}
+	})
+	t.Run("files_with_matches_paths", func(t *testing.T) {
+		args := []byte(`{"pattern":"foo"}`)
+		result := "a.go\nb.go\n... 已截断，共 2 条匹配"
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, result)
+		if line != "Grepped foo in bar · 2 paths" {
+			t.Fatalf("got %q", line)
+		}
+	})
+	t.Run("content_matches", func(t *testing.T) {
+		args := []byte(`{"pattern":"foo","output_mode":"content"}`)
+		result := "a.go:1:foo\na.go:2:foo"
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, result)
+		if line != "Grepped foo in bar · 2 matches" {
+			t.Fatalf("got %q", line)
+		}
+	})
+	t.Run("count", func(t *testing.T) {
+		args := []byte(`{"pattern":"foo","output_mode":"count"}`)
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, "42")
+		if line != "Grepped foo in bar · 42 matches" {
+			t.Fatalf("got %q", line)
+		}
+	})
+	t.Run("count_zero", func(t *testing.T) {
+		args := []byte(`{"pattern":"foo","output_mode":"count"}`)
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, "0")
+		if line != "Grepped foo in bar · 0 matches" {
+			t.Fatalf("got %q", line)
+		}
+	})
 }
