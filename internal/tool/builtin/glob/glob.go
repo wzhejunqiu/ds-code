@@ -12,6 +12,8 @@ import (
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/tool/globmatch"
+	"github.com/hejunqiu/ds-code/internal/tool/textfile"
 )
 
 // GlobTool finds paths matching a glob under the workspace.
@@ -62,24 +64,18 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		limit = 200
 	}
 
-	var matches []string
+	matchLimit := 0
 	if strings.Contains(in.Pattern, "**") {
-		matches, err = globDoubleStar(root, in.Pattern, limit*4)
-		if err != nil {
-			return "", err
-		}
-		if err := t.validateGlobMatches(matches, in.Pattern); err != nil {
-			return "", err
-		}
-	} else {
-		matches, err = filepath.Glob(filepath.Join(root, in.Pattern))
-		if err != nil {
-			return "", err
-		}
+		matchLimit = limit * 4
+	}
+	matches, err := globmatch.MatchFiles(root, in.Pattern, matchLimit)
+	if err != nil {
+		return "", err
 	}
 	if err := t.validateGlobMatches(matches, in.Pattern); err != nil {
 		return "", err
 	}
+
 	var lines []string
 	for _, m := range matches {
 		if ctx.Err() != nil {
@@ -97,6 +93,9 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		}
 		info, err := os.Stat(m)
 		if err != nil || info.IsDir() {
+			continue
+		}
+		if !textfile.IsSearchable(m) {
 			continue
 		}
 		lines = append(lines, rel)
@@ -122,44 +121,6 @@ func (t *GlobTool) validateGlobMatches(matches []string, pattern string) error {
 		}
 	}
 	return nil
-}
-
-func globDoubleStar(root, pattern string, limit int) ([]string, error) {
-	suffix := strings.TrimPrefix(pattern, "**/")
-	if suffix == pattern {
-		suffix = strings.TrimPrefix(pattern, "**")
-	}
-	var out []string
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			if d.Name() == ".git" {
-				return filepath.SkipDir
-			}
-			if permission.IsSensitiveAbs(path) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if permission.IsSensitiveAbs(path) {
-			return nil
-		}
-		base := filepath.Base(path)
-		ok := suffix == "" || strings.HasSuffix(path, suffix)
-		if !ok && suffix != "" {
-			ok, _ = filepath.Match(suffix, base)
-		}
-		if ok {
-			out = append(out, path)
-		}
-		if limit > 0 && len(out) >= limit {
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	return out, err
 }
 
 var _ tool.Tool = (*GlobTool)(nil)

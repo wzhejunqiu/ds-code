@@ -128,6 +128,37 @@ func TestGlobTool_rejectsOutsideWorkspace(t *testing.T) {
 	}
 }
 
+func TestGlobTool_skipsBinaryFiles(t *testing.T) {
+	dir := t.TempDir()
+	pngData := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	pngData = append(pngData, make([]byte, 32)...)
+	if err := os.WriteFile(filepath.Join(dir, "img.png"), pngData, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}},
+	}
+	perm := permission.NewEngine("readonly", dir, false)
+	globTool := &glob.GlobTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"pattern": "**/*"})
+	out, err := globTool.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "img.png") {
+		t.Fatalf("glob should skip binary png: %q", out)
+	}
+	if !strings.Contains(out, "main.go") {
+		t.Fatalf("expected main.go: %q", out)
+	}
+}
+
 func TestListDirTool_skipsSensitiveEntries(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("x"), 0o600); err != nil {
