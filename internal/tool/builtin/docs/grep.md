@@ -35,7 +35,7 @@
 
 ## 实现细节
 
-源文件：`grep.go`
+源文件：[`grep.go`](../grep.go)
 
 1. `filepath.WalkDir` 自 `path` 解析后的绝对根递归。
 2. **跳过**：`.git` 目录、敏感路径、`GitignoreMatcher` 忽略的文件。
@@ -62,6 +62,6 @@
 
 ## 相关代码
 
-- `internal/tool/builtin/grep.go`
-- `internal/tool/builtin/grep_test.go`
-- `internal/tool/display.go` — `FormatGrepDisplay`、`AppendGrepResultSuffix`
+- [`grep.go`](../grep.go)
+- [`grep_test.go`](../grep_test.go)
+- [`display.go`](../../display.go) — `FormatGrepDisplay`、`AppendGrepResultSuffix`

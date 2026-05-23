@@ -35,7 +35,7 @@ wrote path/to/file (N bytes)
 
 ## 实现细节
 
-源文件：`write_file.go`
+源文件：[`write_file.go`](../write_file.go)
 
 1. `Perm.ResolvePath` 解析目标路径。
 2. `os.MkdirAll` 创建父目录（权限 `0755`）。
@@ -60,5 +60,5 @@ wrote path/to/file (N bytes)
 
 ## 相关代码
 
-- `internal/tool/builtin/write_file.go`
-- `internal/tool/display.go` — `FormatWriteFileDisplay`
+- [`write_file.go`](../write_file.go)
+- [`display.go`](../../display.go) — `FormatWriteFileDisplay`

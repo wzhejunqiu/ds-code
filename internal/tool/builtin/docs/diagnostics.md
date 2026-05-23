@@ -45,7 +45,7 @@ path/to/file:行:列 [severity] message
 
 ## 实现细节
 
-源文件：`diagnostics.go`
+源文件：[`diagnostics.go`](../diagnostics.go)
 
 ### 流程
 
@@ -89,6 +89,6 @@ diagnostics.Execute
 
 ## 相关代码
 
-- `internal/tool/builtin/diagnostics.go`
-- `internal/lsp/`
-- `internal/tool/builtin/diagnostics_integration_test.go`
+- [`diagnostics.go`](../diagnostics.go)
+- [`diagnostics_integration_test.go`](../diagnostics_integration_test.go)
+- [`lsp/`](../../../lsp/) — Manager、Client、语言 server 注册

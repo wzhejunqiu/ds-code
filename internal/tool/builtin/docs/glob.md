@@ -35,7 +35,7 @@
 
 ## 实现细节
 
-源文件：`glob.go`
+源文件：[`glob.go`](../glob.go)
 
 ### 两种匹配路径
 
@@ -75,6 +75,6 @@
 
 ## 相关代码
 
-- `internal/tool/builtin/glob.go`
-- `internal/tool/builtin/glob_test.go`
-- `internal/tool/display.go` — `FormatGlobDisplay`
+- [`glob.go`](../glob.go)
+- [`glob_test.go`](../glob_test.go)
+- [`display.go`](../../display.go) — `FormatGlobDisplay`、`AppendPathResultSuffix`

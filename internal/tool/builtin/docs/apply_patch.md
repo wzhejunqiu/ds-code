@@ -40,7 +40,7 @@
 - `*** End of File` 标记 EOF 相关块。
 - 可用 `<<'EOF'` heredoc 包裹（解析器 `unwrapHeredoc`）。
 
-完整语法见 `internal/patch/parser.go`。
+完整语法见 [`patch/parser.go`](../../../patch/parser.go)。
 
 ## 用法示例
 
@@ -60,7 +60,7 @@
 
 ## 实现细节
 
-源文件：`apply_patch.go` → `internal/patch/apply`
+源文件：[`apply_patch.go`](../apply_patch.go) → [`patch/apply/`](../../../patch/apply/)
 
 1. `patch.Parse(patchText, workspace)` 解析为 `[]FileChange`。
 2. 若配置 `max_changed_lines > 0`，先 `patch.CountChangedLines` 校验总量。
@@ -89,7 +89,7 @@
 
 ## 相关代码
 
-- `internal/tool/builtin/apply_patch.go`
-- `internal/patch/parser.go`、`internal/patch/apply/apply.go`
-- `internal/tool/display.go` — `ApplyPatchStarts`、`ApplyPatchFileDisplay`
-- `internal/patch/stats.go` — 变更行数统计（TUI `+N`/`-N`）
+- [`apply_patch.go`](../apply_patch.go)
+- [`parser.go`](../../../patch/parser.go)、[`apply/apply.go`](../../../patch/apply/apply.go)
+- [`display.go`](../../display.go) — `ApplyPatchStarts`、`ApplyPatchFileDisplay`
+- [`stats.go`](../../../patch/stats.go) — 变更行数统计（TUI `+N`/`-N`）

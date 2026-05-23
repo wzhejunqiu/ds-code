@@ -80,7 +80,7 @@ command: ...
 
 ## 实现细节
 
-源文件：`shell.go`
+源文件：[`shell.go`](../shell.go)
 
 ### 同步 `runSync`
 
@@ -116,7 +116,7 @@ command: ...
 
 ## 相关代码
 
-- `internal/tool/builtin/shell.go`
-- `internal/tool/builtin/shell_background_test.go`
-- `internal/tool/shell_display.go`
-- `internal/shelljobs/manager/`
+- [`shell.go`](../shell.go)
+- [`shell_background_test.go`](../shell_background_test.go)
+- [`shell_display.go`](../../shell_display.go)
+- [`shelljobs/manager/`](../../../shelljobs/manager/)

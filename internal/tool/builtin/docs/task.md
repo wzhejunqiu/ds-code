@@ -36,7 +36,7 @@
 
 ## 实现细节
 
-源文件：`task.go`
+源文件：[`task.go`](../task.go)
 
 ### 并发控制
 
@@ -80,7 +80,8 @@
 
 ## 相关代码
 
-- `internal/tool/builtin/task.go`
-- `internal/tool/builtin/task_test.go`
-- `internal/agent/subagent/runner.go`、`README.md`
-- `internal/session/subagentstore/`
+- [`task.go`](../task.go)
+- [`task_test.go`](../task_test.go)
+- [`register_readonly.go`](../register_readonly.go) — 子代理工具集
+- [`subagent/runner.go`](../../../agent/subagent/runner.go)、[`subagent/README.md`](../../../agent/subagent/README.md)
+- [`subagentstore/`](../../../session/subagentstore/)
