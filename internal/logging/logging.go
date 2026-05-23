@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/datadir"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -46,7 +46,7 @@ func TrySetup(opts Options) func() {
 func Setup(opts Options) (func(), error) {
 	prevSensitive := allowSensitive.Load()
 	SetAllowSensitiveData(opts.AllowSensitiveData)
-	logDir, err := config.EnsureLogsDir(opts.ProjectRoot)
+	logDir, err := datadir.EnsureLogsDir(opts.ProjectRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func Setup(opts Options) (func(), error) {
 	L().Info("logging initialized",
 		zap.String("path", logPath),
 		zap.Int("verbosity", opts.Verbosity),
-		zap.String("project_id", config.ProjectID(opts.ProjectRoot)),
+		zap.String("project_id", datadir.ProjectID(opts.ProjectRoot)),
 	)
 	return cleanup, nil
 }
