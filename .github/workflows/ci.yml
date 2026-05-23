@@ -58,7 +58,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6
+          # v2.9+ is built with Go 1.26+; required when go.mod targets go 1.26.x
+          version: v2.12.2
 
       - name: staticcheck
         run: |
