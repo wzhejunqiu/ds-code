@@ -39,7 +39,7 @@ BuildRegistry(runMode, deps)
 - **Agent 模式**：完整写工具与子代理 `task`。
 - **Subagent（`task` 内）**：仅 `RegisterExploreTools`，权限引擎为 `readonly`。
 
-实现入口：[`setup/setup.go`](../../setup/setup.go)、[`register/explore.go`](../../register/explore.go)；各工具见 `<tool>/` 子目录。
+实现入口：[`setup/setup.go`](../setup/setup.go)、[`register/explore.go`](../register/explore.go)；各工具见 `<tool>/` 子目录。
 
 ## 共同实现约定
 
@@ -66,20 +66,20 @@ type Tool interface {
 
 ## 权限级别
 
-定义于 [`permission/level.go`](../../../permission/level.go)：`Low` < `Medium` < `High` < `Highest`。Runner 结合 `permission.mode`（`readonly` / `ask` / `auto`）决定是否向用户确认。
+定义于 [`permission/level.go`](../../permission/level.go)：`Low` < `Medium` < `High` < `Highest`。Runner 结合 `permission.mode`（`readonly` / `ask` / `auto`）决定是否向用户确认。
 
 ## 相关代码
 
-- [`registry.go`](../../registry.go) — `Tool` 接口与 `Registry`
-- [`schema.go`](../../schema.go) — `ObjectSchema`
-- [`setup/setup.go`](../../setup/setup.go) — 按运行模式注册工具
-- [`display.go`](../../display.go) — TUI 工具行展示
-- [`runner_loop.go`](../../../agent/runner_loop.go) — 工具调用与展示回调
+- [`registry.go`](../registry.go) — `Tool` 接口与 `Registry`
+- [`schema.go`](../schema.go) — `ObjectSchema`
+- [`setup/setup.go`](../setup/setup.go) — 按运行模式注册工具
+- [`display.go`](../display.go) — TUI 工具行展示
+- [`runner_loop.go`](../../agent/runner_loop.go) — 工具调用与展示回调
 
 ## 相关文档
 
-- 配置键：[docs/CONFIG.md](../../../../docs/CONFIG.md) — `tools.*`、`web.*`、`lsp.*`
-- 系统设计：[docs/DESIGN.md](../../../../docs/DESIGN.md) §9
-- 产品规划：[docs/PLAN.md](../../../../docs/PLAN.md)
-- TUI 展示：[`display.go`](../../display.go)、[`ui/tui/chattool/`](../../../ui/tui/chattool/)
-- 子代理：[`agent/subagent/README.md`](../../../agent/subagent/README.md)
+- 配置键：[docs/CONFIG.md](../../../docs/CONFIG.md) — `tools.*`、`web.*`、`lsp.*`
+- 系统设计：[docs/DESIGN.md](../../../docs/DESIGN.md) §9
+- 产品规划：[docs/PLAN.md](../../../docs/PLAN.md)
+- TUI 展示：[`display.go`](../display.go)、[`ui/tui/chattool/`](../../ui/tui/chattool/)
+- 子代理：[`agent/subagent/README.md`](../../agent/subagent/README.md)

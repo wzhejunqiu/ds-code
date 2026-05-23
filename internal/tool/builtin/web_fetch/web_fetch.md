@@ -35,7 +35,7 @@ HTTP {status_code}
 
 ## 实现细节
 
-源文件：[`web_fetch.go`](../web_fetch.go)、[`web_fetch_policy.go`](../web_fetch_policy.go)
+源文件：[`web_fetch.go`](web_fetch.go)、[`web_fetch_policy.go`](web_fetch_policy.go)
 
 ### 多层校验
 
@@ -73,7 +73,7 @@ HTTP {status_code}
 
 ## 相关代码
 
-- [`web_fetch.go`](../web_fetch.go)
-- [`web_fetch_policy.go`](../web_fetch_policy.go)
-- [`web_fetch_test.go`](../web_fetch_test.go)、[`web_fetch_policy_test.go`](../web_fetch_policy_test.go)
+- [`web_fetch.go`](web_fetch.go)
+- [`web_fetch_policy.go`](web_fetch_policy.go)
+- [`web_fetch_test.go`](web_fetch_test.go)、[`web_fetch_policy_test.go`](web_fetch_policy_test.go)
 - [`display.go`](../../display.go) — `FormatWebFetchDisplay`

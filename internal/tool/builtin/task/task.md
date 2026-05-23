@@ -36,7 +36,7 @@
 
 ## 实现细节
 
-源文件：[`task.go`](../task.go)
+源文件：[`task.go`](task.go)
 
 ### 并发控制
 
@@ -80,8 +80,8 @@
 
 ## 相关代码
 
-- [`task.go`](../task.go)
-- [`task_test.go`](../task_test.go)
-- [`register_readonly.go`](../register_readonly.go) — 子代理工具集
+- [`task.go`](task.go)
+- [`task_test.go`](task_test.go)
+- [`explore.go`](../../register/explore.go) — 子代理工具集（`RegisterExploreTools`）
 - [`subagent/runner.go`](../../../agent/subagent/runner.go)、[`subagent/README.md`](../../../agent/subagent/README.md)
 - [`subagentstore/`](../../../session/subagentstore/)

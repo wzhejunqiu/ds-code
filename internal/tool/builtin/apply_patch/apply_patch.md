@@ -60,7 +60,7 @@
 
 ## 实现细节
 
-源文件：[`apply_patch.go`](../apply_patch.go) → [`patch/apply/`](../../../patch/apply/)
+源文件：[`apply_patch.go`](apply_patch.go) → [`patch/apply/`](../../../patch/apply/)
 
 1. `patch.Parse(patchText, workspace)` 解析为 `[]FileChange`。
 2. 若配置 `max_changed_lines > 0`，先 `patch.CountChangedLines` 校验总量。
@@ -89,7 +89,7 @@
 
 ## 相关代码
 
-- [`apply_patch.go`](../apply_patch.go)
+- [`apply_patch.go`](apply_patch.go)
 - [`parser.go`](../../../patch/parser.go)、[`apply/apply.go`](../../../patch/apply/apply.go)
 - [`display.go`](../../display.go) — `ApplyPatchStarts`、`ApplyPatchFileDisplay`
 - [`stats.go`](../../../patch/stats.go) — 变更行数统计（TUI `+N`/`-N`）

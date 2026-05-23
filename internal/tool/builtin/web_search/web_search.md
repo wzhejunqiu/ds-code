@@ -48,5 +48,5 @@
 
 ## 相关代码
 
-- [`web_search.go`](../web_search.go)
+- [`web_search.go`](web_search.go)
 - [`setup/setup.go`](../../setup/setup.go) — 注册占位说明

@@ -39,7 +39,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 ## 实现细节
 
-源文件：[`read_file.go`](../read_file.go)
+源文件：[`read_file.go`](read_file.go)
 
 1. **权限**：`Perm.CheckReadablePath` 解析路径并拒绝敏感文件。
 2. **体积预检**：`os.Stat` 检查文件字节数 ≤ `tools.read_file.max_bytes`（默认 2MiB），超限直接报错，不读入内存。
@@ -66,6 +66,6 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 ## 相关代码
 
-- [`read_file.go`](../read_file.go)
-- [`read_file_test.go`](../read_file_test.go)
+- [`read_file.go`](read_file.go)
+- [`read_file_test.go`](read_file_test.go)
 - [`display.go`](../../display.go) — `FormatReadFileDisplay`、`ReadFileLineRange`、`AppendReadFileLineRange`

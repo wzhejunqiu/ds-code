@@ -37,7 +37,7 @@
 
 ## 实现细节
 
-源文件：[`list_dir.go`](../list_dir.go)
+源文件：[`list_dir.go`](list_dir.go)
 
 1. `Perm.CheckReadablePath` 解析目录。
 2. `os.ReadDir` 读取一层。
@@ -63,6 +63,6 @@
 
 ## 相关代码
 
-- [`list_dir.go`](../list_dir.go)
-- [`glob_test.go`](../glob_test.go)（与 list_dir 联合测试）
+- [`list_dir.go`](list_dir.go)
+- [`glob_test.go`](../glob/glob_test.go)（与 list_dir 联合测试）
 - [`display.go`](../../display.go) — `AppendPathResultSuffix`
