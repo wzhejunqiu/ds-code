@@ -14,8 +14,8 @@ func TestRenderUserHighlightNoLabels(t *testing.T) {
 		{Role: RoleUser},
 		{Role: RoleAssistant},
 	}
-	blocks[0].Content.WriteString("你好")
-	blocks[1].Content.WriteString("你好！")
+	blocks[0].Content = "你好"
+	blocks[1].Content = "你好！"
 
 	out := Render(blocks, 40, time.Now(), false)
 	if strings.Contains(out, "You") || strings.Contains(out, "Assistant") {
@@ -37,7 +37,7 @@ func TestRenderReasoningExpandedWhileThinking(t *testing.T) {
 		ReasoningStartedAt: started,
 		Streaming:          true,
 	}}
-	blocks[0].Reasoning.WriteString("think step")
+	blocks[0].Reasoning = "think step"
 
 	out := Render(blocks, 60, time.Now(), false)
 	if !strings.Contains(out, "think step") {
@@ -57,8 +57,8 @@ func TestRenderReasoningCollapsedAfterThinking(t *testing.T) {
 		ReasoningStartedAt: started,
 		ReasoningEndedAt:   ended,
 	}}
-	blocks[0].Reasoning.WriteString("think step")
-	blocks[0].Content.WriteString("answer")
+	blocks[0].Reasoning = "think step"
+	blocks[0].Content = "answer"
 
 	out := Render(blocks, 60, time.Now(), false)
 	if strings.Contains(out, "think step") {
@@ -71,7 +71,7 @@ func TestRenderReasoningCollapsedAfterThinking(t *testing.T) {
 
 func TestRenderTurnDuration(t *testing.T) {
 	blocks := []Block{{Role: RoleAssistant}}
-	blocks[0].Content.WriteString("done")
+	blocks[0].Content = "done"
 	blocks[0].TurnDuration = 5*time.Second + 200*time.Millisecond
 
 	out := Render(blocks, 40, time.Now(), false)
@@ -111,7 +111,7 @@ func TestRenderAssistantMarkdown(t *testing.T) {
 
 func TestRenderUserFullWidthBackground(t *testing.T) {
 	blocks := []Block{{Role: RoleUser}}
-	blocks[0].Content.WriteString("hi")
+	blocks[0].Content = "hi"
 
 	out := Render(blocks, 30, time.Now(), false)
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")

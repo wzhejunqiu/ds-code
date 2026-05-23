@@ -84,7 +84,7 @@ func (r *Registry) Start(id, label, prompt string) *Record {
 	}
 	if prompt != "" {
 		blk := chat.Block{Role: chat.RoleUser}
-		blk.Content.WriteString(prompt)
+		blk.AppendContent(prompt)
 		rec.Chat = append(rec.Chat, blk)
 		rec.Chat = append(rec.Chat, chat.Block{
 			Role:              chat.RoleAssistant,
@@ -123,7 +123,7 @@ func (r *Registry) End(id, summary string, runErr error) {
 	rec.Status = StatusDone
 	if summary != "" {
 		blk := chat.Block{Role: chat.RoleAssistant}
-		blk.Content.WriteString(summary)
+		blk.AppendContent(summary)
 		rec.Chat = append(rec.Chat, blk)
 	}
 }
@@ -144,7 +144,8 @@ func (r *Registry) ToolEnd(id, name, args, command, result string, isError bool)
 	}
 	finishToolBlock(rec, name, args, command, result, isError)
 	rec.ToolLines = rec.ToolLines[:0]
-	for _, b := range rec.Chat {
+	for i := range rec.Chat {
+		b := &rec.Chat[i]
 		if b.Role == chat.RoleTool {
 			preview := b.ToolResult
 			if preview == "" && b.ToolRunning {

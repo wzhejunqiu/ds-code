@@ -13,7 +13,7 @@ import (
 func UpdateSlashOutput(s *state.State, m msg.SlashOutputMsg, syncChat func()) tea.Cmd {
 	if m.Text != "" {
 		s.Chat = append(s.Chat, chat.Block{Role: chat.RoleAssistant})
-		s.Chat[len(s.Chat)-1].Content.WriteString(m.Text)
+		s.Chat[len(s.Chat)-1].AppendContent(m.Text)
 	}
 	syncChat()
 	return nil

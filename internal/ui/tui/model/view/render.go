@@ -164,7 +164,7 @@ func RefreshStatus(s *state.State) {
 		snap.PromptTokensTotal, snap.CompletionTokensTotal, snap.PromptCacheHitTokensTotal, next)
 }
 
-func Render(s *state.State, chatVP, toolVP *viewport.Model, input textinput.Model) string {
+func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model) string {
 	if s.Width == 0 {
 		return style.App.Render("Loading…\n")
 	}
@@ -180,7 +180,10 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input textinput.Mode
 		b.WriteString("\n")
 	}
 
-	inputBody := input.View()
+	var inputBody string
+	if input != nil {
+		inputBody = input.View()
+	}
 	if s.Running {
 		inputBody = style.FooterHint.Render("Working… · Esc to cancel")
 	}

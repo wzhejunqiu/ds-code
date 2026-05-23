@@ -105,5 +105,5 @@ func (m *Model) refreshStatus() {
 }
 
 func (m *Model) View() string {
-	return view.Render(&m.State, &m.chatVP, &m.toolVP, m.input)
+	return view.Render(&m.State, &m.chatVP, &m.toolVP, &m.input)
 }

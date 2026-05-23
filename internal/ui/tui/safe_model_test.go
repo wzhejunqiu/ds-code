@@ -87,20 +87,36 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 	sm.inner.TestSyncResumePicker()
 
 	enter := tea.KeyMsg{Type: tea.KeyEnter}
-	for i := 0; i < 2; i++ {
-		updated, cmd := sm.Update(enter)
-		if s, ok := updated.(*safeModel); ok {
+
+	updated, resumeCmd := sm.Update(enter)
+	if s, ok := updated.(*safeModel); ok {
+		sm = s
+	}
+	if resumeCmd == nil {
+		t.Fatal("expected resume cmd on first enter")
+	}
+
+	// Second enter while resume is in flight must not start another resume or corrupt state.
+	updated2, cmd2 := sm.Update(enter)
+	if s, ok := updated2.(*safeModel); ok {
+		sm = s
+	}
+	if cmd2 != nil {
+		t.Fatal("second enter should be ignored while resume is pending")
+	}
+
+	if msg := resumeCmd(); msg != nil {
+		updated3, _ := sm.Update(msg)
+		if s, ok := updated3.(*safeModel); ok {
 			sm = s
 		}
-		if cmd != nil {
-			if msg := cmd(); msg != nil {
-				updated2, _ := sm.Update(msg)
-				if s, ok := updated2.(*safeModel); ok {
-					sm = s
-				}
-			}
-		}
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("View panicked: %v", r)
+		}
+	}()
 	_ = sm.View()
 }
 

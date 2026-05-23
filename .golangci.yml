@@ -8,6 +8,10 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+  settings:
+    govet:
+      enable:
+        - copylocks
   exclusions:
     generated: lax
     presets:

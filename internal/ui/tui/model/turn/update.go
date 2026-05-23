@@ -100,7 +100,8 @@ func UpdateToolEnd(s *state.State, m msg.ToolEndMsg, syncChat, syncTool SyncFn) 
 	withMainChat(s, func() {
 		FinishToolBlock(s, m.Name, m.Args, m.Command, m.Result, m.IsError)
 		s.ToolLines = s.ToolLines[:0]
-		for _, b := range s.Chat {
+		for i := range s.Chat {
+			b := &s.Chat[i]
 			if b.Role == chat.RoleTool {
 				preview := b.ToolResult
 				if preview == "" && b.ToolRunning {

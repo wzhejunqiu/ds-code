@@ -146,4 +146,18 @@ TUI 工具块标题由 `internal/tool.DisplaySummary` 生成人类可读单行�
 
 `grep`/`glob`/`list_dir` 结束时可能追加 `· N matches` / `· N paths`。持久化会话中的 `ToolCallsJSON` 仍为原始 JSON；仅展示层变化。
 
+## 不可复制类型（传参与遍历）
+
+部分依赖在按值复制后会破坏堆/GC 语义（`-race` 下可能表现为 `found bad pointer in Go heap`，不一定有 `DATA RACE` 报告）。TUI 代码应遵守：
+
+| 类型 | 约定 |
+|------|------|
+| `state.State`（含 `sync.WaitGroup`） | 仅 `*state.State` 传递，禁止按值复制 |
+| `textinput.Model` / `viewport.Model` | 可放在 `model.Model` 内按 bubbles 惯例持有；**跨函数**传 `*textinput.Model` / `*viewport.Model`（见 `model/view.Render`） |
+| `lipgloss.Style` | 包级变量可直接 `.Render`；跨函数或循环内用 `*lipgloss.Style`，勿 `s2 := style` 后在多行渲染中复用 |
+| `strings.Builder` | 仅作函数内局部变量；**不要**放入会被 `range` 或赋值复制的 struct（`chat.Block` 使用 `string`） |
+| `chat.Block` | 可按值存在于 slice 中；遍历需读内容时用 `for i := range blocks { b := &blocks[i] }` |
+
+本地检查：`make vet`（`go vet -copylocks ./...`）。
+
 配置路径与 YAML 键见 `internal/config/README.md` 与 `docs/CONFIG.md`。

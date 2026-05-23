@@ -23,10 +23,10 @@ func TestBlocksFromMessages(t *testing.T) {
 	if len(blocks) != 3 {
 		t.Fatalf("got %d blocks, want 3", len(blocks))
 	}
-	if blocks[0].Role != chat.RoleUser || blocks[0].Content.String() != "hello" {
+	if blocks[0].Role != chat.RoleUser || blocks[0].Content != "hello" {
 		t.Fatalf("user block: %+v", blocks[0])
 	}
-	if blocks[1].Role != chat.RoleAssistant || blocks[1].Content.String() != "hi" || blocks[1].Reasoning.String() != "think" {
+	if blocks[1].Role != chat.RoleAssistant || blocks[1].Content != "hi" || blocks[1].Reasoning != "think" {
 		t.Fatalf("assistant block: %+v", blocks[1])
 	}
 	if !blocks[1].ReasoningOpen {
@@ -49,7 +49,7 @@ func TestBlocksFromMessages_reasoningBeforeTools(t *testing.T) {
 	if len(blocks) != 2 {
 		t.Fatalf("got %d blocks, want 2", len(blocks))
 	}
-	if blocks[0].Role != chat.RoleAssistant || blocks[0].Reasoning.String() != "think first" {
+	if blocks[0].Role != chat.RoleAssistant || blocks[0].Reasoning != "think first" {
 		t.Fatalf("assistant block first: %+v", blocks[0])
 	}
 	if blocks[1].Role != chat.RoleTool {

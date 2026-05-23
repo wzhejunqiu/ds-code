@@ -37,8 +37,8 @@ func TestApplyTurnMetrics_prefersLastAssistantWithContent(t *testing.T) {
 		{Role: chat.RoleTool, ToolName: "read_file"},
 		{Role: chat.RoleAssistant},
 	}
-	m.Chat[1].Content.WriteString("preamble")
-	m.Chat[3].Reasoning.WriteString("think")
+	m.Chat[1].Content = "preamble"
+	m.Chat[3].Reasoning = "think"
 
 	turn.ApplyTurnMetrics(&m.State, &agent.TurnResult{
 		TurnDuration:           5*time.Second + 200*time.Millisecond,

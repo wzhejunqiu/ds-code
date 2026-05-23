@@ -21,15 +21,16 @@ func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace st
 		msg := msgs[i]
 		switch msg.Role {
 		case role.User:
-			b := chat.Block{Role: chat.RoleUser}
-			b.Content.WriteString(msg.Content)
-			blocks = append(blocks, b)
+			blocks = append(blocks, chat.Block{Role: chat.RoleUser, Content: msg.Content})
 		case role.Assistant:
 			calls := parseToolCalls(msg.ToolCallsJSON)
 			if msg.Content != "" || msg.ReasoningContent != "" {
-				b := chat.Block{Role: chat.RoleAssistant, ReasoningOpen: reasoningOpen}
-				b.Content.WriteString(msg.Content)
-				b.Reasoning.WriteString(msg.ReasoningContent)
+				b := chat.Block{
+					Role:          chat.RoleAssistant,
+					ReasoningOpen: reasoningOpen,
+					Content:       msg.Content,
+					Reasoning:     msg.ReasoningContent,
+				}
 				if msg.ReasoningDurationMS > 0 {
 					b.ReasoningDuration = time.Duration(msg.ReasoningDurationMS) * time.Millisecond
 				}

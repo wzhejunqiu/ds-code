@@ -176,7 +176,7 @@ func SubmitLine(s *state.State, line string, syncChat, syncTool func()) tea.Cmd 
 		s.MainChat = s.Chat
 	}
 	s.MainChat = append(s.MainChat, chat.Block{Role: chat.RoleUser})
-	s.MainChat[len(s.MainChat)-1].Content.WriteString(line)
+	s.MainChat[len(s.MainChat)-1].AppendContent(line)
 	s.Subagents = subagent.Registry{}
 	s.SubagentNav = state.SubagentNavMain
 	s.ViewingSubagentID = ""

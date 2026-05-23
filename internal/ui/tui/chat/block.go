@@ -1,15 +1,12 @@
 package chat
 
-import (
-	"strings"
-	"time"
-)
+import "time"
 
 // Block is one row in the in-memory transcript (rendered by Render).
 type Block struct {
 	Role               Role
-	Content            strings.Builder
-	Reasoning          strings.Builder
+	Content            string
+	Reasoning          string
 	ReasoningOpen      bool
 	ReasoningStartedAt time.Time
 	ReasoningEndedAt   time.Time
@@ -29,12 +26,12 @@ type Block struct {
 
 // AppendContent appends assistant/user visible text.
 func (b *Block) AppendContent(s string) {
-	b.Content.WriteString(s)
+	b.Content += s
 }
 
 // AppendReasoning appends thinking trace text.
 func (b *Block) AppendReasoning(s string) {
-	b.Reasoning.WriteString(s)
+	b.Reasoning += s
 }
 
 // FinalizeReasoning closes the thinking phase for this assistant segment.

@@ -16,23 +16,24 @@ func Render(blocks []Block, width int, now time.Time, showToolDetails bool) stri
 	}
 	var lines []string
 
-	for _, b := range blocks {
+	for i := range blocks {
+		b := &blocks[i]
 		switch b.Role {
 		case RoleUser:
-			lines = append(lines, renderUserBlock(b.Content.String(), width)...)
+			lines = append(lines, renderUserBlock(b.Content, width)...)
 			lines = append(lines, "")
 		case RoleAssistant:
 			indent := lipgloss.Width(assistantBullet)
-			if b.Reasoning.Len() > 0 || b.ReasoningDuration > 0 || !b.ReasoningStartedAt.IsZero() {
+			if b.Reasoning != "" || b.ReasoningDuration > 0 || !b.ReasoningStartedAt.IsZero() {
 				expanded := reasoningExpanded(b)
 				label := reasoningBlockLabel(expanded, b.ReasoningStartedAt, b.ReasoningEndedAt, now, b.ReasoningDuration)
 				lines = append(lines, styleReason.Render(strings.Repeat(" ", indent)+label))
-				if expanded && b.Reasoning.Len() > 0 {
-					lines = append(lines, styleReason.Render(markdown.WrapText(b.Reasoning.String(), width-indent)))
+				if expanded && b.Reasoning != "" {
+					lines = append(lines, styleReason.Render(markdown.WrapText(b.Reasoning, width-indent)))
 				}
 			}
-			if b.Content.Len() > 0 {
-				lines = append(lines, renderAssistantBlock(b.Content.String(), width)...)
+			if b.Content != "" {
+				lines = append(lines, renderAssistantBlock(b.Content, width)...)
 			} else if b.Streaming {
 				lines = append(lines, renderAssistantLine(styleReason.Render("…")))
 			}

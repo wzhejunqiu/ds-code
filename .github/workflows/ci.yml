@@ -24,7 +24,7 @@ jobs:
         run: ./scripts/fetch-tokenizers-lib.sh
 
       - name: go vet
-        run: go vet ./...
+        run: go vet -copylocks ./...
 
       - name: go test
         run: go test -race -count=1 ./...
@@ -41,7 +41,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-
+      - name: Install tokenizers static lib (linux)
+        run: ./scripts/fetch-tokenizers-lib.sh
       - name: Install gopls
         run: go install golang.org/x/tools/gopls@latest
 

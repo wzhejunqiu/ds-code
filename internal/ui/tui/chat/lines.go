@@ -12,7 +12,7 @@ func renderUserBlock(content string, width int) []string {
 }
 
 func renderAssistantBlock(content string, width int) []string {
-	return markdown.RenderPrefixedBlock(assistantBullet, styleBullet, content, width, lipgloss.Width(assistantBullet))
+	return markdown.RenderPrefixedBlock(assistantBullet, &styleBullet, content, width, lipgloss.Width(assistantBullet))
 }
 
 func renderHighlightedBlock(prefix, content string, width, indent int) []string {
@@ -33,16 +33,19 @@ func renderHighlightedBlock(prefix, content string, width, indent int) []string 
 }
 
 func renderAssistantLine(body string) string {
-	return renderPlainPrefixedLine(assistantBullet, styleBullet, body)
+	return renderPlainPrefixedLine(assistantBullet, &styleBullet, body)
 }
 
 func renderHighlightedLine(prefix, text string, width int) string {
 	return styleUserBg.Width(width).Align(lipgloss.Left).Render(prefix + text)
 }
 
-func renderPlainPrefixedLine(prefix string, prefixStyle lipgloss.Style, body string) string {
+func renderPlainPrefixedLine(prefix string, prefixStyle *lipgloss.Style, body string) string {
 	if prefix == "" {
 		return body
+	}
+	if prefixStyle == nil {
+		return prefix + body
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, prefixStyle.Render(prefix), body)
 }

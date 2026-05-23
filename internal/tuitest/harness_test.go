@@ -155,7 +155,7 @@ func chatText(m *model.Model) string {
 		return ""
 	}
 	for _, blk := range m.State.MainChat {
-		b.WriteString(blk.Content.String())
+		b.WriteString(blk.Content)
 	}
 	return b.String()
 }

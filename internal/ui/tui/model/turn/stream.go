@@ -27,7 +27,7 @@ func ApplyTurnMetrics(s *state.State, result *agent.TurnResult) {
 		if idx < 0 {
 			idx = i
 		}
-		if s.Chat[i].Content.Len() > 0 {
+		if s.Chat[i].Content != "" {
 			idx = i
 			break
 		}

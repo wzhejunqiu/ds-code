@@ -53,7 +53,8 @@ func renderSegment(content string, width int) (string, error) {
 }
 
 // RenderPrefixedBlock renders markdown with a leading prefix on the first line.
-func RenderPrefixedBlock(prefix string, prefixStyle lipgloss.Style, content string, width, indent int) []string {
+// prefixStyle must not be copied after use; pass a pointer to a long-lived Style value.
+func RenderPrefixedBlock(prefix string, prefixStyle *lipgloss.Style, content string, width, indent int) []string {
 	bodyWidth := width - indent
 	if bodyWidth < 1 {
 		bodyWidth = 1
@@ -75,18 +76,17 @@ func RenderPrefixedBlock(prefix string, prefixStyle lipgloss.Style, content stri
 		if strings.TrimSpace(StripANSI(line)) == "" {
 			continue
 		}
-		p, ps := prefix, prefixStyle
 		if i > 0 {
-			p = strings.Repeat(" ", indent)
-			ps = lipgloss.NewStyle()
+			out = append(out, joinPrefixedLine(strings.Repeat(" ", indent), nil, line))
+			continue
 		}
-		out = append(out, joinPrefixedLine(p, ps, line))
+		out = append(out, joinPrefixedLine(prefix, prefixStyle, line))
 	}
 	return out
 }
 
 // RenderPlainPrefixedBlock wraps plain text with a prefix column.
-func RenderPlainPrefixedBlock(prefix string, prefixStyle lipgloss.Style, content string, width, indent int) []string {
+func RenderPlainPrefixedBlock(prefix string, prefixStyle *lipgloss.Style, content string, width, indent int) []string {
 	wrapped := WrapText(strings.TrimRight(content, "\n"), width-indent)
 	if wrapped == "" {
 		return nil
@@ -94,19 +94,21 @@ func RenderPlainPrefixedBlock(prefix string, prefixStyle lipgloss.Style, content
 	lines := strings.Split(wrapped, "\n")
 	out := make([]string, 0, len(lines))
 	for i, line := range lines {
-		p, ps := prefix, prefixStyle
 		if i > 0 {
-			p = strings.Repeat(" ", indent)
-			ps = lipgloss.NewStyle()
+			out = append(out, joinPrefixedLine(strings.Repeat(" ", indent), nil, line))
+			continue
 		}
-		out = append(out, joinPrefixedLine(p, ps, line))
+		out = append(out, joinPrefixedLine(prefix, prefixStyle, line))
 	}
 	return out
 }
 
-func joinPrefixedLine(prefix string, prefixStyle lipgloss.Style, body string) string {
+func joinPrefixedLine(prefix string, prefixStyle *lipgloss.Style, body string) string {
 	if prefix == "" {
 		return body
+	}
+	if prefixStyle == nil {
+		return prefix + body
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, prefixStyle.Render(prefix), body)
 }
