@@ -13,8 +13,6 @@ import (
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
 
-const defaultMaxResults = 100
-
 // GlobTool finds paths matching a glob under the workspace.
 type GlobTool struct {
 	Cfg       *config.Config
@@ -64,7 +62,7 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	}
 	limit := t.Cfg.Tools.Glob.MaxResults
 	if limit <= 0 {
-		limit = defaultMaxResults
+		limit = builtin.DefaultMaxResults
 	}
 
 	candidates, err := builtin.CollectGlobPattern(ctx, t.Perm, root, in.Pattern, builtin.FileFilter{}, t.gitignoreIgnored)

@@ -86,19 +86,20 @@ func TestValidateGlobMatches_rejectsOutsideWorkspace(t *testing.T) {
 	}
 }
 
-func TestCollectGlobPattern_ordersNotApplied(t *testing.T) {
+func TestCollectGlobPattern_preservesMatchOrderNotModTime(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "old.go"), []byte("x\n"), 0o644); err != nil {
+	aFirst := filepath.Join(dir, "a_first.go")
+	zLast := filepath.Join(dir, "z_last.go")
+	if err := os.WriteFile(aFirst, []byte("x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	newF := filepath.Join(dir, "new.go")
-	if err := os.WriteFile(newF, []byte("y\n"), 0o644); err != nil {
+	if err := os.WriteFile(zLast, []byte("y\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	oldTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	newTime := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
-	_ = os.Chtimes(filepath.Join(dir, "old.go"), oldTime, oldTime)
-	_ = os.Chtimes(newF, newTime, newTime)
+	_ = os.Chtimes(aFirst, oldTime, oldTime)
+	_ = os.Chtimes(zLast, newTime, newTime)
 
 	perm := permission.NewEngine("readonly", dir, false)
 	out, err := builtin.CollectGlobPattern(context.Background(), perm, dir, "*.go", builtin.FileFilter{}, nil)
@@ -107,5 +108,17 @@ func TestCollectGlobPattern_ordersNotApplied(t *testing.T) {
 	}
 	if len(out) != 2 {
 		t.Fatalf("expected 2 candidates, got %d", len(out))
+	}
+	// filepath.Glob order is lexical; mtime desc would put z_last first.
+	if out[0].Rel != "a_first.go" || out[1].Rel != "z_last.go" {
+		t.Fatalf("CollectGlobPattern should not sort by ModTime: got %q, %q", out[0].Rel, out[1].Rel)
+	}
+	sorted := append([]builtin.FileCandidate(nil), out...)
+	builtin.SortByModTimeDesc(sorted,
+		func(c builtin.FileCandidate) time.Time { return c.ModTime },
+		func(c builtin.FileCandidate) string { return c.Rel },
+	)
+	if sorted[0].Rel != "z_last.go" {
+		t.Fatalf("caller sort should order by mtime: got %q first", sorted[0].Rel)
 	}
 }

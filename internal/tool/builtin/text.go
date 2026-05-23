@@ -31,6 +31,9 @@ const (
 	ErrPatternTooLong         = "pattern 过长（最多 512 字符）"
 )
 
+// DefaultMaxResults is the fallback when tools.glob.max_results is unset or non-positive.
+const DefaultMaxResults = 100
+
 // Truncation / limit suffixes (shared).
 const (
 	TruncatedAtMatches = "... 已截断，共 %d 条匹配"
