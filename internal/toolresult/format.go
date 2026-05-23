@@ -14,14 +14,15 @@ func FormatToolResult(name, callID, body string) string {
 
 // FormatToolError wraps a permission or execution error.
 func FormatToolError(name, callID string, err error) string {
-	return FormatToolResult(name, callID, "error: "+err.Error())
+	return FormatToolResult(name, callID, ToolErrorPrefix+err.Error())
 }
 
 // UnpackToolBody extracts the inner body from a formatted tool result or error wrapper.
 func UnpackToolBody(formatted string) (body string, isError bool) {
 	const prefix = "<tool_result"
 	if !strings.HasPrefix(formatted, prefix) {
-		return formatted, strings.HasPrefix(strings.TrimSpace(formatted), "error:")
+		trimmed := strings.TrimSpace(formatted)
+		return formatted, strings.HasPrefix(trimmed, ToolErrorPrefix) || strings.HasPrefix(trimmed, "error:")
 	}
 	start := strings.Index(formatted, ">\n")
 	if start < 0 {
@@ -34,7 +35,7 @@ func UnpackToolBody(formatted string) (body string, isError bool) {
 	} else {
 		body = formatted[start:end]
 	}
-	isError = strings.HasPrefix(body, "error: ")
+	isError = strings.HasPrefix(body, ToolErrorPrefix) || strings.HasPrefix(body, "error:")
 	return body, isError
 }
 
@@ -44,7 +45,7 @@ func TruncateToolResult(body string, cfg *config.Config) string {
 	if max <= 0 || len(body) <= max {
 		return body
 	}
-	suffix := "\n... [truncated; use offset/limit or narrower query]"
+	suffix := TruncateSuffix
 	if len(suffix) >= max {
 		return body[:max]
 	}

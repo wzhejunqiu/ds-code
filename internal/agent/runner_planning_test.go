@@ -15,7 +15,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin/read_file"
 )
 
 // getFailMemoryStore fails Get once tool messages exist (simulates round>0 prepare failure).
@@ -102,7 +102,7 @@ func TestRunTurn_planningStartOnLaterRounds(t *testing.T) {
 
 	perm := permission.NewEngine("auto", dir, false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	reg.Register(&read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
 
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{
@@ -156,7 +156,7 @@ func TestRunTurn_prepareFailureEndsPlanning(t *testing.T) {
 
 	perm := permission.NewEngine("auto", dir, false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	reg.Register(&read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
 
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{

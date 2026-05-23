@@ -18,7 +18,8 @@ import (
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin/read_file"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin/write_file"
 )
 
 func TestRunner_multiRoundTool(t *testing.T) {
@@ -36,7 +37,7 @@ func TestRunner_multiRoundTool(t *testing.T) {
 
 	perm := permission.NewEngine("auto", dir, false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	reg.Register(&read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
 
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{
@@ -188,7 +189,7 @@ func TestRunner_cancelledDuringToolRound(t *testing.T) {
 	llmClient := &cancelOnNthChat{n: 2, cancel: cancel, inner: inner}
 	perm := permission.NewEngine("auto", dir, false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	reg.Register(&read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
 	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
 	r := &agent.Runner{
 		LLM:      llmClient,
@@ -232,7 +233,7 @@ func TestRunner_permissionDenied(t *testing.T) {
 	dir := t.TempDir()
 	perm := permission.NewEngine("readonly", dir, false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.WriteFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	reg.Register(&write_file.WriteFileTool{Cfg: cfg, Perm: perm, Strict: false})
 
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{{
@@ -296,7 +297,7 @@ func TestRunner_exceededMaxSubRounds(t *testing.T) {
 
 	perm := permission.NewEngine("auto", t.TempDir(), false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	reg.Register(&read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false})
 	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
 	r := &agent.Runner{
 		LLM:      mockLLM,

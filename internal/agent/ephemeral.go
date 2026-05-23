@@ -51,9 +51,9 @@ func (r *Runner) RunEphemeral(ctx context.Context, prompt string, opts Ephemeral
 
 	system := opts.MergedSystem
 	if system == "" {
-		system = "You answer brief side questions. Do not assume tool access."
+		system = BTWDefaultSystem
 		if r.Context != nil && r.Context.AgentsMD != "" {
-			system += "\n\n## AGENTS.md\n" + r.Context.AgentsMD
+			system += BTWAgentsHeader + r.Context.AgentsMD
 		}
 	}
 

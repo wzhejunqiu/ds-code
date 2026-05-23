@@ -14,7 +14,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin/write_file"
 )
 
 func TestRunner_createsCheckpointBeforeWriteFile(t *testing.T) {
@@ -31,7 +31,7 @@ func TestRunner_createsCheckpointBeforeWriteFile(t *testing.T) {
 	cfg.ProjectRoot = dir
 	perm := permission.NewEngine("auto", dir, false)
 	reg := tool.NewRegistry()
-	reg.Register(&builtin.WriteFileTool{Cfg: cfg, Perm: perm, Strict: false})
+	reg.Register(&write_file.WriteFileTool{Cfg: cfg, Perm: perm, Strict: false})
 
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{{

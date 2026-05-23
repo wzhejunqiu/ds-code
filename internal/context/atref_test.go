@@ -102,7 +102,7 @@ func TestAtExpander_sensitiveDenied(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "error:") {
+	if !strings.Contains(out, "错误:") {
 		t.Fatalf("expected permission error in output: %q", out)
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/agent/subagent"
 	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/tool/register"
 )
 
 func Task(env *Env, args string) error {
@@ -41,7 +41,7 @@ func Task(env *Env, args string) error {
 
 	gi, _ := tool.LoadGitignore(env.Cfg.ProjectRoot)
 	summary, err := subagent.Run(env.Ctx, env.Cfg, env.Runner.LLM, prompt, func(reg *tool.Registry) {
-		builtin.RegisterExploreTools(reg, env.Cfg, env.Runner.Perm, gi, env.Cfg.LLM.StrictTools)
+		register.ExploreTools(reg, env.Cfg, env.Runner.Perm, gi, env.Cfg.LLM.StrictTools)
 	}, sub, run, nil)
 	status := subagentstore.StatusDone
 	errMsg := ""

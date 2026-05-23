@@ -85,12 +85,10 @@ func (s *Service) summarize(ctx context.Context, sess session.Session, transcrip
 	if s.Cfg.LLM.MaxTokens > 0 && s.Cfg.LLM.MaxTokens < maxOut {
 		maxOut = s.Cfg.LLM.MaxTokens
 	}
-	prompt := `Summarize the following conversation for continuing work. Preserve: goals, decisions, file paths, errors, and open tasks. Do not include secrets or credentials. Be concise.
-
-` + transcript
+	prompt := CompactSummarizeUserPrefix + transcript
 
 	resp, err := s.LLM.Chat(ctx, llm.Request{
-		MergedSystem: "You produce concise technical conversation summaries.",
+		MergedSystem: CompactSummarizeSystem,
 		Messages:     []llm.Message{{Role: role.User, Content: prompt}},
 		Model:        sess.Model,
 		MaxTokens:    maxOut,
@@ -115,7 +113,7 @@ func (s *Service) compactFallback(ctx context.Context, sessionID string, turns [
 		if watermark > st.CompactUpToMessageID {
 			st.CompactUpToMessageID = watermark
 			if st.CompactSummary == "" {
-				st.CompactSummary = "[Older turns omitted from API context; run /compact when online for a full summary.]"
+				st.CompactSummary = CompactFallbackSummary
 			}
 		}
 		return nil
@@ -125,28 +123,28 @@ func (s *Service) compactFallback(ctx context.Context, sessionID string, turns [
 func formatTurnsForCompact(turns []session.UserTurn) string {
 	var b strings.Builder
 	for i, t := range turns {
-		fmt.Fprintf(&b, "--- Turn %d ---\n", i+1)
+		fmt.Fprintf(&b, CompactTurnLabel, i+1)
 		for _, m := range t.Messages {
 			switch m.Role {
 			case role.System:
 				continue
 			case role.User:
-				b.WriteString("User: ")
+				b.WriteString(CompactRoleUser)
 				b.WriteString(truncateCompact(m.Content, 8000))
 				b.WriteByte('\n')
 			case role.Assistant:
 				if m.ReasoningContent != "" {
-					b.WriteString("Assistant (reasoning): ")
+					b.WriteString(CompactRoleAssistantReason)
 					b.WriteString(truncateCompact(m.ReasoningContent, 4000))
 					b.WriteByte('\n')
 				}
 				if m.Content != "" {
-					b.WriteString("Assistant: ")
+					b.WriteString(CompactRoleAssistant)
 					b.WriteString(truncateCompact(m.Content, 8000))
 					b.WriteByte('\n')
 				}
 			case role.Tool:
-				b.WriteString("Tool ")
+				b.WriteString(CompactRoleTool)
 				b.WriteString(m.ToolName)
 				b.WriteString(": ")
 				b.WriteString(truncateCompact(m.Content, 4000))
@@ -161,14 +159,14 @@ func truncateCompact(s string, max int) string {
 	if len(s) <= max {
 		return s
 	}
-	return s[:max] + "\n...[truncated]"
+	return s[:max] + CompactTruncated
 }
 
 func sanitizeCompactInput(s string) string {
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
 		if secretLineRE.MatchString(line) {
-			lines[i] = "[redacted]"
+			lines[i] = CompactRedacted
 		}
 	}
 	return strings.Join(lines, "\n")

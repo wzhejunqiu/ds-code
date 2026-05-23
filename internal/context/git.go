@@ -33,7 +33,7 @@ func CaptureGitSnapshot(projectRoot string, maxChars int) (string, error) {
 
 	s := strings.TrimSpace(b.String())
 	if len(s) > maxChars {
-		s = s[:maxChars] + "\n... [git snapshot truncated]"
+		s = s[:maxChars] + GitSnapshotTruncated
 	}
 	return s, nil
 }

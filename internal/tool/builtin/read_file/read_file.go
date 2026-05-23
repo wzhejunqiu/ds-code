@@ -1,0 +1,147 @@
+package read_file
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+)
+
+// ReadFileTool reads file contents with optional line range.
+type ReadFileTool struct {
+	Cfg    *config.Config
+	Perm   *permission.Engine
+	Strict bool
+}
+
+func (t *ReadFileTool) Name() string { return "read_file" }
+
+func (t *ReadFileTool) Description() string { return DescReadFile }
+
+func (t *ReadFileTool) Schema() map[string]any {
+	return tool.ObjectSchema(map[string]any{
+		"path":   map[string]any{"type": "string", "description": builtin.SchemaPathFileRelOrAbs},
+		"offset": map[string]any{"type": "integer", "description": builtin.SchemaOffset},
+		"limit":  map[string]any{"type": "integer", "description": builtin.SchemaLimit},
+	}, []string{"path"}, t.Strict)
+}
+
+func (t *ReadFileTool) PermissionLevel() permission.Level { return permission.LevelLow }
+
+func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	var in struct {
+		Path   string `json:"path"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
+	}
+	if err := json.Unmarshal(args, &in); err != nil {
+		return "", err
+	}
+	if in.Path == "" {
+		return "", fmt.Errorf("%s", builtin.ErrPathRequired)
+	}
+	abs, err := t.Perm.CheckReadablePath(in.Path)
+	if err != nil {
+		return "", err
+	}
+
+	maxLines := t.Cfg.Tools.ReadFile.MaxLines
+	if maxLines <= 0 {
+		maxLines = 500
+	}
+	maxBytes := t.Cfg.Tools.ReadFile.MaxBytes
+	if maxBytes <= 0 {
+		maxBytes = 2 << 20
+	}
+
+	st, err := os.Stat(abs)
+	if err != nil {
+		return "", err
+	}
+	if st.Size() > int64(maxBytes) {
+		return "", fmt.Errorf(ErrFileTooLarge, st.Size(), maxBytes)
+	}
+
+	start, end, rangeTruncated, err := resolveReadOffsetLimit(in.Offset, in.Limit, maxLines)
+	if err != nil {
+		return "", err
+	}
+
+	return formatReadFileOutput(abs, start, end, rangeTruncated)
+}
+
+func resolveReadOffsetLimit(offset, limit, maxLines int) (readStart, readEnd int, truncated bool, err error) {
+	if offset < 0 || limit < 0 {
+		return 0, 0, false, fmt.Errorf("%s", builtin.ErrOffsetLimitNonNegative)
+	}
+	readStart = 1
+	if offset > 0 {
+		readStart = offset
+	}
+	readLimit := limit
+	if readLimit <= 0 {
+		readLimit = maxLines
+	}
+	if readLimit > maxLines {
+		readLimit = maxLines
+		truncated = limit > maxLines
+	}
+	readEnd = readStart + readLimit - 1
+	return readStart, readEnd, truncated, nil
+}
+
+func formatReadFileOutput(abs string, start, end int, rangeTruncated bool) (string, error) {
+	f, err := os.Open(abs)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	sc := bufio.NewScanner(f)
+	buf := make([]byte, 0, 64*1024)
+	sc.Buffer(buf, 1024*1024)
+
+	var out strings.Builder
+	lineNo := 0
+	moreAfter := 0
+
+	for sc.Scan() {
+		lineNo++
+		if lineNo < start {
+			continue
+		}
+		if lineNo > end {
+			moreAfter++
+			for sc.Scan() {
+				moreAfter++
+			}
+			break
+		}
+		fmt.Fprintf(&out, "%d|%s\n", lineNo, sc.Text())
+	}
+	if err := sc.Err(); err != nil {
+		return "", err
+	}
+	if lineNo < start {
+		return fmt.Sprintf(ResultEmptyOffsetBeyond, start, lineNo), nil
+	}
+	if rangeTruncated {
+		out.WriteString(MsgTruncatedMaxLines)
+	}
+	if moreAfter > 0 {
+		fmt.Fprintf(&out, MsgMoreLinesNotShown, moreAfter)
+	}
+	return strings.TrimRight(out.String(), "\n"), nil
+}
+
+var _ tool.Tool = (*ReadFileTool)(nil)

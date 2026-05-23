@@ -85,5 +85,5 @@ func trimSummary(s string, cfg *config.Config) string {
 	if len(s) <= max {
 		return s
 	}
-	return s[:max] + "\n... [subagent summary truncated]"
+	return s[:max] + agent.SubagentSummaryTruncated
 }

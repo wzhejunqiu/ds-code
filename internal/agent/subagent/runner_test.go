@@ -14,7 +14,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/tool/register"
 )
 
 func TestRun_readOnlySummary(t *testing.T) {
@@ -59,7 +59,7 @@ func TestRun_readOnlySummary(t *testing.T) {
 	}
 	summary, err := subagent.Run(context.Background(), cfg, mockLLM, "inspect main.go", func(reg *tool.Registry) {
 		perm := permission.NewEngine("readonly", dir, false)
-		builtin.RegisterExploreTools(reg, cfg, perm, nil, false)
+		register.ExploreTools(reg, cfg, perm, nil, false)
 	}, sub, run, nil)
 	if err != nil {
 		t.Fatal(err)

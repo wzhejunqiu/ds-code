@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/patch"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
 
 const titleArgsMax = 80
@@ -297,7 +298,7 @@ func readFilePathFromDisplay(line string) string {
 
 // AppendGrepResultSuffix appends match count to a grep title.
 func AppendGrepResultSuffix(argsLine, result string) string {
-	if strings.Contains(strings.ToLower(result), "no matches") {
+	if strings.Contains(result, builtin.ResultGrepNoMatches) {
 		return argsLine + " · 0 matches"
 	}
 	n := countNonEmptyLines(result)

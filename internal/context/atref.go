@@ -54,12 +54,12 @@ func (e *AtExpander) Expand(userText string) (string, error) {
 	var blocks []string
 	for _, ref := range refs {
 		if remaining <= 0 {
-			blocks = append(blocks, fmt.Sprintf("--- @%s ---\n[skipped: at_reference budget exhausted]", ref))
+			blocks = append(blocks, fmt.Sprintf(AtRefSkippedBlock, ref, AtRefSkippedBudget))
 			continue
 		}
 		block, used, err := e.expandRef(ref, perFileMax, remaining)
 		if err != nil {
-			blocks = append(blocks, fmt.Sprintf("--- @%s ---\nerror: %v", ref, err))
+			blocks = append(blocks, fmt.Sprintf("--- @%s ---\n"+AtRefErrorLine, ref, err))
 			continue
 		}
 		remaining -= used
@@ -117,10 +117,10 @@ func (e *AtExpander) expandFile(ref, abs string, perFileMax, remaining int) (str
 	}
 	rel, _ := filepath.Rel(e.Perm.Workspace, abs)
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "--- @%s (%s) ---\n", ref, filepath.ToSlash(rel))
+	fmt.Fprintf(&sb, AtRefFileHeader, ref, filepath.ToSlash(rel))
 	sb.WriteString(content)
 	if truncated {
-		sb.WriteString("\n... [file truncated for @ reference budget]")
+		sb.WriteString(AtRefFileTruncated)
 	}
 	return sb.String(), len(content), nil
 }
@@ -180,26 +180,26 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "--- @%s/ (directory) ---\n", strings.TrimSuffix(ref, "/"))
+	fmt.Fprintf(&b, AtRefDirHeader, strings.TrimSuffix(ref, "/"))
 	if len(files) > maxFiles {
-		b.WriteString(fmt.Sprintf("Too many files (%d+). Listed first %d; use grep/glob for more.\n\n", maxFiles+1, maxFiles))
+		b.WriteString(fmt.Sprintf(AtRefTooManyFiles, maxFiles+1, maxFiles))
 		files = files[:maxFiles]
 	}
 
 	used := 0
 	for _, f := range files {
 		if remaining-used <= 0 {
-			b.WriteString("\n... [remaining files skipped: budget exhausted]")
+			b.WriteString(AtRefRemainingSkipped)
 			break
 		}
 		full, err := e.Perm.CheckReadablePath(f.rel)
 		if err != nil {
-			fmt.Fprintf(&b, "\n%s: error: %v\n", f.rel, err)
+			fmt.Fprintf(&b, "\n%s: "+AtRefErrorLine+"\n", f.rel, err)
 			continue
 		}
 		block, n, err := e.expandFile(f.rel, full, perFileMax, remaining-used)
 		if err != nil {
-			fmt.Fprintf(&b, "\n%s: error: %v\n", f.rel, err)
+			fmt.Fprintf(&b, "\n%s: "+AtRefErrorLine+"\n", f.rel, err)
 			continue
 		}
 		b.WriteString("\n")

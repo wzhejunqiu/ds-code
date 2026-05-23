@@ -15,7 +15,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/hejunqiu/ds-code/internal/tool/register"
 )
 
 func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
@@ -52,7 +52,7 @@ func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
 	}
 
 	_, err = subagent.Run(context.Background(), cfg, mockLLM, "say hi", func(reg *tool.Registry) {
-		builtin.RegisterExploreTools(reg, cfg, permission.NewEngine("readonly", dir, false), nil, false)
+		register.ExploreTools(reg, cfg, permission.NewEngine("readonly", dir, false), nil, false)
 	}, sub, run, nil)
 	if err != nil {
 		t.Fatal(err)

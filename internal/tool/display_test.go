@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
 
 func TestDisplaySummary_shell(t *testing.T) {
@@ -102,7 +103,7 @@ func TestReadFileLineRange(t *testing.T) {
 }
 
 func TestAppendGrepResultSuffix(t *testing.T) {
-	line := tool.AppendGrepResultSuffix("Grepped foo in bar", "no matches found")
+	line := tool.AppendGrepResultSuffix("Grepped foo in bar", builtin.ResultGrepNoMatches)
 	if !strings.Contains(line, "0 matches") {
 		t.Fatalf("got %q", line)
 	}

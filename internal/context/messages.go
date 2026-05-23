@@ -39,6 +39,6 @@ func messageToLLM(m session.Message) llm.Message {
 func compactSummaryMessage(summary string) llm.Message {
 	return llm.Message{
 		Role:    role.Assistant,
-		Content: "[Conversation summary]\n" + summary,
+		Content: ConversationSummaryPrefix + summary,
 	}
 }
