@@ -135,6 +135,9 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		return "", err
 	}
 	res := t.searchCandidates(ctx, candidates, re, mode, searchLimit)
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 
 	switch mode {
 	case modeCount:
@@ -145,7 +148,11 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		}
 		out := strings.Join(res.lines, "\n")
 		if res.truncated {
-			out += fmt.Sprintf("\n"+builtin.TruncatedAtMatches, limit)
+			truncFmt := builtin.TruncatedAtMatches
+			if mode == modeFilesWithMatches {
+				truncFmt = builtin.TruncatedAtPaths
+			}
+			out += fmt.Sprintf("\n"+truncFmt, limit)
 		}
 		return out, nil
 	}

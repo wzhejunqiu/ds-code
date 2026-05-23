@@ -3,6 +3,8 @@ package grep_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -295,9 +297,85 @@ func TestGrepTool_outputModeContent_headLimit(t *testing.T) {
 	if len(lines) != 3 {
 		t.Fatalf("expected 2 matches + truncation line, got %d lines: %q", len(lines), out)
 	}
-	if !strings.Contains(lines[2], "已截断") {
-		t.Fatalf("expected truncation suffix: %q", out)
+	if !strings.Contains(lines[2], "条匹配") {
+		t.Fatalf("expected match truncation suffix: %q", out)
 	}
+}
+
+func TestGrepTool_outputModeFilesWithMatches_headLimit(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 10; i++ {
+		name := fmt.Sprintf("f%02d.txt", i)
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("needle\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	g := newGrepTool(t, dir, 2, nil)
+	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "files_with_matches"})
+	out, err := g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(out, "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected 2 paths + truncation line, got %d lines: %q", len(lines), out)
+	}
+	if !strings.Contains(lines[2], "个文件") {
+		t.Fatalf("expected file truncation suffix: %q", out)
+	}
+}
+
+func TestGrepTool_contextCanceled(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 200; i++ {
+		name := fmt.Sprintf("f%03d.txt", i)
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("needle line\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	g := newGrepTool(t, dir, 50, nil)
+
+	modes := []struct {
+		name string
+		args map[string]any
+	}{
+		{"content", map[string]any{"pattern": "needle", "output_mode": "content"}},
+		{"count", map[string]any{"pattern": "needle", "output_mode": "count"}},
+	}
+	for _, tc := range modes {
+		t.Run(tc.name, func(t *testing.T) {
+			args, _ := json.Marshal(tc.args)
+			ctx, cancel := context.WithCancel(context.Background())
+			errCh := make(chan error, 1)
+			go func() {
+				_, err := g.Execute(ctx, args)
+				errCh <- err
+			}()
+			cancel()
+			select {
+			case err := <-errCh:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("expected context.Canceled, got %v", err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("timeout waiting for canceled grep")
+			}
+		})
+	}
+
+	t.Run("pre_canceled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		args, _ := json.Marshal(map[string]any{"pattern": "needle"})
+		out, err := g.Execute(ctx, args)
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context.Canceled, got %v out=%q", err, out)
+		}
+		if out != "" {
+			t.Fatalf("expected empty output on cancel, got %q", out)
+		}
+	})
 }
 
 func TestGrepTool_invalidOutputMode(t *testing.T) {

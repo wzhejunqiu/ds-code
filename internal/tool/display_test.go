@@ -111,7 +111,7 @@ func TestAppendGrepResultSuffix(t *testing.T) {
 	})
 	t.Run("files_with_matches_paths", func(t *testing.T) {
 		args := []byte(`{"pattern":"foo"}`)
-		result := "a.go\nb.go\n... 已截断，共 2 条匹配"
+		result := "a.go\nb.go\n... 已截断，共 2 个文件"
 		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, result)
 		if line != "Grepped foo in bar · 2 paths" {
 			t.Fatalf("got %q", line)

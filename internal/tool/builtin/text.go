@@ -34,6 +34,7 @@ const (
 // Truncation / limit suffixes (shared).
 const (
 	TruncatedAtMatches = "... 已截断，共 %d 条匹配"
+	TruncatedAtPaths   = "... 已截断，共 %d 个文件"
 	TruncatedAtEntries = "... 已截断，共 %d 项"
 	TruncatedAtResults = "... 已截断，共 %d 条结果"
 )
