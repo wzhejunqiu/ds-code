@@ -48,9 +48,8 @@ func RegisterAgentExtras(reg *tool.Registry, d Deps) {
 	if d.LLM != nil {
 		reg.Register(builtin.NewTaskTool(d.Cfg, d.Perm, d.LLM, d.Strict, d.Subagent))
 	}
-	if d.Cfg.Web.SearchEnabled {
-		reg.Register(&builtin.WebSearchTool{Cfg: d.Cfg, Strict: d.Strict})
-	}
+	// web_search remains disabled until a search provider is wired (see human tool display plan).
+	_ = d.Cfg.Web.SearchEnabled
 	if d.MCP != nil {
 		d.MCP.Register(reg)
 	}

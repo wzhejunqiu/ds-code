@@ -13,8 +13,8 @@ func TestRegistry_lifecycle(t *testing.T) {
 	if rec.ID != "sa-1" || reg.Len() != 1 {
 		t.Fatalf("start: %+v len=%d", rec, reg.Len())
 	}
-	reg.ToolStart("sa-1", "read_file", "path=main.go", "")
-	reg.ToolEnd("sa-1", "read_file", "path=main.go", "", "ok", false)
+	reg.ToolStart("sa-1", "read_file", "Read main.go", "")
+	reg.ToolEnd("sa-1", "read_file", "Read main.go", "", "ok", false)
 	reg.End("sa-1", "summary text", nil)
 	got := reg.Get("sa-1")
 	if got.Status != subagent.StatusDone {

@@ -28,14 +28,17 @@ func renderBlock(b Block, width int, expanded bool) []string {
 	var body []string
 
 	if b.Running {
-		title := toolRunningTitle(b.Name, b.Args, b.Command)
-		body = append(body, styleToolTitle.Render(bullet+title))
-		switch {
-		case b.Command != "":
-			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+b.Command))
-		case b.Args != "":
-			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+truncate(b.Args, titleArgsMax)))
-		default:
+		body = append(body, renderRunningTitle(b.Name, b.Command, b.Args))
+		if !tool.UsesHumanDisplay(b.Name) && !tool.IsShellDisplay(b.Name) && !tool.IsApplyPatchDisplay(b.Name) {
+			switch {
+			case b.Command != "":
+				body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+truncate(b.Command, titleArgsMax)))
+			case b.Args != "":
+				body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+truncate(b.Args, titleArgsMax)))
+			default:
+				body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"running…"))
+			}
+		} else if toolRunningTitle(b.Name, b.Args, b.Command) == "" && !tool.IsShellDisplay(b.Name) && !tool.IsApplyPatchDisplay(b.Name) {
 			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"running…"))
 		}
 		return body
@@ -44,10 +47,13 @@ func renderBlock(b Block, width int, expanded bool) []string {
 	body = append(body, renderTitleLine(b.Name, b.Command, b.Args, b.Error))
 
 	if expanded {
-		if b.Args != "" {
+		if b.Args != "" && !skipExpandedArgs(b.Name) {
 			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"args: "+b.Args))
 		}
-		if b.Command != "" {
+		if b.Command != "" && tool.IsShellDisplay(b.Name) {
+			full := tool.ShellFullCommand(b.Command)
+			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"command: "+full))
+		} else if b.Command != "" && !tool.IsApplyPatchDisplay(b.Name) {
 			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"command: "+b.Command))
 		}
 		if b.Result != "" {
@@ -60,7 +66,17 @@ func renderBlock(b Block, width int, expanded bool) []string {
 	return body
 }
 
+func skipExpandedArgs(name string) bool {
+	return tool.UsesHumanDisplay(name) || tool.IsShellDisplay(name) || tool.IsApplyPatchDisplay(name)
+}
+
 func renderTitleLine(name, command, args string, isError bool) string {
+	if tool.IsShellDisplay(name) {
+		return renderShellTitle(args, command, isError)
+	}
+	if tool.IsApplyPatchDisplay(name) {
+		return renderApplyPatchTitle(args, command, isError)
+	}
 	if human := tool.HumanToolTitle(name, args, command); human != "" {
 		parts := []string{styleToolName.Render(bullet + human)}
 		if isError {
@@ -78,11 +94,49 @@ func renderTitleLine(name, command, args string, isError bool) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
 
+func renderShellTitle(description, commandField string, isError bool) string {
+	commands := tool.ShellCommandsList(commandField)
+	parts := []string{styleToolName.Render(bullet + description)}
+	if commands != "" {
+		parts = append(parts, styleToolShellCmds.Render(" "+commands))
+	}
+	if isError {
+		parts = append(parts, styleToolError.Render(" (error)"))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
+}
+
+func renderApplyPatchTitle(filename, statsEnc string, isError bool) string {
+	added, removed, _ := tool.DecodeApplyPatchStats(statsEnc)
+	parts := []string{styleToolName.Render(bullet + "Edit " + filename)}
+	if added > 0 {
+		parts = append(parts, styleToolSuccess.Render(fmt.Sprintf(" +%d", added)))
+	}
+	if removed > 0 {
+		parts = append(parts, styleToolError.Render(fmt.Sprintf(" -%d", removed)))
+	}
+	if isError {
+		parts = append(parts, styleToolError.Render(" (error)"))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
+}
+
+func renderRunningTitle(name, command, args string) string {
+	line := renderTitleLine(name, command, args, false)
+	return lipgloss.JoinHorizontal(lipgloss.Top, line, styleToolMeta.Render(" …"))
+}
+
 func toolRunningTitle(name, args, command string) string {
 	if human := tool.HumanToolTitle(name, args, command); human != "" {
-		return human + " …"
+		return human
 	}
-	return name + " …"
+	if tool.IsShellDisplay(name) {
+		return args
+	}
+	if tool.IsApplyPatchDisplay(name) {
+		return "Edit " + args
+	}
+	return name
 }
 
 func parenContent(command, args string) string {

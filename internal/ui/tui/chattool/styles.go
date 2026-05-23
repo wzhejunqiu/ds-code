@@ -14,4 +14,6 @@ var (
 	styleToolResult     = lipgloss.NewStyle().Foreground(theme.Muted)
 	styleToolExpandHint = lipgloss.NewStyle().Foreground(theme.Muted).Italic(true)
 	styleToolError      = lipgloss.NewStyle().Foreground(theme.Error)
+	styleToolSuccess    = lipgloss.NewStyle().Foreground(theme.Success)
+	styleToolShellCmds  = lipgloss.NewStyle().Foreground(theme.Muted)
 )

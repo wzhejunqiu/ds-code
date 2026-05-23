@@ -2,36 +2,34 @@ package turn
 
 import (
 	"testing"
-	"time"
 
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
-func TestAppendPlanningBlock_preservesExistingTimer(t *testing.T) {
-	started := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
-	s := &state.State{
-		Chat: []chat.Block{{
-			Role:              chat.RolePlanning,
-			Streaming:         true,
-			PlanningStartedAt: started,
-		}},
-	}
-	AppendPlanningBlock(s)
+func TestFinishToolBlock_updatesReadFileTitle(t *testing.T) {
+	s := &state.State{}
+	AppendToolBlock(s, "read_file", "Read sample.go", "", "", true, false)
+	FinishToolBlock(s, "read_file", "Read sample.go L1-3", "", "1|x\n", false)
 	if len(s.Chat) != 1 {
-		t.Fatalf("blocks = %d, want 1", len(s.Chat))
+		t.Fatalf("got %d tool blocks, want 1", len(s.Chat))
 	}
-	if !s.Chat[0].PlanningStartedAt.Equal(started) {
-		t.Fatalf("PlanningStartedAt reset to %v, want %v", s.Chat[0].PlanningStartedAt, started)
+	if s.Chat[0].ToolArgs != "Read sample.go L1-3" {
+		t.Fatalf("args = %q", s.Chat[0].ToolArgs)
+	}
+	if s.Chat[0].ToolRunning {
+		t.Fatal("still running")
 	}
 }
 
-func TestAppendPlanningBlock_replacesNonPlanningTail(t *testing.T) {
-	s := &state.State{
-		Chat: []chat.Block{{Role: chat.RoleUser}},
+func TestFinishToolBlock_applyPatchExactMatch(t *testing.T) {
+	s := &state.State{}
+	AppendToolBlock(s, "apply_patch", "a.go", "1|1", "", true, false)
+	AppendToolBlock(s, "apply_patch", "b.go", "|2", "", true, false)
+	FinishToolBlock(s, "apply_patch", "b.go", "|2", "ok", false)
+	if s.Chat[1].ToolRunning {
+		t.Fatal("b.go should be finished")
 	}
-	AppendPlanningBlock(s)
-	if len(s.Chat) != 2 || s.Chat[1].Role != chat.RolePlanning {
-		t.Fatalf("chat = %+v", s.Chat)
+	if !s.Chat[0].ToolRunning {
+		t.Fatal("a.go should still be running")
 	}
 }

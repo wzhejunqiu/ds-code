@@ -13,5 +13,6 @@ var (
 	Divider   = lipgloss.Color("#C8C4B8")
 	UserBg    = lipgloss.Color("#E8E6E0")
 	Error     = lipgloss.Color("#C2410C")
+	Success   = lipgloss.Color("#15803D")
 	OverlayBd = lipgloss.Color("#B8B4A8")
 )

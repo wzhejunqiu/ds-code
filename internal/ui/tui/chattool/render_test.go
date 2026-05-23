@@ -23,10 +23,10 @@ func TestRenderBlockCollapsed_wrapsAtWidth(t *testing.T) {
 
 func TestRenderBlockCollapsed(t *testing.T) {
 	out := renderOut(Block{
-		Name: "shell", Args: `{"command":"echo hi"}`,
-		Command: "echo hi", Result: "hi\n",
+		Name: "shell", Args: "echo hi",
+		Command: "echo\x00echo hi", Result: "hi\n",
 	}, 60, false)
-	for _, want := range []string{"shell", "(echo hi)", "└", "hi"} {
+	for _, want := range []string{"echo hi", "echo", "└", "hi"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in:\n%s", want, out)
 		}
@@ -69,12 +69,15 @@ func TestRenderBlockExpandHint(t *testing.T) {
 
 func TestRenderBlockExpanded(t *testing.T) {
 	out := renderOut(Block{
-		Name: "shell", Args: `{"command":"echo hi"}`,
-		Command: "echo hi", Result: "hi\n",
+		Name: "shell", Args: "echo hi",
+		Command: "echo\x00echo hi", Result: "hi\n",
 	}, 60, true)
-	for _, want := range []string{"shell", "(echo hi)", "args:", "command:", "echo hi", "└", "hi"} {
+	for _, want := range []string{"echo hi", "command:", "echo hi", "└", "hi"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in:\n%s", want, out)
 		}
+	}
+	if strings.Contains(out, "args:") {
+		t.Fatalf("shell should not repeat args:\n%s", out)
 	}
 }

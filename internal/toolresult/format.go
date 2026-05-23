@@ -44,7 +44,7 @@ func TruncateToolResult(body string, cfg *config.Config) string {
 	if max <= 0 || len(body) <= max {
 		return body
 	}
-	suffix := "\n... [truncated; use start/end or narrower query]"
+	suffix := "\n... [truncated; use offset/limit or narrower query]"
 	if len(suffix) >= max {
 		return body[:max]
 	}

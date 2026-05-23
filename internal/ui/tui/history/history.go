@@ -45,16 +45,42 @@ func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace st
 					if toolMsg != nil {
 						result, isError = ctxpkg.UnpackToolBody(toolMsg.Content)
 					}
-					argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments), workspace)
-					blocks = append(blocks, chat.Block{
-						Role:        chat.RoleTool,
-						ToolName:    tc.Name,
-						ToolCallID:  tc.ID,
-						ToolArgs:    argsLine,
-						ToolCommand: command,
-						ToolResult:  result,
-						ToolError:   isError,
-					})
+					rows := tool.ApplyPatchStarts(tc.Name, []byte(tc.Arguments), workspace)
+					if len(rows) == 0 {
+						argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments), workspace)
+						if tc.Name == "read_file" && !isError {
+							if start, end, ok := tool.ReadFileLineRange(result); ok {
+								argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
+							}
+						}
+						if tc.Name == "grep" && !isError {
+							argsLine = tool.AppendGrepResultSuffix(argsLine, result)
+						}
+						if (tc.Name == "glob" || tc.Name == "list_dir") && !isError {
+							argsLine = tool.AppendPathResultSuffix(argsLine, result)
+						}
+						blocks = append(blocks, chat.Block{
+							Role:        chat.RoleTool,
+							ToolName:    tc.Name,
+							ToolCallID:  tc.ID,
+							ToolArgs:    argsLine,
+							ToolCommand: command,
+							ToolResult:  result,
+							ToolError:   isError,
+						})
+						continue
+					}
+					for _, row := range rows {
+						blocks = append(blocks, chat.Block{
+							Role:        chat.RoleTool,
+							ToolName:    tc.Name,
+							ToolCallID:  tc.ID,
+							ToolArgs:    row.Args,
+							ToolCommand: row.Command,
+							ToolResult:  result,
+							ToolError:   isError,
+						})
+					}
 				}
 			}
 		case role.Tool:

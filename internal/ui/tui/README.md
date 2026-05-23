@@ -130,4 +130,20 @@ session.Message[]  ──chatBlocksFromMessages──►  []chatBlock  ──ren
 
 `ReasoningDurationMS`、`TurnDurationMS` 会复制到 assistant 块，用于「thought」/「task took」等页脚文案。
 
+## 工具行展示约定
+
+TUI 工具块标题由 `internal/tool.DisplaySummary` 生成人类可读单行（非 `tool_name (json)`）：
+
+| 工具 | 示例 |
+|------|------|
+| `read_file` | `Read sample.go L1-3` |
+| `write_file` | `Write sample.go` |
+| `grep` / `glob` / `list_dir` | `Grepped … in ds-code` / `Searched files …` / `List tuitest` |
+| `shell` | `{description}` + 浅色命令名片段（`cd, 2+`）；展开显示完整 `command` |
+| `apply_patch` | 每文件一行 `Edit file.go` + 绿色 `+N` + 红色 `-N` |
+| `task` / `web_fetch` | `Task: …` / `Fetch https://…` |
+| `mcp__*` | `MCP server · tool` |
+
+`grep`/`glob`/`list_dir` 结束时可能追加 `· N matches` / `· N paths`。持久化会话中的 `ToolCallsJSON` 仍为原始 JSON；仅展示层变化。
+
 配置路径与 YAML 键见 `internal/config/README.md` 与 `docs/CONFIG.md`。

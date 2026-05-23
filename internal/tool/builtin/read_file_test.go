@@ -14,7 +14,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 )
 
-func TestReadFile_startEnd(t *testing.T) {
+func TestReadFile_offsetLimit(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "f.txt")
 	lines := make([]string, 30)
@@ -27,9 +27,9 @@ func TestReadFile_startEnd(t *testing.T) {
 
 	tool := readFileTool(t, root, 500, 1<<20)
 	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
-		"path":  "f.txt",
-		"start": 10,
-		"end":   20,
+		"path":   "f.txt",
+		"offset": 10,
+		"limit":  11,
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestReadFile_startEnd(t *testing.T) {
 	}
 }
 
-func TestReadFile_maxLinesTruncatesRange(t *testing.T) {
+func TestReadFile_maxLinesTruncatesLimit(t *testing.T) {
 	root := t.TempDir()
 	var b strings.Builder
 	for i := 1; i <= 100; i++ {
@@ -55,8 +55,8 @@ func TestReadFile_maxLinesTruncatesRange(t *testing.T) {
 	tool := readFileTool(t, root, 10, 1<<20)
 	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
 		"path":  "big.txt",
-		"start": 1,
-		"end":   10000,
+		"offset": 1,
+		"limit": 10000,
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -79,17 +79,20 @@ func TestReadFile_maxBytesRejects(t *testing.T) {
 	}
 }
 
-func TestReadFile_endBeforeStart(t *testing.T) {
+func TestReadFile_offsetBeyondFile(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "f.txt"), []byte("a\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	tool := readFileTool(t, root, 500, 1<<20)
-	_, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
-		"path": "f.txt", "start": 5, "end": 2,
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
+		"path": "f.txt", "offset": 5,
 	}))
-	if err == nil || !strings.Contains(err.Error(), "must be >=") {
-		t.Fatalf("err = %v", err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "offset 5 beyond file length") {
+		t.Fatalf("out = %q", out)
 	}
 }
 

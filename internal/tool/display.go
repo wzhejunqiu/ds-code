@@ -3,52 +3,237 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/patch"
 )
 
+const titleArgsMax = 80
+
+// ApplyPatchFileDisplay is one per-file apply_patch TUI row.
+type ApplyPatchFileDisplay struct {
+	Filename string
+	Added    int
+	Removed  int
+}
+
+// ToolDisplayRow is one TUI tool block (args + optional command field).
+type ToolDisplayRow struct {
+	Args    string
+	Command string
+}
+
+// ApplyPatchStarts returns per-file rows for apply_patch tool start, or nil for other tools.
+func ApplyPatchStarts(name string, rawArgs []byte, workspace string) []ToolDisplayRow {
+	if name != "apply_patch" {
+		return nil
+	}
+	args := ArgsMap(rawArgs)
+	p, _ := args["patch"].(string)
+	if p == "" {
+		return nil
+	}
+	displays := ApplyPatchFileDisplays(p, workspace)
+	if len(displays) == 0 {
+		return nil
+	}
+	rows := make([]ToolDisplayRow, len(displays))
+	for i, d := range displays {
+		rows[i] = ToolDisplayRow{Args: d.Filename, Command: EncodeApplyPatchStats(d.Added, d.Removed)}
+	}
+	return rows
+}
+
+// ToolEndRows returns per-file rows to finish for apply_patch, or nil for other tools.
+func ToolEndRows(name string, rawArgs []byte, workspace string) []ToolDisplayRow {
+	return ApplyPatchStarts(name, rawArgs, workspace)
+}
+
 // DisplaySummary formats tool arguments for the TUI (args line and optional command).
 func DisplaySummary(name string, rawArgs []byte, workspace string) (argsLine, command string) {
 	args := ArgsMap(rawArgs)
 	switch name {
 	case "shell":
-		if c, _ := args["command"].(string); c != "" {
-			return formatArgsJSON(rawArgs), c
-		}
-	case "write_file":
-		if p, _ := args["path"].(string); p != "" {
-			return "path=" + p, ""
-		}
+		return ShellSummary(rawArgs)
 	case "read_file":
 		if p, _ := args["path"].(string); p != "" {
 			return FormatReadFileDisplay(p, 0, 0), ""
 		}
+	case "write_file":
+		if p, _ := args["path"].(string); p != "" {
+			return FormatWriteFileDisplay(p), ""
+		}
+	case "grep":
+		pat, _ := args["pattern"].(string)
+		rel, _ := args["path"].(string)
+		return FormatGrepDisplay(pat, rel, workspace), ""
+	case "glob":
+		pat, _ := args["pattern"].(string)
+		rel, _ := args["path"].(string)
+		return FormatGlobDisplay(pat, rel, workspace), ""
+	case "list_dir":
+		rel, _ := args["path"].(string)
+		return FormatListDirDisplay(rel, workspace), ""
 	case "apply_patch":
 		if p, _ := args["patch"].(string); p != "" {
-			paths, err := patch.Paths(p, workspace)
-			if err == nil {
-				return "files: " + strings.Join(paths, ", "), ""
+			displays := ApplyPatchFileDisplays(p, workspace)
+			if len(displays) > 0 {
+				d := displays[0]
+				return d.Filename, EncodeApplyPatchStats(d.Added, d.Removed)
 			}
-			return "patch", ""
 		}
 	case "task":
 		if d, _ := args["description"].(string); d != "" {
-			return d, ""
+			return FormatTaskDisplay(d), ""
 		}
 		if p, _ := args["prompt"].(string); p != "" {
-			return truncateOneLine(p, 120), ""
+			return FormatTaskDisplay(p), ""
+		}
+	case "web_fetch":
+		if u, _ := args["url"].(string); u != "" {
+			return FormatWebFetchDisplay(u), ""
 		}
 	default:
-		if strings.HasPrefix(name, "mcp__") {
-			return formatArgsJSON(rawArgs), ""
+		if isMCPToolName(name) {
+			return FormatMCPDisplay(name), ""
 		}
 	}
 	if len(rawArgs) > 0 {
 		return formatArgsJSON(rawArgs), ""
 	}
 	return "", ""
+}
+
+// ApplyPatchFileDisplays returns one display row per file in a patch.
+func ApplyPatchFileDisplays(patchText, workspace string) []ApplyPatchFileDisplay {
+	stats, err := patch.FileLineStats(patchText, workspace)
+	if err != nil || len(stats) == 0 {
+		return nil
+	}
+	out := make([]ApplyPatchFileDisplay, 0, len(stats))
+	for _, st := range stats {
+		out = append(out, ApplyPatchFileDisplay{
+			Filename: patch.DisplayBasename(st.Path),
+			Added:    st.Added,
+			Removed:  st.Removed,
+		})
+	}
+	return out
+}
+
+// EncodeApplyPatchStats encodes +N/-M for the command field (0 = omit side).
+func EncodeApplyPatchStats(added, removed int) string {
+	if added <= 0 && removed <= 0 {
+		return ""
+	}
+	a, r := "-", "-"
+	if added > 0 {
+		a = strconv.Itoa(added)
+	}
+	if removed > 0 {
+		r = strconv.Itoa(removed)
+	}
+	return a + "|" + r
+}
+
+// DecodeApplyPatchStats decodes the command field from EncodeApplyPatchStats.
+func DecodeApplyPatchStats(command string) (added, removed int, ok bool) {
+	if command == "" {
+		return 0, 0, false
+	}
+	parts := strings.SplitN(command, "|", 2)
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	if parts[0] != "-" {
+		added, _ = strconv.Atoi(parts[0])
+	}
+	if parts[1] != "-" {
+		removed, _ = strconv.Atoi(parts[1])
+	}
+	return added, removed, true
+}
+
+// displayPathLabel maps tool path args to a short UI label (never ".").
+func displayPathLabel(relPath, workspace string) string {
+	relPath = strings.TrimSpace(relPath)
+	if relPath == "" || relPath == "." || relPath == "/" {
+		if workspace != "" {
+			base := filepath.Base(workspace)
+			if base != "" && base != "." {
+				return base
+			}
+		}
+		return "project"
+	}
+	base := filepath.Base(relPath)
+	if base == "" || base == "." {
+		return "project"
+	}
+	return base
+}
+
+// FormatGrepDisplay formats grep tool title.
+func FormatGrepDisplay(pattern, relPath, workspace string) string {
+	pattern = truncateOneLine(pattern, titleArgsMax)
+	return "Grepped " + pattern + " in " + displayPathLabel(relPath, workspace)
+}
+
+// FormatGlobDisplay formats glob tool title.
+func FormatGlobDisplay(pattern, relPath, workspace string) string {
+	pattern = truncateOneLine(pattern, titleArgsMax)
+	return "Searched files " + pattern + " in " + displayPathLabel(relPath, workspace)
+}
+
+// FormatListDirDisplay formats list_dir tool title.
+func FormatListDirDisplay(relPath, workspace string) string {
+	return "List " + displayPathLabel(relPath, workspace)
+}
+
+// FormatWriteFileDisplay formats write_file tool title.
+func FormatWriteFileDisplay(path string) string {
+	return "Write " + filepath.Base(path)
+}
+
+// FormatTaskDisplay formats task tool title.
+func FormatTaskDisplay(descOrPrompt string) string {
+	return "Task: " + truncateOneLine(descOrPrompt, 120)
+}
+
+// FormatWebFetchDisplay formats web_fetch tool title.
+func FormatWebFetchDisplay(url string) string {
+	return "Fetch " + truncateOneLine(url, 120)
+}
+
+func isMCPToolName(name string) bool {
+	return strings.HasPrefix(name, "mcp__")
+}
+
+// FormatMCPDisplay formats an MCP tool name for the TUI.
+func FormatMCPDisplay(toolName string) string {
+	server, toolPart, ok := parseMCPToolName(toolName)
+	if ok && server != "" && toolPart != "" {
+		return "MCP " + server + " · " + toolPart
+	}
+	raw := strings.TrimPrefix(toolName, "mcp__")
+	if raw == "" {
+		raw = toolName
+	}
+	return "MCP " + truncateOneLine(raw, 80)
+}
+
+func parseMCPToolName(name string) (server, tool string, ok bool) {
+	if !strings.HasPrefix(name, "mcp__") {
+		return "", "", false
+	}
+	rest := strings.TrimPrefix(name, "mcp__")
+	parts := strings.SplitN(rest, "__", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
 }
 
 // ReadFileLineRange parses "N|..." lines from read_file tool output.
@@ -79,7 +264,7 @@ func ReadFileLineRange(result string) (start, end int, ok bool) {
 
 // FormatReadFileDisplay formats a human-readable read_file label for the TUI.
 func FormatReadFileDisplay(path string, start, end int) string {
-	line := "Read " + path
+	line := "Read " + filepath.Base(path)
 	if start > 0 && end >= start {
 		line += fmt.Sprintf(" L%d-%d", start, end)
 	}
@@ -110,10 +295,59 @@ func readFilePathFromDisplay(line string) string {
 	return ""
 }
 
+// AppendGrepResultSuffix appends match count to a grep title.
+func AppendGrepResultSuffix(argsLine, result string) string {
+	if strings.Contains(strings.ToLower(result), "no matches") {
+		return argsLine + " · 0 matches"
+	}
+	n := countNonEmptyLines(result)
+	if n > 0 {
+		return argsLine + fmt.Sprintf(" · %d matches", n)
+	}
+	return argsLine
+}
+
+// AppendPathResultSuffix appends path count for glob/list_dir.
+func AppendPathResultSuffix(argsLine, result string) string {
+	n := countNonEmptyLines(result)
+	if n > 0 {
+		return argsLine + fmt.Sprintf(" · %d paths", n)
+	}
+	return argsLine
+}
+
+func countNonEmptyLines(s string) int {
+	n := 0
+	for _, line := range strings.Split(s, "\n") {
+		if strings.TrimSpace(line) != "" {
+			n++
+		}
+	}
+	return n
+}
+
+// UsesHumanDisplay reports tools that use a single-line human title in args.
+func UsesHumanDisplay(name string) bool {
+	switch name {
+	case "read_file", "write_file", "grep", "glob", "list_dir", "task", "web_fetch":
+		return true
+	default:
+		return isMCPToolName(name)
+	}
+}
+
+// IsApplyPatchDisplay reports apply_patch dual-segment title rendering.
+func IsApplyPatchDisplay(name string) bool {
+	return name == "apply_patch"
+}
+
 // HumanToolTitle returns a single-line TUI label when the tool uses a non-function style.
-// Empty means use the default "tool_name (args)" rendering.
+// Empty means use specialized or default rendering.
 func HumanToolTitle(name, args, command string) string {
-	if name == "read_file" && args != "" {
+	if IsShellDisplay(name) || IsApplyPatchDisplay(name) {
+		return ""
+	}
+	if UsesHumanDisplay(name) && args != "" {
 		return args
 	}
 	return ""

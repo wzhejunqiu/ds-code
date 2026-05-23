@@ -34,6 +34,10 @@ func (t *ShellTool) Description() string {
 
 func (t *ShellTool) Schema() map[string]any {
 	return tool.ObjectSchema(map[string]any{
+		"description": map[string]any{
+			"type":        "string",
+			"description": "One short natural-language phrase describing what this shell invocation does. Do not repeat the full shell command.",
+		},
 		"command": map[string]any{
 			"type":        "string",
 			"description": "Shell command (required for sync/background start)",

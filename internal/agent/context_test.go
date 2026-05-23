@@ -13,8 +13,8 @@ func TestSubagentToolCallbacks_forwardsToolEvents(t *testing.T) {
 	parent.OnSubagentToolStart = func(_, _, _, _ string) { subStarts++ }
 	parent.OnSubagentToolEnd = func(_, _, _, _, _ string, _ bool) { subEnds++ }
 	sub := agent.SubagentToolCallbacks(parent, "sa-1")
-	sub.OnToolStart("read_file", "path=x", "")
-	sub.OnToolEnd("read_file", "path=x", "", "ok", false)
+	sub.OnToolStart("read_file", "Read x", "")
+	sub.OnToolEnd("read_file", "Read x", "", "ok", false)
 	if subStarts != 1 || subEnds != 1 {
 		t.Fatalf("sub starts=%d ends=%d", subStarts, subEnds)
 	}

@@ -136,19 +136,48 @@ func (r *Runner) runToolCalls(
 			zap.String("call_id", tc.ID),
 		)
 		rawArgs := []byte(tc.Arguments)
-		argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
+		patchDisplays := tool.ApplyPatchStarts(tc.Name, rawArgs, r.Perm.Workspace)
 		if cb != nil && cb.OnToolStart != nil {
-			cb.OnToolStart(tc.Name, argsLine, command)
+			if len(patchDisplays) > 0 {
+				for _, d := range patchDisplays {
+					cb.OnToolStart(tc.Name, d.Args, d.Command)
+				}
+			} else {
+				argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
+				cb.OnToolStart(tc.Name, argsLine, command)
+			}
 		}
 		body := r.executeTool(ctx, sessionID, tc)
 		displayResult, isError := ctxpkg.UnpackToolBody(body)
-		if tc.Name == "read_file" && !isError {
-			if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
-				argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
+		endRows := tool.ToolEndRows(tc.Name, rawArgs, r.Perm.Workspace)
+		if len(endRows) == 0 {
+			argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
+			if tc.Name == "read_file" && !isError {
+				if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
+					argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
+				}
 			}
-		}
-		if cb != nil && cb.OnToolEnd != nil {
-			cb.OnToolEnd(tc.Name, argsLine, command, displayResult, isError)
+			if tc.Name == "grep" && !isError {
+				argsLine = tool.AppendGrepResultSuffix(argsLine, displayResult)
+			}
+			if (tc.Name == "glob" || tc.Name == "list_dir") && !isError {
+				argsLine = tool.AppendPathResultSuffix(argsLine, displayResult)
+			}
+			if cb != nil && cb.OnToolEnd != nil {
+				cb.OnToolEnd(tc.Name, argsLine, command, displayResult, isError)
+			}
+		} else {
+			for _, row := range endRows {
+				argsLine := row.Args
+				if tc.Name == "read_file" && !isError {
+					if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
+						argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
+					}
+				}
+				if cb != nil && cb.OnToolEnd != nil {
+					cb.OnToolEnd(tc.Name, argsLine, row.Command, displayResult, isError)
+				}
+			}
 		}
 		body = ctxpkg.TruncateToolResult(body, r.Cfg)
 		if err := r.Sessions.AppendMessage(ctx, session.Message{

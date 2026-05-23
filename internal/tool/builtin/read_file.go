@@ -23,14 +23,14 @@ type ReadFileTool struct {
 func (t *ReadFileTool) Name() string { return "read_file" }
 
 func (t *ReadFileTool) Description() string {
-	return "Read a file under the project workspace. Optional start/end (1-based inclusive line range)."
+	return "Read a file under the project workspace. Optional offset (1-based) and limit (max lines per call)."
 }
 
 func (t *ReadFileTool) Schema() map[string]any {
 	return tool.ObjectSchema(map[string]any{
-		"path":  map[string]any{"type": "string", "description": "Path to the file (relative to project root, or absolute if under project root)"},
-		"start": map[string]any{"type": "integer", "description": "Start line (1-based, inclusive)"},
-		"end":   map[string]any{"type": "integer", "description": "End line (1-based, inclusive)"},
+		"path":   map[string]any{"type": "string", "description": "Path to the file (relative to project root, or absolute if under project root)"},
+		"offset": map[string]any{"type": "integer", "description": "Start line (1-based)"},
+		"limit":  map[string]any{"type": "integer", "description": "Max lines to read"},
 	}, []string{"path"}, t.Strict)
 }
 
@@ -41,9 +41,9 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", err
 	}
 	var in struct {
-		Path  string `json:"path"`
-		Start int    `json:"start"`
-		End   int    `json:"end"`
+		Path   string `json:"path"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
 	}
 	if err := json.Unmarshal(args, &in); err != nil {
 		return "", err
@@ -73,7 +73,7 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", fmt.Errorf("read_file: file size %d exceeds limit %d bytes", st.Size(), maxBytes)
 	}
 
-	start, end, rangeTruncated, err := resolveReadLineRange(in.Start, in.End, maxLines)
+	start, end, rangeTruncated, err := resolveReadOffsetLimit(in.Offset, in.Limit, maxLines)
 	if err != nil {
 		return "", err
 	}
@@ -81,31 +81,23 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	return formatReadFileOutput(abs, start, end, rangeTruncated)
 }
 
-func resolveReadLineRange(start, end, maxLines int) (readStart, readEnd int, truncated bool, err error) {
-	if start < 0 || end < 0 {
-		return 0, 0, false, fmt.Errorf("start and end must be non-negative")
+func resolveReadOffsetLimit(offset, limit, maxLines int) (readStart, readEnd int, truncated bool, err error) {
+	if offset < 0 || limit < 0 {
+		return 0, 0, false, fmt.Errorf("offset and limit must be non-negative")
 	}
-	switch {
-	case start == 0 && end == 0:
-		readStart = 1
-		readEnd = readStart + maxLines - 1
-	case start > 0 && end == 0:
-		readStart = start
-		readEnd = readStart + maxLines - 1
-	case start == 0 && end > 0:
-		readStart = 1
-		readEnd = end
-	default:
-		readStart = start
-		readEnd = end
+	readStart = 1
+	if offset > 0 {
+		readStart = offset
 	}
-	if readEnd < readStart {
-		return 0, 0, false, fmt.Errorf("end (%d) must be >= start (%d)", readEnd, readStart)
+	readLimit := limit
+	if readLimit <= 0 {
+		readLimit = maxLines
 	}
-	if readEnd-readStart+1 > maxLines {
-		readEnd = readStart + maxLines - 1
-		truncated = true
+	if readLimit > maxLines {
+		readLimit = maxLines
+		truncated = limit > maxLines
 	}
+	readEnd = readStart + readLimit - 1
 	return readStart, readEnd, truncated, nil
 }
 
@@ -142,10 +134,10 @@ func formatReadFileOutput(abs string, start, end int, rangeTruncated bool) (stri
 		return "", err
 	}
 	if lineNo < start {
-		return fmt.Sprintf("(empty: start %d beyond file length %d)", start, lineNo), nil
+		return fmt.Sprintf("(empty: offset %d beyond file length %d)", start, lineNo), nil
 	}
 	if rangeTruncated {
-		out.WriteString("\n... truncated to max_lines; adjust start/end to continue")
+		out.WriteString("\n... truncated to max_lines; adjust offset/limit to continue")
 	}
 	if moreAfter > 0 {
 		fmt.Fprintf(&out, "\n... %d more lines not shown", moreAfter)

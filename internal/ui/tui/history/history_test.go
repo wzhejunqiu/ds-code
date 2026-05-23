@@ -1,6 +1,7 @@
 package history
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func TestBlocksFromMessages(t *testing.T) {
 	if blocks[2].Role != chat.RoleTool || blocks[2].ToolName != "read_file" || blocks[2].ToolResult != "more" {
 		t.Fatalf("tool block: %+v", blocks[2])
 	}
-	if blocks[2].ToolArgs != "path=a.go" {
+	if blocks[2].ToolArgs != "Read a.go" {
 		t.Fatalf("tool args = %q", blocks[2].ToolArgs)
 	}
 }
@@ -67,6 +68,34 @@ func TestBlocksFromMessages_interruptSystemMessage(t *testing.T) {
 	}
 	if blocks[1].Role != chat.RoleInterrupt {
 		t.Fatalf("second block role = %s, want interrupt", blocks[1].Role)
+	}
+}
+
+func TestBlocksFromMessages_applyPatchMultiFile(t *testing.T) {
+	patch := "*** Begin Patch\n*** Update File: a.go\n@@\n-x\n+y\n*** Update File: b.go\n@@\n-z\n*** End Patch\n"
+	args, err := json.Marshal(map[string]string{"patch": patch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls, err := json.Marshal([]map[string]string{
+		{"id": "p1", "name": "apply_patch", "arguments": string(args)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	msgs := []session.Message{
+		{Role: role.Assistant, ToolCallsJSON: string(calls)},
+		{Role: role.Tool, Content: "ok", ToolName: "apply_patch", ToolCallID: "p1"},
+	}
+	blocks := BlocksFromMessages(msgs, false, "")
+	var tools int
+	for _, b := range blocks {
+		if b.Role == chat.RoleTool {
+			tools++
+		}
+	}
+	if tools != 2 {
+		t.Fatalf("got %d tool blocks, want 2 (blocks=%d)", tools, len(blocks))
 	}
 }
 

@@ -55,19 +55,37 @@ func AppendToolBlock(s *state.State, name, args, command, result string, running
 }
 
 func FinishToolBlock(s *state.State, name, args, command, result string, isError bool) {
+	// Exact match (e.g. apply_patch per-file rows).
 	for i := len(s.Chat) - 1; i >= 0; i-- {
 		if s.Chat[i].Role != chat.RoleTool || !s.Chat[i].ToolRunning {
 			continue
 		}
-		s.Chat[i].ToolName = name
-		s.Chat[i].ToolArgs = args
-		s.Chat[i].ToolCommand = command
-		s.Chat[i].ToolResult = result
-		s.Chat[i].ToolRunning = false
-		s.Chat[i].ToolError = isError
+		if s.Chat[i].ToolName != name || s.Chat[i].ToolArgs != args || s.Chat[i].ToolCommand != command {
+			continue
+		}
+		finishToolAt(s, i, args, command, result, isError)
+		return
+	}
+	// Same tool call may refresh display args on end (read_file line range, grep match count).
+	for i := len(s.Chat) - 1; i >= 0; i-- {
+		if s.Chat[i].Role != chat.RoleTool || !s.Chat[i].ToolRunning {
+			continue
+		}
+		if s.Chat[i].ToolName != name || s.Chat[i].ToolCommand != command {
+			continue
+		}
+		finishToolAt(s, i, args, command, result, isError)
 		return
 	}
 	AppendToolBlock(s, name, args, command, result, false, isError)
+}
+
+func finishToolAt(s *state.State, i int, args, command, result string, isError bool) {
+	s.Chat[i].ToolArgs = args
+	s.Chat[i].ToolCommand = command
+	s.Chat[i].ToolResult = result
+	s.Chat[i].ToolRunning = false
+	s.Chat[i].ToolError = isError
 }
 
 func FinalizeLastAssistant(s *state.State, at time.Time) {
