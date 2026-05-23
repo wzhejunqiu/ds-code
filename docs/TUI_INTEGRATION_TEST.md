@@ -84,7 +84,8 @@ ds-code-tui-test
 | `stream-reasoning` | reasoning + content 流式 |
 | `tool-read` | `read_file` 两轮 |
 | `tool-grep` | `grep` 两轮 |
-| `tool-patch` | `apply_patch` 两轮 |
+| `tool-patch-single` | `apply_patch` 单行 `sample.go` |
+| `tool-patch-multi` | `apply_patch` 多行 `sample_multiline.go` |
 | `tool-multi` | 并行多 tool |
 | `tool-shell` | `shell echo` |
 | `error-api` | HTTP 400 |

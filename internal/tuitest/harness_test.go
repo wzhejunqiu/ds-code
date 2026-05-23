@@ -5,6 +5,8 @@ package tuitest
 import (
 	"context"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,8 +18,24 @@ import (
 	tuimsg "github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 )
 
+func TestHarness_toolPatchSingle(t *testing.T) {
+	stack, m := runScenario(t, "tool-patch-single")
+	if m.State.ErrLine != "" {
+		t.Fatalf("ErrLine = %q", m.State.ErrLine)
+	}
+	assertFileContains(t, stack.Project, "sample.go", "// harness")
+}
+
+func TestHarness_toolPatchMulti(t *testing.T) {
+	stack, m := runScenario(t, "tool-patch-multi")
+	if m.State.ErrLine != "" {
+		t.Fatalf("ErrLine = %q", m.State.ErrLine)
+	}
+	assertFileContains(t, stack.Project, "sample_multiline.go", "// harness")
+}
+
 func TestHarness_streamBasic(t *testing.T) {
-	m := runScenario(t, "stream-basic")
+	_, m := runScenario(t, "stream-basic")
 	if m.State.ErrLine != "" {
 		t.Fatalf("ErrLine = %q", m.State.ErrLine)
 	}
@@ -27,14 +45,14 @@ func TestHarness_streamBasic(t *testing.T) {
 }
 
 func TestHarness_streamReasoning(t *testing.T) {
-	m := runScenario(t, "stream-reasoning")
+	_, m := runScenario(t, "stream-reasoning")
 	if !strings.Contains(chatText(m), "answer") {
 		t.Fatalf("chat = %q", chatText(m))
 	}
 }
 
 func TestHarness_toolRead(t *testing.T) {
-	m := runScenario(t, "tool-read")
+	_, m := runScenario(t, "tool-read")
 	if m.State.ErrLine != "" {
 		t.Fatalf("ErrLine = %q", m.State.ErrLine)
 	}
@@ -44,14 +62,14 @@ func TestHarness_toolRead(t *testing.T) {
 }
 
 func TestHarness_errorAPI(t *testing.T) {
-	m := runScenario(t, "error-api")
+	_, m := runScenario(t, "error-api")
 	if m.State.ErrLine == "" {
 		t.Fatal("expected ErrLine for API error scenario")
 	}
 }
 
 func TestHarness_errorContext(t *testing.T) {
-	m := runScenario(t, "error-context")
+	_, m := runScenario(t, "error-context")
 	if m.State.ErrLine != "" {
 		t.Fatalf("unexpected ErrLine: %q", m.State.ErrLine)
 	}
@@ -60,7 +78,7 @@ func TestHarness_errorContext(t *testing.T) {
 	}
 }
 
-func runScenario(t *testing.T, name string) *model.Model {
+func runScenario(t *testing.T, name string) (*Stack, *model.Model) {
 	t.Helper()
 	stack, err := NewStack(t)
 	if err != nil {
@@ -117,7 +135,18 @@ func runScenario(t *testing.T, name string) *model.Model {
 	case <-time.After(30 * time.Second):
 		t.Fatal("timeout waiting for turn")
 	}
-	return m
+	return stack, m
+}
+
+func assertFileContains(t *testing.T, project, rel, want string) {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(project, rel))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), want) {
+		t.Fatalf("%s = %q, want substring %q", rel, b, want)
+	}
 }
 
 func chatText(m *model.Model) string {

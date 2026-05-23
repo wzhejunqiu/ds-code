@@ -16,7 +16,8 @@ func All() []*Scenario {
 		streamReasoning(),
 		toolRead(),
 		toolGrep(),
-		toolPatch(),
+		toolPatchSingle(),
+		toolPatchMulti(),
 		toolMulti(),
 		toolShell(),
 		errorAPI(),
@@ -124,23 +125,46 @@ func toolGrep() *Scenario {
 	}
 }
 
-func toolPatch() *Scenario {
-	patch := `*** Begin Patch
+func toolPatchSingle() *Scenario {
+	return toolPatchScenario(
+		"tool-patch-single",
+		"apply patch single",
+		"call_patch_single",
+		`*** Begin Patch
 *** Update File: sample.go
+@@
+-func Hello() string { return "hello" }
++func Hello() string { return "hello" }
++// harness
+*** End Patch`,
+	)
+}
+
+func toolPatchMulti() *Scenario {
+	return toolPatchScenario(
+		"tool-patch-multi",
+		"apply patch multi",
+		"call_patch_multi",
+		`*** Begin Patch
+*** Update File: sample_multiline.go
 @@
  func Hello() string {
  	return "hello"
  }
 +// harness
-*** End Patch`
+*** End Patch`,
+	)
+}
+
+func toolPatchScenario(name, prompt, callID, patch string) *Scenario {
 	args, _ := json.Marshal(map[string]string{"patch": patch})
 	return &Scenario{
-		Name:   "tool-patch",
-		Prompt: "apply patch",
+		Name:   name,
+		Prompt: prompt,
 		Turns: []Turn{
 			{
 				ToolCalls: []llm.ToolCall{{
-					ID: "call_patch_1", Name: "apply_patch", Arguments: string(args),
+					ID: callID, Name: "apply_patch", Arguments: string(args),
 				}},
 				FinishReason: "tool_calls",
 			},

@@ -45,13 +45,10 @@ Harness 总览见 [TUI_INTEGRATION_TEST.md](./TUI_INTEGRATION_TEST.md)。
 
 ### Harness 工程文件
 
-工具类场景在临时 `ProjectRoot` 下预置 [`sample.go`](../internal/tuitest/project.go)：
+工具类场景在临时 `ProjectRoot` 下预置（见 [`project.go`](../internal/tuitest/project.go)）：
 
-```go
-package main
-
-func Hello() string { return "hello" }
-```
+- `sample.go` — 单行 `Hello`
+- `sample_multiline.go` — 多行 `Hello`（供 `tool-patch-multi`）
 
 ---
 
@@ -63,7 +60,8 @@ func Hello() string { return "hello" }
 | `stream-reasoning` | `reasoning stream test` | 1 | reasoning 小片流式 + 收起 + `answer` |
 | `tool-read` | `read sample file` | 2 | `read_file` → 真实读盘 |
 | `tool-grep` | `grep package` | 2 | `grep` |
-| `tool-patch` | `apply_patch` | 2 | `apply_patch` 改 `sample.go` |
+| `tool-patch-single` | `apply patch single` | 2 | `apply_patch` 改单行 `sample.go` |
+| `tool-patch-multi` | `apply patch multi` | 2 | `apply_patch` 改多行 `sample_multiline.go` |
 | `tool-multi` | `multi tools` | 2 | 并行 `read_file` + `grep` |
 | `tool-shell` | `run shell` | 2 | `shell echo harness-ok` |
 | `error-api` | `trigger api error` | 1 | `ErrLine` 展示 API 错误 |
@@ -150,18 +148,41 @@ Then content starts; thinking collapses.
 
 ---
 
-### `tool-patch`
+### `tool-patch-single`
 
 | Turn | 类型 | 剧本 |
 |------|------|------|
-| 1 | tool_calls | `apply_patch`，patch 正文见下 |
+| 1 | tool_calls | `apply_patch` → `sample.go`（单行 hunk） |
 | 2 | SSE | `Patch applied.` → `stop` |
 
-**Patch 剧本**（在 `sample.go` 的 `Hello` 后增加一行 `// harness`）：
+**Patch**（在单行 `Hello` 后增加 `// harness`）：
 
 ```diff
 *** Begin Patch
 *** Update File: sample.go
+@@
+-func Hello() string { return "hello" }
++func Hello() string { return "hello" }
++// harness
+*** End Patch
+```
+
+**Harness**：`TestHarness_toolPatchSingle`，`sample.go` 含 `// harness`。
+
+---
+
+### `tool-patch-multi`
+
+| Turn | 类型 | 剧本 |
+|------|------|------|
+| 1 | tool_calls | `apply_patch` → `sample_multiline.go`（多行 hunk） |
+| 2 | SSE | `Patch applied.` → `stop` |
+
+**Patch**（在多行 `Hello` 后增加 `// harness`）：
+
+```diff
+*** Begin Patch
+*** Update File: sample_multiline.go
 @@
  func Hello() string {
  	return "hello"
@@ -169,6 +190,8 @@ Then content starts; thinking collapses.
 +// harness
 *** End Patch
 ```
+
+**Harness**：`TestHarness_toolPatchMulti`，`sample_multiline.go` 含 `// harness`。
 
 ---
 

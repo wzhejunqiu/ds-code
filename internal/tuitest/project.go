@@ -29,6 +29,7 @@ func writeMinimalFixture(dir string) error {
 	files := map[string]string{
 		"AGENTS.md": "# harness\n",
 		"sample.go": "package main\n\nfunc Hello() string { return \"hello\" }\n",
+		"sample_multiline.go": "package main\n\nfunc Hello() string {\n\treturn \"hello\"\n}\n",
 	}
 	for name, body := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {

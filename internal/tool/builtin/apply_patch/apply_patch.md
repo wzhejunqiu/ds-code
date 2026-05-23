@@ -50,7 +50,7 @@
 }
 ```
 
-集成测试剧本：`docs/TUI_TCASE_SCRIPTS.md` — `tool-patch`。
+集成测试剧本：`docs/TUI_TCASE_SCRIPTS.md` — `tool-patch-single`、`tool-patch-multi`。
 
 ## 返回格式
 
