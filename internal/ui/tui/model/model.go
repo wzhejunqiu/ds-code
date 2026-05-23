@@ -89,7 +89,7 @@ func (m *Model) syncToolView() {
 func (m *Model) syncAllViews() {
 	m.syncChatView()
 	m.syncToolView()
-	if m.Overlay == state.OverlayResume && len(m.ResumeSessions) > 0 {
+	if m.Overlay == state.OverlayResume && m.ResumeSessions != nil {
 		session.SyncResumePicker(&m.State, &m.resumePicker)
 	}
 	if m.Overlay == state.OverlaySubagentList && m.Subagents.Len() > 0 {

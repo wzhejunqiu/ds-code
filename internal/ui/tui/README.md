@@ -30,12 +30,14 @@ tea.KeyMsg / tea.WindowSizeMsg / 异步 tea.Msg
 
 ## 输入：斜杠补全 vs 恢复会话列表
 
-每次 textinput 更新后调用 `updateCompletion()`：
+每次 textinput 更新后调用 `updateCompletion()`（**含光标闪烁 tick**，与按键同等频率）：
 
-1. 若解析为 `/resume <filter>`，交给 `updateResumePicker(filter)` 并返回。
+1. 若解析为 `/resume <filter>`，交给 `session.ScheduleResumeFilter` 并返回。
 2. 若已离开 resume 模式，调用 `clearResumePicker()`。
-3. 否则，若去空格后以 `/` 开头，由 `slash.FilterCommands` 驱动 `overlayComplete` 与 `completePicker`。
+3. 否则，若去空格后以 `/` 开头，由 `slash.FilterCommands` **同步**驱动 `overlayComplete` 与 `completePicker`。
 4. 非斜杠输入则关闭补全浮层。
+
+**架构差异**：TUI 里只有 `/resume <filter>` 是「随输入 debounce + 异步查 Store + Loading 文案」的浮层；斜杠补全等在内存中过滤，用 `CompleteFilterKey` 早退，不会出现 Loading ↔ 空列表闪烁。
 
 **Enter 分流**（有意拆分）：
 
@@ -49,12 +51,21 @@ tea.KeyMsg / tea.WindowSizeMsg / 异步 tea.Msg
 
 两种入口：
 
-1. **交互过滤**：`/resume foo` → `listResumeSessions` 按 ID 前缀、子串或标题过滤；随输入更新浮层。
-2. **裸命令**：`/resume` → `fetchResumeList` → `resumeListMsg`，最多加载 `resumeListMax`（50）条会话。
+1. **交互过滤**：`/resume foo` → `listFromStore` 拉取后 `filterSessions` 按 ID 前缀、子串或标题过滤；随输入 debounce（`resumeFilterDebounce`）更新浮层。
+2. **裸命令**：`/resume` + Enter → `FetchList` → `resumeListMsg`，最多加载 `resumeListMax`（50）条会话；无会话时显示 `No saved sessions.` 并关闭浮层（与交互过滤不同）。
 
-`updateResumePicker` 在仅 textinput 光标闪烁、过滤串未变且已有列表时提前返回，避免每次按键重置 `Cursor`。过滤变化时 `ResetSelection`；列表变短时用 `ClampSelection` 保留合法索引。
+**已加载哨兵**（`state.ResumeSessions`）：
 
-`resumePageSize()` 按终端高度估算可见行数（约 `height/5`，限制在 4–14），使列表能放在输入框下方。
+| 值 | 含义 |
+|----|------|
+| `nil` | 当前 filter 尚未完成一次拉取（可显示 `Loading sessions…`） |
+| 非 `nil`（含 `[]` 空切片） | 已拉取完成；无匹配时 picker 显示 `No matching sessions.`，`ScheduleResumeFilter` 在同 filter 下不再发 Tick |
+
+`ApplyResumeSessions` 将 `filterSessions` 的 `nil` 规范为 `[]`，以便与「未加载」区分。filter 变化时会先把 `ResumeSessions` 置 `nil` 再显示 Loading。
+
+`ScheduleResumeFilter` 在过滤串未变且 `ResumeSessions != nil` 时提前返回（光标闪烁、重复 `UpdateCompletion` 不会重复查库），避免重置 `Cursor`。过滤变化时 `ResetSelection`；列表变短时用 `ClampSelection` 保留合法索引。
+
+`session.PageSize()` 按终端高度估算可见行数（约 `height/5`，限制在 4–14），使列表能放在输入框下方。`syncAllViews` 在 `OverlayResume` 且 `ResumeSessions != nil` 时同步 picker（空列表也会刷新 `OverlayText`）。
 
 ## 布局
 

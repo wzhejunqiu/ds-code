@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/ui/slash"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/input"
@@ -103,6 +104,32 @@ func TestHandleCompleteKeyEnterDefersWhenReadyToSubmit(t *testing.T) {
 
 	if input.HandleCompleteKey(&m.State, tea.KeyMsg{Type: tea.KeyEnter}, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd) {
 		t.Fatal("enter should submit command, not pick from list")
+	}
+}
+
+func TestUpdateCompletionResumeNoRefetchWhenLoadedEmpty(t *testing.T) {
+	m := New(&deps.Deps{Store: session.NewMemoryStore()})
+	m.input.SetValue("/resume nomatch")
+	m.Overlay = state.OverlayResume
+	m.ResumeFilter = "nomatch"
+	m.ResumeSessions = []session.Summary{}
+	seqBefore := m.ResumeFilterSeq
+	m.TestSyncResumePicker()
+	overlayBefore := m.OverlayText
+
+	for i := 0; i < 5; i++ {
+		if cmd := input.UpdateCompletion(&m.State, m.input.Value(), &m.completePicker, &m.resumePicker); cmd != nil {
+			t.Fatalf("iteration %d: expected no refetch cmd on cursor blink, got cmd", i)
+		}
+	}
+	if m.ResumeFilterSeq != seqBefore {
+		t.Fatalf("ResumeFilterSeq = %d, want %d (no new debounce tick)", m.ResumeFilterSeq, seqBefore)
+	}
+	if m.OverlayText != overlayBefore {
+		t.Fatalf("overlay changed on repeat UpdateCompletion:\nbefore: %q\nafter:  %q", overlayBefore, m.OverlayText)
+	}
+	if !strings.Contains(m.OverlayText, "No matching sessions") {
+		t.Fatalf("overlay = %q, want stable empty-list message", m.OverlayText)
 	}
 }
 

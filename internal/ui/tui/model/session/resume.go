@@ -106,13 +106,17 @@ func ClearResumePicker(s *state.State, picker *component.Picker) {
 }
 
 func ScheduleResumeFilter(s *state.State, filter string, picker *component.Picker) tea.Cmd {
-	if s.Overlay == state.OverlayResume && filter == s.ResumeFilter && len(s.ResumeSessions) > 0 {
+	// ResumeSessions == nil means not loaded yet; non-nil (including empty) means loaded.
+	if s.Overlay == state.OverlayResume && filter == s.ResumeFilter && s.ResumeSessions != nil {
 		return nil
 	}
 	s.Overlay = state.OverlayResume
 	s.Complete = nil
 	s.CompleteFilterKey = ""
-	if len(s.ResumeSessions) == 0 {
+	if filter != s.ResumeFilter {
+		s.ResumeSessions = nil
+	}
+	if s.ResumeSessions == nil {
 		s.OverlayText = resumeLoadingOverlay
 	}
 	s.ResumeFilterSeq++
@@ -132,6 +136,9 @@ func UpdateResumeFilterTick(s *state.State, m msg.ResumeFilterTickMsg) tea.Cmd {
 func ApplyResumeSessions(s *state.State, filter string, list []session.Summary, picker *component.Picker) {
 	filterChanged := s.ResumeFilter != filter
 	s.ResumeFilter = filter
+	if list == nil {
+		list = []session.Summary{}
+	}
 	s.ResumeSessions = list
 	if filterChanged || len(list) == 0 {
 		picker.ResetSelection()
