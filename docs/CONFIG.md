@@ -236,7 +236,7 @@ DS_CODE_DEEPSEEK_API_KEY → DEEPSEEK_API_KEY → 报错退出
 | `context.truncate_by` | string | **`chars`** | `chars` \| `tokenizer`；工具/`@` 截断 |
 | `context.tool_result_max_chars` | int | **100000** | 单次 tool 返回字符上限 |
 | `context.at_reference_max_chars` | int | **128000** | `@` 引用预加载总字符上限 |
-| `context.git_snapshot_max_chars` | int | **16000** | `git status` + `diff --stat` 注入 system 上限 |
+| `context.git_snapshot_max_chars` | int | **16000** | Git 快照（分支、默认分支、user、status、最近提交）注入 system 总上限 |
 | `context.at_dir_max_files` | int | **50** | `@dir/` 最多预读文件数 |
 | `context.at_dir_max_depth` | int | **4** | `@dir/` 最大目录深度 |
 

@@ -106,7 +106,7 @@ ds-code --plan -p "分析 internal/agent 目录结构并给出重构建议"
 
 - **`@path` / `@dir/`**：预加载文件/目录（预算见 `context.at_reference_*`）
 - **Slash 命令**：`/help`、`/git`、`/mode`、`/effort`、`/thinking`、`/compact`、`/context`、`/clear`、`/resume` 等；`/` 补全支持前缀过滤
-- **Git 感知**：启动注入 `git status -sb` + `git diff --stat`
+- **Git 感知**：启动注入当前分支、默认分支、Git user、`git status`、最近 5 条提交
 
 ### 写操作与权限
 

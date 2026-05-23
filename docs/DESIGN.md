@@ -394,7 +394,7 @@ type Service interface {
 | `AgentsMDLoader` | 自 cwd 向上至 git 根 `AGENTS.md` | per-session 失效：cwd 变更 |
 | `RulesLoader` | `.ds-code/rules/**` | glob 匹配结果缓存 |
 | `SkillsLoader` | `.ds-code/skills/**/SKILL.md` + `~/.ds-code/skills/**/SKILL.md` | 按 name 懒加载 |
-| `GitSnapshot` | `git status -sb`、`git diff --stat` | 每用户轮或 `/git` 刷新；≤ `git_snapshot_max_chars` |
+| `GitSnapshot` | 当前分支、默认分支、Git user、`git status`（≤2k）、最近 5 条提交 | 会话启动或 `/git` 刷新；整段 ≤ `git_snapshot_max_chars` |
 
 ---
 

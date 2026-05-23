@@ -115,7 +115,7 @@ func SessionBilledTokens(s Session) int {
 | `AgentsMD` | `string` | `AGENTS.md` |
 | `Rules` | `string` | rules 片段 |
 | `Skills` | `string` | 当前激活 skill |
-| `GitSnapshot` | `string` | `git status` / `diff --stat`（可选；计入 **System prompt** 分项） |
+| `GitSnapshot` | `string` | 当前分支、默认分支、Git user、`git status`、最近 5 条提交（可选；计入 **System prompt** 分项） |
 | `ToolsJSON` | `string` | 请求体 `tools` 数组 JSON（与 API 序列化一致） |
 | `Messages` | `[]Message` | **仅** `user` / `assistant` / `tool`；**不含** `role=system`（system 由上行字段合并为一条） |
 
