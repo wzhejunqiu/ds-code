@@ -17,26 +17,58 @@ import (
 
 const sessionTitleTimeout = 30 * time.Second
 
+type titleGenState struct {
+	wg sync.WaitGroup
+}
+
 var titleGenInFlight sync.Map
+
+// SessionTitleWaitTimeout is the recommended wait budget for callers (e.g. non-interactive -p).
+const SessionTitleWaitTimeout = sessionTitleTimeout + 5*time.Second
 
 // NewSessionTitleHook returns a Runner hook that asynchronously generates session titles.
 func NewSessionTitleHook(cfg *config.Config, llmClient llm.Client, store session.Store, subStore subagentstore.Store) agent.SessionTitleHook {
 	if cfg == nil || llmClient == nil || store == nil || subStore == nil {
 		return nil
 	}
-	return func(parentCtx context.Context, sessionID, userContent string) {
-		if _, loaded := titleGenInFlight.LoadOrStore(sessionID, struct{}{}); loaded {
+	return func(_ context.Context, sessionID, userContent string) {
+		state := &titleGenState{}
+		state.wg.Add(1)
+		if _, loaded := titleGenInFlight.LoadOrStore(sessionID, state); loaded {
+			state.wg.Done()
 			return
 		}
 		go func() {
 			defer titleGenInFlight.Delete(sessionID)
-			generateSessionTitleAsync(parentCtx, cfg, llmClient, store, subStore, sessionID, userContent)
+			defer state.wg.Done()
+			generateSessionTitleAsync(cfg, llmClient, store, subStore, sessionID, userContent)
 		}()
 	}
 }
 
-func generateSessionTitleAsync(parentCtx context.Context, cfg *config.Config, llmClient llm.Client, store session.Store, subStore subagentstore.Store, sessionID, userContent string) {
-	ctx, cancel := context.WithTimeout(parentCtx, sessionTitleTimeout)
+// WaitForSessionTitle blocks until in-flight title generation for sessionID finishes or timeout elapses.
+func WaitForSessionTitle(sessionID string, timeout time.Duration) {
+	v, ok := titleGenInFlight.Load(sessionID)
+	if !ok {
+		return
+	}
+	state, ok := v.(*titleGenState)
+	if !ok {
+		return
+	}
+	done := make(chan struct{})
+	go func() {
+		state.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(timeout):
+	}
+}
+
+func generateSessionTitleAsync(cfg *config.Config, llmClient llm.Client, store session.Store, subStore subagentstore.Store, sessionID, userContent string) {
+	ctx, cancel := context.WithTimeout(context.Background(), sessionTitleTimeout)
 	defer cancel()
 
 	title, err := GenerateSessionTitle(ctx, cfg, llmClient, subStore, sessionID, userContent)

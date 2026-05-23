@@ -66,6 +66,7 @@ func lookupPrices(modelID string) (PerMillion, string) {
 	p, ok := activePrices[modelID]
 	if !ok {
 		p = activePrices[DefaultSubagentModel]
+		modelID = DefaultSubagentModel
 	}
 	return p, modelID
 }

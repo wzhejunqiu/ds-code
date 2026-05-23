@@ -6,7 +6,6 @@ import (
 
 	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/hejunqiu/ds-code/cmd/ds-code/commands"
-	"github.com/hejunqiu/ds-code/internal/billing"
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
@@ -53,14 +52,8 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	// Interactive TUI and -p both call the LLM; only the non-TTY idle path skips it.
 	requireKey := prompt != "" || permission.IsInteractiveTTY()
 
-	cfg, err := config.Load(cmd, config.Options{RequireAPIKey: requireKey})
+	cfg, err := app.BootstrapConfig(cmd, config.Options{RequireAPIKey: requireKey})
 	if err != nil {
-		return err
-	}
-	if err := billing.SetupFromUserConfig(); err != nil {
-		return err
-	}
-	if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
 		return err
 	}
 	closeLog, err := setupLogging(cfg)

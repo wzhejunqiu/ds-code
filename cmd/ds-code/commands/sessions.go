@@ -6,6 +6,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	sessionsqlite "github.com/hejunqiu/ds-code/internal/session/sqlite"
@@ -18,11 +19,8 @@ func SessionsCmd() *cobra.Command {
 		Use:   "sessions",
 		Short: "List saved sessions for the current project",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := config.Load(cmd, config.Options{})
+			cfg, err := app.BootstrapConfig(cmd, config.Options{})
 			if err != nil {
-				return err
-			}
-			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
 				return err
 			}
 			defer logging.TrySetup(logging.Options{

@@ -32,8 +32,8 @@ func TestSnapshotForModel_unknownModelUsesFlashRates(t *testing.T) {
 
 	flash := billing.SnapshotForModel("deepseek-v4-flash")
 	unknown := billing.SnapshotForModel("unknown-model-xyz")
-	if unknown.ModelID != "unknown-model-xyz" {
-		t.Fatalf("model id = %q", unknown.ModelID)
+	if unknown.ModelID != billing.DefaultSubagentModel {
+		t.Fatalf("model id = %q, want %q", unknown.ModelID, billing.DefaultSubagentModel)
 	}
 	if unknown.InputPerMillion != flash.InputPerMillion {
 		t.Fatalf("unknown input = %v, flash = %v", unknown.InputPerMillion, flash.InputPerMillion)
