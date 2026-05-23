@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"sort"
 	"sync"
 	"time"
 
@@ -129,35 +128,7 @@ func (l *LazyStore) UpdateSession(ctx context.Context, sessionID string, fn func
 }
 
 func (l *LazyStore) ListSessions(ctx context.Context, limit int) ([]Summary, error) {
-	list, err := l.inner.ListSessions(ctx, limit)
-	if err != nil {
-		return nil, err
-	}
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-	seen := make(map[string]bool, len(list))
-	for _, s := range list {
-		seen[s.ID] = true
-	}
-	for id, sess := range l.pending {
-		if seen[id] {
-			continue
-		}
-		list = append(list, Summary{
-			ID:        sess.ID,
-			Title:     sess.Title,
-			Model:     sess.Model,
-			UpdatedAt: sess.UpdatedAt,
-			CreatedAt: sess.CreatedAt,
-		})
-	}
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].UpdatedAt.After(list[j].UpdatedAt)
-	})
-	if limit > 0 && len(list) > limit {
-		list = list[:limit]
-	}
-	return list, nil
+	return l.inner.ListSessions(ctx, limit)
 }
 
 func (l *LazyStore) materialize(ctx context.Context, id string) error {

@@ -32,13 +32,21 @@ type Config struct {
 }
 
 type LLMConfig struct {
-	BaseURL         string        `mapstructure:"base_url"`
-	Model           string        `mapstructure:"model"`
-	MaxTokens       int           `mapstructure:"max_tokens"`
-	Timeout         time.Duration `mapstructure:"timeout"`
-	StrictTools     bool          `mapstructure:"strict_tools"`
+	BaseURL         string             `mapstructure:"base_url"`
+	Model           string             `mapstructure:"model"`
+	MaxTokens       int                `mapstructure:"max_tokens"`
+	Timeout         time.Duration      `mapstructure:"timeout"`
+	StrictTools     bool               `mapstructure:"strict_tools"`
+	Thinking        ThinkingConfig     `mapstructure:"thinking"`
+	ReasoningEffort string             `mapstructure:"reasoning_effort"`
+	Subagent        SubagentLLMConfig  `mapstructure:"subagent"`
+}
+
+// SubagentLLMConfig holds LLM settings for task/title subagents.
+type SubagentLLMConfig struct {
+	Model           string         `mapstructure:"model"`
 	Thinking        ThinkingConfig `mapstructure:"thinking"`
-	ReasoningEffort string        `mapstructure:"reasoning_effort"`
+	ReasoningEffort string         `mapstructure:"reasoning_effort"`
 }
 
 type ThinkingConfig struct {
@@ -59,7 +67,12 @@ type ContextConfig struct {
 }
 
 type AgentConfig struct {
-	MaxTurns int `mapstructure:"max_turns"`
+	MaxTurns              int                       `mapstructure:"max_turns"`
+	SessionTitleSubagent  SessionTitleSubagentConfig `mapstructure:"session_title_subagent"`
+}
+
+type SessionTitleSubagentConfig struct {
+	Enabled bool `mapstructure:"enabled"`
 }
 
 type ToolsConfig struct {

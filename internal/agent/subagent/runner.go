@@ -22,8 +22,12 @@ type RegisterFunc func(reg *tool.Registry)
 
 // Run executes a read-only sub-agent exploration and returns a summary string.
 // run must already exist in subStore (created by the task tool). Optional cb streams
-// nested tool events to the parent turn UI.
-func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt string, register RegisterFunc, subStore subagentstore.Store, run subagentstore.Run, cb *agent.TurnCallbacks) (string, error) {
+// nested tool events to the parent turn UI. maxTurns 0 uses min(8, cfg.Agent.MaxTurns).
+func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt string, register RegisterFunc, subStore subagentstore.Store, run subagentstore.Run, cb *agent.TurnCallbacks, maxTurns int) (string, error) {
+	return executeRun(ctx, cfg, llmClient, prompt, register, subStore, run, cb, maxTurns)
+}
+
+func executeRun(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt string, register RegisterFunc, subStore subagentstore.Store, run subagentstore.Run, cb *agent.TurnCallbacks, maxTurns int) (string, error) {
 	if prompt == "" {
 		return "", fmt.Errorf("subagent: empty prompt")
 	}
@@ -36,7 +40,12 @@ func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt s
 	register(reg)
 
 	store := newSessionStore(subStore, run)
-	sess, err := store.CreateSession(cfg.LLM.Model, cfg.LLM.ReasoningEffort, cfg.LLM.Thinking.Type, "readonly", "agent")
+	sess, err := store.CreateSession(
+		cfg.LLM.ResolveSubagentModel(),
+		cfg.LLM.ResolveSubagentReasoningEffort(),
+		cfg.LLM.ResolveSubagentThinkingType(),
+		"readonly", "agent",
+	)
 	if err != nil {
 		return "", err
 	}
@@ -52,10 +61,7 @@ func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt s
 		Rules:    rules,
 	}
 
-	maxTurns := 8
-	if cfg.Agent.MaxTurns > 0 && cfg.Agent.MaxTurns < maxTurns {
-		maxTurns = cfg.Agent.MaxTurns
-	}
+	maxTurns = resolveMaxTurns(cfg, maxTurns)
 
 	runner := &agent.Runner{
 		LLM:      llmClient,
@@ -91,6 +97,17 @@ func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt s
 		summary = result.FinalReasoning
 	}
 	return trimSummary(summary, cfg), nil
+}
+
+func resolveMaxTurns(cfg *config.Config, override int) int {
+	if override > 0 {
+		return override
+	}
+	maxTurns := 8
+	if cfg.Agent.MaxTurns > 0 && cfg.Agent.MaxTurns < maxTurns {
+		maxTurns = cfg.Agent.MaxTurns
+	}
+	return maxTurns
 }
 
 func trimSummary(s string, cfg *config.Config) string {

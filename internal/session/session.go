@@ -19,6 +19,8 @@ type Session struct {
 	PromptTokensTotal         int64
 	CompletionTokensTotal     int64
 	PromptCacheHitTokensTotal int64
+	PricingSnapshotJSON       string
+	EstimatedCostCNY          float64
 	GitSnapshot               string
 	Title                     string
 	CreatedAt                 time.Time
@@ -45,5 +47,8 @@ type Message struct {
 	PromptTokens         int64
 	CompletionTokens     int64
 	PromptCacheHitTokens int64
+	ModelID              string
+	PricingSnapshotJSON  string
+	EstimatedCostCNY     float64
 	CreatedAt            time.Time
 }

@@ -153,6 +153,9 @@ DS_CODE_DEEPSEEK_API_KEY → DEEPSEEK_API_KEY → 报错退出
 | 环境变量 | YAML 键 |
 |----------|---------|
 | `DS_CODE_LLM_MODEL` | `llm.model` |
+| `DS_CODE_LLM_SUBAGENT_MODEL` | `llm.subagent.model` |
+| `DS_CODE_LLM_SUBAGENT_THINKING_TYPE` | `llm.subagent.thinking.type` |
+| `DS_CODE_LLM_SUBAGENT_REASONING_EFFORT` | `llm.subagent.reasoning_effort` |
 | `DS_CODE_LLM_MAX_TOKENS` | `llm.max_tokens` |
 | `DS_CODE_PERMISSION_MODE` | `permission.mode` |
 
@@ -168,10 +171,13 @@ DS_CODE_DEEPSEEK_API_KEY → DEEPSEEK_API_KEY → 报错退出
 
 | Flag | 短选项 | 配置键 | 类型 | 说明 |
 |------|--------|--------|------|------|
-| `--model` | — | `llm.model` | string | `deepseek-v4-pro` \| `deepseek-v4-flash` |
+| `--model` | — | `llm.model` | string | 主 agent：`deepseek-v4-pro` \| `deepseek-v4-flash` |
+| `--subagent-model` | — | `llm.subagent.model` | string | Subagent 模型 |
 | `--max-tokens` | — | `llm.max_tokens` | int | 单次 completion 上限，≤ `393216` |
-| `--thinking` | — | `llm.thinking.type` | string | `enabled` \| `disabled` |
-| `--reasoning-effort` | — | `llm.reasoning_effort` | string | `high` \| `max` |
+| `--thinking` | — | `llm.thinking.type` | string | 主 agent 思考：`enabled` \| `disabled` |
+| `--subagent-thinking` | — | `llm.subagent.thinking.type` | string | Subagent 思考 |
+| `--reasoning-effort` | — | `llm.reasoning_effort` | string | 主 agent：`high` \| `max` |
+| `--subagent-reasoning-effort` | — | `llm.subagent.reasoning_effort` | string | Subagent 推理强度 |
 | `--strict-tools` | — | `llm.strict_tools` | bool | `true` → 全部请求走 Beta `base_url` |
 | `--permission-mode` | — | `permission.mode` | string | `readonly` \| `ask` \| `auto` |
 | `--dangerously-auto` | — | `permission.mode` | bool | 设为 `auto`；非 TTY 脚本用，文档警示 |
@@ -224,6 +230,47 @@ DS_CODE_DEEPSEEK_API_KEY → DEEPSEEK_API_KEY → 报错退出
 | `llm.strict_tools` | bool | **false** | `--strict-tools` | 见 [llm-deepseek.md · strict 模式](llm-deepseek.md#strict-模式beta) |
 | `llm.thinking.type` | string | **`enabled`** | `--thinking` | `enabled` \| `disabled` |
 | `llm.reasoning_effort` | string | **`max`** | `--reasoning-effort` | `high` \| `max`（`low`/`medium`/`xhigh` 映射见 llm-deepseek） |
+| `llm.subagent.model` | string | **`deepseek-v4-flash`** | `--subagent-model` | Task / 标题 subagent 默认模型 |
+| `llm.subagent.thinking.type` | string | **`disabled`** | `--subagent-thinking` | Subagent 思考模式 |
+| `llm.subagent.reasoning_effort` | string | **`high`** | `--subagent-reasoning-effort` | Subagent 推理强度 |
+
+用量与费用：`messages` / `subagent_messages` 的 assistant 行记录 `model_id`、`pricing_snapshot_json`、`estimated_cost_cny`（人民币估算）；`/context` 与状态栏合计主 agent + subagent token 与 ¥ 费用（subagent 费用含 session-title run）。`sessions.db` schema **v4** 起生效；若启动报错 schema version 不匹配，请删除项目目录下的 `sessions.db` 后重启（不自动迁移）。
+
+### 5.1.1 `billing` — 模型单价（仅用户级配置）
+
+**仅** `~/.ds-code/config/config.yaml` 可配置；**禁止**写在项目级 `.ds-code/config.yaml`。启动时从用户配置加载并覆盖内置默认价目表（内置默认仍作未配置模型的回退）。
+
+内置默认价与 [DeepSeek 模型 & 价格](https://api-docs.deepseek.com/zh-cn/quick_start/pricing) 对齐（元 / 1M tokens）：
+
+| 模型 | 输入（缓存未命中） | 输出 | 输入（缓存命中） |
+|------|-------------------|------|------------------|
+| `deepseek-v4-flash` | 1 | 2 | 0.02 |
+| `deepseek-v4-pro` | 3（2.5 折，至 2026-05-31） | 6 | 0.025 |
+
+`deepseek-v4-pro` 优惠结束后为：输入 12、输出 24、缓存命中 0.1；可在用户级 `billing.model_prices` 中自行覆盖。
+
+| 键 | 类型 | 说明 |
+|----|------|------|
+| `billing.price_table_version` | string | 可选；写入价格快照 `price_table_version`，便于区分改价前后记录 |
+| `billing.model_prices.<model_id>.input_per_million` | float | 输入 token 单价（元 / 1M tokens） |
+| `billing.model_prices.<model_id>.output_per_million` | float | 输出 token 单价 |
+| `billing.model_prices.<model_id>.cache_hit_per_million` | float | 缓存命中输入单价 |
+
+示例（用户级 `~/.ds-code/config/config.yaml`）：
+
+```yaml
+billing:
+  price_table_version: my-prices-2026-06
+  model_prices:
+    deepseek-v4-pro:
+      input_per_million: 12.0
+      output_per_million: 24.0
+      cache_hit_per_million: 0.1
+    deepseek-v4-flash:
+      input_per_million: 1.0
+      output_per_million: 2.0
+      cache_hit_per_million: 0.02
+```
 
 ### 5.2 `context` — 窗口、compact、截断
 

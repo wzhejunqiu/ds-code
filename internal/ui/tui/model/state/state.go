@@ -64,8 +64,9 @@ type State struct {
 	ErrLine           string
 	SensitiveLogWarn  string
 
-	HeaderSession session.Session
-	HasSession    bool
+	HeaderSession  session.Session
+	HeaderCostCNY  float64
+	HasSession     bool
 
 	ExitConfirmPending bool
 	ExitConfirmKey     string

@@ -52,6 +52,15 @@ func validate(cfg *Config) error {
 	if !slices.Contains(allowedEffort, cfg.LLM.ReasoningEffort) {
 		return fmt.Errorf("config: llm.reasoning_effort must be high or max, got %q", cfg.LLM.ReasoningEffort)
 	}
+	if cfg.LLM.Subagent.Model != "" && !slices.Contains(allowedModels, cfg.LLM.Subagent.Model) {
+		return fmt.Errorf("config: llm.subagent.model must be one of %v, got %q", allowedModels, cfg.LLM.Subagent.Model)
+	}
+	if cfg.LLM.Subagent.Thinking.Type != "" && !slices.Contains(allowedThinking, cfg.LLM.Subagent.Thinking.Type) {
+		return fmt.Errorf("config: llm.subagent.thinking.type must be enabled or disabled, got %q", cfg.LLM.Subagent.Thinking.Type)
+	}
+	if cfg.LLM.Subagent.ReasoningEffort != "" && !slices.Contains(allowedEffort, cfg.LLM.Subagent.ReasoningEffort) {
+		return fmt.Errorf("config: llm.subagent.reasoning_effort must be high or max, got %q", cfg.LLM.Subagent.ReasoningEffort)
+	}
 	if !slices.Contains(allowedPermission, cfg.Permission.Mode) {
 		return fmt.Errorf("config: permission.mode must be readonly, ask, or auto, got %q", cfg.Permission.Mode)
 	}

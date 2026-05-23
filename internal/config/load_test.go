@@ -67,6 +67,15 @@ func TestLoad_defaults(t *testing.T) {
 	if cfg.LLM.Model != "deepseek-v4-pro" {
 		t.Fatalf("model = %q", cfg.LLM.Model)
 	}
+	if cfg.LLM.Subagent.Model != "deepseek-v4-flash" {
+		t.Fatalf("subagent model = %q", cfg.LLM.Subagent.Model)
+	}
+	if cfg.LLM.Subagent.Thinking.Type != "disabled" {
+		t.Fatalf("subagent thinking = %q", cfg.LLM.Subagent.Thinking.Type)
+	}
+	if cfg.LLM.Subagent.ReasoningEffort != "high" {
+		t.Fatalf("subagent effort = %q", cfg.LLM.Subagent.ReasoningEffort)
+	}
 	if cfg.Permission.Mode != "ask" {
 		t.Fatalf("permission = %q", cfg.Permission.Mode)
 	}

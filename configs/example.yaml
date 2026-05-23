@@ -2,11 +2,30 @@
 # 用户级：复制到 ~/.ds-code/config/config.yaml（路径固定，不可改）
 # 项目级：复制到 <git-root>/.ds-code/config.yaml
 # 权威说明：docs/CONFIG.md
+#
+# billing 段仅允许写在用户级 ~/.ds-code/config/config.yaml（勿写入项目级 config.yaml）：
+
+# billing:
+#   price_table_version: my-prices-2025-06
+#   model_prices:
+#     deepseek-v4-pro:
+#       input_per_million: 12.0
+#       output_per_million: 24.0
+#       cache_hit_per_million: 0.1
+#     deepseek-v4-flash:
+#       input_per_million: 1.0
+#       output_per_million: 2.0
+#       cache_hit_per_million: 0.02
 
 llm:
   # api_key: 禁止写在此处；仅 DS_CODE_DEEPSEEK_API_KEY 或 DEEPSEEK_API_KEY 环境变量
   base_url: https://api.deepseek.com
   model: deepseek-v4-pro
+  subagent:
+    model: deepseek-v4-flash
+    thinking:
+      type: disabled
+    reasoning_effort: high
   max_tokens: 16384
   timeout: 120s
   strict_tools: false

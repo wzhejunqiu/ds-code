@@ -84,6 +84,7 @@ func (r *Runner) attachStreamHandlers(cb *TurnCallbacks, round int, stream *subR
 func (r *Runner) finishTerminalRound(
 	ctx context.Context,
 	sessionID string,
+	modelID string,
 	resp *llm.Response,
 	stream *subRoundStream,
 	turnStart time.Time,
@@ -100,6 +101,7 @@ func (r *Runner) finishTerminalRound(
 		ReasoningDurationMS: durationMS(reasoningDur),
 		TurnDurationMS:      durationMS(turnDur),
 	}
+	enrichAssistantUsage(&assistantMsg, modelID, resp.Usage)
 	if err := r.Sessions.AppendMessage(ctx, assistantMsg); err != nil {
 		return nil, err
 	}
@@ -227,6 +229,7 @@ func (r *Runner) runToolCalls(
 func (r *Runner) appendAssistantWithTools(
 	ctx context.Context,
 	sessionID string,
+	modelID string,
 	resp *llm.Response,
 	stream *subRoundStream,
 ) error {
@@ -247,5 +250,6 @@ func (r *Runner) appendAssistantWithTools(
 		ReasoningDurationMS: durationMS(stream.timing.duration()),
 		ToolCallsJSON:       string(tcJSON),
 	}
+	enrichAssistantUsage(&assistantMsg, modelID, resp.Usage)
 	return r.Sessions.AppendMessage(ctx, assistantMsg)
 }

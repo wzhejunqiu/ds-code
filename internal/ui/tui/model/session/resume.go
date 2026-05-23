@@ -39,7 +39,7 @@ func PageSize(s *state.State) int {
 func SyncResumePicker(s *state.State, picker *component.Picker) {
 	items := make([]string, len(s.ResumeSessions))
 	for i, sum := range s.ResumeSessions {
-		title := sum.Title
+		title := session.OneLine(sum.Title)
 		if title == "" {
 			title = "(untitled)"
 		}

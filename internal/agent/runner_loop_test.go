@@ -70,6 +70,7 @@ func TestFinishTerminalRound_writesOutWhenNoCallback(t *testing.T) {
 	got, err := r.finishTerminalRound(
 		context.Background(),
 		sess.ID,
+		sess.Model,
 		&llm.Response{Content: "final"},
 		stream,
 		time.Now(),
@@ -127,7 +128,7 @@ func TestAppendAssistantWithTools_persistsToolCallsJSON(t *testing.T) {
 			ID: "c1", Name: "read_file", Arguments: `{"path":"x"}`,
 		}},
 	}
-	if err := r.appendAssistantWithTools(context.Background(), sess.ID, resp, &subRoundStream{}); err != nil {
+	if err := r.appendAssistantWithTools(context.Background(), sess.ID, sess.Model, resp, &subRoundStream{}); err != nil {
 		t.Fatal(err)
 	}
 	msgs, _ := store.ListMessages(context.Background(), sess.ID)

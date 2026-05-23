@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
+	"github.com/hejunqiu/ds-code/internal/billing"
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/spf13/cobra"
@@ -18,6 +19,9 @@ func ResumeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cmd, config.Options{RequireAPIKey: true})
 			if err != nil {
+				return err
+			}
+			if err := billing.SetupFromUserConfig(); err != nil {
 				return err
 			}
 			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {

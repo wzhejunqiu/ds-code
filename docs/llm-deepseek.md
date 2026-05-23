@@ -183,7 +183,7 @@ func (b ContextBreakdown) PercentOfTotal(part int) float64 { ... }
 
 YAML 键、CLI、环境变量及合并优先级见 **[CONFIG.md](CONFIG.md)**；全量示例见 [`configs/example.yaml`](../configs/example.yaml)。
 
-与 API 直接相关的默认：`llm.model` = **`deepseek-v4-pro`**，`llm.thinking.type` = **`enabled`**，`llm.reasoning_effort` = **`max`**，`llm.max_tokens` = **16384**（硬顶 393216），`context.window_tokens` = **1048576**，`context.compact_threshold_ratio` = **0.80**。
+与 API 直接相关的默认：`llm.model` = **`deepseek-v4-pro`**，`llm.thinking.type` = **`enabled`**，`llm.reasoning_effort` = **`max`**；Subagent（`llm.subagent`）默认 **`deepseek-v4-flash`** / thinking **`disabled`** / reasoning **`high`**。`llm.max_tokens` = **16384**（硬顶 393216），`context.window_tokens` = **1048576**，`context.compact_threshold_ratio` = **0.80**。UI 费用估算单位为 **人民币（¥）**，按 `messages` / `subagent_messages` 持久化的价格快照计算（见 [CONFIG.md §5.1](CONFIG.md#51-llm--deepseek-客户端)）。
 
 **允许切换的模型**（`/mode` 与配置校验白名单）：`deepseek-v4-pro`、`deepseek-v4-flash`（弃用名自动迁移见上表）。
 

@@ -67,6 +67,8 @@ tea.KeyMsg / tea.WindowSizeMsg / 异步 tea.Msg
 
 `session.PageSize()` 按终端高度估算可见行数（约 `height/5`，限制在 4–14），使列表能放在输入框下方。`syncAllViews` 在 `OverlayResume` 且 `ResumeSessions != nil` 时同步 picker（空列表也会刷新 `OverlayText`）。
 
+`LazyStore.ListSessions` 仅返回已落库会话（`AppendMessage` 后）；未发消息的 pending session 不会出现在 `/resume` 列表。列表 title 经 `session.OneLine` 压单行；首条消息后异步 LLM 标题见 `internal/agent/subagent/title.go`。
+
 ## 布局
 
 `view.Layout`（[`model/view/render.go`](model/view/render.go)）按**内容行数**计算聊天/工具视口高度，并受终端高度上限约束，使输入框紧贴 transcript 下方，而非钉在屏幕底部；由 `SyncChat` / `SyncTool` 在同步视口内容时调用。

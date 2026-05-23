@@ -53,7 +53,7 @@ func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
 
 	_, err = subagent.Run(context.Background(), cfg, mockLLM, "say hi", func(reg *tool.Registry) {
 		register.ExploreTools(reg, cfg, permission.NewEngine("readonly", dir, false), nil, false)
-	}, sub, run, nil)
+	}, sub, run, nil, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

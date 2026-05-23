@@ -80,6 +80,35 @@ func TestLazyStore_defersInsertUntilMessage(t *testing.T) {
 	if got.GitSnapshot != "branch main" {
 		t.Fatalf("git_snapshot = %q, want branch main", got.GitSnapshot)
 	}
+	if got.PricingSnapshotJSON == "" {
+		t.Fatal("expected pricing_snapshot_json after materialize")
+	}
+}
+
+func TestLazyStore_ListSessions_excludesPending(t *testing.T) {
+	t.Parallel()
+	inner := session.NewMemoryStore()
+	store := session.NewLazyStore(inner)
+	ctx := context.Background()
+
+	if _, err := store.CreateSession("m", "max", "enabled", "ask", "agent"); err != nil {
+		t.Fatal(err)
+	}
+
+	list, err := store.ListSessions(ctx, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("ListSessions = %d, want 0 (pending must not appear)", len(list))
+	}
+	innerList, err := inner.ListSessions(ctx, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(innerList) != 0 {
+		t.Fatalf("inner ListSessions = %d, want 0", len(innerList))
+	}
 }
 
 func TestLazyStore_DropPending(t *testing.T) {

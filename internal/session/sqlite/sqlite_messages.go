@@ -16,7 +16,9 @@ func (s *Store) ListMessages(ctx context.Context, sessionID string) ([]session.M
 		COALESCE(reasoning_duration_ms, 0), COALESCE(turn_duration_ms, 0),
 		COALESCE(tool_calls_json, ''),
 		COALESCE(tool_call_id, ''), COALESCE(tool_name, ''),
-		prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
+		prompt_tokens, completion_tokens, prompt_cache_hit_tokens,
+		COALESCE(model_id, ''), COALESCE(pricing_snapshot_json, ''), COALESCE(estimated_cost_cny, 0),
+		created_at
 		FROM messages WHERE session_id=? ORDER BY id ASC`, sessionID)
 	if err != nil {
 		return nil, err
@@ -40,7 +42,8 @@ func scanMessage(rows *sql.Rows) (session.Message, error) {
 		&m.ID, &m.SessionID, &m.Role, &m.Content, &m.ReasoningContent,
 		&m.ReasoningDurationMS, &m.TurnDurationMS,
 		&m.ToolCallsJSON, &m.ToolCallID, &m.ToolName,
-		&m.PromptTokens, &m.CompletionTokens, &m.PromptCacheHitTokens, &created,
+		&m.PromptTokens, &m.CompletionTokens, &m.PromptCacheHitTokens,
+		&m.ModelID, &m.PricingSnapshotJSON, &m.EstimatedCostCNY, &created,
 	)
 	if err != nil {
 		return session.Message{}, err
@@ -60,12 +63,15 @@ func (s *Store) AppendMessage(ctx context.Context, msg session.Message) error {
 	res, err := s.db.ExecContext(ctx, `INSERT INTO messages (
 		session_id, role, content, reasoning_content, reasoning_duration_ms, turn_duration_ms,
 		tool_calls_json, tool_call_id, tool_name,
-		prompt_tokens, completion_tokens, prompt_cache_hit_tokens, created_at
-	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		prompt_tokens, completion_tokens, prompt_cache_hit_tokens,
+		model_id, pricing_snapshot_json, estimated_cost_cny,
+		created_at
+	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		msg.SessionID, msg.Role, msg.Content, msg.ReasoningContent,
 		msg.ReasoningDurationMS, msg.TurnDurationMS,
 		msg.ToolCallsJSON, msg.ToolCallID, msg.ToolName,
 		msg.PromptTokens, msg.CompletionTokens, msg.PromptCacheHitTokens,
+		msg.ModelID, msg.PricingSnapshotJSON, msg.EstimatedCostCNY,
 		msg.CreatedAt.Format(time.RFC3339),
 	)
 	if err != nil {
@@ -75,13 +81,18 @@ func (s *Store) AppendMessage(ctx context.Context, msg session.Message) error {
 	msg.ID = id
 
 	if msg.Role == role.User {
-		title := session.TruncateTitle(msg.Content, 80)
+		title := session.TruncateTitle(msg.Content, session.MaxTitleRunes)
 		if _, err := s.db.ExecContext(ctx, `UPDATE sessions SET title=CASE WHEN title='' THEN ? ELSE title END, updated_at=? WHERE id=?`,
 			title, now.Format(time.RFC3339), msg.SessionID); err != nil {
 			return fmt.Errorf("update session title: %w", err)
 		}
 	} else {
-		if _, err := s.db.ExecContext(ctx, `UPDATE sessions SET updated_at=? WHERE id=?`, now.Format(time.RFC3339), msg.SessionID); err != nil {
+		if msg.EstimatedCostCNY > 0 {
+			if _, err := s.db.ExecContext(ctx, `UPDATE sessions SET estimated_cost_cny = estimated_cost_cny + ?, updated_at=? WHERE id=?`,
+				msg.EstimatedCostCNY, now.Format(time.RFC3339), msg.SessionID); err != nil {
+				return fmt.Errorf("update session cost: %w", err)
+			}
+		} else if _, err := s.db.ExecContext(ctx, `UPDATE sessions SET updated_at=? WHERE id=?`, now.Format(time.RFC3339), msg.SessionID); err != nil {
 			return fmt.Errorf("update session timestamp: %w", err)
 		}
 	}

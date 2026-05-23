@@ -13,6 +13,9 @@ func applyChangedFlags(cfg *Config, cmd *cobra.Command) error {
 	if f := fs.Lookup("model"); f != nil && f.Changed {
 		cfg.LLM.Model = f.Value.String()
 	}
+	if f := fs.Lookup("subagent-model"); f != nil && f.Changed {
+		cfg.LLM.Subagent.Model = f.Value.String()
+	}
 	if f := fs.Lookup("max-tokens"); f != nil && f.Changed {
 		v, err := fs.GetInt("max-tokens")
 		if err != nil {
@@ -23,8 +26,14 @@ func applyChangedFlags(cfg *Config, cmd *cobra.Command) error {
 	if f := fs.Lookup("thinking"); f != nil && f.Changed {
 		cfg.LLM.Thinking.Type = f.Value.String()
 	}
+	if f := fs.Lookup("subagent-thinking"); f != nil && f.Changed {
+		cfg.LLM.Subagent.Thinking.Type = f.Value.String()
+	}
 	if f := fs.Lookup("reasoning-effort"); f != nil && f.Changed {
 		cfg.LLM.ReasoningEffort = f.Value.String()
+	}
+	if f := fs.Lookup("subagent-reasoning-effort"); f != nil && f.Changed {
+		cfg.LLM.Subagent.ReasoningEffort = f.Value.String()
 	}
 	if f := fs.Lookup("strict-tools"); f != nil && f.Changed {
 		v, err := fs.GetBool("strict-tools")

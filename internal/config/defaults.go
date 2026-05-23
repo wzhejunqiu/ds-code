@@ -11,6 +11,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("llm.strict_tools", false)
 	v.SetDefault("llm.thinking.type", "enabled")
 	v.SetDefault("llm.reasoning_effort", "max")
+	v.SetDefault("llm.subagent.model", "deepseek-v4-flash")
+	v.SetDefault("llm.subagent.thinking.type", "disabled")
+	v.SetDefault("llm.subagent.reasoning_effort", "high")
 
 	v.SetDefault("context.window_tokens", 1_048_576)
 	v.SetDefault("context.max_output_tokens", 393_216)
@@ -24,6 +27,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("context.at_dir_max_depth", 4)
 
 	v.SetDefault("agent.max_turns", 25)
+	v.SetDefault("agent.session_title_subagent.enabled", true)
 
 	v.SetDefault("tools.parallel_tool_calls", false)
 	v.SetDefault("tools.read_file.max_lines", 500)

@@ -82,3 +82,33 @@ func TestStore_messageDurations(t *testing.T) {
 		t.Fatalf("durations: reasoning=%d turn=%d", msgs[0].ReasoningDurationMS, msgs[0].TurnDurationMS)
 	}
 }
+
+func TestStore_appendMessageRollsUpSessionCost(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sessions.db")
+	store, err := sqlite.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	sess, err := store.CreateSession("m", "max", "enabled", "ask", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := store.AppendMessage(ctx, session.Message{
+		SessionID:        sess.ID,
+		Role:             role.Assistant,
+		Content:          "hi",
+		EstimatedCostCNY: 0.42,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.Get(ctx, sess.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.EstimatedCostCNY != 0.42 {
+		t.Fatalf("session cost = %v, want 0.42", got.EstimatedCostCNY)
+	}
+}

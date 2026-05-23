@@ -107,6 +107,9 @@ func subagentMessageToSession(m subagentstore.Message) session.Message {
 		PromptTokens:         m.PromptTokens,
 		CompletionTokens:     m.CompletionTokens,
 		PromptCacheHitTokens: m.PromptCacheHitTokens,
+		ModelID:              m.ModelID,
+		PricingSnapshotJSON:  m.PricingSnapshotJSON,
+		EstimatedCostCNY:     m.EstimatedCostCNY,
 		CreatedAt:            m.CreatedAt,
 	}
 }
@@ -126,6 +129,9 @@ func sessionMessageToSubagent(m session.Message, runID string) subagentstore.Mes
 		PromptTokens:         m.PromptTokens,
 		CompletionTokens:     m.CompletionTokens,
 		PromptCacheHitTokens: m.PromptCacheHitTokens,
+		ModelID:              m.ModelID,
+		PricingSnapshotJSON:  m.PricingSnapshotJSON,
+		EstimatedCostCNY:     m.EstimatedCostCNY,
 		CreatedAt:            m.CreatedAt,
 	}
 }

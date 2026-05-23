@@ -147,7 +147,10 @@ func (m *MemoryStore) AppendMessage(_ context.Context, msg Message) error {
 	s := m.sessions[msg.SessionID]
 	s.UpdatedAt = msg.CreatedAt
 	if msg.Role == role.User && s.Title == "" {
-		s.Title = TruncateTitle(msg.Content, 80)
+		s.Title = TruncateTitle(msg.Content, MaxTitleRunes)
+	}
+	if msg.EstimatedCostCNY > 0 {
+		s.EstimatedCostCNY += msg.EstimatedCostCNY
 	}
 	m.sessions[msg.SessionID] = s
 	return nil

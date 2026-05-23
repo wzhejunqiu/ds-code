@@ -30,19 +30,45 @@ func TotalForSession(ctx context.Context, main session.Store, sub subagentstore.
 	return snap, nil
 }
 
-// SubagentOnly returns usage summed from subagent_runs for a parent session.
+// SubagentOnly returns usage summed from all subagent_runs for a parent session.
 func SubagentOnly(ctx context.Context, sub subagentstore.Store, parentSessionID string) (session.UsageSnapshot, error) {
+	return subagentUsage(ctx, sub, parentSessionID, true)
+}
+
+// SubagentTaskOnly returns usage from task subagent runs (excludes session-title runs).
+func SubagentTaskOnly(ctx context.Context, sub subagentstore.Store, parentSessionID string) (session.UsageSnapshot, error) {
+	return subagentUsage(ctx, sub, parentSessionID, false)
+}
+
+func subagentUsage(ctx context.Context, sub subagentstore.Store, parentSessionID string, includeTitle bool) (session.UsageSnapshot, error) {
 	if sub == nil {
 		return session.UsageSnapshot{}, nil
 	}
-	u, err := sub.SumUsage(ctx, parentSessionID)
+	if includeTitle {
+		u, err := sub.SumUsage(ctx, parentSessionID)
+		if err != nil {
+			return session.UsageSnapshot{}, err
+		}
+		snap := session.UsageSnapshot{
+			PromptTokensTotal:         int64(u.PromptTokens),
+			CompletionTokensTotal:     int64(u.CompletionTokens),
+			PromptCacheHitTokensTotal: int64(u.PromptCacheHitTokens),
+		}
+		snap.Billed = int(snap.PromptTokensTotal + snap.CompletionTokensTotal)
+		return snap, nil
+	}
+	runs, err := sub.ListRuns(ctx, parentSessionID)
 	if err != nil {
 		return session.UsageSnapshot{}, err
 	}
-	snap := session.UsageSnapshot{
-		PromptTokensTotal:         int64(u.PromptTokens),
-		CompletionTokensTotal:     int64(u.CompletionTokens),
-		PromptCacheHitTokensTotal: int64(u.PromptCacheHitTokens),
+	var snap session.UsageSnapshot
+	for _, r := range runs {
+		if r.RunKind == subagentstore.RunKindTitle {
+			continue
+		}
+		snap.PromptTokensTotal += r.PromptTokensTotal
+		snap.CompletionTokensTotal += r.CompletionTokensTotal
+		snap.PromptCacheHitTokensTotal += r.PromptCacheHitTokensTotal
 	}
 	snap.Billed = int(snap.PromptTokensTotal + snap.CompletionTokensTotal)
 	return snap, nil

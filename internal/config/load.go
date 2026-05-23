@@ -44,6 +44,9 @@ func Load(cmd *cobra.Command, opts Options) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := rejectProjectBilling(projectRoot); err != nil {
+		return nil, err
+	}
 	projectYAML := ProjectConfigPath(projectRoot)
 	if err := readYAMLIfExists(v, func() (string, error) { return projectYAML, nil }); err != nil {
 		return nil, err
@@ -115,9 +118,12 @@ func readYAMLIfExists(v *viper.Viper, pathFn func() (string, error)) error {
 func BindFlags(cmd *cobra.Command) {
 	fs := cmd.PersistentFlags()
 	fs.String("model", "", "LLM model (deepseek-v4-pro|deepseek-v4-flash)")
+	fs.String("subagent-model", "", "Subagent LLM model (deepseek-v4-pro|deepseek-v4-flash)")
 	fs.Int("max-tokens", 0, "Max completion tokens (≤393216)")
 	fs.String("thinking", "", "Thinking mode: enabled|disabled")
+	fs.String("subagent-thinking", "", "Subagent thinking mode: enabled|disabled")
 	fs.String("reasoning-effort", "", "Reasoning effort: high|max")
+	fs.String("subagent-reasoning-effort", "", "Subagent reasoning effort: high|max")
 	fs.Bool("strict-tools", false, "Use DeepSeek beta API for strict tool schema")
 	fs.String("permission-mode", "", "Permission mode: readonly|ask|auto")
 	fs.Bool("dangerously-auto", false, "Set permission mode to auto (use with care)")

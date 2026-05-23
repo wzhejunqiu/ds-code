@@ -4,18 +4,20 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hejunqiu/ds-code/internal/session"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hejunqiu/ds-code/internal/billing"
+	"github.com/hejunqiu/ds-code/internal/session"
 	_ "modernc.org/sqlite"
 )
 
 // Store persists sessions in SQLite (Phase 3+).
 type Store struct {
-	db *sql.DB
+	db   *sql.DB
+	path string
 }
 
 // Open opens or creates sessions.db at path (0600).
@@ -38,7 +40,7 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{db: db}
+	s := &Store{db: db, path: path}
 	db.SetMaxOpenConns(1)
 	if err := s.initSchema(); err != nil {
 		db.Close()
@@ -67,15 +69,17 @@ func (s *Store) Close() error {
 
 func (s *Store) CreateSession(model, effort, thinking, permMode, runMode string) (session.Session, error) {
 	now := time.Now().UTC()
+	snap := billing.SnapshotForModel(model)
 	sess := session.Session{
-		ID:              uuid.NewString(),
-		Model:           model,
-		ReasoningEffort: effort,
-		ThinkingType:    thinking,
-		PermissionMode:  permMode,
-		RunMode:         runMode,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		ID:                  uuid.NewString(),
+		Model:               model,
+		ReasoningEffort:     effort,
+		ThinkingType:        thinking,
+		PermissionMode:      permMode,
+		RunMode:             runMode,
+		PricingSnapshotJSON: billing.MarshalSnapshot(snap),
+		CreatedAt:           now,
+		UpdatedAt:           now,
 	}
 	if err := s.Create(context.Background(), sess); err != nil {
 		return session.Session{}, err
@@ -84,15 +88,21 @@ func (s *Store) CreateSession(model, effort, thinking, permMode, runMode string)
 }
 
 func (s *Store) Create(ctx context.Context, sess session.Session) error {
+	if sess.PricingSnapshotJSON == "" && sess.Model != "" {
+		snap := billing.SnapshotForModel(sess.Model)
+		sess.PricingSnapshotJSON = billing.MarshalSnapshot(snap)
+	}
 	_, err := s.db.ExecContext(ctx, `INSERT INTO sessions (
 		id, title, model, reasoning_effort, thinking_type, permission_mode, run_mode,
 		compact_summary, compact_up_to_message_id,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
+		pricing_snapshot_json, estimated_cost_cny,
 		git_snapshot, created_at, updated_at
-	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		sess.ID, sess.Title, sess.Model, sess.ReasoningEffort, sess.ThinkingType,
 		sess.PermissionMode, sess.RunMode, sess.CompactSummary, sess.CompactUpToMessageID,
 		sess.PromptTokensTotal, sess.CompletionTokensTotal, sess.PromptCacheHitTokensTotal,
+		sess.PricingSnapshotJSON, sess.EstimatedCostCNY,
 		sess.GitSnapshot, sess.CreatedAt.Format(time.RFC3339), sess.UpdatedAt.Format(time.RFC3339),
 	)
 	return err

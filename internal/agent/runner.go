@@ -22,18 +22,22 @@ import (
 	"go.uber.org/zap"
 )
 
+// SessionTitleHook runs after the first user message is persisted (optional LLM title).
+type SessionTitleHook func(ctx context.Context, sessionID, userContent string)
+
 // Runner executes the agent loop.
 type Runner struct {
-	LLM         llm.Client
-	Tools       *tool.Registry
-	Perm        *permission.Engine
-	Sessions    session.Store
-	Context     *ctxpkg.Service
-	Cfg         *config.Config
-	MaxTurns    int
-	Out         io.Writer
-	Audit       *audit.Logger
-	Checkpoints *checkpoint.Store
+	LLM              llm.Client
+	Tools            *tool.Registry
+	Perm             *permission.Engine
+	Sessions         session.Store
+	Context          *ctxpkg.Service
+	Cfg              *config.Config
+	MaxTurns         int
+	Out              io.Writer
+	Audit            *audit.Logger
+	Checkpoints      *checkpoint.Store
+	SessionTitleHook SessionTitleHook
 }
 
 // TurnResult is the outcome of a user turn.
@@ -63,6 +67,11 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		Content:   expanded,
 	}); err != nil {
 		return nil, err
+	}
+	if r.SessionTitleHook != nil && r.Cfg != nil && r.Cfg.Agent.SessionTitleSubagent.Enabled && SessionTitleGenEnabled(ctx) {
+		if first, err := session.IsFirstUserMessage(ctx, r.Sessions, sessionID); err == nil && first {
+			r.SessionTitleHook(ctx, sessionID, expanded)
+		}
 	}
 
 	sess, err := r.Sessions.Get(ctx, sessionID)
@@ -139,9 +148,9 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		result.SubRounds = round + 1
 
 		if len(resp.ToolCalls) == 0 {
-			return r.finishTerminalRound(ctx, sessionID, resp, stream, turnStart, result, cb)
+			return r.finishTerminalRound(ctx, sessionID, sess.Model, resp, stream, turnStart, result, cb)
 		}
-		if err := r.appendAssistantWithTools(ctx, sessionID, resp, stream); err != nil {
+		if err := r.appendAssistantWithTools(ctx, sessionID, sess.Model, resp, stream); err != nil {
 			return nil, err
 		}
 		if err := r.runToolCalls(ctx, sessionID, resp.ToolCalls, resp, stream, cb); err != nil {

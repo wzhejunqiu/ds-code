@@ -19,6 +19,9 @@ func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSe
 		return reg, err
 	}
 	for _, run := range runs {
+		if run.RunKind == subagentstore.RunKindTitle {
+			continue
+		}
 		msgs, err := sub.ListMessages(ctx, run.ID)
 		if err != nil {
 			return reg, err

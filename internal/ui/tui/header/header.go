@@ -26,7 +26,8 @@ func shortenHome(path string) string {
 	return path
 }
 
-func Render(width int, version string, cfg *config.Config, sess *session.Session) string {
+// Render draws the TUI header. costCNY is total estimated session cost in yuan (0 = omit).
+func Render(width int, version string, cfg *config.Config, sess *session.Session, costCNY float64) string {
 	if width < 20 {
 		width = 20
 	}
@@ -51,9 +52,11 @@ func Render(width int, version string, cfg *config.Config, sess *session.Session
 		if effort != "" {
 			modelLabel += "[" + effort + "]"
 		}
-		snap := session.UsageSnapshotFromSession(*sess)
-		cost := billing.FormatUSD(billing.EstimateUSD(sess.Model, snap))
-		metaLine = style.HeaderMeta.Render(fmt.Sprintf("%s · %s · %s", modelLabel, thinkingLabel(thinking), cost))
+		costPart := ""
+		if costCNY > 0 {
+			costPart = " · " + billing.FormatCNY(costCNY)
+		}
+		metaLine = style.HeaderMeta.Render(fmt.Sprintf("%s · %s%s", modelLabel, thinkingLabel(thinking), costPart))
 	} else {
 		metaLine = style.HeaderMeta.Render(cfg.LLM.Model + " · API usage estimate")
 	}

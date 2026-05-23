@@ -31,17 +31,20 @@ func (m *MemoryStore) CreateRun(_ context.Context, p CreateRunParams) (Run, erro
 	defer m.mu.Unlock()
 	now := time.Now().UTC()
 	id := fmt.Sprintf("sa-%d", len(m.runs)+1)
+	kind := DefaultRunKind(p.RunKind)
 	r := Run{
-		ID:               id,
-		ParentSessionID:  p.ParentSessionID,
-		ParentToolCallID: p.ParentToolCallID,
-		Label:            p.Label,
-		Prompt:           p.Prompt,
-		Status:           StatusRunning,
-		Model:            p.Model,
-		ReasoningEffort:  p.ReasoningEffort,
-		ThinkingType:     p.ThinkingType,
-		CreatedAt:        now,
+		ID:                  id,
+		ParentSessionID:     p.ParentSessionID,
+		ParentToolCallID:    p.ParentToolCallID,
+		RunKind:             kind,
+		Label:               p.Label,
+		Prompt:              p.Prompt,
+		Status:              StatusRunning,
+		Model:               p.Model,
+		ReasoningEffort:     p.ReasoningEffort,
+		ThinkingType:        p.ThinkingType,
+		PricingSnapshotJSON: p.PricingSnapshotJSON,
+		CreatedAt:           now,
 	}
 	m.runs[id] = r
 	return r, nil
@@ -57,6 +60,11 @@ func (m *MemoryStore) FinishRun(_ context.Context, runID string, status Status, 
 	r.Status = status
 	r.Error = errMsg
 	r.EndedAt = time.Now().UTC()
+	var cost float64
+	for _, msg := range m.msgs[runID] {
+		cost += msg.EstimatedCostCNY
+	}
+	r.EstimatedCostCNY = cost
 	m.runs[runID] = r
 	return nil
 }
@@ -146,4 +154,17 @@ func (m *MemoryStore) SumUsage(_ context.Context, parentSessionID string) (llm.U
 		u.PromptCacheHitTokens += int(r.PromptCacheHitTokensTotal)
 	}
 	return u, nil
+}
+
+func (m *MemoryStore) SumEstimatedCostCNY(_ context.Context, parentSessionID string) (float64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var sum float64
+	for _, r := range m.runs {
+		if r.ParentSessionID != parentSessionID {
+			continue
+		}
+		sum += r.EstimatedCostCNY
+	}
+	return sum, nil
 }

@@ -118,7 +118,7 @@ ds-code --plan -p "分析 internal/agent 目录结构并给出重构建议"
 
 ### 会话与压缩
 
-- **SQLite**：`~/.ds-code/projects/<project_id>/sessions.db`（按项目分库，0600）
+- **SQLite**：`~/.ds-code/projects/<project_id>/sessions.db`（按项目分库，0600）。schema 版本不匹配时需删除该文件后重启，见 [CONFIG.md §5.1](docs/CONFIG.md#51-llm--deepseek-客户端)
 - **自动 compact**：`PrepareRequest` 条件 A/B；API 过长时 compact 后重试（条件 C）
 - **手动**：`/compact`、`/context`；`/clear` 换新 session（历史仍保留）
 

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
+	"github.com/hejunqiu/ds-code/internal/agent/subagent"
 	"github.com/hejunqiu/ds-code/internal/audit"
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
@@ -55,7 +56,7 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		return nil, nil, nil, err
 	}
 
-	subStore, _ := a.openSubagentStore()
+	subStore := a.subStore
 	ctxSvc := &ctxpkg.Service{
 		Cfg:      a.Cfg,
 		Store:    store,
@@ -87,16 +88,17 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	}
 
 	runner := &agent.Runner{
-		LLM:         llmClient,
-		Tools:       bundle.reg,
-		Perm:        perm,
-		Sessions:    store,
-		Context:     ctxSvc,
-		Cfg:         a.Cfg,
-		MaxTurns:    maxTurns,
-		Out:         out,
-		Audit:       auditLog,
-		Checkpoints: cpStore,
+		LLM:              llmClient,
+		Tools:            bundle.reg,
+		Perm:             perm,
+		Sessions:         store,
+		Context:          ctxSvc,
+		Cfg:              a.Cfg,
+		MaxTurns:         maxTurns,
+		Out:              out,
+		Audit:            auditLog,
+		Checkpoints:      cpStore,
+		SessionTitleHook: subagent.NewSessionTitleHook(a.Cfg, llmClient, store, subStore),
 	}
 	return runner, store, ctxSvc, nil
 }

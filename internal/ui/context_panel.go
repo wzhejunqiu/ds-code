@@ -20,6 +20,7 @@ type ContextPanelData struct {
 	MainSnapshot session.UsageSnapshot
 	SubSnapshot  session.UsageSnapshot
 	Snapshot     session.UsageSnapshot
+	Cost         usageagg.CostBreakdown
 	Breakdown    ctxpkg.ContextBreakdown
 	Threshold    int
 	Estimated    bool
@@ -45,11 +46,16 @@ func BuildContextPanelData(ctx context.Context, cfg *config.Config, main session
 	if err != nil {
 		return ContextPanelData{}, err
 	}
+	cost, err := usageagg.EstimateCostForSession(ctx, main, sub, sess.ID)
+	if err != nil {
+		return ContextPanelData{}, err
+	}
 	return ContextPanelData{
 		Session:      sess,
 		MainSnapshot: mainSnap,
 		SubSnapshot:  subSnap,
 		Snapshot:     total,
+		Cost:         cost,
 		Breakdown:    bd,
 		Threshold:    threshold,
 		Estimated:    bd.Estimated,
@@ -59,17 +65,19 @@ func BuildContextPanelData(ctx context.Context, cfg *config.Config, main session
 // FormatContextPanel renders the two-layer /context view for TUI or REPL.
 func FormatContextPanel(d ContextPanelData) string {
 	var b strings.Builder
-	cost := billing.FormatUSD(billing.EstimateUSD(d.Session.Model, d.Snapshot))
 	fmt.Fprintf(&b, "Session %s\n", d.Session.ID)
-	fmt.Fprintf(&b, "Billed (cumulative)  %d tokens   est. %s\n", d.Snapshot.Billed, cost)
+	fmt.Fprintf(&b, "Billed (cumulative)  %d tokens   est. %s\n",
+		d.Snapshot.Billed, billing.FormatCNY(d.Cost.TotalCNY))
 	fmt.Fprintf(&b, "  prompt in      %d\n", d.Snapshot.PromptTokensTotal)
 	fmt.Fprintf(&b, "  completion out %d\n", d.Snapshot.CompletionTokensTotal)
 	fmt.Fprintf(&b, "  cache hit      %d\n", d.Snapshot.PromptCacheHitTokensTotal)
-	fmt.Fprintf(&b, "  (main agent)   in %d · out %d\n",
-		d.MainSnapshot.PromptTokensTotal, d.MainSnapshot.CompletionTokensTotal)
+	fmt.Fprintf(&b, "  (main agent)   in %d · out %d   %s\n",
+		d.MainSnapshot.PromptTokensTotal, d.MainSnapshot.CompletionTokensTotal,
+		billing.FormatCNY(d.Cost.MainCNY))
 	if d.SubSnapshot.Billed > 0 {
-		fmt.Fprintf(&b, "  (subagent runs) in %d · out %d\n",
-			d.SubSnapshot.PromptTokensTotal, d.SubSnapshot.CompletionTokensTotal)
+		fmt.Fprintf(&b, "  (subagent runs) in %d · out %d   %s\n",
+			d.SubSnapshot.PromptTokensTotal, d.SubSnapshot.CompletionTokensTotal,
+			billing.FormatCNY(d.Cost.SubagentCNY))
 	}
 	fmt.Fprintf(&b, "Compact: prompt_total >= %d → B; next est >= %d → A\n\n",
 		d.Threshold, d.Threshold)
@@ -105,21 +113,25 @@ func writeRow(b *strings.Builder, name string, tokens int, bd ctxpkg.ContextBrea
 
 // ContextPanelJSON is the /context --json export shape.
 type ContextPanelJSON struct {
-	Session   session.Session        `json:"session"`
-	Snapshot  session.UsageSnapshot  `json:"snapshot"`
-	Breakdown ctxpkg.ContextBreakdown `json:"breakdown"`
-	Threshold int                    `json:"compact_threshold"`
-	CostUSD   float64                `json:"estimated_cost_usd"`
+	Session      session.Session         `json:"session"`
+	Snapshot     session.UsageSnapshot   `json:"snapshot"`
+	Breakdown    ctxpkg.ContextBreakdown `json:"breakdown"`
+	Threshold    int                     `json:"compact_threshold"`
+	MainCostCNY  float64                 `json:"main_cost_cny"`
+	SubCostCNY   float64                 `json:"sub_cost_cny"`
+	TotalCostCNY float64                 `json:"total_cost_cny"`
 }
 
 // FormatContextJSON encodes panel data as indented JSON.
 func FormatContextJSON(d ContextPanelData) (string, error) {
 	payload := ContextPanelJSON{
-		Session:   d.Session,
-		Snapshot:  d.Snapshot,
-		Breakdown: d.Breakdown,
-		Threshold: d.Threshold,
-		CostUSD:   billing.EstimateUSD(d.Session.Model, d.Snapshot),
+		Session:      d.Session,
+		Snapshot:     d.Snapshot,
+		Breakdown:    d.Breakdown,
+		Threshold:    d.Threshold,
+		MainCostCNY:  d.Cost.MainCNY,
+		SubCostCNY:   d.Cost.SubagentCNY,
+		TotalCostCNY: d.Cost.TotalCNY,
 	}
 	raw, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {

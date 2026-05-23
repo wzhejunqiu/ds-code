@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hejunqiu/ds-code/internal/agent"
+	"github.com/hejunqiu/ds-code/internal/billing"
 	"github.com/hejunqiu/ds-code/internal/agent/subagent"
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/llm"
@@ -104,14 +105,17 @@ func (t *TaskTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		return "", fmt.Errorf("%s", ErrNoSubStore)
 	}
 
+	subModel := t.Cfg.LLM.ResolveSubagentModel()
 	run, err := t.Subagent.CreateRun(ctx, subagentstore.CreateRunParams{
-		ParentSessionID:  inv.SessionID,
-		ParentToolCallID: inv.ToolCallID,
-		Label:            label,
-		Prompt:           in.Prompt,
-		Model:            t.Cfg.LLM.Model,
-		ReasoningEffort:  t.Cfg.LLM.ReasoningEffort,
-		ThinkingType:     t.Cfg.LLM.Thinking.Type,
+		ParentSessionID:     inv.SessionID,
+		ParentToolCallID:    inv.ToolCallID,
+		RunKind:             subagentstore.RunKindTask,
+		Label:               label,
+		Prompt:              in.Prompt,
+		Model:               subModel,
+		ReasoningEffort:     t.Cfg.LLM.ResolveSubagentReasoningEffort(),
+		ThinkingType:        t.Cfg.LLM.ResolveSubagentThinkingType(),
+		PricingSnapshotJSON: billing.MarshalSnapshot(billing.SnapshotForModel(subModel)),
 	})
 	if err != nil {
 		return "", err
@@ -127,7 +131,7 @@ func (t *TaskTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	subCB := agent.SubagentToolCallbacks(parent, subID)
 	summary, runErr := subagent.Run(ctx, t.Cfg, t.LLM, in.Prompt, func(reg *tool.Registry) {
 		register.ExploreTools(reg, t.Cfg, t.Perm, gi, t.Strict)
-	}, t.Subagent, run, subCB)
+	}, t.Subagent, run, subCB, 0)
 
 	status := subagentstore.StatusDone
 	errMsg := ""

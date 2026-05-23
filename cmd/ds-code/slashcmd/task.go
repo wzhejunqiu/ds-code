@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hejunqiu/ds-code/internal/agent/subagent"
+	"github.com/hejunqiu/ds-code/internal/billing"
 	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/register"
@@ -26,14 +27,17 @@ func Task(env *Env, args string) error {
 	if env.SessionID != nil {
 		parentID = *env.SessionID
 	}
+	subModel := env.Cfg.LLM.ResolveSubagentModel()
 	run, err := sub.CreateRun(env.Ctx, subagentstore.CreateRunParams{
-		ParentSessionID:  parentID,
-		ParentToolCallID: "slash-" + uuid.NewString(),
-		Label:            truncateLabel(prompt, 48),
-		Prompt:           prompt,
-		Model:            env.Cfg.LLM.Model,
-		ReasoningEffort:  env.Cfg.LLM.ReasoningEffort,
-		ThinkingType:     env.Cfg.LLM.Thinking.Type,
+		ParentSessionID:     parentID,
+		ParentToolCallID:    "slash-" + uuid.NewString(),
+		RunKind:             subagentstore.RunKindTask,
+		Label:               truncateLabel(prompt, 48),
+		Prompt:              prompt,
+		Model:               subModel,
+		ReasoningEffort:     env.Cfg.LLM.ResolveSubagentReasoningEffort(),
+		ThinkingType:        env.Cfg.LLM.ResolveSubagentThinkingType(),
+		PricingSnapshotJSON: billing.MarshalSnapshot(billing.SnapshotForModel(subModel)),
 	})
 	if err != nil {
 		return err
@@ -42,7 +46,7 @@ func Task(env *Env, args string) error {
 	gi, _ := tool.LoadGitignore(env.Cfg.ProjectRoot)
 	summary, err := subagent.Run(env.Ctx, env.Cfg, env.Runner.LLM, prompt, func(reg *tool.Registry) {
 		register.ExploreTools(reg, env.Cfg, env.Runner.Perm, gi, env.Cfg.LLM.StrictTools)
-	}, sub, run, nil)
+	}, sub, run, nil, 0)
 	status := subagentstore.StatusDone
 	errMsg := ""
 	if err != nil {

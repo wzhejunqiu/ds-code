@@ -18,11 +18,20 @@ const (
 	StatusError   Status = "error"
 )
 
-// Run is metadata for one task subagent execution.
+// RunKind distinguishes task tool runs from session-title generation.
+type RunKind string
+
+const (
+	RunKindTask  RunKind = "task"
+	RunKindTitle RunKind = "title"
+)
+
+// Run is metadata for one subagent execution.
 type Run struct {
 	ID                        string
 	ParentSessionID           string
 	ParentToolCallID          string
+	RunKind                   RunKind
 	Label                     string
 	Prompt                    string
 	Status                    Status
@@ -30,6 +39,8 @@ type Run struct {
 	Model                     string
 	ReasoningEffort           string
 	ThinkingType              string
+	PricingSnapshotJSON       string
+	EstimatedCostCNY          float64
 	PromptTokensTotal         int64
 	CompletionTokensTotal     int64
 	PromptCacheHitTokensTotal int64
@@ -52,18 +63,31 @@ type Message struct {
 	PromptTokens         int64
 	CompletionTokens     int64
 	PromptCacheHitTokens int64
+	ModelID              string
+	PricingSnapshotJSON  string
+	EstimatedCostCNY     float64
 	CreatedAt            time.Time
 }
 
 // CreateRunParams holds fields for a new subagent run.
 type CreateRunParams struct {
-	ParentSessionID  string
-	ParentToolCallID string
-	Label            string
-	Prompt           string
-	Model            string
-	ReasoningEffort  string
-	ThinkingType     string
+	ParentSessionID     string
+	ParentToolCallID    string
+	RunKind             RunKind
+	Label               string
+	Prompt              string
+	Model               string
+	ReasoningEffort     string
+	ThinkingType        string
+	PricingSnapshotJSON string
+}
+
+// DefaultRunKind returns task when kind is unset.
+func DefaultRunKind(k RunKind) RunKind {
+	if k == "" {
+		return RunKindTask
+	}
+	return k
 }
 
 // Store persists subagent runs and messages.
@@ -79,4 +103,5 @@ type Store interface {
 
 	AddUsage(ctx context.Context, runID string, u llm.Usage) error
 	SumUsage(ctx context.Context, parentSessionID string) (llm.Usage, error)
+	SumEstimatedCostCNY(ctx context.Context, parentSessionID string) (float64, error)
 }

@@ -48,7 +48,7 @@ func (a *App) RunTUIHarness(cmd *cobra.Command, sessionID string, reg *mockserve
 		runner.Perm.Prompter = permission.TUIPrompter(promptCh)
 	}
 
-	subStore, _ := a.openSubagentStore()
+	subStore := a.subStore
 	deps := tui.Deps{
 		Cfg:       a.Cfg,
 		Runner:    runner,

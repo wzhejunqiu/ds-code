@@ -16,6 +16,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/ui/tui/header"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/layout"
 	subagentui "github.com/hejunqiu/ds-code/internal/ui/tui/model/subagent"
+	"github.com/hejunqiu/ds-code/internal/billing"
 	"github.com/hejunqiu/ds-code/internal/session/usageagg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
@@ -39,7 +40,7 @@ func ChatViewportContent(s *state.State, width int) string {
 	if s.HasSession {
 		sess = &s.HeaderSession
 	}
-	hdr := header.Render(width, s.Deps.Version, s.Deps.Cfg, sess)
+	hdr := header.Render(width, s.Deps.Version, s.Deps.Cfg, sess, s.HeaderCostCNY)
 	if s.SubagentNav == state.SubagentNavDetail {
 		if crumb := subagentui.DetailBreadcrumb(s); crumb != "" {
 			hdr += "\n" + style.FooterHint.Render(crumb+"  (← back to list)")
@@ -160,8 +161,18 @@ func RefreshStatus(s *state.State) {
 	if err != nil {
 		snap = session.UsageSnapshotFromSession(sess)
 	}
-	s.StatusRight = fmt.Sprintf("in %d · out %d · cache %d%s",
-		snap.PromptTokensTotal, snap.CompletionTokensTotal, snap.PromptCacheHitTokensTotal, next)
+	cost, err := usageagg.EstimateCostForSession(ctx, s.Deps.Store, s.Deps.Subagent, s.SessionID)
+	if err != nil {
+		s.HeaderCostCNY = 0
+	} else {
+		s.HeaderCostCNY = cost.TotalCNY
+	}
+	costLabel := ""
+	if s.HeaderCostCNY > 0 {
+		costLabel = " · " + billing.FormatCNY(s.HeaderCostCNY)
+	}
+	s.StatusRight = fmt.Sprintf("in %d · out %d · cache %d%s%s",
+		snap.PromptTokensTotal, snap.CompletionTokensTotal, snap.PromptCacheHitTokensTotal, costLabel, next)
 }
 
 func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model) string {

@@ -14,6 +14,7 @@ func (s *Store) Get(ctx context.Context, id string) (session.Session, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT id, title, model, reasoning_effort, thinking_type, permission_mode, run_mode,
 		compact_summary, compact_up_to_message_id,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
+		COALESCE(pricing_snapshot_json, ''), COALESCE(estimated_cost_cny, 0),
 		git_snapshot, created_at, updated_at FROM sessions WHERE id=?`, id)
 	return scanSession(row)
 }
@@ -25,6 +26,7 @@ func scanSession(row *sql.Row) (session.Session, error) {
 		&sess.ID, &sess.Title, &sess.Model, &sess.ReasoningEffort, &sess.ThinkingType,
 		&sess.PermissionMode, &sess.RunMode, &sess.CompactSummary, &sess.CompactUpToMessageID,
 		&sess.PromptTokensTotal, &sess.CompletionTokensTotal, &sess.PromptCacheHitTokensTotal,
+		&sess.PricingSnapshotJSON, &sess.EstimatedCostCNY,
 		&sess.GitSnapshot, &created, &updated,
 	)
 	if err != nil {
@@ -70,11 +72,13 @@ func (s *Store) UpdateSession(ctx context.Context, sessionID string, fn func(*se
 		title=?, model=?, reasoning_effort=?, thinking_type=?, permission_mode=?, run_mode=?,
 		compact_summary=?, compact_up_to_message_id=?,
 		prompt_tokens_total=?, completion_tokens_total=?, prompt_cache_hit_tokens_total=?,
+		pricing_snapshot_json=?, estimated_cost_cny=?,
 		git_snapshot=?, updated_at=?
 		WHERE id=?`,
 		sess.Title, sess.Model, sess.ReasoningEffort, sess.ThinkingType, sess.PermissionMode, sess.RunMode,
 		sess.CompactSummary, sess.CompactUpToMessageID,
 		sess.PromptTokensTotal, sess.CompletionTokensTotal, sess.PromptCacheHitTokensTotal,
+		sess.PricingSnapshotJSON, sess.EstimatedCostCNY,
 		sess.GitSnapshot, sess.UpdatedAt.Format(time.RFC3339), sess.ID,
 	)
 	return err

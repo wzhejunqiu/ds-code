@@ -18,7 +18,7 @@ func TestHeaderWidths(t *testing.T) {
 					t.Fatalf("width %d panic: %v", w, r)
 				}
 			}()
-			_ = header.Render(w, "v", cfg, sess)
+			_ = header.Render(w, "v", cfg, sess, 0)
 		}()
 	}
 }

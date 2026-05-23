@@ -60,7 +60,7 @@ func TestRun_readOnlySummary(t *testing.T) {
 	summary, err := subagent.Run(context.Background(), cfg, mockLLM, "inspect main.go", func(reg *tool.Registry) {
 		perm := permission.NewEngine("readonly", dir, false)
 		register.ExploreTools(reg, cfg, perm, nil, false)
-	}, sub, run, nil)
+	}, sub, run, nil, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 // schemaVersion must increase whenever the table layout changes.
-const schemaVersion = 3
+const schemaVersion = 4
 
 func (s *Store) initSchema() error {
 	var v int
@@ -21,8 +21,8 @@ func (s *Store) initSchema() error {
 		return s.applySchema()
 	case v != schemaVersion:
 		return fmt.Errorf(
-			"sessions.db schema version %d (expected %d): delete the database file and restart",
-			v, schemaVersion,
+			"sessions.db schema version %d (expected %d) at %s: delete this file and restart",
+			v, schemaVersion, s.path,
 		)
 	default:
 		return nil
@@ -47,6 +47,8 @@ func (s *Store) applySchema() error {
 			prompt_tokens_total INTEGER NOT NULL DEFAULT 0,
 			completion_tokens_total INTEGER NOT NULL DEFAULT 0,
 			prompt_cache_hit_tokens_total INTEGER NOT NULL DEFAULT 0,
+			pricing_snapshot_json TEXT NOT NULL DEFAULT '',
+			estimated_cost_cny REAL NOT NULL DEFAULT 0,
 			git_snapshot TEXT NOT NULL DEFAULT '',
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL
@@ -65,6 +67,9 @@ func (s *Store) applySchema() error {
 			prompt_tokens INTEGER NOT NULL DEFAULT 0,
 			completion_tokens INTEGER NOT NULL DEFAULT 0,
 			prompt_cache_hit_tokens INTEGER NOT NULL DEFAULT 0,
+			model_id TEXT NOT NULL DEFAULT '',
+			pricing_snapshot_json TEXT NOT NULL DEFAULT '',
+			estimated_cost_cny REAL NOT NULL DEFAULT 0,
 			created_at TEXT NOT NULL,
 			FOREIGN KEY (session_id) REFERENCES sessions(id)
 		)`,
@@ -74,6 +79,7 @@ func (s *Store) applySchema() error {
 			id TEXT PRIMARY KEY,
 			parent_session_id TEXT NOT NULL,
 			parent_tool_call_id TEXT NOT NULL,
+			run_kind TEXT NOT NULL DEFAULT 'task',
 			label TEXT NOT NULL DEFAULT '',
 			prompt TEXT NOT NULL DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'running',
@@ -81,6 +87,8 @@ func (s *Store) applySchema() error {
 			model TEXT NOT NULL DEFAULT '',
 			reasoning_effort TEXT NOT NULL DEFAULT '',
 			thinking_type TEXT NOT NULL DEFAULT '',
+			pricing_snapshot_json TEXT NOT NULL DEFAULT '',
+			estimated_cost_cny REAL NOT NULL DEFAULT 0,
 			prompt_tokens_total INTEGER NOT NULL DEFAULT 0,
 			completion_tokens_total INTEGER NOT NULL DEFAULT 0,
 			prompt_cache_hit_tokens_total INTEGER NOT NULL DEFAULT 0,
@@ -103,6 +111,9 @@ func (s *Store) applySchema() error {
 			prompt_tokens INTEGER NOT NULL DEFAULT 0,
 			completion_tokens INTEGER NOT NULL DEFAULT 0,
 			prompt_cache_hit_tokens INTEGER NOT NULL DEFAULT 0,
+			model_id TEXT NOT NULL DEFAULT '',
+			pricing_snapshot_json TEXT NOT NULL DEFAULT '',
+			estimated_cost_cny REAL NOT NULL DEFAULT 0,
 			created_at TEXT NOT NULL,
 			FOREIGN KEY (run_id) REFERENCES subagent_runs(id)
 		)`,

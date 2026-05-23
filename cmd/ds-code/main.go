@@ -6,6 +6,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/hejunqiu/ds-code/cmd/ds-code/commands"
+	"github.com/hejunqiu/ds-code/internal/billing"
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
@@ -54,6 +55,9 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 
 	cfg, err := config.Load(cmd, config.Options{RequireAPIKey: requireKey})
 	if err != nil {
+		return err
+	}
+	if err := billing.SetupFromUserConfig(); err != nil {
 		return err
 	}
 	if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
