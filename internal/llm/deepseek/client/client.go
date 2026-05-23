@@ -95,6 +95,7 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (*llm.Response, erro
 	if err != nil {
 		return nil, err
 	}
+	llm.LogRequestDebug(req, raw)
 
 	httpResp, err := c.doWithRetry(ctx, raw)
 	if err != nil {
@@ -106,8 +107,15 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (*llm.Response, erro
 		return nil, parseAPIError(httpResp)
 	}
 
+	var resp *llm.Response
 	if req.Stream {
-		return parseStream(httpResp.Body, req.OnStream)
+		resp, err = parseStream(httpResp.Body, req.OnStream)
+	} else {
+		resp, err = parseNonStream(httpResp.Body)
 	}
-	return parseNonStream(httpResp.Body)
+	if err != nil {
+		return nil, err
+	}
+	llm.LogResponseDebug(resp)
+	return resp, nil
 }

@@ -15,7 +15,7 @@ func TestRenderPlanningBlock(t *testing.T) {
 		PlanningStartedAt: started,
 	}}
 	out := Render(blocks, 60, now, false)
-	if !strings.Contains(out, "Planning next moves") {
+	if !strings.Contains(out, "规划下一步行动") {
 		t.Fatalf("missing planning label:\n%s", out)
 	}
 	if !strings.Contains(out, "2s") {

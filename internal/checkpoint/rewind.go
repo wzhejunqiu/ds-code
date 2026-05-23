@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/patch"
+	"go.uber.org/zap"
 )
 
 // ApplyRewind restores workspace files from a checkpoint record.
@@ -43,5 +45,10 @@ func ApplyRewind(workspace string, rec Record) error {
 			return err
 		}
 	}
+	logging.L().Debug("checkpoint rewind applied",
+		zap.Int("checkpoint_id", rec.ID),
+		zap.String("session_id", rec.SessionID),
+		zap.Int("files_restored", len(rec.Files)),
+	)
 	return nil
 }

@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/logging"
+	"go.uber.org/zap"
 )
 
 type chatResponse struct {
@@ -70,6 +72,7 @@ func parseStream(r io.Reader, onStream llm.StreamFunc) (*llm.Response, error) {
 	toolAcc := map[int]*llm.ToolCall{}
 	finish := ""
 	var usage llm.Usage
+	var sseLines, jsonErrors int
 
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -78,12 +81,14 @@ func parseStream(r io.Reader, onStream llm.StreamFunc) (*llm.Response, error) {
 		if !strings.HasPrefix(line, "data: ") {
 			continue
 		}
+		sseLines++
 		data := strings.TrimPrefix(line, "data: ")
 		if data == "[DONE]" {
 			break
 		}
 		var chunk streamChunk
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			jsonErrors++
 			continue
 		}
 		if chunk.Usage.PromptTokens > 0 || chunk.Usage.CompletionTokens > 0 {
@@ -137,6 +142,17 @@ func parseStream(r io.Reader, onStream llm.StreamFunc) (*llm.Response, error) {
 			calls = append(calls, *tc)
 		}
 	}
+
+	logging.L().Debug("LLM stream parsed",
+		zap.Int("sse_lines", sseLines),
+		zap.Int("json_errors", jsonErrors),
+		zap.String("finish_reason", finish),
+		zap.Int("content_chars", content.Len()),
+		zap.Int("reasoning_chars", reasoning.Len()),
+		zap.Int("tool_calls", len(calls)),
+		zap.Int("prompt_tokens", usage.PromptTokens),
+		zap.Int("completion_tokens", usage.CompletionTokens),
+	)
 
 	return &llm.Response{
 		Content:          content.String(),

@@ -118,6 +118,34 @@ func TestApplyCLIDerived_verboseCount(t *testing.T) {
 	}
 }
 
+func TestApplyCLIDerived_allowLogSensitiveData(t *testing.T) {
+	tests := []struct {
+		name  string
+		args  []string
+		want  bool
+	}{
+		{"vv_and_flag", []string{"-vv", "--allow-log-sensitive-data"}, true},
+		{"flag_without_vv", []string{"--allow-log-sensitive-data"}, false},
+		{"vv_only", []string{"-vv"}, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := &cobra.Command{}
+			config.BindFlags(cmd)
+			if err := cmd.ParseFlags(tc.args); err != nil {
+				t.Fatal(err)
+			}
+			cfg := &config.Config{}
+			if err := config.ApplyCLIDerived(cfg, cmd); err != nil {
+				t.Fatal(err)
+			}
+			if cfg.AllowLogSensitiveData != tc.want {
+				t.Fatalf("AllowLogSensitiveData = %v, want %v", cfg.AllowLogSensitiveData, tc.want)
+			}
+		})
+	}
+}
+
 func TestLoad_rejectsProjectAutoPermission(t *testing.T) {
 	dir := t.TempDir()
 	gitDir := filepath.Join(dir, ".git")

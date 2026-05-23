@@ -26,8 +26,9 @@ func SessionsCmd() *cobra.Command {
 				return err
 			}
 			defer logging.TrySetup(logging.Options{
-				ProjectRoot: cfg.ProjectRoot,
-				Verbosity:   cfg.LogVerbosity,
+				ProjectRoot:        cfg.ProjectRoot,
+				Verbosity:          cfg.LogVerbosity,
+				AllowSensitiveData: cfg.AllowLogSensitiveData,
 			})()
 
 			store, err := sessionsqlite.OpenDefault(cfg.ProjectRoot)

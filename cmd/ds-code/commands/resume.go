@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"os"
+
 	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/logging"
@@ -22,13 +24,16 @@ func ResumeCmd() *cobra.Command {
 				return err
 			}
 			closeLog, err := logging.Setup(logging.Options{
-				ProjectRoot: cfg.ProjectRoot,
-				Verbosity:   cfg.LogVerbosity,
+				ProjectRoot:        cfg.ProjectRoot,
+				Verbosity:          cfg.LogVerbosity,
+				AllowSensitiveData: cfg.AllowLogSensitiveData,
 			})
 			if err != nil {
 				return err
 			}
 			defer closeLog()
+			app.LogConfigResolved(cfg)
+			app.MaybeWarnSensitiveLog(cfg, os.Stderr)
 
 			return app.New(cfg).RunTUI(cmd, args[0])
 		},

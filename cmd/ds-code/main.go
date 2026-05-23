@@ -64,6 +64,8 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	defer closeLog()
+	app.LogConfigResolved(cfg)
+	app.MaybeWarnSensitiveLog(cfg, os.Stderr)
 
 	application := app.New(cfg)
 
@@ -81,7 +83,8 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 
 func setupLogging(cfg *config.Config) (func(), error) {
 	return logging.Setup(logging.Options{
-		ProjectRoot: cfg.ProjectRoot,
-		Verbosity:   cfg.LogVerbosity,
+		ProjectRoot:        cfg.ProjectRoot,
+		Verbosity:          cfg.LogVerbosity,
+		AllowSensitiveData: cfg.AllowLogSensitiveData,
 	})
 }

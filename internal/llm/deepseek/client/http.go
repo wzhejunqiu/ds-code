@@ -8,6 +8,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/hejunqiu/ds-code/internal/logging"
+	"go.uber.org/zap"
 )
 
 func (c *Client) doWithRetry(ctx context.Context, body []byte) (*http.Response, error) {
@@ -26,6 +29,12 @@ func (c *Client) doWithRetry(ctx context.Context, body []byte) (*http.Response, 
 		resp, err := c.http.Do(httpReq)
 		if err != nil {
 			lastErr = err
+			logging.L().Debug("LLM HTTP attempt failed",
+				zap.Int("attempt", attempt+1),
+				zap.Int64("backoff_ms", backoff.Milliseconds()),
+				zap.String("err_type", "network"),
+				zap.Error(err),
+			)
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
@@ -37,6 +46,12 @@ func (c *Client) doWithRetry(ctx context.Context, body []byte) (*http.Response, 
 		}
 		if resp.StatusCode == 429 || resp.StatusCode >= 500 {
 			lastErr = parseAPIError(resp)
+			logging.L().Debug("LLM HTTP attempt retryable",
+				zap.Int("attempt", attempt+1),
+				zap.Int("status", resp.StatusCode),
+				zap.Int64("backoff_ms", backoff.Milliseconds()),
+				zap.Error(lastErr),
+			)
 			resp.Body.Close()
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
@@ -47,6 +62,10 @@ func (c *Client) doWithRetry(ctx context.Context, body []byte) (*http.Response, 
 			backoff *= 2
 			continue
 		}
+		logging.L().Debug("LLM HTTP ok",
+			zap.Int("attempt", attempt+1),
+			zap.Int("status", resp.StatusCode),
+		)
 		return resp, nil
 	}
 	return nil, lastErr

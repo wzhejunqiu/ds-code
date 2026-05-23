@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
@@ -47,6 +48,9 @@ func New(d *deps.Deps) *Model {
 		chatVP: viewport.New(40, 10),
 		toolVP: viewport.New(40, 4),
 		input:  ti,
+	}
+	if d.Cfg != nil && d.Cfg.AllowLogSensitiveData {
+		m.SensitiveLogWarn = logging.SensitiveDataWarningMsg
 	}
 	view.RefreshStatus(&m.State)
 	return m

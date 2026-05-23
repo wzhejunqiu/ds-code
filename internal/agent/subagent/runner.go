@@ -10,9 +10,11 @@ import (
 	"github.com/hejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
+	"go.uber.org/zap"
 )
 
 // RegisterFunc registers tools on a fresh registry.
@@ -66,10 +68,24 @@ func Run(ctx context.Context, cfg *config.Config, llmClient llm.Client, prompt s
 		Out:      io.Discard,
 	}
 
+	logging.L().Debug("subagent run start",
+		zap.String("subagent_session_id", sess.ID),
+		zap.String("parent_run_id", run.ID),
+		zap.Int("prompt_chars", len(prompt)),
+	)
 	result, err := runner.RunTurn(ctx, sess.ID, prompt, cb)
 	if err != nil {
+		logging.L().Debug("subagent run failed",
+			zap.String("subagent_session_id", sess.ID),
+			zap.Error(err),
+		)
 		return "", err
 	}
+	logging.L().Debug("subagent run done",
+		zap.String("subagent_session_id", sess.ID),
+		zap.Int("sub_rounds", result.SubRounds),
+		zap.Int("prompt_tokens", result.Usage.PromptTokens),
+	)
 	summary := result.FinalContent
 	if summary == "" {
 		summary = result.FinalReasoning

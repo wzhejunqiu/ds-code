@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
+	"go.uber.org/zap"
 )
 
 // Tool is a built-in agent tool.
@@ -65,7 +68,19 @@ func (r *Registry) Execute(ctx context.Context, name string, args json.RawMessag
 	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", name)
 	}
-	return t.Execute(ctx, args)
+	start := time.Now()
+	out, err := t.Execute(ctx, args)
+	logging.L().Debug("tool registry execute",
+		zap.String("tool", name),
+		zap.Int("args_chars", len(args)),
+		zap.Int("result_chars", len(out)),
+		zap.Int64("duration_ms", time.Since(start).Milliseconds()),
+		zap.Bool("ok", err == nil),
+	)
+	if err != nil {
+		return out, err
+	}
+	return out, nil
 }
 
 // ArgsMap unmarshals tool arguments to a map for permission checks.

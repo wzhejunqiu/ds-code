@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/tool"
+	"go.uber.org/zap"
 )
 
 var atRefPattern = regexp.MustCompile(`@([a-zA-Z0-9_./\-]+)`)
@@ -76,7 +78,14 @@ func (e *AtExpander) Expand(userText string) (string, error) {
 		}
 		b.WriteString(block)
 	}
-	return b.String(), nil
+	out := b.String()
+	logging.L().Debug("at reference expand",
+		zap.Int("refs", len(refs)),
+		zap.Int("blocks", len(blocks)),
+		zap.Int("output_chars", len(out)),
+		zap.Int("budget_remaining", remaining),
+	)
+	return out, nil
 }
 
 func (e *AtExpander) expandRef(ref string, perFileMax, remaining int) (string, int, error) {

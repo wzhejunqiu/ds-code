@@ -143,6 +143,7 @@ func (m *MemoryStore) AppendMessage(_ context.Context, msg Message) error {
 	msg.ID = m.nextID
 	msg.CreatedAt = time.Now().UTC()
 	m.messages[msg.SessionID] = append(m.messages[msg.SessionID], msg)
+	LogAppendDebug(msg)
 	s := m.sessions[msg.SessionID]
 	s.UpdatedAt = msg.CreatedAt
 	if msg.Role == role.User && s.Title == "" {
@@ -179,5 +180,6 @@ func (m *MemoryStore) AddUsage(_ context.Context, sessionID string, u llm.Usage)
 	s.PromptCacheHitTokensTotal += int64(u.PromptCacheHitTokens)
 	s.UpdatedAt = time.Now().UTC()
 	m.sessions[sessionID] = s
+	LogAddUsageDebug(sessionID, u)
 	return nil
 }

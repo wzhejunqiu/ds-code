@@ -95,6 +95,9 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	}
 
 	chromeH := gapAfterChat + inputFrameH + gapAfterInput + footerH
+	if s.SensitiveLogWarn != "" {
+		chromeH += ContentLineCount(s.SensitiveLogWarn) + 1
+	}
 	if s.ErrLine != "" {
 		chromeH += 2
 	}
@@ -199,6 +202,11 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input textinput.Mode
 		}
 	}
 	b.WriteString(layout.Footer(s.Width, footerLeft, s.StatusRight))
+
+	if s.SensitiveLogWarn != "" {
+		b.WriteString("\n")
+		b.WriteString(lipgloss.NewStyle().Foreground(theme.Error).Render(s.SensitiveLogWarn))
+	}
 
 	if s.ErrLine != "" {
 		b.WriteString("\n")

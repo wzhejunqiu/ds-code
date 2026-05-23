@@ -6,10 +6,12 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/chattool"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"go.uber.org/zap"
 )
 
 type SyncFn func()
@@ -149,6 +151,17 @@ func UpdateTurnDone(s *state.State, m msg.TurnDoneMsg, sync SyncFn, refreshStatu
 	} else {
 		s.ErrLine = ""
 	}
+	interrupted := CurrentTurnInterrupted(s)
+	promptTokens := 0
+	if m.Result != nil {
+		promptTokens = m.Result.Usage.PromptTokens
+	}
+	logging.L().Debug("tui turn done",
+		zap.Bool("interrupted", interrupted),
+		zap.Bool("cancelled", m.Err != nil && errors.Is(m.Err, context.Canceled)),
+		zap.Bool("ok", m.Err == nil && !interrupted),
+		zap.Int("prompt_tokens", promptTokens),
+	)
 	refreshStatus()
 	sync()
 	return tea.Batch(listen(), tick())

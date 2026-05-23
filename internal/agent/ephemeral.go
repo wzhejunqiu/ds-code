@@ -7,7 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/role"
+	"go.uber.org/zap"
 )
 
 // EphemeralOpts configures a /btw side-channel request.
@@ -62,6 +64,12 @@ func (r *Runner) RunEphemeral(ctx context.Context, prompt string, opts Ephemeral
 		return nil, err
 	}
 
+	userID := "btw-" + uuid.NewString()
+	logging.L().Debug("ephemeral request",
+		zap.String("session_id", opts.SessionID),
+		zap.Int("messages", len(messages)),
+		zap.String("user_id", userID),
+	)
 	resp, err := r.LLM.Chat(ctx, llm.Request{
 		MergedSystem:    system,
 		Messages:        messages,
@@ -70,7 +78,7 @@ func (r *Runner) RunEphemeral(ctx context.Context, prompt string, opts Ephemeral
 		Stream:          false,
 		ThinkingType:    "disabled",
 		ReasoningEffort: sess.ReasoningEffort,
-		UserID:          "btw-" + uuid.NewString(),
+		UserID:          userID,
 		StrictTools:     r.Cfg.LLM.StrictTools,
 	})
 	if err != nil {

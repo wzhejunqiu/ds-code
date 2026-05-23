@@ -60,8 +60,9 @@ type State struct {
 	ReasoningAll       bool
 	ToolDetailsVisible bool
 
-	StatusRight string
-	ErrLine     string
+	StatusRight       string
+	ErrLine           string
+	SensitiveLogWarn  string
 
 	HeaderSession session.Session
 	HasSession    bool

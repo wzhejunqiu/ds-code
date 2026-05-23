@@ -24,16 +24,16 @@ import (
 
 // Runner executes the agent loop.
 type Runner struct {
-	LLM     llm.Client
-	Tools   *tool.Registry
-	Perm    *permission.Engine
-	Sessions session.Store
-	Context *ctxpkg.Service
-	Cfg      *config.Config
-	MaxTurns int
-	Out          io.Writer
-	Audit        *audit.Logger
-	Checkpoints  *checkpoint.Store
+	LLM         llm.Client
+	Tools       *tool.Registry
+	Perm        *permission.Engine
+	Sessions    session.Store
+	Context     *ctxpkg.Service
+	Cfg         *config.Config
+	MaxTurns    int
+	Out         io.Writer
+	Audit       *audit.Logger
+	Checkpoints *checkpoint.Store
 }
 
 // TurnResult is the outcome of a user turn.
@@ -115,13 +115,6 @@ func (r *Runner) RunTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		stream := &subRoundStream{}
 		req.OnStream = r.attachStreamHandlers(cb, round, stream)
 
-		logging.L().Info("LLM request",
-			zap.String("session_id", sessionID),
-			zap.Int("round", round+1),
-			zap.String("model", req.Model),
-			zap.Int("messages", len(req.Messages)),
-			zap.Int("tools", len(req.Tools)),
-		)
 		resp, err := r.chatWithCompactRetry(ctx, sessionID, req)
 		if err != nil {
 			if !stream.planningDone && cb != nil && cb.OnPlanningEnd != nil {
@@ -167,6 +160,11 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)
 	}
 	if err := r.recordCheckpoint(ctx, sessionID, tc.Name, args); err != nil {
+		logging.L().Debug("checkpoint failed",
+			zap.String("session_id", sessionID),
+			zap.String("tool", tc.Name),
+			zap.Error(err),
+		)
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, fmt.Errorf("checkpoint: %w", err))
 	}
 	if r.Audit != nil {

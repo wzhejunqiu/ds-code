@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/patch"
+	"go.uber.org/zap"
 )
 
 const maxCaptureBytes = 4 << 20 // 4 MiB per file
@@ -27,6 +29,14 @@ func CapturePaths(workspace string, resolve func(rel string) (string, error), pa
 		}
 		out = append(out, st)
 	}
+	var totalBytes int
+	for _, st := range out {
+		totalBytes += len(st.Content)
+	}
+	logging.L().Debug("checkpoint capture",
+		zap.Int("paths", len(out)),
+		zap.Int("bytes", totalBytes),
+	)
 	return out, nil
 }
 

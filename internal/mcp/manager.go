@@ -7,8 +7,10 @@ import (
 	"sync"
 
 	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/tool"
+	"go.uber.org/zap"
 )
 
 // Manager connects configured MCP servers and exposes their tools.
@@ -79,6 +81,10 @@ func (m *Manager) DiscoverTools(ctx context.Context, strict bool) error {
 		if err != nil {
 			return fmt.Errorf("mcp: server %q list tools: %w", srv.Name, err)
 		}
+		logging.L().Debug("mcp discover tools",
+			zap.String("server", srv.Name),
+			zap.Int("tool_count", len(list)),
+		)
 		for _, t := range list {
 			ad := newAdapterTool(srv, t, strict)
 			if _, exists := m.byName[ad.Name()]; exists {

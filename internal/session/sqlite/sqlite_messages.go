@@ -85,5 +85,6 @@ func (s *Store) AppendMessage(ctx context.Context, msg session.Message) error {
 			return fmt.Errorf("update session timestamp: %w", err)
 		}
 	}
+	session.LogAppendDebug(msg)
 	return nil
 }

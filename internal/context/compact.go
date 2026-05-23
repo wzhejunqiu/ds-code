@@ -39,6 +39,11 @@ func (s *Service) CompactAPIContext(ctx context.Context, sessionID string) error
 
 	transcript := formatTurnsForCompact(oldTurns)
 	transcript = sanitizeCompactInput(transcript)
+	logging.L().Debug("compact preparing",
+		zap.String("session_id", sessionID),
+		zap.Int("old_turns", len(oldTurns)),
+		zap.Int("transcript_chars", len(transcript)),
+	)
 	if strings.TrimSpace(transcript) == "" {
 		return nil
 	}
@@ -48,6 +53,13 @@ func (s *Service) CompactAPIContext(ctx context.Context, sessionID string) error
 		_ = s.compactFallback(ctx, sessionID, turns, keep)
 		return fmt.Errorf("compact: %w (applied fallback truncation)", err)
 	}
+	logging.L().Debug("compact summarized",
+		zap.String("session_id", sessionID),
+		zap.String("model", sess.Model),
+		zap.Int("summary_chars", len(summary)),
+		zap.Int("prompt_tokens", usage.PromptTokens),
+		zap.Int("completion_tokens", usage.CompletionTokens),
+	)
 
 	watermark := oldTurns[len(oldTurns)-1].MaxMessageID()
 	mergedSummary := sess.CompactSummary
@@ -109,6 +121,11 @@ func (s *Service) compactFallback(ctx context.Context, sessionID string, turns [
 	}
 	old := turns[:len(turns)-keep]
 	watermark := old[len(old)-1].MaxMessageID()
+	logging.L().Debug("compact fallback",
+		zap.String("session_id", sessionID),
+		zap.Int64("watermark_msg_id", watermark),
+		zap.Bool("set_fallback_summary", true),
+	)
 	return s.Store.UpdateSession(ctx, sessionID, func(st *session.Session) error {
 		if watermark > st.CompactUpToMessageID {
 			st.CompactUpToMessageID = watermark

@@ -21,8 +21,9 @@ type Config struct {
 	Web              WebConfig            `mapstructure:"web"`
 	LSP              LSPConfig            `mapstructure:"lsp"`
 	RunMode          string               `mapstructure:"run_mode"`
-	LogVerbosity     int                  `mapstructure:"-"`
-	JSONOutput       bool                 `mapstructure:"-"`
+	LogVerbosity          int  `mapstructure:"-"`
+	AllowLogSensitiveData bool `mapstructure:"-"`
+	JSONOutput            bool `mapstructure:"-"`
 	Prompt           string               `mapstructure:"-"`
 	ProjectRoot      string               `mapstructure:"-"`
 	ProjectID        string               `mapstructure:"-"`

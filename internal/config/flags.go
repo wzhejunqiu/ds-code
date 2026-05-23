@@ -82,5 +82,10 @@ func ApplyCLIDerived(cfg *Config, cmd *cobra.Command) error {
 		return fmt.Errorf("config: verbose flag: %w", err)
 	}
 	cfg.LogVerbosity = verbose
+	allowSensitive, err := fs.GetBool("allow-log-sensitive-data")
+	if err != nil {
+		return fmt.Errorf("config: allow-log-sensitive-data flag: %w", err)
+	}
+	cfg.AllowLogSensitiveData = cfg.LogVerbosity >= 2 && allowSensitive
 	return nil
 }

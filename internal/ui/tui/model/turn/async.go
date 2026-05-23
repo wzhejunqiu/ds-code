@@ -2,13 +2,16 @@ package turn
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hejunqiu/ds-code/internal/agent"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
+	"go.uber.org/zap"
 )
 
 const (
@@ -50,6 +53,7 @@ func (b *streamBuffer) trySendContent(events chan<- tea.Msg) {
 		}
 		b.mu.Unlock()
 	default:
+		logging.L().Debug("stream content dropped", zap.Int("pending_chars", len(payload)))
 	}
 }
 
@@ -69,6 +73,7 @@ func (b *streamBuffer) trySendReasoning(events chan<- tea.Msg) {
 		}
 		b.mu.Unlock()
 	default:
+		logging.L().Debug("stream reasoning dropped", zap.Int("pending_chars", len(payload)))
 	}
 }
 
@@ -93,6 +98,11 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 		wg.Add(1)
 		defer wg.Done()
 	}
+	start := time.Now()
+	logging.L().Debug("tui turn async start",
+		zap.String("session_id", d.SessionID),
+		zap.Int("prompt_chars", len(line)),
+	)
 	ctx, cancel := context.WithCancel(context.Background())
 	sendAgentEvent(events, msg.TurnStartedMsg{Cancel: cancel}, true)
 
@@ -143,6 +153,16 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 	result, err := d.Runner.RunTurn(ctx, d.SessionID, line, cb)
 	buf.flush(events)
 	sendAgentEvent(events, msg.TurnDoneMsg{Result: result, Err: err}, true)
+	subRounds := 0
+	if result != nil {
+		subRounds = result.SubRounds
+	}
+	logging.L().Debug("tui turn async done",
+		zap.String("session_id", d.SessionID),
+		zap.Int64("duration_ms", time.Since(start).Milliseconds()),
+		zap.Int("sub_rounds", subRounds),
+		zap.Bool("ok", err == nil),
+	)
 }
 
 func sendAgentEvent(events chan<- tea.Msg, m tea.Msg, critical bool) {
@@ -150,6 +170,9 @@ func sendAgentEvent(events chan<- tea.Msg, m tea.Msg, critical bool) {
 		select {
 		case events <- m:
 		default:
+			logging.L().Debug("agent event dropped",
+				zap.String("type", fmt.Sprintf("%T", m)),
+			)
 		}
 		return
 	}
@@ -161,5 +184,8 @@ func sendAgentEvent(events chan<- tea.Msg, m tea.Msg, critical bool) {
 			time.Sleep(agentEventRetryInterval)
 		}
 	}
-	events <- m
+	logging.L().Error("agent event dropped after retries",
+		zap.String("type", fmt.Sprintf("%T", m)),
+		zap.Int("retries", agentEventMaxRetries),
+	)
 }

@@ -7,8 +7,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/patch"
 	wspkg "github.com/hejunqiu/ds-code/internal/workspace"
+	"go.uber.org/zap"
 )
 
 // ErrDenied is returned when an operation is not allowed.
@@ -41,6 +43,21 @@ func NewEngine(mode, workspace string, interactive bool) *Engine {
 
 // Check validates whether a tool may run with the given arguments map.
 func (e *Engine) Check(tool string, args map[string]any) error {
+	err := e.check(tool, args)
+	if err != nil {
+		fields := []zap.Field{
+			zap.String("tool", tool),
+			zap.String("deny_reason", classifyDeny(err)),
+		}
+		if logging.AllowSensitiveData() {
+			fields = append(fields, zap.Error(err))
+		}
+		logging.L().Debug("permission denied", fields...)
+	}
+	return err
+}
+
+func (e *Engine) check(tool string, args map[string]any) error {
 	if tool == "shell" && isShellReadOnlyOp(args) {
 		return e.checkShellReadOnly(args)
 	}
@@ -179,9 +196,11 @@ func (e *Engine) checkPath(rel string) error {
 func (e *Engine) CheckReadablePath(rel string) (string, error) {
 	abs, err := e.ResolvePath(rel)
 	if err != nil {
+		logReadablePathDenied(rel, "", "resolve", err)
 		return "", err
 	}
 	if IsSensitiveAbs(abs) {
+		logReadablePathDenied(rel, abs, "sensitive", nil)
 		return "", fmt.Errorf("%w: sensitive path %s", ErrDenied, rel)
 	}
 	return abs, nil
@@ -196,6 +215,23 @@ func (e *Engine) ResolvePath(rel string) (string, error) {
 		return "", fmt.Errorf("%w: %v", ErrDenied, err)
 	}
 	return abs, nil
+}
+
+func logReadablePathDenied(rel, resolved, reason string, err error) {
+	fields := []zap.Field{
+		zap.Bool("allowed", false),
+		zap.String("deny_reason", reason),
+	}
+	if logging.AllowSensitiveData() {
+		fields = append(fields, logging.FieldString("path", rel))
+		if resolved != "" {
+			fields = append(fields, logging.FieldString("resolved", resolved))
+		}
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+		}
+	}
+	logging.L().Debug("readable path denied", fields...)
 }
 
 func (e *Engine) checkSensitiveShell(cmd string) error {

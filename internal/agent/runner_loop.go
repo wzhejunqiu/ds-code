@@ -31,12 +31,21 @@ func (r *Runner) chatWithCompactRetry(ctx context.Context, sessionID string, req
 	}
 	logging.L().Info("context too long, compacting", zap.String("session_id", sessionID))
 	if compactErr := r.Context.CompactAPIContext(ctx, sessionID); compactErr != nil {
+		logging.L().Debug("context compact retry failed",
+			zap.String("session_id", sessionID),
+			zap.Error(compactErr),
+		)
 		return nil, fmt.Errorf("context too long; compact failed: %w", compactErr)
 	}
 	view, maxTokens, prepErr := r.Context.PrepareRequest(ctx, sessionID)
 	if prepErr != nil {
 		return nil, prepErr
 	}
+	logging.L().Debug("context compact retry prepared",
+		zap.String("session_id", sessionID),
+		zap.Int("messages", len(view.Messages)),
+		zap.Int("max_tokens", maxTokens),
+	)
 	req.Messages = view.Messages
 	req.MergedSystem = view.MergedSystem()
 	req.MaxTokens = maxTokens
@@ -136,6 +145,7 @@ func (r *Runner) runToolCalls(
 			zap.String("call_id", tc.ID),
 		)
 		rawArgs := []byte(tc.Arguments)
+		argsChars := len(rawArgs)
 		patchDisplays := tool.ApplyPatchStarts(tc.Name, rawArgs, r.Perm.Workspace)
 		if cb != nil && cb.OnToolStart != nil {
 			if len(patchDisplays) > 0 {
@@ -179,7 +189,17 @@ func (r *Runner) runToolCalls(
 				}
 			}
 		}
+		bodyBefore := body
 		body = ctxpkg.TruncateToolResult(body, r.Cfg)
+		logging.L().Debug("tool result stored",
+			zap.String("session_id", sessionID),
+			zap.String("tool", tc.Name),
+			zap.String("call_id", tc.ID),
+			zap.Int("args_chars", argsChars),
+			zap.Int("result_chars", len(body)),
+			zap.Bool("truncated", len(body) < len(bodyBefore)),
+			zap.Bool("is_error", isError),
+		)
 		if err := r.Sessions.AppendMessage(ctx, session.Message{
 			SessionID:  sessionID,
 			Role:       role.Tool,
@@ -214,6 +234,11 @@ func (r *Runner) appendAssistantWithTools(
 	if err != nil {
 		return fmt.Errorf("marshal tool_calls: %w", err)
 	}
+	logging.L().Debug("append assistant with tools",
+		zap.String("session_id", sessionID),
+		zap.Int("tool_calls", len(resp.ToolCalls)),
+		zap.Int("content_chars", len(resp.Content)),
+	)
 	assistantMsg := session.Message{
 		SessionID:           sessionID,
 		Role:                role.Assistant,

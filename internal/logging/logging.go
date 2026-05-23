@@ -29,6 +29,8 @@ type Options struct {
 	ProjectRoot string
 	// Verbosity: 0 = INFO; 1 (-v) = INFO; 2 (-vv) = DEBUG (with caller).
 	Verbosity int
+	// AllowSensitiveData permits full bodies and paths in debug logs.
+	AllowSensitiveData bool
 }
 
 // TrySetup installs the file logger when possible; on failure it keeps the nop logger.
@@ -42,6 +44,8 @@ func TrySetup(opts Options) func() {
 
 // Setup installs the global logger. Returns a cleanup func that restores the nop logger and closes the file.
 func Setup(opts Options) (func(), error) {
+	prevSensitive := allowSensitive.Load()
+	SetAllowSensitiveData(opts.AllowSensitiveData)
 	logDir, err := config.EnsureLogsDir(opts.ProjectRoot)
 	if err != nil {
 		return nil, err
@@ -70,6 +74,7 @@ func Setup(opts Options) (func(), error) {
 		_ = logger.Sync()
 		_ = f.Close()
 		swap(prev)
+		SetAllowSensitiveData(prevSensitive)
 	}
 
 	L().Info("logging initialized",

@@ -60,7 +60,7 @@ const (
 	// AssistantBullet is the visible prefix for assistant messages (exported for tests).
 	AssistantBullet = assistantBullet
 	planningBullet  = "◦ "
-	planningLabel   = "Planning next moves"
+	planningLabel   = "规划下一步行动"
 	interruptBullet = "⏹ "
 	interruptLabel  = "Turn cancelled (Esc)"
 )

@@ -100,12 +100,31 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 	if maxTokens > deepseek.MaxOutputTokens {
 		maxTokens = deepseek.MaxOutputTokens
 	}
+	toolCount := 0
+	if s.Tools != nil {
+		toolCount = len(s.Tools.Definitions())
+	}
+	logging.L().Debug("prepare request",
+		zap.String("session_id", sessionID),
+		zap.Int("messages", len(view.Messages)),
+		zap.Int("merged_system_chars", len(view.MergedSystem())),
+		zap.Int("tools", toolCount),
+		zap.Int("max_tokens", maxTokens),
+		zap.Int64("prompt_tokens_total", sess.PromptTokensTotal),
+	)
 	return view, maxTokens, nil
 }
 
 func (s *Service) shouldCompact(ctx context.Context, sessionID string, sess session.Session) bool {
 	threshold := s.compactThreshold()
-	if s.sessionPromptTotal(ctx, sessionID, sess) >= threshold {
+	total := s.sessionPromptTotal(ctx, sessionID, sess)
+	if total >= threshold {
+		logging.L().Debug("should compact",
+			zap.String("session_id", sessionID),
+			zap.String("reason", "prompt_total"),
+			zap.Int("threshold", threshold),
+			zap.Int("total", total),
+		)
 		return true
 	}
 	if !s.userTurnCounted {
@@ -119,10 +138,25 @@ func (s *Service) shouldCompact(ctx context.Context, sessionID string, sess sess
 		}
 		s.userTurnBreakdown = &bd
 		s.userTurnCounted = true
-		return bd.Total() >= threshold
+		if bd.Total() >= threshold {
+			logging.L().Debug("should compact",
+				zap.String("session_id", sessionID),
+				zap.String("reason", "breakdown_total"),
+				zap.Int("threshold", threshold),
+				zap.Int("total", bd.Total()),
+			)
+			return true
+		}
+		return false
 	}
-	if s.userTurnBreakdown != nil {
-		return s.userTurnBreakdown.Total() >= threshold
+	if s.userTurnBreakdown != nil && s.userTurnBreakdown.Total() >= threshold {
+		logging.L().Debug("should compact",
+			zap.String("session_id", sessionID),
+			zap.String("reason", "cached_breakdown"),
+			zap.Int("threshold", threshold),
+			zap.Int("total", s.userTurnBreakdown.Total()),
+		)
+		return true
 	}
 	return false
 }
@@ -185,6 +219,15 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 		}
 	}
 	view.Messages = apiMsgs
+	logging.L().Debug("build api context",
+		zap.String("session_id", sessionID),
+		zap.Int("history_msgs", len(msgs)),
+		zap.Int("api_msgs", len(apiMsgs)),
+		zap.Int64("compact_watermark", sess.CompactUpToMessageID),
+		zap.Bool("has_summary", sess.CompactSummary != ""),
+		zap.Int("recent_turns", len(recent)),
+		zap.Int("window_tokens", window),
+	)
 	return view, nil
 }
 

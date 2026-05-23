@@ -51,6 +51,9 @@ func (s *Store) AddUsage(ctx context.Context, sessionID string, u llm.Usage) err
 		u.PromptTokens, u.CompletionTokens, u.PromptCacheHitTokens,
 		time.Now().UTC().Format(time.RFC3339), sessionID,
 	)
+	if err == nil {
+		session.LogAddUsageDebug(sessionID, u)
+	}
 	return err
 }
 

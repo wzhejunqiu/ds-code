@@ -5,8 +5,10 @@ import (
 	"fmt"
 
 	"github.com/hejunqiu/ds-code/internal/checkpoint"
+	"github.com/hejunqiu/ds-code/internal/logging"
 	"github.com/hejunqiu/ds-code/internal/role"
 	"github.com/hejunqiu/ds-code/internal/session"
+	"go.uber.org/zap"
 )
 
 func (r *Runner) recordCheckpoint(ctx context.Context, sessionID, toolName string, args map[string]any) error {
@@ -28,8 +30,22 @@ func (r *Runner) recordCheckpoint(ctx context.Context, sessionID, toolName strin
 		return err
 	}
 	patch, _ := args["patch"].(string)
-	_, err = r.Checkpoints.Create(ctx, sessionID, toolName, files, patch)
-	return err
+	rec, err := r.Checkpoints.Create(ctx, sessionID, toolName, files, patch)
+	if err != nil {
+		return err
+	}
+	var totalBytes int
+	for _, f := range files {
+		totalBytes += len(f.Content)
+	}
+	logging.L().Debug("checkpoint created",
+		zap.String("session_id", sessionID),
+		zap.String("tool", toolName),
+		zap.Int("checkpoint_id", rec.ID),
+		zap.Int("paths", len(files)),
+		zap.Int("bytes", totalBytes),
+	)
+	return nil
 }
 
 func isCheckpointTool(name string) bool {
