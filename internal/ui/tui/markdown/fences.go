@@ -42,10 +42,7 @@ func splitByFences(content string) []part {
 			parts = append(parts, part{text: rest[start:]})
 			break
 		}
-		code := codeBody[:closeAt]
-		if strings.HasSuffix(code, "\n") {
-			code = strings.TrimSuffix(code, "\n")
-		}
+		code := strings.TrimSuffix(codeBody[:closeAt], "\n")
 		parts = append(parts, part{fenced: true, lang: lang, code: code})
 		rest = codeBody[closeAt:]
 		if afterClose, ok := strings.CutPrefix(rest, "```"); ok {

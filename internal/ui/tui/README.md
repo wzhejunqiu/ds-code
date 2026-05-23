@@ -26,7 +26,7 @@ tea.KeyMsg / tea.WindowSizeMsg / 异步 tea.Msg
 | `overlayContext` / `overlayHelp` | `/context`、`?` | Esc / q |
 | `overlayPrompt` | 工具权限询问通道 | y / n |
 
-`dismissOverlay` 会清理 complete/resume 关联的 picker 状态，避免残留列表。
+`overlay.Dismiss` 只清理 `state` 中的浮层字段（如 `Complete`、`ResumeSessions`）。complete/resume 的 picker widget 由 `input.HandleCompleteKey`（`PickerKeyCancel`）和 `updateInput`（提交消息时）分别调用 `ClearCompletePicker` / `ClearResumePicker`。
 
 ## 输入：斜杠补全 vs 恢复会话列表
 
@@ -58,7 +58,7 @@ tea.KeyMsg / tea.WindowSizeMsg / 异步 tea.Msg
 
 ## 布局
 
-`layout()` 按**内容行数**计算聊天/工具视口高度，并受终端高度上限约束，使输入框紧贴 transcript 下方，而非钉在屏幕底部。详见 `model_view.go` 中 `layout` 注释。
+`view.Layout`（[`model/view/render.go`](model/view/render.go)）按**内容行数**计算聊天/工具视口高度，并受终端高度上限约束，使输入框紧贴 transcript 下方，而非钉在屏幕底部；由 `SyncChat` / `SyncTool` 在同步视口内容时调用。
 
 ## 主题
 

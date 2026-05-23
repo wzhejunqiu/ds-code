@@ -35,10 +35,10 @@ func (m *Model) nextThinkingTickCmd() tea.Cmd {
 }
 
 func turnThinkingElapsed(m *Model) time.Duration {
-	if len(m.State.Chat) == 0 {
+	if len(m.Chat) == 0 {
 		return 0
 	}
-	blk := m.State.Chat[len(m.State.Chat)-1]
+	blk := m.Chat[len(m.Chat)-1]
 	if blk.ReasoningStartedAt.IsZero() {
 		return 0
 	}

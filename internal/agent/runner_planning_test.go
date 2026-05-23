@@ -24,7 +24,7 @@ type getFailMemoryStore struct {
 }
 
 func (s *getFailMemoryStore) Get(ctx context.Context, id string) (session.Session, error) {
-	msgs, err := s.MemoryStore.ListMessages(ctx, id)
+	msgs, err := s.ListMessages(ctx, id)
 	if err != nil {
 		return session.Session{}, err
 	}

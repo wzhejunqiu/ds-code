@@ -50,7 +50,7 @@ func TestMergeSystem_runtimeEnvBeforeAgentsMD(t *testing.T) {
 	if baseIdx < 0 || envIdx < 0 || agentsIdx < 0 {
 		t.Fatalf("sections missing: %q", merged)
 	}
-	if !(baseIdx < envIdx && envIdx < agentsIdx) {
+	if baseIdx >= envIdx || envIdx >= agentsIdx {
 		t.Fatalf("wrong section order: %q", merged)
 	}
 }

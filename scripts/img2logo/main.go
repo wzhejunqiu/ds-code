@@ -17,7 +17,10 @@ func main() {
 	}
 	width := 32
 	if len(os.Args) >= 3 {
-		fmt.Sscanf(os.Args[2], "%d", &width)
+		if _, err := fmt.Sscanf(os.Args[2], "%d", &width); err != nil {
+			fmt.Fprintln(os.Stderr, "invalid width:", os.Args[2])
+			os.Exit(1)
+		}
 	}
 
 	f, err := os.Open(os.Args[1])

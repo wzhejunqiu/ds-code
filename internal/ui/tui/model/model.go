@@ -100,10 +100,6 @@ func (m *Model) syncAllViews() {
 	}
 }
 
-func (m *Model) layout() {
-	view.Layout(&m.State, &m.chatVP, &m.toolVP, &m.input)
-}
-
 func (m *Model) refreshStatus() {
 	view.RefreshStatus(&m.State)
 }

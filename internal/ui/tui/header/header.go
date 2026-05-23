@@ -61,7 +61,8 @@ func Render(width int, version string, cfg *config.Config, sess *session.Session
 	pathLine := style.HeaderPath.Render(shortenHome(cfg.ProjectRoot))
 	logo := style.Logo.Render(style.LogoArt)
 	info := lipgloss.JoinVertical(lipgloss.Left, titleLine, metaLine, pathLine)
-	return lipgloss.JoinHorizontal(lipgloss.Center, logo, "  ", info)
+	out := lipgloss.JoinHorizontal(lipgloss.Center, logo, "  ", info)
+	return lipgloss.NewStyle().MaxWidth(width).Render(out)
 }
 
 func thinkingLabel(t string) string {

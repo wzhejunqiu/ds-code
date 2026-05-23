@@ -15,10 +15,6 @@ func Divider(width int) string {
 }
 
 func InputFrame(width int, inputView string) string {
-	innerW := width - 4
-	if innerW < 10 {
-		innerW = 10
-	}
 	prompt := style.InputPrompt.Render("> ")
 	line := lipgloss.JoinHorizontal(lipgloss.Top, prompt, style.InputText.Render(inputView))
 	var b strings.Builder

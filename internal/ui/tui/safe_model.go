@@ -34,7 +34,7 @@ func (s *safeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.inner.State.ErrLine = formatRecoveredError("update", r)
+				s.inner.ErrLine = formatRecoveredError("update", r)
 				cmd = nil
 			}
 		}()
@@ -55,7 +55,7 @@ func (s *safeModel) View() string {
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.inner.State.ErrLine = formatRecoveredError("render", r)
+				s.inner.ErrLine = formatRecoveredError("render", r)
 				view = s.fallbackView()
 			}
 		}()
@@ -69,8 +69,8 @@ func (s *safeModel) View() string {
 
 func (s *safeModel) fallbackView() string {
 	msg := "TUI render error"
-	if s.inner != nil && s.inner.State.ErrLine != "" {
-		msg = s.inner.State.ErrLine
+	if s.inner != nil && s.inner.ErrLine != "" {
+		msg = s.inner.ErrLine
 	}
 	return style.App.Render(
 		lipgloss.NewStyle().Foreground(theme.Error).Render(msg) +

@@ -19,8 +19,8 @@ func TestViewWithWidthBeforeWindowSizeMsg(t *testing.T) {
 		Version:   "v",
 		Cfg:       &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}},
 	})
-	sm.inner.State.Width = 80
-	sm.inner.State.Height = 24
+	sm.inner.Width = 80
+	sm.inner.Height = 24
 	sm.inner.TestSyncChatView()
 
 	defer func() {
@@ -79,8 +79,8 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 
 	cfg := &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}}
 	sm := newSafeModel(&Deps{Store: store, SessionID: sess.ID, Version: "test", Cfg: cfg})
-	sm.inner.State.Width = 120
-	sm.inner.State.Height = 40
+	sm.inner.Width = 120
+	sm.inner.Height = 40
 	sm.inner.TestInputSetValue("/resume")
 	sm.inner.Overlay = state.OverlayResume
 	sm.inner.ResumeSessions = []session.Summary{{ID: sess.ID, Title: "hello"}}

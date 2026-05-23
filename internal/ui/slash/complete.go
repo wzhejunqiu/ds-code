@@ -17,9 +17,6 @@ func FilterCommands(input string) []Command {
 
 	var out []Command
 	for _, c := range All() {
-		if c.Phase != "" {
-			// still offer for discovery; execution may defer to stub
-		}
 		if prefix == "" || strings.HasPrefix(c.Name, prefix) {
 			out = append(out, c)
 		}

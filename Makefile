@@ -38,8 +38,12 @@ test-integration:
 vet:
 	go vet ./...
 
+GOLANGCI_LINT_VERSION := $(shell cat .golangci-lint-version)
+GOPATH_BIN := $(shell go env GOPATH)/bin
+
 lint:
-	golangci-lint run ./...
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	$(GOPATH_BIN)/golangci-lint run ./...
 
 staticcheck:
 	@command -v staticcheck >/dev/null 2>&1 || go install honnef.co/go/tools/cmd/staticcheck@latest

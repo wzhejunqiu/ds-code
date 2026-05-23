@@ -191,7 +191,7 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 	var b strings.Builder
 	fmt.Fprintf(&b, AtRefDirHeader, strings.TrimSuffix(ref, "/"))
 	if len(files) > maxFiles {
-		b.WriteString(fmt.Sprintf(AtRefTooManyFiles, maxFiles+1, maxFiles))
+		fmt.Fprintf(&b, AtRefTooManyFiles, maxFiles+1, maxFiles)
 		files = files[:maxFiles]
 	}
 

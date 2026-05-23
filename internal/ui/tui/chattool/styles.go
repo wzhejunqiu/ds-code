@@ -7,7 +7,6 @@ import (
 
 var (
 	styleTool           = lipgloss.NewStyle().Foreground(theme.Muted)
-	styleToolTitle      = lipgloss.NewStyle().Foreground(theme.Accent).Bold(true)
 	styleToolName       = lipgloss.NewStyle().Foreground(theme.Text).Bold(true)
 	styleToolCommand    = lipgloss.NewStyle().Foreground(theme.Muted)
 	styleToolMeta       = lipgloss.NewStyle().Foreground(theme.Muted)
