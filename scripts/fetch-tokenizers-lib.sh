@@ -17,4 +17,7 @@ url="https://github.com/daulet/tokenizers/releases/latest/download/libtokenizers
 echo "Fetching $url"
 curl -fsSL -o "$DEST/libtokenizers.tar.gz" "$url"
 tar -xzf "$DEST/libtokenizers.tar.gz" -C "$DEST"
+if command -v ranlib >/dev/null 2>&1; then
+  ranlib "$DEST/libtokenizers.a"
+fi
 echo "Installed $DEST/libtokenizers.a"

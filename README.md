@@ -44,7 +44,7 @@ make build
    ./scripts/fetch-tokenizers-lib.sh
    ```
 
-   产物：`third_party/tokenizers/libtokenizers.a`（已在 `.gitignore` 中忽略 tarball）。
+   产物：`third_party/tokenizers/libtokenizers.a`（按 OS/arch 本地下载，不入库；见 `.gitignore`）。
 
 2. 带 CGO 构建或测试：
 
@@ -66,7 +66,7 @@ CGO_ENABLED=1 go run -tags cgo ./cmd/count-tokens -text "hello"
 ## 开发
 
 ```bash
-make test    # 单元测试（默认无 CGO）
+make test    # 单元测试（缺 lib 时自动 ./scripts/fetch-tokenizers-lib.sh）
 make test-tui   # TUI 集成测（-tags=tuitest，见 docs/TUI_INTEGRATION_TEST.md）
 make build-tui-test && ./bin/ds-code-tui-test   # 交互式 TUI harness（内置 /tcase 场景）
 make test-integration  # LSP 集成测（需 gopls：go install golang.org/x/tools/gopls@latest）

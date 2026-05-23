@@ -1,4 +1,5 @@
 third_party/tokenizers/*.tar.gz
+third_party/tokenizers/libtokenizers.a
 
 .DS_Store
 **/.DS_Store

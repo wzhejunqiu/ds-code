@@ -20,6 +20,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install tokenizers static lib (linux)
+        run: ./scripts/fetch-tokenizers-lib.sh
+
       - name: go vet
         run: go vet ./...
 
@@ -55,6 +58,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install tokenizers static lib (linux)
+        run: ./scripts/fetch-tokenizers-lib.sh
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
@@ -74,6 +80,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Install tokenizers static lib (linux)
+        run: ./scripts/fetch-tokenizers-lib.sh
 
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
