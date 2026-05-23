@@ -11,6 +11,7 @@ import (
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/lsp"
+	"github.com/hejunqiu/ds-code/internal/lsp/client"
 	"github.com/hejunqiu/ds-code/internal/testutil"
 )
 
