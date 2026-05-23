@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/permission"
@@ -156,6 +157,81 @@ func TestGlobTool_skipsBinaryFiles(t *testing.T) {
 	}
 	if !strings.Contains(out, "main.go") {
 		t.Fatalf("expected main.go: %q", out)
+	}
+}
+
+func TestGlobTool_ordersResultsByModTime(t *testing.T) {
+	dir := t.TempDir()
+	oldPath := filepath.Join(dir, "old.go")
+	newPath := filepath.Join(dir, "new.go")
+	if err := os.WriteFile(oldPath, []byte("package old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(newPath, []byte("package new\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	oldTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	newTime := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(oldPath, oldTime, oldTime); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(newPath, newTime, newTime); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}},
+	}
+	perm := permission.NewEngine("readonly", dir, false)
+	g := &glob.GlobTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"pattern": "*.go"})
+	out, err := g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newIdx := strings.Index(out, "new.go")
+	oldIdx := strings.Index(out, "old.go")
+	if newIdx < 0 || oldIdx < 0 {
+		t.Fatalf("expected both files: %q", out)
+	}
+	if newIdx > oldIdx {
+		t.Fatalf("newer file should appear first: %q", out)
+	}
+}
+
+func TestGlobTool_pathsRelativeToProjectRoot(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "internal", "pkg")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "a.go"), []byte("package pkg\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}},
+	}
+	perm := permission.NewEngine("readonly", dir, false)
+	g := &glob.GlobTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	args, _ := json.Marshal(map[string]any{
+		"pattern": "**/*.go",
+		"path":    "internal/pkg",
+	})
+	out, err := g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "internal/pkg/a.go"
+	if !strings.Contains(out, want) {
+		t.Fatalf("expected workspace-relative path %q in output, got %q", want, out)
+	}
+	if strings.HasPrefix(strings.TrimSpace(out), "a.go") {
+		t.Fatalf("should not be relative to search dir only: %q", out)
 	}
 }
 

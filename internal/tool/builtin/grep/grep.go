@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,7 +18,6 @@ import (
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
 	"github.com/hejunqiu/ds-code/internal/tool/globmatch"
-	"github.com/hejunqiu/ds-code/internal/tool/textfile"
 )
 
 const (
@@ -65,12 +63,6 @@ func (t *GrepTool) Schema() map[string]any {
 }
 
 func (t *GrepTool) PermissionLevel() permission.Level { return permission.LevelLow }
-
-type fileCandidate struct {
-	absPath string
-	rel     string
-	modTime time.Time
-}
 
 type lineHit struct {
 	lineNum int
@@ -158,14 +150,18 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	}
 }
 
-func (t *GrepTool) collectCandidates(ctx context.Context, searchPath string) ([]fileCandidate, error) {
+func (t *GrepTool) gitignoreIgnored(rel string) bool {
+	return t.Gitignore != nil && t.Gitignore.Ignored(rel)
+}
+
+func (t *GrepTool) collectCandidates(ctx context.Context, searchPath string) ([]builtin.FileCandidate, error) {
 	if globmatch.HasMeta(searchPath) {
 		return t.collectGlobPath(ctx, searchPath)
 	}
 	return t.collectExactPath(ctx, searchPath)
 }
 
-func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]fileCandidate, error) {
+func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]builtin.FileCandidate, error) {
 	root, err := t.Perm.CheckReadablePath(searchPath)
 	if err != nil {
 		return nil, err
@@ -174,14 +170,15 @@ func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]f
 	if err != nil {
 		return nil, err
 	}
+	filter := builtin.FileFilter{MaxFileBytes: maxFileBytes}
 	if !info.IsDir() {
-		if c := t.makeCandidate(root); c != nil {
-			return []fileCandidate{*c}, nil
+		if c := builtin.MakeFileCandidate(t.Perm, root, filter); c != nil {
+			return []builtin.FileCandidate{*c}, nil
 		}
 		return nil, nil
 	}
 
-	var out []fileCandidate
+	var out []builtin.FileCandidate
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return nil
@@ -198,8 +195,8 @@ func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]f
 			}
 			return nil
 		}
-		if c := t.makeCandidate(path); c != nil {
-			if t.Gitignore != nil && t.Gitignore.Ignored(c.rel) {
+		if c := builtin.MakeFileCandidate(t.Perm, path, filter); c != nil {
+			if t.Gitignore != nil && t.Gitignore.Ignored(c.Rel) {
 				return nil
 			}
 			out = append(out, *c)
@@ -209,88 +206,20 @@ func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]f
 	return out, err
 }
 
-func (t *GrepTool) collectGlobPath(ctx context.Context, searchPath string) ([]fileCandidate, error) {
+func (t *GrepTool) collectGlobPath(ctx context.Context, searchPath string) ([]builtin.FileCandidate, error) {
 	base, pattern := globmatch.SplitPath(searchPath)
 	root, err := t.Perm.CheckReadablePath(base)
 	if err != nil {
 		return nil, err
 	}
-	absPaths, err := globmatch.MatchFiles(root, pattern, 0)
-	if err != nil {
-		return nil, err
-	}
-	if err := t.validateGlobMatches(absPaths, searchPath); err != nil {
-		return nil, err
-	}
-
-	var out []fileCandidate
-	for _, abs := range absPaths {
-		if ctx.Err() != nil {
-			return out, ctx.Err()
-		}
-		if c := t.makeCandidate(abs); c != nil {
-			if t.Gitignore != nil && t.Gitignore.Ignored(c.rel) {
-				continue
-			}
-			out = append(out, *c)
-		}
-	}
-	return out, nil
+	return builtin.CollectGlobPattern(ctx, t.Perm, root, pattern, builtin.FileFilter{MaxFileBytes: maxFileBytes}, t.gitignoreIgnored)
 }
 
-func (t *GrepTool) makeCandidate(absPath string) *fileCandidate {
-	if permission.IsSensitiveAbs(absPath) {
-		return nil
-	}
-	info, err := os.Stat(absPath)
-	if err != nil || info.IsDir() || info.Size() > maxFileBytes {
-		return nil
-	}
-	if !textfile.IsSearchable(absPath) {
-		return nil
-	}
-	ws, err := filepath.Abs(t.Perm.Workspace)
-	if err != nil {
-		return nil
-	}
-	if resolved, err := filepath.EvalSymlinks(ws); err == nil {
-		ws = resolved
-	}
-	abs := absPath
-	if resolved, err := filepath.EvalSymlinks(absPath); err == nil {
-		abs = resolved
-	}
-	rel, err := filepath.Rel(ws, abs)
-	if err != nil || strings.HasPrefix(rel, "..") {
-		return nil
-	}
-	return &fileCandidate{
-		absPath: absPath,
-		rel:     filepath.ToSlash(rel),
-		modTime: info.ModTime(),
-	}
-}
-
-func (t *GrepTool) validateGlobMatches(matches []string, pattern string) error {
-	for _, m := range matches {
-		abs := filepath.Clean(m)
-		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-			abs = resolved
-		}
-		if err := t.Perm.EnsureAbsUnderWorkspace(abs, pattern); err != nil {
-			return permission.GlobOutsideWorkspaceError(abs, pattern)
-		}
-	}
-	return nil
-}
-
-func (t *GrepTool) searchCandidates(ctx context.Context, candidates []fileCandidate, re *regexp.Regexp, mode outputMode, limit int) searchResult {
-	sort.Slice(candidates, func(i, j int) bool {
-		if !candidates[i].modTime.Equal(candidates[j].modTime) {
-			return candidates[i].modTime.After(candidates[j].modTime)
-		}
-		return candidates[i].rel < candidates[j].rel
-	})
+func (t *GrepTool) searchCandidates(ctx context.Context, candidates []builtin.FileCandidate, re *regexp.Regexp, mode outputMode, limit int) searchResult {
+	builtin.SortByModTimeDesc(candidates,
+		func(c builtin.FileCandidate) time.Time { return c.ModTime },
+		func(c builtin.FileCandidate) string { return c.Rel },
+	)
 
 	workers := maxWorkers
 	if n := runtime.NumCPU(); n < workers {
@@ -334,12 +263,12 @@ func (t *GrepTool) searchCandidates(ctx context.Context, candidates []fileCandid
 		var wg sync.WaitGroup
 		for j, c := range batch {
 			wg.Add(1)
-			go func(j int, c fileCandidate) {
+			go func(j int, c builtin.FileCandidate) {
 				defer wg.Done()
 				if ctx.Err() != nil {
 					return
 				}
-				batchHits[j] = grepFile(c.absPath, c.rel, re, stopAfter)
+				batchHits[j] = grepFile(c.AbsPath, c.Rel, re, stopAfter)
 			}(j, c)
 		}
 		wg.Wait()

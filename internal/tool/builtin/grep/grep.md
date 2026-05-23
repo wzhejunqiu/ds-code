@@ -75,11 +75,11 @@
 | 精确路径（无 `*`/`?`/`[`） | `CheckReadablePath` → 单文件或 `WalkDir` 递归                                                        |
 | glob 路径                  | [`globmatch.SplitPath`](../../globmatch/globmatch.go) + [`MatchFiles`](../../globmatch/globmatch.go) |
 
-过滤：`.git`、敏感路径、`.gitignore`、大于 2MiB、[`textfile.IsSearchable`](../../textfile/textfile.go) 二进制跳过。
+过滤：`.git`、敏感路径、`.gitignore`、大于 2MiB、[`textfile.IsSearchable`](../../textfile/textfile.go) 二进制跳过。文件路径相对项目根，由 [`builtin.MakeFileCandidate`](../filecandidate.go) 统一计算（与 `glob` 一致）。
 
 ### 搜索
 
-1. 候选按 `ModTime` 降序（相同时按路径升序）。
+1. 候选按 `ModTime` 降序（相同时按路径升序），[`builtin.SortByModTimeDesc`](../sort.go)。
 2. 按批并发（`min(8, NumCPU)`）`ReadFile` + 逐行 `regexp.MatchString`。
 3. `content` / `files_with_matches`：达到 `head_limit` 后停止；`count` 扫完全部候选。
 

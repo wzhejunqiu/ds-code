@@ -47,7 +47,7 @@ func HarnessConfig(mockBaseURL, projectRoot string) (*config.Config, error) {
 			ParallelToolCalls: true,
 			ReadFile:          config.ReadFileToolConfig{MaxLines: 500},
 			Grep:              config.GrepToolConfig{HeadLimit: 200},
-			Glob:              config.GlobToolConfig{MaxResults: 200},
+			Glob:              config.GlobToolConfig{MaxResults: 100},
 			Shell:             config.ShellToolConfig{Timeout: 120 * time.Second},
 		},
 		MCP: config.MCPConfig{Servers: nil},

@@ -55,7 +55,7 @@ tools:
   grep:
     head_limit: 200
   glob:
-    max_results: 200
+    max_results: 100
   apply_patch:
     max_changed_lines: 2000
   shell:

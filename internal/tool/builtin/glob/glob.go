@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/permission"
 	"github.com/hejunqiu/ds-code/internal/tool"
 	"github.com/hejunqiu/ds-code/internal/tool/builtin"
-	"github.com/hejunqiu/ds-code/internal/tool/globmatch"
-	"github.com/hejunqiu/ds-code/internal/tool/textfile"
 )
+
+const defaultMaxResults = 100
 
 // GlobTool finds paths matching a glob under the workspace.
 type GlobTool struct {
@@ -36,6 +35,10 @@ func (t *GlobTool) Schema() map[string]any {
 }
 
 func (t *GlobTool) PermissionLevel() permission.Level { return permission.LevelLow }
+
+func (t *GlobTool) gitignoreIgnored(rel string) bool {
+	return t.Gitignore != nil && t.Gitignore.Ignored(rel)
+}
 
 func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	if err := ctx.Err(); err != nil {
@@ -61,66 +64,39 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	}
 	limit := t.Cfg.Tools.Glob.MaxResults
 	if limit <= 0 {
-		limit = 200
+		limit = defaultMaxResults
 	}
 
-	matchLimit := 0
-	if strings.Contains(in.Pattern, "**") {
-		matchLimit = limit * 4
-	}
-	matches, err := globmatch.MatchFiles(root, in.Pattern, matchLimit)
+	candidates, err := builtin.CollectGlobPattern(ctx, t.Perm, root, in.Pattern, builtin.FileFilter{}, t.gitignoreIgnored)
 	if err != nil {
 		return "", err
 	}
-	if err := t.validateGlobMatches(matches, in.Pattern); err != nil {
-		return "", err
-	}
+	builtin.SortByModTimeDesc(candidates,
+		func(c builtin.FileCandidate) time.Time { return c.ModTime },
+		func(c builtin.FileCandidate) string { return c.Rel },
+	)
 
 	var lines []string
-	for _, m := range matches {
+	truncated := false
+	for _, c := range candidates {
 		if ctx.Err() != nil {
 			return "", ctx.Err()
 		}
-		if permission.IsSensitiveAbs(m) {
-			continue
-		}
-		rel, err := filepath.Rel(root, m)
-		if err != nil {
-			continue
-		}
-		if t.Gitignore != nil && t.Gitignore.Ignored(rel) {
-			continue
-		}
-		info, err := os.Stat(m)
-		if err != nil || info.IsDir() {
-			continue
-		}
-		if !textfile.IsSearchable(m) {
-			continue
-		}
-		lines = append(lines, rel)
+		lines = append(lines, c.Rel)
 		if len(lines) >= limit {
-			lines = append(lines, fmt.Sprintf(builtin.TruncatedAtResults, limit))
+			truncated = len(candidates) > limit
+			lines = lines[:limit]
 			break
 		}
 	}
 	if len(lines) == 0 {
 		return ResultNoFilesMatched, nil
 	}
-	return strings.Join(lines, "\n"), nil
-}
-
-func (t *GlobTool) validateGlobMatches(matches []string, pattern string) error {
-	for _, m := range matches {
-		abs := filepath.Clean(m)
-		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-			abs = resolved
-		}
-		if err := t.Perm.EnsureAbsUnderWorkspace(abs, pattern); err != nil {
-			return permission.GlobOutsideWorkspaceError(abs, pattern)
-		}
+	out := strings.Join(lines, "\n")
+	if truncated {
+		out += "\n" + fmt.Sprintf(builtin.TruncatedAtResults, limit)
 	}
-	return nil
+	return out, nil
 }
 
 var _ tool.Tool = (*GlobTool)(nil)

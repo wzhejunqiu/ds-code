@@ -55,7 +55,7 @@ func (t *ListDirTool) Execute(ctx context.Context, args json.RawMessage) (string
 	}
 	limit := t.Cfg.Tools.Glob.MaxResults
 	if limit <= 0 {
-		limit = 200
+		limit = 100
 	}
 	var lines []string
 	for _, e := range entries {
