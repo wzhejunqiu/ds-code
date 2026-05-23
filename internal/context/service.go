@@ -2,6 +2,8 @@ package context
 
 import (
 	"context"
+	"os"
+	"time"
 
 	"github.com/hejunqiu/ds-code/internal/config"
 	"github.com/hejunqiu/ds-code/internal/llm"
@@ -12,6 +14,7 @@ import (
 	"github.com/hejunqiu/ds-code/internal/session"
 	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/hejunqiu/ds-code/internal/versioninfo"
 	"go.uber.org/zap"
 )
 
@@ -142,8 +145,13 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 
 	toolDefs := s.Tools.Definitions()
 	skills := s.SkillsText
+	cwd, _ := os.Getwd()
+	runtimeEnv := prompt.FormatRuntimeEnv(
+		s.Cfg.ProjectRoot, cwd, time.Now(), versioninfo.PlatformForPrompt(),
+	)
 	view := &APIContextView{
 		SystemPrompt: prompt.DefaultSystemBase,
+		RuntimeEnv:   runtimeEnv,
 		AgentsMD:     s.AgentsMD,
 		Rules:        s.Rules,
 		Skills:       skills,

@@ -7,7 +7,8 @@ const DefaultSystemBase = `你是 ds-code，在用户项目工作区中运行的
 
 // MergeSystem section headers.
 const (
-	SectionAgentsMD = "\n\n## 项目说明（AGENTS.md）\n"
+	SectionRuntimeEnv = "\n\n## 运行环境\n"
+	SectionAgentsMD     = "\n\n## 项目说明（AGENTS.md）\n"
 	SectionRules    = "\n\n## 规则\n"
 	SectionSkill    = "\n\n## 当前 Skill\n"
 	SectionGit      = "\n\n## Git 快照\n"

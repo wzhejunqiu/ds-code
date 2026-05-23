@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/hejunqiu/ds-code/internal/config"
@@ -50,5 +51,14 @@ func TestBuildAPIContext_includesRulesAndSkills(t *testing.T) {
 	}
 	if !contains(merged, "Use TDD") {
 		t.Fatalf("skills not in system: %s", merged)
+	}
+	if !contains(merged, dir) {
+		t.Fatalf("project_root not in runtime env: %s", merged)
+	}
+	if !contains(merged, "## 运行环境") {
+		t.Fatalf("runtime env section missing: %s", merged)
+	}
+	if !contains(merged, runtime.GOOS) {
+		t.Fatalf("OS info not in system (GOOS=%s): %s", runtime.GOOS, merged)
 	}
 }

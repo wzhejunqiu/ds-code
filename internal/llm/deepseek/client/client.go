@@ -65,7 +65,7 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (*llm.Response, erro
 
 	merged := req.MergedSystem
 	if merged == "" {
-		merged = MergeSystem("", "", "", "", "")
+		merged = MergeSystem("", "", "", "", "", "")
 	}
 
 	body := chatRequest{

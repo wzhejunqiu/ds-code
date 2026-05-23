@@ -3,13 +3,14 @@ package prompt
 import "strings"
 
 // MergeSystem combines fixed system base with project context into one system string.
-func MergeSystem(systemBase, agentsMD, rules, skills, gitSnapshot string) string {
+func MergeSystem(systemBase, runtimeEnv, agentsMD, rules, skills, gitSnapshot string) string {
 	var b strings.Builder
 	base := systemBase
 	if strings.TrimSpace(base) == "" {
 		base = DefaultSystemBase
 	}
 	b.WriteString(strings.TrimSpace(base))
+	appendSection(&b, SectionRuntimeEnv, runtimeEnv)
 	appendSection(&b, SectionAgentsMD, agentsMD)
 	appendSection(&b, SectionRules, rules)
 	appendSection(&b, SectionSkill, skills)

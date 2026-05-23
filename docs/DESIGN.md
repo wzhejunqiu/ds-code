@@ -362,7 +362,7 @@ type Service interface {
 
 **拼装顺序**（固定，防 Prompt 注入）：
 
-1. `mergeSystem(SystemPrompt, AgentsMD, Rules, Skills, GitSnapshot)` → 单条 `role=system`
+1. `mergeSystem(SystemPrompt, RuntimeEnv, AgentsMD, Rules, Skills, GitSnapshot)` → 单条 `role=system`（`RuntimeEnv` 含 project_root、cwd、OS/架构/Shell、本地日期时间）
 2. `tools` ← `tool.Registry.SchemasForMode(runMode)` → JSON
 3. `Messages`：
    - 若有 `compact_summary`：首条 assistant（元数据 `compact=true`）
