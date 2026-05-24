@@ -38,7 +38,7 @@ func EstimateCostForSession(ctx context.Context, main session.Store, sub subagen
 	}
 
 	out.MainCNY = sumMainMessageCost(ctx, main, parentSessionID, sess)
-	out.SubagentCNY = sumSubagentCost(ctx, sub, parentSessionID, true)
+	out.SubagentCNY = sumSubagentCost(ctx, sub, parentSessionID)
 	out.TotalCNY = out.MainCNY + out.SubagentCNY
 	if out.TotalCNY == 0 {
 		out.TotalCNY = estimateFromSession(sess, out.TotalSnap)
@@ -74,33 +74,24 @@ func sumMainMessageCost(ctx context.Context, main session.Store, sessionID strin
 	return estimateFromSession(sess, session.UsageSnapshotFromSession(sess))
 }
 
-// includeTitle when true sums all subagent runs; when false skips RunKindTitle.
-func sumSubagentCost(ctx context.Context, sub subagentstore.Store, parentSessionID string, includeTitle bool) float64 {
+func sumSubagentCost(ctx context.Context, sub subagentstore.Store, parentSessionID string) float64 {
 	if sub == nil {
 		return 0
 	}
-	if includeTitle {
-		if sum, err := sub.SumEstimatedCostCNY(ctx, parentSessionID); err == nil && sum > 0 {
-			return sum
-		}
+	if sum, err := sub.SumEstimatedCostCNY(ctx, parentSessionID); err == nil && sum > 0 {
+		return sum
 	}
 	runs, err := sub.ListRuns(ctx, parentSessionID)
 	if err != nil || len(runs) == 0 {
-		if includeTitle {
-			snap, err := SubagentOnly(ctx, sub, parentSessionID)
-			if err != nil || snap.Billed == 0 {
-				return 0
-			}
-			return billing.EstimateCNY(billing.DefaultSubagentModel, snap)
+		snap, err := SubagentOnly(ctx, sub, parentSessionID)
+		if err != nil || snap.Billed == 0 {
+			return 0
 		}
-		return 0
+		return billing.EstimateCNY(billing.DefaultSubagentModel, snap)
 	}
 	var total float64
 	var hasRunCost bool
 	for _, r := range runs {
-		if !includeTitle && r.RunKind == subagentstore.RunKindTitle {
-			continue
-		}
 		if r.EstimatedCostCNY > 0 {
 			total += r.EstimatedCostCNY
 			hasRunCost = true
@@ -121,12 +112,9 @@ func sumSubagentCost(ctx context.Context, sub subagentstore.Store, parentSession
 	if hasRunCost || total > 0 {
 		return total
 	}
-	if includeTitle {
-		snap, err := SubagentOnly(ctx, sub, parentSessionID)
-		if err != nil || snap.Billed == 0 {
-			return 0
-		}
-		return billing.EstimateCNY(billing.DefaultSubagentModel, snap)
+	snap, err := SubagentOnly(ctx, sub, parentSessionID)
+	if err != nil || snap.Billed == 0 {
+		return 0
 	}
-	return 0
+	return billing.EstimateCNY(billing.DefaultSubagentModel, snap)
 }

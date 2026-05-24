@@ -13,7 +13,7 @@ func UpdateStart(s *state.State, m msg.SubagentStartMsg, sync SyncFn) tea.Cmd {
 	if !turn.EventsAllowed(s) {
 		return nil
 	}
-	s.Subagents.Start(m.ID, m.Label, m.Prompt)
+	s.Subagents.Start(m.ID, m.Label, m.Prompt, m.AgentType, m.Background)
 	if s.SubagentNav == state.SubagentNavDetail && s.ViewingSubagentID == m.ID {
 		s.SyncDisplayedChat()
 	}

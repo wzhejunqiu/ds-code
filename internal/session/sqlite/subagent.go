@@ -24,20 +24,25 @@ type subagentSQLite struct {
 func (st *subagentSQLite) CreateRun(ctx context.Context, p subagentstore.CreateRunParams) (subagentstore.Run, error) {
 	now := time.Now().UTC()
 	id := "sa-" + uuid.NewString()
-	kind := subagentstore.DefaultRunKind(p.RunKind)
 	priceJSON := p.PricingSnapshotJSON
 	if priceJSON == "" {
 		priceJSON = billing.MarshalSnapshot(billing.SnapshotForModel(p.Model))
 	}
-	_, err := st.db.ExecContext(ctx, `INSERT INTO subagent_runs (
-		id, parent_session_id, parent_tool_call_id, run_kind, label, prompt, status, error,
+	bg := 0
+	if p.Background {
+		bg = 1
+	}
+	_, err := st.db.ExecContext(ctx, `INSERT INTO agent_runs (
+		id, parent_session_id, parent_tool_call_id, agent_type, spawn_kind, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
+		background, output_path, isolation_mode, worktree_path, worktree_branch,
 		pricing_snapshot_json, estimated_cost_cny,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		created_at, ended_at
-	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		id, p.ParentSessionID, p.ParentToolCallID, string(kind), p.Label, p.Prompt, string(subagentstore.StatusRunning), "",
+	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		id, p.ParentSessionID, p.ParentToolCallID, p.AgentType, string(p.SpawnKind), p.Label, p.Prompt, string(subagentstore.StatusRunning), "",
 		p.Model, p.ReasoningEffort, p.ThinkingType,
+		bg, p.OutputPath, p.IsolationMode, p.WorktreePath, p.WorktreeBranch,
 		priceJSON, 0,
 		0, 0, 0,
 		now.Format(time.RFC3339), "",
@@ -49,24 +54,39 @@ func (st *subagentSQLite) CreateRun(ctx context.Context, p subagentstore.CreateR
 		ID:                  id,
 		ParentSessionID:     p.ParentSessionID,
 		ParentToolCallID:    p.ParentToolCallID,
-		RunKind:             kind,
+		AgentType:           p.AgentType,
+		SpawnKind:           p.SpawnKind,
 		Label:               p.Label,
 		Prompt:              p.Prompt,
 		Status:              subagentstore.StatusRunning,
 		Model:               p.Model,
 		ReasoningEffort:     p.ReasoningEffort,
 		ThinkingType:        p.ThinkingType,
+		Background:          p.Background,
+		OutputPath:          p.OutputPath,
+		IsolationMode:       p.IsolationMode,
+		WorktreePath:        p.WorktreePath,
+		WorktreeBranch:      p.WorktreeBranch,
 		PricingSnapshotJSON: priceJSON,
 		CreatedAt:           now,
 	}, nil
 }
 
+func (st *subagentSQLite) SetRunBackground(ctx context.Context, runID string, background bool) error {
+	bg := 0
+	if background {
+		bg = 1
+	}
+	_, err := st.db.ExecContext(ctx, `UPDATE agent_runs SET background=? WHERE id=?`, bg, runID)
+	return err
+}
+
 func (st *subagentSQLite) FinishRun(ctx context.Context, runID string, status subagentstore.Status, errMsg string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := st.db.ExecContext(ctx, `UPDATE subagent_runs SET
+	_, err := st.db.ExecContext(ctx, `UPDATE agent_runs SET
 		status=?, error=?, ended_at=?,
 		estimated_cost_cny = COALESCE((
-			SELECT SUM(estimated_cost_cny) FROM subagent_messages WHERE run_id=?
+			SELECT SUM(estimated_cost_cny) FROM agent_messages WHERE run_id=?
 		), 0)
 		WHERE id=?`,
 		string(status), errMsg, now, runID, runID,
@@ -75,12 +95,14 @@ func (st *subagentSQLite) FinishRun(ctx context.Context, runID string, status su
 }
 
 func (st *subagentSQLite) ListRuns(ctx context.Context, parentSessionID string) ([]subagentstore.Run, error) {
-	rows, err := st.db.QueryContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, run_kind, label, prompt, status, error,
+	rows, err := st.db.QueryContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, agent_type, spawn_kind, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
+		background, COALESCE(output_path, ''), COALESCE(isolation_mode, ''), COALESCE(worktree_path, ''), COALESCE(worktree_branch, ''),
+		COALESCE(tool_use_count, 0), COALESCE(duration_ms, 0),
 		COALESCE(pricing_snapshot_json, ''), COALESCE(estimated_cost_cny, 0),
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		created_at, ended_at
-		FROM subagent_runs WHERE parent_session_id=? ORDER BY created_at ASC`, parentSessionID)
+		FROM agent_runs WHERE parent_session_id=? ORDER BY created_at ASC`, parentSessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -89,22 +111,26 @@ func (st *subagentSQLite) ListRuns(ctx context.Context, parentSessionID string) 
 }
 
 func (st *subagentSQLite) GetRun(ctx context.Context, runID string) (subagentstore.Run, error) {
-	row := st.db.QueryRowContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, run_kind, label, prompt, status, error,
+	row := st.db.QueryRowContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, agent_type, spawn_kind, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
+		background, COALESCE(output_path, ''), COALESCE(isolation_mode, ''), COALESCE(worktree_path, ''), COALESCE(worktree_branch, ''),
+		COALESCE(tool_use_count, 0), COALESCE(duration_ms, 0),
 		COALESCE(pricing_snapshot_json, ''), COALESCE(estimated_cost_cny, 0),
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		created_at, ended_at
-		FROM subagent_runs WHERE id=?`, runID)
+		FROM agent_runs WHERE id=?`, runID)
 	return scanRun(row)
 }
 
 func (st *subagentSQLite) GetRunByToolCall(ctx context.Context, parentSessionID, parentToolCallID string) (subagentstore.Run, error) {
-	row := st.db.QueryRowContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, run_kind, label, prompt, status, error,
+	row := st.db.QueryRowContext(ctx, `SELECT id, parent_session_id, parent_tool_call_id, agent_type, spawn_kind, label, prompt, status, error,
 		model, reasoning_effort, thinking_type,
+		background, COALESCE(output_path, ''), COALESCE(isolation_mode, ''), COALESCE(worktree_path, ''), COALESCE(worktree_branch, ''),
+		COALESCE(tool_use_count, 0), COALESCE(duration_ms, 0),
 		COALESCE(pricing_snapshot_json, ''), COALESCE(estimated_cost_cny, 0),
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		created_at, ended_at
-		FROM subagent_runs WHERE parent_session_id=? AND parent_tool_call_id=?`,
+		FROM agent_runs WHERE parent_session_id=? AND parent_tool_call_id=?`,
 		parentSessionID, parentToolCallID,
 	)
 	return scanRun(row)
@@ -115,7 +141,7 @@ func (st *subagentSQLite) AppendMessage(ctx context.Context, msg subagentstore.M
 	if !msg.CreatedAt.IsZero() {
 		now = msg.CreatedAt
 	}
-	_, err := st.db.ExecContext(ctx, `INSERT INTO subagent_messages (
+	_, err := st.db.ExecContext(ctx, `INSERT INTO agent_messages (
 		run_id, role, content, reasoning_content, reasoning_duration_ms, turn_duration_ms,
 		tool_calls_json, tool_call_id, tool_name,
 		prompt_tokens, completion_tokens, prompt_cache_hit_tokens,
@@ -140,7 +166,7 @@ func (st *subagentSQLite) ListMessages(ctx context.Context, runID string) ([]sub
 		prompt_tokens, completion_tokens, prompt_cache_hit_tokens,
 		COALESCE(model_id, ''), COALESCE(pricing_snapshot_json, ''), COALESCE(estimated_cost_cny, 0),
 		created_at
-		FROM subagent_messages WHERE run_id=? ORDER BY id ASC`, runID)
+		FROM agent_messages WHERE run_id=? ORDER BY id ASC`, runID)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +183,7 @@ func (st *subagentSQLite) ListMessages(ctx context.Context, runID string) ([]sub
 }
 
 func (st *subagentSQLite) AddUsage(ctx context.Context, runID string, u llm.Usage) error {
-	_, err := st.db.ExecContext(ctx, `UPDATE subagent_runs SET
+	_, err := st.db.ExecContext(ctx, `UPDATE agent_runs SET
 		prompt_tokens_total = prompt_tokens_total + ?,
 		completion_tokens_total = completion_tokens_total + ?,
 		prompt_cache_hit_tokens_total = prompt_cache_hit_tokens_total + ?
@@ -172,7 +198,7 @@ func (st *subagentSQLite) SumUsage(ctx context.Context, parentSessionID string) 
 		COALESCE(SUM(prompt_tokens_total), 0),
 		COALESCE(SUM(completion_tokens_total), 0),
 		COALESCE(SUM(prompt_cache_hit_tokens_total), 0)
-		FROM subagent_runs WHERE parent_session_id=?`, parentSessionID)
+		FROM agent_runs WHERE parent_session_id=?`, parentSessionID)
 	var u llm.Usage
 	var p, c, cache int64
 	if err := row.Scan(&p, &c, &cache); err != nil {
@@ -185,7 +211,7 @@ func (st *subagentSQLite) SumUsage(ctx context.Context, parentSessionID string) 
 }
 
 func (st *subagentSQLite) SumEstimatedCostCNY(ctx context.Context, parentSessionID string) (float64, error) {
-	row := st.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(estimated_cost_cny), 0) FROM subagent_runs WHERE parent_session_id=?`,
+	row := st.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(estimated_cost_cny), 0) FROM agent_runs WHERE parent_session_id=?`,
 		parentSessionID)
 	var sum float64
 	if err := row.Scan(&sum); err != nil {
@@ -216,10 +242,13 @@ type rowScanner interface {
 
 func scanRunRow(row rowScanner) (subagentstore.Run, error) {
 	var r subagentstore.Run
-	var status, kind, created, ended string
+	var status, spawnKind, created, ended string
+	var bg int64
 	err := row.Scan(
-		&r.ID, &r.ParentSessionID, &r.ParentToolCallID, &kind, &r.Label, &r.Prompt, &status, &r.Error,
+		&r.ID, &r.ParentSessionID, &r.ParentToolCallID, &r.AgentType, &spawnKind, &r.Label, &r.Prompt, &status, &r.Error,
 		&r.Model, &r.ReasoningEffort, &r.ThinkingType,
+		&bg, &r.OutputPath, &r.IsolationMode, &r.WorktreePath, &r.WorktreeBranch,
+		&r.ToolUseCount, &r.DurationMS,
 		&r.PricingSnapshotJSON, &r.EstimatedCostCNY,
 		&r.PromptTokensTotal, &r.CompletionTokensTotal, &r.PromptCacheHitTokensTotal,
 		&created, &ended,
@@ -227,8 +256,9 @@ func scanRunRow(row rowScanner) (subagentstore.Run, error) {
 	if err != nil {
 		return subagentstore.Run{}, err
 	}
-	r.RunKind = subagentstore.DefaultRunKind(subagentstore.RunKind(kind))
+	r.SpawnKind = subagentstore.SpawnKind(spawnKind)
 	r.Status = subagentstore.Status(status)
+	r.Background = bg != 0
 	r.CreatedAt, err = parseRFC3339(created)
 	if err != nil {
 		return subagentstore.Run{}, err

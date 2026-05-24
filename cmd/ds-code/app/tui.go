@@ -7,6 +7,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	agenttool "github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui"
 	"github.com/wzhejunqiu/ds-code/internal/version"
 	"github.com/spf13/cobra"
@@ -47,6 +48,13 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 	}
 
 	subStore := a.subStore
+	var backgroundAgents func() int
+	if at, ok := runner.Tools.Get("agent"); ok {
+		if agt, ok := at.(*agenttool.AgentTool); ok {
+			svc := agt.SpawnService()
+			backgroundAgents = svc.BackgroundManager.RunningCount
+		}
+	}
 	deps := tui.Deps{
 		Cfg:       a.Cfg,
 		Runner:    runner,
@@ -55,7 +63,8 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 		Context:   ctxSvc,
 		SessionID: sessionID,
 		Version:   version.Version,
-		PromptCh:  promptCh,
+		PromptCh:         promptCh,
+		BackgroundAgents: backgroundAgents,
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line string) (bool, error) {
 			env := &slashcmd.Env{
 				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,

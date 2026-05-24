@@ -139,7 +139,7 @@ func Handle(env *Env, host Host, line string) (handled bool, err error) {
 		if err := requireSessionEnv(env); err != nil {
 			return true, err
 		}
-		return true, Task(env, args)
+		return true, Agent(env, args)
 
 	case "checkpoint":
 		if err := requireSessionEnv(env); err != nil {

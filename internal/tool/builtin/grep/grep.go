@@ -44,6 +44,9 @@ type GrepTool struct {
 
 func (t *GrepTool) Name() string { return "grep" }
 
+func (t *GrepTool) IsReadOnly() bool        { return true }
+func (t *GrepTool) IsConcurrencySafe() bool { return true }
+
 func (t *GrepTool) Description() string { return DescGrep }
 
 func (t *GrepTool) Schema() map[string]any {

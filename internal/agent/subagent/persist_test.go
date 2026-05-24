@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wzhejunqiu/ds-code/internal/agent/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
@@ -18,7 +19,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool/register"
 )
 
-func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
+func TestRun_persistsAgentMessagesNotMainSession(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &config.Config{
 		ProjectRoot: dir,
@@ -26,7 +27,7 @@ func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
 		Context:     config.ContextConfig{ToolResultMaxChars: 50_000},
 		Tools: config.ToolsConfig{
 			ReadFile: config.ReadFileToolConfig{MaxLines: 500},
-			Task:     config.TaskToolConfig{SummaryMaxChars: 8000},
+			Agent:    config.AgentToolConfig{SummaryMaxChars: 8000},
 		},
 		Agent: config.AgentConfig{MaxTurns: 5},
 	}
@@ -46,14 +47,19 @@ func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
 		Label:            "x",
 		Prompt:           "say hi",
 		Model:            "m",
+		AgentType:        "Explore",
+		SpawnKind:        subagentstore.SpawnSync,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = subagent.Run(context.Background(), cfg, mockLLM, "say hi", func(reg *tool.Registry) {
-		register.ExploreTools(reg, cfg, permission.NewEngine("readonly", dir, false), nil, false)
-	}, sub, run, nil, 0)
+	perm := permission.NewEngine("readonly", dir, false)
+	reg := tool.NewRegistry()
+	register.ExploreTools(reg, cfg, perm, nil, false)
+
+	def, _ := spawn.NewRegistry().Resolve("Explore")
+	_, err = spawn.ExecuteRun(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +69,7 @@ func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(subMsgs) == 0 {
-		t.Fatal("expected subagent messages")
+		t.Fatal("expected agent messages")
 	}
 
 	mainMsgs, err := main.ListMessages(context.Background(), parent.ID)
@@ -72,17 +78,17 @@ func TestRun_persistsSubagentMessagesNotMainSession(t *testing.T) {
 	}
 	for _, m := range mainMsgs {
 		if m.Role == role.Tool && m.ToolName == "read_file" {
-			t.Fatalf("main session leaked subagent tool row: %+v", m)
+			t.Fatalf("main session leaked agent tool row: %+v", m)
 		}
 	}
 
 	sess, _ := main.Get(context.Background(), parent.ID)
 	if sess.PromptTokensTotal != 0 {
-		t.Fatalf("main session totals should not include subagent usage, got %d", sess.PromptTokensTotal)
+		t.Fatalf("main session totals should not include agent usage, got %d", sess.PromptTokensTotal)
 	}
 }
 
-func TestBuildAPIContext_ignoresSubagentTable(t *testing.T) {
+func TestBuildAPIContext_ignoresAgentTable(t *testing.T) {
 	ctx := context.Background()
 	main := session.NewMemoryStore()
 	sub := subagentstore.NewMemoryStore()
@@ -93,17 +99,17 @@ func TestBuildAPIContext_ignoresSubagentTable(t *testing.T) {
 	})
 	_ = main.AppendMessage(ctx, session.Message{
 		SessionID: parent.ID, Role: role.Assistant,
-		ToolCallsJSON: `[{"id":"c1","name":"task","arguments":"{}"}]`,
+		ToolCallsJSON: `[{"id":"c1","name":"agent","arguments":"{}"}]`,
 	})
 	_ = main.AppendMessage(ctx, session.Message{
-		SessionID: parent.ID, Role: role.Tool, ToolCallID: "c1", ToolName: "task", Content: "task summary",
+		SessionID: parent.ID, Role: role.Tool, ToolCallID: "c1", ToolName: "agent", Content: "agent summary",
 	})
 
 	run, _ := sub.CreateRun(ctx, subagentstore.CreateRunParams{
 		ParentSessionID: parent.ID, ParentToolCallID: "c1", Prompt: "internal",
 	})
 	_ = sub.AppendMessage(ctx, subagentstore.Message{
-		RunID: run.ID, Role: role.User, Content: "secret subagent prompt",
+		RunID: run.ID, Role: role.User, Content: "secret agent prompt",
 	})
 	_ = sub.AppendMessage(ctx, subagentstore.Message{
 		RunID: run.ID, Role: role.Tool, ToolName: "read_file", Content: "file body",
@@ -120,11 +126,14 @@ func TestBuildAPIContext_ignoresSubagentTable(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, m := range view.Messages {
-		if strings.Contains(m.Content, "secret subagent") {
-			t.Fatalf("leaked subagent content into API context: %q", m.Content)
+		if strings.Contains(m.Content, "secret agent") {
+			t.Fatalf("leaked agent content into API context: %q", m.Content)
 		}
 		if strings.Contains(m.Content, "file body") {
-			t.Fatalf("leaked subagent tool into API context: %q", m.Content)
+			t.Fatalf("leaked agent tool into API context: %q", m.Content)
 		}
 	}
 }
+
+// Ensure agent package is used
+var _ = agent.SubagentSummaryTruncated

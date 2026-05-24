@@ -23,7 +23,7 @@ func TestUpdatePlanningEnd_clearsMainChatWhileViewingSubagent(t *testing.T) {
 		SubagentNav:       state.SubagentNavDetail,
 		ViewingSubagentID: "sa-1",
 	}
-	s.Subagents.Start("sa-1", "label", "explore pkg")
+	s.Subagents.Start("sa-1", "label", "explore pkg", "Explore", false)
 	s.SyncDisplayedChat()
 
 	rec := s.Subagents.Get("sa-1")

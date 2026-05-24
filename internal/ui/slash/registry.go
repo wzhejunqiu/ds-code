@@ -27,7 +27,7 @@ func All() []Command {
 		{Name: "rewind", Args: "<n> [--yes]", Description: "Rewind workspace to checkpoint n (requires --yes)"},
 		{Name: "git", Description: "Refresh git status/diff snapshot for next request"},
 		{Name: "skill", Args: "[name]", Description: "List or activate a skill"},
-		{Name: "task", Args: "<prompt…>", Description: "Dispatch read-only subagent (direct)"},
+		{Name: "task", Args: "<prompt…>", Description: "Spawn a sub-agent (uses agent tool)"},
 	}
 	return append(append(cmds, devCommands()...), tuitestCommands()...)
 }

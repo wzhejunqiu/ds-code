@@ -27,7 +27,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("context.at_dir_max_depth", 4)
 
 	v.SetDefault("agent.max_turns", 25)
-	v.SetDefault("agent.session_title_subagent.enabled", true)
 
 	v.SetDefault("tools.parallel_tool_calls", false)
 	v.SetDefault("tools.read_file.max_lines", 500)
@@ -38,8 +37,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("tools.shell.timeout", "120s")
 	v.SetDefault("tools.shell.max_background", 5)
 	v.SetDefault("tools.shell.background_output_max_bytes", 262144)
-	v.SetDefault("tools.task.max_parallel", 3)
-	v.SetDefault("tools.task.summary_max_chars", 16_000)
+	v.SetDefault("tools.agent.max_parallel", 3)
+	v.SetDefault("tools.agent.summary_max_chars", 16_000)
+	v.SetDefault("tools.agent.fork_enabled", true)
+	v.SetDefault("tools.agent.auto_background_after", 120)
 
 	v.SetDefault("permission.mode", "ask")
 

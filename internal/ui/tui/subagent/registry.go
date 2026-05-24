@@ -25,11 +25,13 @@ type Record struct {
 	Prompt             string
 	ParentToolCallID   string
 	Status             Status
-	Chat      []chat.Block
-	ToolLines []string
-	StartedAt time.Time
-	EndedAt   time.Time
-	Err       string
+	AgentType          string
+	Background         bool
+	Chat               []chat.Block
+	ToolLines          []string
+	StartedAt          time.Time
+	EndedAt            time.Time
+	Err                string
 }
 
 // Registry stores subagent runs for the current main session turn history.
@@ -71,13 +73,15 @@ func (r *Registry) Add(rec *Record) {
 	r.records = append(r.records, rec)
 }
 
-func (r *Registry) Start(id, label, prompt string) *Record {
+func (r *Registry) Start(id, label, prompt, agentType string, background bool) *Record {
 	rec := &Record{
-		ID:        id,
-		Label:     label,
-		Prompt:    prompt,
-		Status:    StatusRunning,
-		StartedAt: time.Now(),
+		ID:         id,
+		Label:      label,
+		Prompt:     prompt,
+		AgentType:  agentType,
+		Background: background,
+		Status:     StatusRunning,
+		StartedAt:  time.Now(),
 	}
 	if label == "" {
 		rec.Label = truncate(prompt, 48)
@@ -116,7 +120,7 @@ func (r *Registry) End(id, summary string, runErr error) {
 	if runErr != nil {
 		rec.Status = StatusError
 		rec.Err = runErr.Error()
-		blk := chat.Block{Role: chat.RoleTool, ToolName: "task", ToolResult: rec.Err, ToolError: true}
+		blk := chat.Block{Role: chat.RoleTool, ToolName: "agent", ToolResult: rec.Err, ToolError: true}
 		rec.Chat = append(rec.Chat, blk)
 		return
 	}

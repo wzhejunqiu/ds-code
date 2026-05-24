@@ -24,6 +24,9 @@ type ListDirTool struct {
 
 func (t *ListDirTool) Name() string { return "list_dir" }
 
+func (t *ListDirTool) IsReadOnly() bool        { return true }
+func (t *ListDirTool) IsConcurrencySafe() bool { return true }
+
 func (t *ListDirTool) Description() string { return DescListDir }
 
 func (t *ListDirTool) Schema() map[string]any {

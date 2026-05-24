@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
-	"github.com/wzhejunqiu/ds-code/internal/agent/subagent"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -63,7 +62,6 @@ func (a *App) RunNonInteractive(cmd *cobra.Command) error {
 		zap.Int("prompt_tokens", result.Usage.PromptTokens),
 		zap.Int("completion_tokens", result.Usage.CompletionTokens),
 	)
-	subagent.WaitForSessionTitle(sess.ID, subagent.SessionTitleWaitTimeout)
 
 	if a.Cfg.JSONOutput {
 		enc := json.NewEncoder(out)

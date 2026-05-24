@@ -26,6 +26,7 @@ type Deps struct {
 	SessionID   string
 	Version     string
 	HandleSlash SlashFunc
-	PromptCh    chan permission.PromptRequest
-	Events      chan<- tea.Msg
+	PromptCh          chan permission.PromptRequest
+	Events            chan<- tea.Msg
+	BackgroundAgents  func() int
 }

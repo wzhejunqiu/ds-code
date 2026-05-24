@@ -23,6 +23,9 @@ type GlobTool struct {
 
 func (t *GlobTool) Name() string { return "glob" }
 
+func (t *GlobTool) IsReadOnly() bool        { return true }
+func (t *GlobTool) IsConcurrencySafe() bool { return true }
+
 func (t *GlobTool) Description() string { return DescGlob }
 
 func (t *GlobTool) Schema() map[string]any {

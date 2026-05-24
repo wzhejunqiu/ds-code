@@ -97,7 +97,7 @@ func CountBreakdown(view *APIContextView) (ContextBreakdown, error) {
 	var subagentParts, convParts []string
 	for _, m := range view.Messages {
 		s := serializeMessageForCount(m)
-		if m.Role == role.Tool && m.Name == "task" {
+		if m.Role == role.Tool && (m.Name == "agent" || m.Name == "task") {
 			subagentParts = append(subagentParts, s)
 		} else {
 			convParts = append(convParts, s)

@@ -1,4 +1,4 @@
-// Package usageagg combines main-session and subagent-run token totals.
+// Package usageagg combines main-session and agent-run token totals.
 package usageagg
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 )
 
-// TotalForSession returns cumulative usage for the main agent plus all subagent runs
+// TotalForSession returns cumulative usage for the main agent plus all agent runs
 // under parentSessionID (for status bar, /context billing, compact thresholds).
 func TotalForSession(ctx context.Context, main session.Store, sub subagentstore.Store, parentSessionID string) (session.UsageSnapshot, error) {
 	sess, err := main.Get(ctx, parentSessionID)
@@ -30,45 +30,19 @@ func TotalForSession(ctx context.Context, main session.Store, sub subagentstore.
 	return snap, nil
 }
 
-// SubagentOnly returns usage summed from all subagent_runs for a parent session.
+// SubagentOnly returns usage summed from all agent_runs for a parent session.
 func SubagentOnly(ctx context.Context, sub subagentstore.Store, parentSessionID string) (session.UsageSnapshot, error) {
-	return subagentUsage(ctx, sub, parentSessionID, true)
-}
-
-// SubagentTaskOnly returns usage from task subagent runs (excludes session-title runs).
-func SubagentTaskOnly(ctx context.Context, sub subagentstore.Store, parentSessionID string) (session.UsageSnapshot, error) {
-	return subagentUsage(ctx, sub, parentSessionID, false)
-}
-
-func subagentUsage(ctx context.Context, sub subagentstore.Store, parentSessionID string, includeTitle bool) (session.UsageSnapshot, error) {
 	if sub == nil {
 		return session.UsageSnapshot{}, nil
 	}
-	if includeTitle {
-		u, err := sub.SumUsage(ctx, parentSessionID)
-		if err != nil {
-			return session.UsageSnapshot{}, err
-		}
-		snap := session.UsageSnapshot{
-			PromptTokensTotal:         int64(u.PromptTokens),
-			CompletionTokensTotal:     int64(u.CompletionTokens),
-			PromptCacheHitTokensTotal: int64(u.PromptCacheHitTokens),
-		}
-		snap.Billed = int(snap.PromptTokensTotal + snap.CompletionTokensTotal)
-		return snap, nil
-	}
-	runs, err := sub.ListRuns(ctx, parentSessionID)
+	u, err := sub.SumUsage(ctx, parentSessionID)
 	if err != nil {
 		return session.UsageSnapshot{}, err
 	}
-	var snap session.UsageSnapshot
-	for _, r := range runs {
-		if r.RunKind == subagentstore.RunKindTitle {
-			continue
-		}
-		snap.PromptTokensTotal += r.PromptTokensTotal
-		snap.CompletionTokensTotal += r.CompletionTokensTotal
-		snap.PromptCacheHitTokensTotal += r.PromptCacheHitTokensTotal
+	snap := session.UsageSnapshot{
+		PromptTokensTotal:         int64(u.PromptTokens),
+		CompletionTokensTotal:     int64(u.CompletionTokens),
+		PromptCacheHitTokensTotal: int64(u.PromptCacheHitTokens),
 	}
 	snap.Billed = int(snap.PromptTokensTotal + snap.CompletionTokensTotal)
 	return snap, nil

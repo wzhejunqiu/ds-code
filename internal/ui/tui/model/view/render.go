@@ -202,6 +202,11 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	b.WriteString("\n")
 
 	footerLeft := "? for shortcuts · ↓ subagents · Ctrl+O tool details"
+	if s.Deps != nil && s.Deps.BackgroundAgents != nil {
+		if n := s.Deps.BackgroundAgents(); n > 0 {
+			footerLeft = fmt.Sprintf("%d agents running in background · ", n) + footerLeft
+		}
+	}
 	if s.ToolDetailsVisible {
 		footerLeft += " (on)"
 	}

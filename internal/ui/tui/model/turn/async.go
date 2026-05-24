@@ -134,8 +134,10 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 		OnPlanningEnd: func() {
 			sendAgentEvent(events, msg.PlanningEndMsg{}, true)
 		},
-		OnSubagentStart: func(id, label, prompt string) {
-			sendAgentEvent(events, msg.SubagentStartMsg{ID: id, Label: label, Prompt: prompt}, true)
+		OnSubagentStart: func(id, label, prompt, agentType string, background bool) {
+			sendAgentEvent(events, msg.SubagentStartMsg{
+				ID: id, Label: label, Prompt: prompt, AgentType: agentType, Background: background,
+			}, true)
 		},
 		OnSubagentEnd: func(id, summary string, err error) {
 			sendAgentEvent(events, msg.SubagentEndMsg{ID: id, Summary: summary, Err: err}, true)

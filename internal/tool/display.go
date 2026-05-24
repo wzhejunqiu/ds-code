@@ -85,12 +85,12 @@ func DisplaySummary(name string, rawArgs []byte, workspace string) (argsLine, co
 				return d.Filename, EncodeApplyPatchStats(d.Added, d.Removed)
 			}
 		}
-	case "task":
+	case "agent", "task":
 		if d, _ := args["description"].(string); d != "" {
-			return FormatTaskDisplay(d), ""
+			return FormatAgentDisplay(d), ""
 		}
 		if p, _ := args["prompt"].(string); p != "" {
-			return FormatTaskDisplay(p), ""
+			return FormatAgentDisplay(p), ""
 		}
 	case "web_fetch":
 		if u, _ := args["url"].(string); u != "" {
@@ -198,9 +198,14 @@ func FormatWriteFileDisplay(path string) string {
 	return "Write " + filepath.Base(path)
 }
 
-// FormatTaskDisplay formats task tool title.
+// FormatAgentDisplay formats the agent tool title.
+func FormatAgentDisplay(descOrPrompt string) string {
+	return "Agent: " + truncateOneLine(descOrPrompt, 120)
+}
+
+// FormatTaskDisplay is an alias for legacy task tool display.
 func FormatTaskDisplay(descOrPrompt string) string {
-	return "Task: " + truncateOneLine(descOrPrompt, 120)
+	return FormatAgentDisplay(descOrPrompt)
 }
 
 // FormatWebFetchDisplay formats web_fetch tool title.
@@ -392,7 +397,7 @@ func countNonEmptyLines(s string) int {
 // UsesHumanDisplay reports tools that use a single-line human title in args.
 func UsesHumanDisplay(name string) bool {
 	switch name {
-	case "read_file", "write_file", "grep", "glob", "list_dir", "task", "web_fetch":
+	case "read_file", "write_file", "grep", "glob", "list_dir", "agent", "task", "web_fetch":
 		return true
 	default:
 		return isMCPToolName(name)

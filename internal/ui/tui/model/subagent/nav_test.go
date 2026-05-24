@@ -11,7 +11,7 @@ import (
 
 func TestHandleNavKey_downOpensList(t *testing.T) {
 	var s state.State
-	s.Subagents.Start("sa-1", "probe", "do work")
+	s.Subagents.Start("sa-1", "probe", "do work", "Explore", false)
 	var picker component.Picker
 	_, handled := subagentui.HandleNavKey(&s, tea.KeyMsg{Type: tea.KeyDown}, &picker, func() {})
 	if !handled || s.SubagentNav != state.SubagentNavList {
@@ -21,7 +21,7 @@ func TestHandleNavKey_downOpensList(t *testing.T) {
 
 func TestHandleNavKey_leftFromDetailReturnsToList(t *testing.T) {
 	var s state.State
-	s.Subagents.Start("sa-1", "probe", "do work")
+	s.Subagents.Start("sa-1", "probe", "do work", "Explore", false)
 	var picker component.Picker
 	subagentui.OpenDetail(&s, "sa-1", &picker, func() {})
 	if s.SubagentNav != state.SubagentNavDetail {

@@ -31,23 +31,40 @@ func (m *MemoryStore) CreateRun(_ context.Context, p CreateRunParams) (Run, erro
 	defer m.mu.Unlock()
 	now := time.Now().UTC()
 	id := fmt.Sprintf("sa-%d", len(m.runs)+1)
-	kind := DefaultRunKind(p.RunKind)
 	r := Run{
 		ID:                  id,
 		ParentSessionID:     p.ParentSessionID,
 		ParentToolCallID:    p.ParentToolCallID,
-		RunKind:             kind,
+		AgentType:           p.AgentType,
+		SpawnKind:           p.SpawnKind,
 		Label:               p.Label,
 		Prompt:              p.Prompt,
 		Status:              StatusRunning,
 		Model:               p.Model,
 		ReasoningEffort:     p.ReasoningEffort,
 		ThinkingType:        p.ThinkingType,
+		Background:          p.Background,
+		OutputPath:          p.OutputPath,
+		IsolationMode:       p.IsolationMode,
+		WorktreePath:        p.WorktreePath,
+		WorktreeBranch:      p.WorktreeBranch,
 		PricingSnapshotJSON: p.PricingSnapshotJSON,
 		CreatedAt:           now,
 	}
 	m.runs[id] = r
 	return r, nil
+}
+
+func (m *MemoryStore) SetRunBackground(_ context.Context, runID string, background bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r, ok := m.runs[runID]
+	if !ok {
+		return fmt.Errorf("subagent run not found: %s", runID)
+	}
+	r.Background = background
+	m.runs[runID] = r
+	return nil
 }
 
 func (m *MemoryStore) FinishRun(_ context.Context, runID string, status Status, errMsg string) error {

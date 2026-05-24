@@ -15,7 +15,7 @@ type TurnCallbacks struct {
 	// OnPlanningEnd: first content/reasoning delta, or LLM complete/error without stream.
 	OnPlanningEnd func()
 	// Subagent hooks (task tool): nested exploration UI, separate from main chat tools.
-	OnSubagentStart     func(id, label, prompt string)
+	OnSubagentStart     func(id, label, prompt, agentType string, background bool)
 	OnSubagentEnd       func(id, summary string, err error)
 	OnSubagentToolStart func(id, name, args, command string)
 	OnSubagentToolEnd   func(id, name, args, command, result string, isError bool)

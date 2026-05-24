@@ -3,6 +3,7 @@ package mock
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
@@ -13,6 +14,7 @@ type Client struct {
 	Responses []*llm.Response
 	Errors    []error
 	Calls     []llm.Request
+	Delay     time.Duration // optional per-call delay (tests)
 }
 
 func (m *Client) Chat(ctx context.Context, req llm.Request) (*llm.Response, error) {
@@ -26,6 +28,13 @@ func (m *Client) Chat(ctx context.Context, req llm.Request) (*llm.Response, erro
 		err := m.Errors[0]
 		m.Errors = m.Errors[1:]
 		return nil, err
+	}
+	if m.Delay > 0 {
+		select {
+		case <-time.After(m.Delay):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 	if len(m.Responses) == 0 {
 		return &llm.Response{Content: "done", FinishReason: "stop"}, nil

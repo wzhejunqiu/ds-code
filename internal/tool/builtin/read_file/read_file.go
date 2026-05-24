@@ -23,6 +23,9 @@ type ReadFileTool struct {
 
 func (t *ReadFileTool) Name() string { return "read_file" }
 
+func (t *ReadFileTool) IsReadOnly() bool        { return true }
+func (t *ReadFileTool) IsConcurrencySafe() bool { return true }
+
 func (t *ReadFileTool) Description() string { return DescReadFile }
 
 func (t *ReadFileTool) Schema() map[string]any {

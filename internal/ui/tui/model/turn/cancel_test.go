@@ -17,7 +17,7 @@ func TestCurrentTurnInterrupted_whileViewingSubagent(t *testing.T) {
 		SubagentNav:       state.SubagentNavDetail,
 		ViewingSubagentID: "sa-1",
 	}
-	s.Subagents.Start("sa-1", "label", "explore pkg")
+	s.Subagents.Start("sa-1", "label", "explore pkg", "Explore", false)
 	s.SyncDisplayedChat()
 
 	if !CurrentTurnInterrupted(s) {
@@ -38,7 +38,7 @@ func TestAppendInterruptBlock_idempotentWhileViewingSubagent(t *testing.T) {
 		SubagentNav:       state.SubagentNavDetail,
 		ViewingSubagentID: "sa-1",
 	}
-	s.Subagents.Start("sa-1", "label", "explore pkg")
+	s.Subagents.Start("sa-1", "label", "explore pkg", "Explore", false)
 	s.SyncDisplayedChat()
 
 	before := len(s.MainChat)

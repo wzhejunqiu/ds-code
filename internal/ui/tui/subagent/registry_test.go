@@ -9,7 +9,7 @@ import (
 
 func TestRegistry_lifecycle(t *testing.T) {
 	var reg subagent.Registry
-	rec := reg.Start("sa-1", "probe", "read main.go")
+	rec := reg.Start("sa-1", "probe", "read main.go", "Explore", false)
 	if rec.ID != "sa-1" || reg.Len() != 1 {
 		t.Fatalf("start: %+v len=%d", rec, reg.Len())
 	}

@@ -35,6 +35,15 @@ type Service struct {
 	// Cached for compact condition A within one user turn.
 	userTurnBreakdown *ContextBreakdown
 	userTurnCounted   bool
+
+	// ForkView, when set, supplies API messages/system for a fork child (BuildAPIContext short-circuit).
+	ForkView *APIContextView
+
+	// AgentOverlay is injected into the dynamic system section for sub-agents.
+	AgentOverlay string
+
+	// ForceAggressiveSnip sets keepRounds=0 during PrepareRequest (recovery snip retry).
+	ForceAggressiveSnip bool
 }
 
 // BeginUserTurn resets per-user-turn breakdown cache (condition A).
@@ -96,6 +105,16 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 	if err != nil {
 		return nil, 0, err
 	}
+
+	// L1 Snip: replace old tool results with placeholders (View layer, non-persisted).
+	keepRounds := s.keepRecentTurns()
+	if s.ForceAggressiveSnip {
+		keepRounds = 0
+	}
+	view.Messages = SnipToolResults(view.Messages, keepRounds)
+	// L2 Micro: replace oversized tool results with SHA256 digests.
+	view.Messages = MicroCompress(view.Messages)
+
 	maxTokens := s.Cfg.LLM.MaxTokens
 	if maxTokens > deepseek.MaxOutputTokens {
 		maxTokens = deepseek.MaxOutputTokens
@@ -163,6 +182,14 @@ func (s *Service) shouldCompact(ctx context.Context, sessionID string, sess sess
 
 // BuildAPIContext constructs the next-request snapshot from session history.
 func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APIContextView, error) {
+	if s.ForkView != nil {
+		view := *s.ForkView
+		if s.AgentOverlay != "" {
+			view.AgentOverlay = s.AgentOverlay
+		}
+		return &view, nil
+	}
+
 	sess, err := s.Store.Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
@@ -219,6 +246,7 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 		}
 	}
 	view.Messages = apiMsgs
+	view.AgentOverlay = s.AgentOverlay
 	logging.L().Debug("build api context",
 		zap.String("session_id", sessionID),
 		zap.Int("history_msgs", len(msgs)),

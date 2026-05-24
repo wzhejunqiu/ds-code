@@ -40,13 +40,16 @@ type LLMConfig struct {
 	Thinking        ThinkingConfig     `mapstructure:"thinking"`
 	ReasoningEffort string             `mapstructure:"reasoning_effort"`
 	Subagent        SubagentLLMConfig  `mapstructure:"subagent"`
+	FallbackModel   string             `mapstructure:"fallback_model"`
 }
 
-// SubagentLLMConfig holds LLM settings for task/title subagents.
+// SubagentLLMConfig holds LLM settings for sub-agents spawned via the agent tool.
 type SubagentLLMConfig struct {
 	Model           string         `mapstructure:"model"`
 	Thinking        ThinkingConfig `mapstructure:"thinking"`
 	ReasoningEffort string         `mapstructure:"reasoning_effort"`
+	MaxTurns        int            `mapstructure:"max_turns"`
+	FallbackModel   string         `mapstructure:"fallback_model"`
 }
 
 type ThinkingConfig struct {
@@ -67,12 +70,7 @@ type ContextConfig struct {
 }
 
 type AgentConfig struct {
-	MaxTurns              int                       `mapstructure:"max_turns"`
-	SessionTitleSubagent  SessionTitleSubagentConfig `mapstructure:"session_title_subagent"`
-}
-
-type SessionTitleSubagentConfig struct {
-	Enabled bool `mapstructure:"enabled"`
+	MaxTurns int `mapstructure:"max_turns"`
 }
 
 type ToolsConfig struct {
@@ -82,7 +80,7 @@ type ToolsConfig struct {
 	Glob              GlobToolConfig     `mapstructure:"glob"`
 	ApplyPatch        ApplyPatchConfig   `mapstructure:"apply_patch"`
 	Shell             ShellToolConfig    `mapstructure:"shell"`
-	Task              TaskToolConfig     `mapstructure:"task"`
+	Agent             AgentToolConfig    `mapstructure:"agent"`
 }
 
 type ReadFileToolConfig struct {
@@ -110,9 +108,11 @@ type ShellToolConfig struct {
 	EnvBlacklistCompiled     []*regexp.Regexp `mapstructure:"-"`
 }
 
-type TaskToolConfig struct {
-	MaxParallel      int `mapstructure:"max_parallel"`
-	SummaryMaxChars  int `mapstructure:"summary_max_chars"`
+type AgentToolConfig struct {
+	MaxParallel      int  `mapstructure:"max_parallel"`
+	SummaryMaxChars  int  `mapstructure:"summary_max_chars"`
+	AutoBackgroundAfter int `mapstructure:"auto_background_after"`
+	ForkEnabled      bool `mapstructure:"fork_enabled"`
 }
 
 type PermissionConfig struct {

@@ -26,6 +26,9 @@ type WebFetchTool struct {
 
 func (t *WebFetchTool) Name() string { return "web_fetch" }
 
+func (t *WebFetchTool) IsReadOnly() bool        { return true }
+func (t *WebFetchTool) IsConcurrencySafe() bool { return true }
+
 func (t *WebFetchTool) Description() string { return DescWebFetch }
 
 func (t *WebFetchTool) Schema() map[string]any {

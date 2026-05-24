@@ -13,25 +13,28 @@ import (
 type Status string
 
 const (
-	StatusRunning Status = "running"
-	StatusDone    Status = "done"
-	StatusError   Status = "error"
+	StatusRunning   Status = "running"
+	StatusCompleted Status = "completed"
+	StatusError     Status = "error"
+	StatusKilled    Status = "killed"
 )
 
-// RunKind distinguishes task tool runs from session-title generation.
-type RunKind string
+// SpawnKind records how an agent was launched.
+type SpawnKind string
 
 const (
-	RunKindTask  RunKind = "task"
-	RunKindTitle RunKind = "title"
+	SpawnSync  SpawnKind = "sync"
+	SpawnAsync SpawnKind = "async"
+	SpawnFork  SpawnKind = "fork"
 )
 
-// Run is metadata for one subagent execution.
+// Run is metadata for one agent execution.
 type Run struct {
 	ID                        string
 	ParentSessionID           string
 	ParentToolCallID          string
-	RunKind                   RunKind
+	AgentType                 string
+	SpawnKind                 SpawnKind
 	Label                     string
 	Prompt                    string
 	Status                    Status
@@ -39,6 +42,13 @@ type Run struct {
 	Model                     string
 	ReasoningEffort           string
 	ThinkingType              string
+	Background                bool
+	OutputPath                string
+	ToolUseCount              int
+	DurationMS                int64
+	IsolationMode             string
+	WorktreePath              string
+	WorktreeBranch            string
 	PricingSnapshotJSON       string
 	EstimatedCostCNY          float64
 	PromptTokensTotal         int64
@@ -69,30 +79,29 @@ type Message struct {
 	CreatedAt            time.Time
 }
 
-// CreateRunParams holds fields for a new subagent run.
+// CreateRunParams holds fields for a new agent run.
 type CreateRunParams struct {
 	ParentSessionID     string
 	ParentToolCallID    string
-	RunKind             RunKind
+	AgentType           string
+	SpawnKind           SpawnKind
 	Label               string
 	Prompt              string
 	Model               string
 	ReasoningEffort     string
 	ThinkingType        string
+	Background          bool
+	OutputPath          string
+	IsolationMode       string
+	WorktreePath        string
+	WorktreeBranch      string
 	PricingSnapshotJSON string
-}
-
-// DefaultRunKind returns task when kind is unset.
-func DefaultRunKind(k RunKind) RunKind {
-	if k == "" {
-		return RunKindTask
-	}
-	return k
 }
 
 // Store persists subagent runs and messages.
 type Store interface {
 	CreateRun(ctx context.Context, p CreateRunParams) (Run, error)
+	SetRunBackground(ctx context.Context, runID string, background bool) error
 	FinishRun(ctx context.Context, runID string, status Status, errMsg string) error
 	ListRuns(ctx context.Context, parentSessionID string) ([]Run, error)
 	GetRun(ctx context.Context, runID string) (Run, error)

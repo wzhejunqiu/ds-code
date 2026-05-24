@@ -5,10 +5,8 @@ third_party/tokenizers/libtokenizers.a
 **/.DS_Store
 # Added by code-review-graph
 .code-review-graph/
+plans/
 bin/
 /ds-code
 .vscode/
 __debug_bin*
-
-# ignore docs
-internal/agent/docs/

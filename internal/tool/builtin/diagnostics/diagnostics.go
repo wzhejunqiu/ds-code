@@ -27,6 +27,9 @@ type DiagnosticsTool struct {
 
 func (t *DiagnosticsTool) Name() string { return "diagnostics" }
 
+func (t *DiagnosticsTool) IsReadOnly() bool        { return true }
+func (t *DiagnosticsTool) IsConcurrencySafe() bool { return true }
+
 func (t *DiagnosticsTool) Description() string { return DescDiagnostics }
 
 func (t *DiagnosticsTool) Schema() map[string]any {

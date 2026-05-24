@@ -137,79 +137,80 @@ func (r *Runner) runToolCalls(
 	stream *subRoundStream,
 	cb *TurnCallbacks,
 ) error {
-	for _, tc := range toolCalls {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		logging.L().Info("tool execute",
-			zap.String("session_id", sessionID),
-			zap.String("tool", tc.Name),
-			zap.String("call_id", tc.ID),
-		)
-		rawArgs := []byte(tc.Arguments)
-		argsChars := len(rawArgs)
-		patchDisplays := tool.ApplyPatchStarts(tc.Name, rawArgs, r.Perm.Workspace)
-		if cb != nil && cb.OnToolStart != nil {
-			if len(patchDisplays) > 0 {
-				for _, d := range patchDisplays {
-					cb.OnToolStart(tc.Name, d.Args, d.Command)
-				}
-			} else {
-				argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
-				cb.OnToolStart(tc.Name, argsLine, command)
+	batches := partitionToolCalls(r.Tools, toolCalls)
+
+	for _, batch := range batches {
+		for _, tc := range batch.calls {
+			if ctx.Err() != nil {
+				return ctx.Err()
 			}
-		}
-		body := r.executeTool(ctx, sessionID, tc)
-		displayResult, isError := ctxpkg.UnpackToolBody(body)
-		endRows := tool.ToolEndRows(tc.Name, rawArgs, r.Perm.Workspace)
-		if len(endRows) == 0 {
-			argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
-			if tc.Name == "read_file" && !isError {
-				if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
-					argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
+			logging.L().Info("tool execute",
+				zap.String("session_id", sessionID),
+				zap.String("tool", tc.Name),
+				zap.String("call_id", tc.ID),
+				zap.Bool("concurrent", batch.concurrent),
+			)
+			rawArgs := []byte(tc.Arguments)
+			patchDisplays := tool.ApplyPatchStarts(tc.Name, rawArgs, r.Perm.Workspace)
+			if cb != nil && cb.OnToolStart != nil {
+				if len(patchDisplays) > 0 {
+					for _, d := range patchDisplays {
+						cb.OnToolStart(tc.Name, d.Args, d.Command)
+					}
+				} else {
+					argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
+					cb.OnToolStart(tc.Name, argsLine, command)
 				}
 			}
-			if tc.Name == "grep" && !isError {
-				argsLine = tool.AppendGrepResultSuffix(argsLine, rawArgs, displayResult)
-			}
-			if (tc.Name == "glob" || tc.Name == "list_dir") && !isError {
-				argsLine = tool.AppendPathResultSuffix(argsLine, displayResult)
-			}
-			if cb != nil && cb.OnToolEnd != nil {
-				cb.OnToolEnd(tc.Name, argsLine, command, displayResult, isError)
+		}
+
+		if batch.concurrent {
+			if err := r.runConcurrentBatch(ctx, sessionID, batch.calls); err != nil {
+				return err
 			}
 		} else {
-			for _, row := range endRows {
-				argsLine := row.Args
+			if err := r.runSerialBatch(ctx, sessionID, batch.calls); err != nil {
+				return err
+			}
+		}
+
+		for _, tc := range batch.calls {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			rawArgs := []byte(tc.Arguments)
+			msgs, _ := r.Sessions.ListMessages(ctx, sessionID)
+			displayResult, isError := findToolResult(msgs, tc.ID)
+			endRows := tool.ToolEndRows(tc.Name, rawArgs, r.Perm.Workspace)
+			if len(endRows) == 0 {
+				argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
 				if tc.Name == "read_file" && !isError {
 					if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
 						argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
 					}
 				}
+				if tc.Name == "grep" && !isError {
+					argsLine = tool.AppendGrepResultSuffix(argsLine, rawArgs, displayResult)
+				}
+				if (tc.Name == "glob" || tc.Name == "list_dir") && !isError {
+					argsLine = tool.AppendPathResultSuffix(argsLine, displayResult)
+				}
 				if cb != nil && cb.OnToolEnd != nil {
-					cb.OnToolEnd(tc.Name, argsLine, row.Command, displayResult, isError)
+					cb.OnToolEnd(tc.Name, argsLine, command, displayResult, isError)
+				}
+			} else {
+				for _, row := range endRows {
+					argsLine := row.Args
+					if tc.Name == "read_file" && !isError {
+						if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
+							argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
+						}
+					}
+					if cb != nil && cb.OnToolEnd != nil {
+						cb.OnToolEnd(tc.Name, argsLine, row.Command, displayResult, isError)
+					}
 				}
 			}
-		}
-		bodyBefore := body
-		body = ctxpkg.TruncateToolResult(body, r.Cfg)
-		logging.L().Debug("tool result stored",
-			zap.String("session_id", sessionID),
-			zap.String("tool", tc.Name),
-			zap.String("call_id", tc.ID),
-			zap.Int("args_chars", argsChars),
-			zap.Int("result_chars", len(body)),
-			zap.Bool("truncated", len(body) < len(bodyBefore)),
-			zap.Bool("is_error", isError),
-		)
-		if err := r.Sessions.AppendMessage(ctx, session.Message{
-			SessionID:  sessionID,
-			Role:       role.Tool,
-			Content:    body,
-			ToolCallID: tc.ID,
-			ToolName:   tc.Name,
-		}); err != nil {
-			return err
 		}
 	}
 
@@ -252,4 +253,13 @@ func (r *Runner) appendAssistantWithTools(
 	}
 	enrichAssistantUsage(&assistantMsg, modelID, resp.Usage)
 	return r.Sessions.AppendMessage(ctx, assistantMsg)
+}
+
+func findToolResult(msgs []session.Message, toolCallID string) (string, bool) {
+	for i := len(msgs) - 1; i >= 0; i-- {
+		if msgs[i].ToolCallID == toolCallID {
+			return ctxpkg.UnpackToolBody(msgs[i].Content)
+		}
+	}
+	return "", false
 }

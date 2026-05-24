@@ -83,6 +83,30 @@ func (r *Registry) Execute(ctx context.Context, name string, args json.RawMessag
 	return out, nil
 }
 
+// All returns all registered tools (unordered).
+func (r *Registry) All() []Tool {
+	out := make([]Tool, 0, len(r.tools))
+	for _, t := range r.tools {
+		out = append(out, t)
+	}
+	return out
+}
+
+// Subset returns a new registry containing only the named tools. Missing names are ignored.
+func (r *Registry) Subset(names []string) *Registry {
+	s := NewRegistry()
+	nameSet := make(map[string]bool, len(names))
+	for _, n := range names {
+		nameSet[n] = true
+	}
+	for _, t := range r.tools {
+		if nameSet[t.Name()] {
+			s.Register(t)
+		}
+	}
+	return s
+}
+
 // ArgsMap unmarshals tool arguments to a map for permission checks.
 func ArgsMap(args json.RawMessage) map[string]any {
 	var m map[string]any

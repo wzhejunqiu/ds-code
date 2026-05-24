@@ -19,9 +19,6 @@ func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSe
 		return reg, err
 	}
 	for _, run := range runs {
-		if run.RunKind == subagentstore.RunKindTitle {
-			continue
-		}
 		msgs, err := sub.ListMessages(ctx, run.ID)
 		if err != nil {
 			return reg, err
@@ -47,14 +44,16 @@ func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSe
 		}
 		chat := BlocksFromMessages(sessMsgs, reasoningOpen, workspace)
 		rec := &subagent.Record{
-			ID:                 run.ID,
-			Label:              run.Label,
-			Prompt:             run.Prompt,
-			ParentToolCallID:   run.ParentToolCallID,
-			Chat:               chat,
-			StartedAt:          run.CreatedAt,
-			EndedAt:            run.EndedAt,
-			Err:                run.Error,
+			ID:               run.ID,
+			Label:            run.Label,
+			Prompt:           run.Prompt,
+			ParentToolCallID: run.ParentToolCallID,
+			AgentType:        run.AgentType,
+			Background:       run.Background,
+			Chat:             chat,
+			StartedAt:        run.CreatedAt,
+			EndedAt:          run.EndedAt,
+			Err:              run.Error,
 		}
 		switch run.Status {
 		case subagentstore.StatusRunning:

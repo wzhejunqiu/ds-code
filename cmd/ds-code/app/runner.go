@@ -4,17 +4,20 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/wzhejunqiu/ds-code/internal/agent"
-	"github.com/wzhejunqiu/ds-code/internal/agent/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	"github.com/wzhejunqiu/ds-code/internal/audit"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
+	agenttool "github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
 	"go.uber.org/zap"
 )
 
@@ -88,17 +91,45 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	}
 
 	runner := &agent.Runner{
-		LLM:              llmClient,
-		Tools:            bundle.reg,
-		Perm:             perm,
-		Sessions:         store,
-		Context:          ctxSvc,
-		Cfg:              a.Cfg,
-		MaxTurns:         maxTurns,
-		Out:              out,
-		Audit:            auditLog,
-		Checkpoints:      cpStore,
-		SessionTitleHook: subagent.NewSessionTitleHook(a.Cfg, llmClient, store, subStore),
+		LLM:         llmClient,
+		Tools:       bundle.reg,
+		Perm:        perm,
+		Sessions:    store,
+		Context:     ctxSvc,
+		Cfg:         a.Cfg,
+		MaxTurns:    maxTurns,
+		Out:         out,
+		Audit:       auditLog,
+		Checkpoints: cpStore,
+	}
+	// Wire async agent notification draining from the spawn service.
+	if at, ok := bundle.reg.Get("agent"); ok {
+		if agt, ok := at.(*agenttool.AgentTool); ok {
+			svc := agt.SpawnService()
+			runner.DrainNotifications = func(ctx context.Context) string {
+				return formatNotifications(svc, spawn.PrioNow, spawn.PrioNext)
+			}
+			runner.DrainNotificationsLater = func(ctx context.Context, sessionID string) {
+				notices := svc.DrainNotifications(spawn.PrioLater)
+				for _, n := range notices {
+					_ = store.AppendMessage(ctx, session.Message{
+						SessionID: sessionID,
+						Role:      role.User,
+						Content:   n.FormatXML(),
+					})
+				}
+			}
+		}
 	}
 	return runner, store, ctxSvc, nil
+}
+
+func formatNotifications(svc *spawn.Service, prios ...spawn.NotificationPriority) string {
+	var parts []string
+	for _, p := range prios {
+		for _, n := range svc.DrainNotifications(p) {
+			parts = append(parts, n.FormatXML())
+		}
+	}
+	return strings.Join(parts, "\n")
 }

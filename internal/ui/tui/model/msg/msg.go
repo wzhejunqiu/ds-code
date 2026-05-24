@@ -22,6 +22,8 @@ type ToolEndMsg struct {
 }
 type SubagentStartMsg struct {
 	ID, Label, Prompt string
+	AgentType         string
+	Background        bool
 }
 type SubagentEndMsg struct {
 	ID      string

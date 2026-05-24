@@ -19,6 +19,9 @@ type WebSearchTool struct {
 
 func (t *WebSearchTool) Name() string { return "web_search" }
 
+func (t *WebSearchTool) IsReadOnly() bool        { return true }
+func (t *WebSearchTool) IsConcurrencySafe() bool { return true }
+
 func (t *WebSearchTool) Description() string { return DescWebSearch }
 
 func (t *WebSearchTool) Schema() map[string]any {

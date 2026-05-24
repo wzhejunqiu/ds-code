@@ -10,10 +10,10 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/register"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/apply_patch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/diagnostics"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/task"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
 )
@@ -49,10 +49,10 @@ func RegisterWrite(reg *tool.Registry, d Deps) {
 	reg.Register(&write_file.WriteFileTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict})
 }
 
-// RegisterAgentExtras registers task, web_search, and MCP for full agent mode.
+// RegisterAgentExtras registers the agent tool and MCP for full agent mode.
 func RegisterAgentExtras(reg *tool.Registry, d Deps) {
 	if d.LLM != nil {
-		reg.Register(task.NewTaskTool(d.Cfg, d.Perm, d.LLM, d.Strict, d.Subagent))
+		reg.Register(agent.NewAgentTool(d.Cfg, d.Perm, d.LLM, d.Strict, d.Subagent, reg))
 	}
 	_ = d.Cfg.Web.SearchEnabled
 	if d.MCP != nil {
