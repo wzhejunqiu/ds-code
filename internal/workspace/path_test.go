@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	wspkg "github.com/hejunqiu/ds-code/internal/workspace"
+	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
 )
 
 func TestValidateRel_rejectsTraversal(t *testing.T) {

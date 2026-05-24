@@ -12,10 +12,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/input"
-	tuimsg "github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
+	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 )
 
 func TestHarness_toolPatchSingle(t *testing.T) {

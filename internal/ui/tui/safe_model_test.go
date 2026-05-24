@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 func TestViewWithWidthBeforeWindowSizeMsg(t *testing.T) {

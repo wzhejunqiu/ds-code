@@ -7,10 +7,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/agent"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"go.uber.org/zap"
 )
 

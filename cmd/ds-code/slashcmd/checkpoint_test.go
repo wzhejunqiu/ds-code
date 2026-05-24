@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/agent"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
 func TestParseRewindArgs(t *testing.T) {

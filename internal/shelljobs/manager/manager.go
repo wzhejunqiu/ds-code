@@ -2,14 +2,14 @@ package manager
 
 import (
 	"fmt"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
 	"os"
 	"os/exec"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 // Manager tracks background shell processes for one project.

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/shell"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
 )
 
 func TestShellTool_backgroundAndPoll(t *testing.T) {

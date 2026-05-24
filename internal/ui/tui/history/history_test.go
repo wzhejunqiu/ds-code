@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 func TestBlocksFromMessages(t *testing.T) {

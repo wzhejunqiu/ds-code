@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
-	"github.com/hejunqiu/ds-code/internal/agent/subagent"
-	"github.com/hejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
+	"github.com/wzhejunqiu/ds-code/internal/agent/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

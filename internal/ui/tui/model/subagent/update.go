@@ -2,9 +2,9 @@ package subagent
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
 )
 
 type SyncFn func()

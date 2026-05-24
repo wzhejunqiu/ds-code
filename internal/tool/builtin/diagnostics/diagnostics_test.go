@@ -7,9 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp"
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 func TestCollectFiles_skipsSensitiveUnderRoot(t *testing.T) {

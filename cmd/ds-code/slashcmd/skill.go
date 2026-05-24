@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 )
 
 func Skill(env *Env, args string) error {

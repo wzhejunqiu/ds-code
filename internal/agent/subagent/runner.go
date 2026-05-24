@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hejunqiu/ds-code/internal/agent"
-	"github.com/hejunqiu/ds-code/internal/config"
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
-	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"go.uber.org/zap"
 )
 

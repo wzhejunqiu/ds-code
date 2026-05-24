@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
 
 func TestIsContextTooLong(t *testing.T) {

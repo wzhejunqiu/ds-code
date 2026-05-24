@@ -3,10 +3,10 @@ package setup_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/llm/mock"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool/setup"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm/mock"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool/setup"
 )
 
 func TestBuildRegistry_planOmitsWriteTools(t *testing.T) {

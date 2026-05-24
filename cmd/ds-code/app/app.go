@@ -1,14 +1,14 @@
 package app
 
 import (
-	"github.com/hejunqiu/ds-code/internal/checkpoint"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp"
-	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
-	sessionsqlite "github.com/hejunqiu/ds-code/internal/session/sqlite"
-	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
+	"github.com/wzhejunqiu/ds-code/internal/checkpoint"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp"
+	mcpsvc "github.com/wzhejunqiu/ds-code/internal/mcp"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	sessionsqlite "github.com/wzhejunqiu/ds-code/internal/session/sqlite"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
 )
 
 // App holds CLI runtime state and lazy-initialized dependencies.

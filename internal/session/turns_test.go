@@ -3,8 +3,8 @@ package session_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
 func TestSplitUserTurns(t *testing.T) {

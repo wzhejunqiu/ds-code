@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
 func TestApp_TrySlashLine_nilSession(t *testing.T) {

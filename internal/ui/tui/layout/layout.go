@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
 
 func Divider(width int) string {

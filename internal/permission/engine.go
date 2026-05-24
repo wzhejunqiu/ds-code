@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/patch"
-	wspkg "github.com/hejunqiu/ds-code/internal/workspace"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/patch"
+	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
 	"go.uber.org/zap"
 )
 

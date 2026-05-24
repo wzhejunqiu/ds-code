@@ -3,7 +3,7 @@ package chattool
 import (
 	"fmt"
 
-	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 // Line renders a compact one-line tool summary for the side panel.

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
 func TestMakeFileCandidate_workspaceRelFromSubdir(t *testing.T) {

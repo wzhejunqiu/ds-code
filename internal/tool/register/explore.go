@@ -2,13 +2,13 @@
 package register
 
 import (
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/glob"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/grep"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/list_dir"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/read_file"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/glob"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/list_dir"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/read_file"
 )
 
 // ExploreTools adds read-only exploration tools for subagents and plan mode.

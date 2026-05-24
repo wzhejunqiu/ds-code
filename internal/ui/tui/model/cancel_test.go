@@ -7,15 +7,15 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
-	tuimsg "github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/view"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
 )
 
 func TestCancelTurn_escShowsInterruptMarker(t *testing.T) {

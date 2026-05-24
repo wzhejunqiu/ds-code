@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
 
 func shortenHome(path string) string {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 func TestShouldCompact_promptTotal(t *testing.T) {

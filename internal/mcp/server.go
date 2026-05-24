@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/security"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/security"
 	mcpclient "github.com/mark3labs/mcp-go/client"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 	"go.uber.org/zap"

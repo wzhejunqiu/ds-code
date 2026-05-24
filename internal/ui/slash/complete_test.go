@@ -3,7 +3,7 @@ package slash_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
 )
 
 func TestFilterCommands_prefix(t *testing.T) {

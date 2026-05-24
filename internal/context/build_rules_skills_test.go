@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 func TestBuildAPIContext_includesRulesAndSkills(t *testing.T) {

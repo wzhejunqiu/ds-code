@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sync"
 
-	deepseekv4 "github.com/hejunqiu/ds-code/internal/assets/deepseek-v4"
+	deepseekv4 "github.com/wzhejunqiu/ds-code/internal/assets/deepseek-v4"
 
 	"github.com/daulet/tokenizers"
 )

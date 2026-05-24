@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
 
 func TestStreamTiming_duration(t *testing.T) {

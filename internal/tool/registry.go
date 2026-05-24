@@ -7,9 +7,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"go.uber.org/zap"
 )
 

@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/slash"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 // TCaseItem is one harness integration scenario row (name + short description).

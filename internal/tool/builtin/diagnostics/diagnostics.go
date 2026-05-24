@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
 // DiagnosticsTool runs LSP diagnostics on workspace paths.

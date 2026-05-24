@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 	"go.uber.org/zap"
 )
 

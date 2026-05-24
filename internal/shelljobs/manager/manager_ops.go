@@ -3,7 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
 	"os"
 	"sort"
 	"time"

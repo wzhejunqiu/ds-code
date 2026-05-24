@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/testutil"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/diagnostics"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/diagnostics"
 )
 
 func TestDiagnosticsTool_goplsOnTypeErrorModule(t *testing.T) {

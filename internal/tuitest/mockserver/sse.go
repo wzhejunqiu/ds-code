@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/tuitest/scenarios"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/tuitest/scenarios"
 )
 
 func writeStreamTurn(w http.ResponseWriter, turn *scenarios.Turn) error {

@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/agent"
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
-	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 const (

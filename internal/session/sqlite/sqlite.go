@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 	_ "modernc.org/sqlite"
 )
 

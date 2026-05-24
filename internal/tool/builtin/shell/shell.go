@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/security"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
-	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
-	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/security"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 // ShellTool runs shell commands synchronously or in the background.

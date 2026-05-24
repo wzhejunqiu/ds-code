@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
 

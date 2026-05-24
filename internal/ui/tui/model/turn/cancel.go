@@ -6,10 +6,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 func RequestCancel(s *state.State, syncView func()) {

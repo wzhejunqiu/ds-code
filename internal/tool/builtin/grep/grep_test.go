@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/grep"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep"
 )
 
 func newGrepTool(t *testing.T, dir string, headLimit int, gi *tool.GitignoreMatcher) *grep.GrepTool {

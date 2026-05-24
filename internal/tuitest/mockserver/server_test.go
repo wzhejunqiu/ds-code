@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
 )
 
 func TestMockServer_receivesBearerAuthorization(t *testing.T) {

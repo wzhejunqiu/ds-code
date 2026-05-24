@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/session"
 )
 
 // TestSyncChatView syncs chat/tool viewports (for tests in package tui).

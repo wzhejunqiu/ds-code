@@ -1,8 +1,8 @@
 package context
 
 import (
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/prompt"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/prompt"
 )
 
 // APIContextView is the snapshot for the next API request.

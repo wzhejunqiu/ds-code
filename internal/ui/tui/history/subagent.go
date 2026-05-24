@@ -3,9 +3,9 @@ package history
 import (
 	"context"
 
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 // LoadSubagentRegistry rebuilds in-memory subagent UI state from persisted runs.

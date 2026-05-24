@@ -2,7 +2,7 @@ package apply
 
 import (
 	"fmt"
-	"github.com/hejunqiu/ds-code/internal/patch"
+	"github.com/wzhejunqiu/ds-code/internal/patch"
 	"strings"
 )
 

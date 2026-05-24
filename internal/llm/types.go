@@ -3,7 +3,7 @@ package llm
 import (
 	"context"
 
-	"github.com/hejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 )
 
 // Client calls the chat completions API.

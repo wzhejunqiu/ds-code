@@ -5,8 +5,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 )
 
 // Status is a subagent run lifecycle state.

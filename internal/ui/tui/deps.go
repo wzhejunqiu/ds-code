@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/hejunqiu/ds-code/internal/ui/tui/deps"
+import "github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 
 // Deps wires the TUI to the agent stack.
 type Deps = deps.Deps

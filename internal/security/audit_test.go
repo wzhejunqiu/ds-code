@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session/sqlite"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/session/sqlite"
 )
 
 // Spot checks mapping to PLAN.md security audit S1–S14.

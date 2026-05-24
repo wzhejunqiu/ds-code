@@ -7,11 +7,11 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/history"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/history"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 const (

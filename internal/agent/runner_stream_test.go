@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/agent"
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 type streamEmitClient struct {

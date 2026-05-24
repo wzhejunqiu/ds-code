@@ -10,7 +10,7 @@ fetch-tokenizers: $(TOKENIZERS_LIB)
 GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null)
 _VERSION_FILE := $(shell sed -n 's/^var Version = "\(.*\)"/\1/p' internal/version/version.go)
 VERSION ?= $(_VERSION_FILE)
-VERSION_PKG := github.com/hejunqiu/ds-code/internal/version
+VERSION_PKG := github.com/wzhejunqiu/ds-code/internal/version
 LDFLAGS := -X $(VERSION_PKG).Version=$(VERSION)
 ifneq ($(GIT_COMMIT),)
 LDFLAGS += -X main.gitCommit=$(GIT_COMMIT)

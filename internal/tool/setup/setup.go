@@ -1,21 +1,21 @@
 package setup
 
 import (
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	mcpsvc "github.com/hejunqiu/ds-code/internal/mcp"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
-	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/register"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/apply_patch"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/diagnostics"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/shell"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/task"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/web_fetch"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/write_file"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	mcpsvc "github.com/wzhejunqiu/ds-code/internal/mcp"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/register"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/apply_patch"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/diagnostics"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/task"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
 )
 
 // Deps holds shared dependencies for tool registration.

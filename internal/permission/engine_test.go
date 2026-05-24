@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 func TestEngine_askNonInteractive_deniesShell(t *testing.T) {

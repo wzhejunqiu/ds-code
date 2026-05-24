@@ -5,7 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 )
 
 func TestSendAgentEvent_criticalEventuallyDelivers(t *testing.T) {

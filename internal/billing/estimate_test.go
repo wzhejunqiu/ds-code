@@ -3,9 +3,9 @@ package billing_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
 func TestEstimateCNY_positive(t *testing.T) {

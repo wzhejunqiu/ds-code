@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
 
 // All returns built-in scenarios in stable order.

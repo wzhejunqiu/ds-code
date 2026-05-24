@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 var fakeLSPBin string

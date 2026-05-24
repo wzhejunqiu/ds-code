@@ -3,9 +3,9 @@ package commands
 import (
 	"os"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/spf13/cobra"
 )
 

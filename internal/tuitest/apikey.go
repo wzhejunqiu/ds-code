@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 const harnessAPIKey = "sk-tui-test-mock"

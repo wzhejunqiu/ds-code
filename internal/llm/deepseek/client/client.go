@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/llm/deepseek/limits"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek/limits"
 )
 
 // Client implements llm.Client for DeepSeek's OpenAI-compatible API.

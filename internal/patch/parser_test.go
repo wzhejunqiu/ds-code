@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/patch"
-	patchapply "github.com/hejunqiu/ds-code/internal/patch/apply"
+	"github.com/wzhejunqiu/ds-code/internal/patch"
+	patchapply "github.com/wzhejunqiu/ds-code/internal/patch/apply"
 )
 
 func TestParse_addAndUpdate(t *testing.T) {

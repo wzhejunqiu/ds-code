@@ -6,11 +6,11 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/input"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 var tcasePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabMoveDown}

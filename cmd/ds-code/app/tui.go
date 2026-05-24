@@ -4,11 +4,11 @@ import (
 	"context"
 	"io"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/ui/tui"
-	"github.com/hejunqiu/ds-code/internal/version"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

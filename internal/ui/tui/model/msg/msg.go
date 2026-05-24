@@ -4,11 +4,11 @@ package msg
 import (
 	"context"
 
-	"github.com/hejunqiu/ds-code/internal/agent"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 type StreamContentMsg struct{ Delta string }

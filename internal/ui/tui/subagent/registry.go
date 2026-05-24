@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chattool"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chattool"
 )
 
 // Status is the lifecycle state of a subagent run.

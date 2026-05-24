@@ -4,8 +4,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/view"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
 )
 
 // QuitAfterWait cancels any active turn, waits for agent goroutines, then quits.

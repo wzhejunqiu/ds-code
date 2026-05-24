@@ -3,7 +3,7 @@ package session
 import (
 	"context"
 
-	"github.com/hejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 )
 
 // IsFirstUserMessage reports whether the session has exactly one user message.

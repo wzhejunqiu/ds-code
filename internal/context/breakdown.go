@@ -5,10 +5,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
-	tokdeepseek "github.com/hejunqiu/ds-code/internal/tokenizer/deepseek"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
+	tokdeepseek "github.com/wzhejunqiu/ds-code/internal/tokenizer/deepseek"
 )
 
 // ContextBreakdown splits the next request into six display buckets.

@@ -6,11 +6,11 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/slash"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/input"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 func TestCompletionReadyToSubmit(t *testing.T) {

@@ -3,8 +3,8 @@ package slashcmd
 import (
 	"fmt"
 
-	"github.com/hejunqiu/ds-code/internal/session"
-	uislash "github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	uislash "github.com/wzhejunqiu/ds-code/internal/ui/slash"
 )
 
 // Handle parses and dispatches a slash command line.

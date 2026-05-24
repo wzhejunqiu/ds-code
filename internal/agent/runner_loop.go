@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/tool"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"go.uber.org/zap"
 )
 

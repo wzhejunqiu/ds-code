@@ -3,9 +3,9 @@ package client
 import (
 	"encoding/json"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/prompt"
-	"github.com/hejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/prompt"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 )
 
 // MergeSystem combines fixed system base with project context into one system string.

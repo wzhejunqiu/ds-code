@@ -5,7 +5,7 @@ package mockserver
 import (
 	"sync"
 
-	"github.com/hejunqiu/ds-code/internal/tuitest/scenarios"
+	"github.com/wzhejunqiu/ds-code/internal/tuitest/scenarios"
 )
 
 // Registry holds scenarios and active turn state for the mock LLM server.

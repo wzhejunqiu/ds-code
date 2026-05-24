@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
-	"github.com/hejunqiu/ds-code/cmd/ds-code/commands"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/version"
-	"github.com/hejunqiu/ds-code/internal/versioninfo"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/commands"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/version"
+	"github.com/wzhejunqiu/ds-code/internal/versioninfo"
 	"github.com/spf13/cobra"
 )
 

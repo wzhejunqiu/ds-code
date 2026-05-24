@@ -4,11 +4,11 @@ import (
 	"context"
 	"io"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
-	"github.com/hejunqiu/ds-code/internal/agent"
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/session"
-	uislash "github.com/hejunqiu/ds-code/internal/ui/slash"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	uislash "github.com/wzhejunqiu/ds-code/internal/ui/slash"
 )
 
 // TrySlashLine dispatches a slash command line when applicable.

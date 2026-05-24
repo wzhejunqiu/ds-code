@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/agent/subagent"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/llm/mock"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/agent/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm/mock"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 )
 
 func TestSessionTitleHook_survivesParentContextCancel(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
-	"github.com/hejunqiu/ds-code/internal/shelljobs/manager"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
 )
 
 func TestManager_backgroundJobCompletes(t *testing.T) {

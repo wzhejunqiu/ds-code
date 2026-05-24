@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"time"
 
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 )
 
 // BlocksFromMessages builds TUI chat blocks from persisted session messages.

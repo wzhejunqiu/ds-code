@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
-	"github.com/hejunqiu/ds-code/internal/tool/globmatch"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/globmatch"
 )
 
 const (

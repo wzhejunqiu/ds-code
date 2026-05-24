@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 func TestHostAllowed(t *testing.T) {

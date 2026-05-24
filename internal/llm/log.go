@@ -1,7 +1,7 @@
 package llm
 
 import (
-	"github.com/hejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"go.uber.org/zap"
 )
 

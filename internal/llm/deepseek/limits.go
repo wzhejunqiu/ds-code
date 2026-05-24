@@ -1,6 +1,6 @@
 package deepseek
 
-import "github.com/hejunqiu/ds-code/internal/llm/deepseek/limits"
+import "github.com/wzhejunqiu/ds-code/internal/llm/deepseek/limits"
 
 const (
 	ContextWindowTokens = limits.ContextWindowTokens

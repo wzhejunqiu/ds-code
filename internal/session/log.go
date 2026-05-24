@@ -1,8 +1,8 @@
 package session
 
 import (
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"go.uber.org/zap"
 )
 

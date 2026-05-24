@@ -5,9 +5,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/hejunqiu/ds-code/internal/ui/theme"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/style"
+	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
 
 // safeModel wraps the TUI model and recovers from render/update panics.

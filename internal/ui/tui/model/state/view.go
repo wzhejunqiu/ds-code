@@ -1,8 +1,8 @@
 package state
 
 import (
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 // BindMainChat sets the primary session transcript (main agent view).

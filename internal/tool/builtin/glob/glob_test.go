@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/glob"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin/list_dir"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/glob"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/list_dir"
 )
 
 func TestGlobTool_doubleStar(t *testing.T) {

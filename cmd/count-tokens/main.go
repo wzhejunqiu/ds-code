@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/tokenizer/deepseek"
+	"github.com/wzhejunqiu/ds-code/internal/tokenizer/deepseek"
 )
 
 func main() {

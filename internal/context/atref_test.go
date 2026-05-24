@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 func TestAtExpander_file(t *testing.T) {

@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/tuitest/mockserver"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/input"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 // NewTCaseSubmit returns a slash handler that runs built-in scenarios.

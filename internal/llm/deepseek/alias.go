@@ -1,9 +1,9 @@
 package deepseek
 
 import (
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	dsclient "github.com/hejunqiu/ds-code/internal/llm/deepseek/client"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	dsclient "github.com/wzhejunqiu/ds-code/internal/llm/deepseek/client"
 )
 
 // Client implements llm.Client for DeepSeek's OpenAI-compatible API.

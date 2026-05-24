@@ -3,7 +3,7 @@ package builtin_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
 func TestParseGrepOutputMode(t *testing.T) {

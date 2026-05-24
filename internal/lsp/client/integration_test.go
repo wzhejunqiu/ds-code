@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp"
-	"github.com/hejunqiu/ds-code/internal/lsp/client"
-	"github.com/hejunqiu/ds-code/internal/testutil"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp"
+	"github.com/wzhejunqiu/ds-code/internal/lsp/client"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestClient_OpenFile_goplsReportsTypeError(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 func TestIsSensitiveAbs_sensitivePaths(t *testing.T) {

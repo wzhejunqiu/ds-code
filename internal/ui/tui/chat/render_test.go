@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/markdown"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 )
 
 func TestRenderUserHighlightNoLabels(t *testing.T) {

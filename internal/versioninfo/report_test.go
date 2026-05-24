@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/version"
-	"github.com/hejunqiu/ds-code/internal/versioninfo"
+	"github.com/wzhejunqiu/ds-code/internal/version"
+	"github.com/wzhejunqiu/ds-code/internal/versioninfo"
 )
 
 func TestFormat_includesDSCodeVersion(t *testing.T) {

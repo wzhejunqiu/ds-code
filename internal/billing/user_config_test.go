@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
 )
 
 func TestSetupFromUserConfig(t *testing.T) {

@@ -3,7 +3,7 @@ package agent
 import (
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
 
 // streamTiming tracks thinking-phase wall time from streaming deltas.

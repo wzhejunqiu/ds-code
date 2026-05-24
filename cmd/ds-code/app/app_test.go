@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/slashcmd"
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 func TestApp_openStore(t *testing.T) {

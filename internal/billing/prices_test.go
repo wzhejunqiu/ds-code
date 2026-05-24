@@ -3,8 +3,8 @@ package billing_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
 func TestConfigure_overridesDefaults(t *testing.T) {

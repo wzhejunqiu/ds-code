@@ -3,10 +3,10 @@ package context_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/llm"
-	"github.com/hejunqiu/ds-code/internal/role"
-	"github.com/hejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
 )
 
 func TestCountBreakdown_invariant(t *testing.T) {

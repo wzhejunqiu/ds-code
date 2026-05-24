@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/tool/textfile"
+	"github.com/wzhejunqiu/ds-code/internal/tool/textfile"
 )
 
 func TestIsSearchable_textFiles(t *testing.T) {

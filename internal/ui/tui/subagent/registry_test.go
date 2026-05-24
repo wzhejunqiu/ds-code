@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 func TestRegistry_lifecycle(t *testing.T) {

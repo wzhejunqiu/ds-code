@@ -3,7 +3,7 @@ package mcp_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/mcp"
+	"github.com/wzhejunqiu/ds-code/internal/mcp"
 )
 
 func TestToolName_roundTrip(t *testing.T) {

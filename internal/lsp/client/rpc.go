@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/lsp/transport"
+	"github.com/wzhejunqiu/ds-code/internal/lsp/transport"
 )
 
 func (c *Client) readLoop() {

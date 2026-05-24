@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/hejunqiu/ds-code/internal/lsp/transport"
+	"github.com/wzhejunqiu/ds-code/internal/lsp/transport"
 )
 
 func main() {

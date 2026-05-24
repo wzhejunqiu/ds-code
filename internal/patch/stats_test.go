@@ -3,7 +3,7 @@ package patch_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/patch"
+	"github.com/wzhejunqiu/ds-code/internal/patch"
 )
 
 func TestFileLineStats_multiFile(t *testing.T) {

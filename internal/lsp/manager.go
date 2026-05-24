@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp/client"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp/client"
 )
 
 // Manager caches language server clients per server ID.

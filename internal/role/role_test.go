@@ -3,7 +3,7 @@ package role_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 )
 
 func TestRole_String(t *testing.T) {

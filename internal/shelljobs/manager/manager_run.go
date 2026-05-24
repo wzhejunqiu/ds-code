@@ -2,8 +2,8 @@ package manager
 
 import (
 	"fmt"
-	"github.com/hejunqiu/ds-code/internal/security"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/wzhejunqiu/ds-code/internal/security"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
 	"os"
 	"os/exec"
 	"path/filepath"

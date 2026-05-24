@@ -3,9 +3,9 @@ package session
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 func TestScheduleResumeFilterSkipsWhenEmptyListLoaded(t *testing.T) {

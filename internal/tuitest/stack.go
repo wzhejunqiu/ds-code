@@ -7,13 +7,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
-	"github.com/hejunqiu/ds-code/internal/agent"
-	ctxpkg "github.com/hejunqiu/ds-code/internal/context"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/session"
-	"github.com/hejunqiu/ds-code/internal/tuitest/mockserver"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 )
 
 // Stack wires production app/runner/TUI deps against a mock LLM server.

@@ -4,9 +4,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	uipkg "github.com/hejunqiu/ds-code/internal/ui"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
+	uipkg "github.com/wzhejunqiu/ds-code/internal/ui"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 )
 
 const (

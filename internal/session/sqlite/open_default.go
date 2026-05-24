@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 // OpenDefault opens the project sessions.db (Phase 3+).

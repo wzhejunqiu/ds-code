@@ -1,6 +1,6 @@
 package turn
 
-import "github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+import "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 
 // withMainChat runs fn while Chat/ToolLines refer to the main session transcript.
 func withMainChat(s *state.State, fn func()) {

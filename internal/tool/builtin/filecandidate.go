@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool/globmatch"
-	"github.com/hejunqiu/ds-code/internal/tool/textfile"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool/globmatch"
+	"github.com/wzhejunqiu/ds-code/internal/tool/textfile"
 )
 
 // FileCandidate is a searchable file under the workspace.

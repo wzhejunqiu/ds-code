@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/spf13/cobra"
 )
 

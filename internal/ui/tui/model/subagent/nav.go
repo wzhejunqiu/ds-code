@@ -6,9 +6,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 var listPickerKeys = component.PickerKeyOpts{Tab: component.PickerTabMoveDown}

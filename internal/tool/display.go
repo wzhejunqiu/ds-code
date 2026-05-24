@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/patch"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/patch"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
 const titleArgsMax = 80

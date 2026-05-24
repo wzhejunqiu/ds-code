@@ -4,14 +4,14 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/input"
-	tuimsg "github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/overlay"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/tcase"
-	subagentui "github.com/hejunqiu/ds-code/internal/ui/tui/model/subagent"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
+	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/overlay"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/tcase"
+	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
 )
 
 // Update handles Bubble Tea messages.

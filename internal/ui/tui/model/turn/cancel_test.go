@@ -3,8 +3,8 @@ package turn
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 func TestCurrentTurnInterrupted_whileViewingSubagent(t *testing.T) {

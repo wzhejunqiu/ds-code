@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/spf13/cobra"
 )
 

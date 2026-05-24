@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hejunqiu/ds-code/internal/logging"
-	"github.com/hejunqiu/ds-code/internal/tuitest"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/input"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/tuitest"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
 	"github.com/spf13/cobra"
 )
 

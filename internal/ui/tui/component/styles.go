@@ -3,7 +3,7 @@ package component
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/hejunqiu/ds-code/internal/ui/theme"
+	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
 )
 
 var (

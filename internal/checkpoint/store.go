@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 // Store persists checkpoints per session under the project checkpoint dir.

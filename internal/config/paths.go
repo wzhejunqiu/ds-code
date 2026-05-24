@@ -1,7 +1,7 @@
 // Fixed ~/.ds-code layout and per-project data paths (see README.md § Project identity).
 package config
 
-import "github.com/hejunqiu/ds-code/internal/datadir"
+import "github.com/wzhejunqiu/ds-code/internal/datadir"
 
 // UserDataHome returns ~/.ds-code (fixed; not configurable).
 func UserDataHome() (string, error) {

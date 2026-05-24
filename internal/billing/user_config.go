@@ -1,6 +1,6 @@
 package billing
 
-import "github.com/hejunqiu/ds-code/internal/config"
+import "github.com/wzhejunqiu/ds-code/internal/config"
 
 // SetupFromUserConfig loads ~/.ds-code/config/config.yaml billing.model_prices and applies overrides.
 func SetupFromUserConfig() error {

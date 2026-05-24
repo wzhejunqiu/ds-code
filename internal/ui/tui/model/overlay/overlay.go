@@ -5,11 +5,11 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	uipkg "github.com/hejunqiu/ds-code/internal/ui"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/view"
+	uipkg "github.com/wzhejunqiu/ds-code/internal/ui"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
 )
 
 func OnWindowSize(s *state.State, width, height int, syncAll func()) tea.Cmd {

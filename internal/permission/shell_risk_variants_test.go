@@ -3,7 +3,7 @@ package permission_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 func TestEngine_check_deniesHighRiskShell_variants(t *testing.T) {

@@ -3,8 +3,8 @@ package billing_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
 
 func TestParseSnapshot_corruptJSONReturnsZeroRates(t *testing.T) {

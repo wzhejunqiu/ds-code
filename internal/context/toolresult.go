@@ -1,8 +1,8 @@
 package context
 
 import (
-	"github.com/hejunqiu/ds-code/internal/config"
-	toolresultpkg "github.com/hejunqiu/ds-code/internal/toolresult"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	toolresultpkg "github.com/wzhejunqiu/ds-code/internal/toolresult"
 )
 
 // FormatToolResult wraps tool output for prompt safety (S5).

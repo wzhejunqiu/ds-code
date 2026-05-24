@@ -3,8 +3,8 @@ package mcp_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/mcp"
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/mcp"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
 

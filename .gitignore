@@ -9,3 +9,6 @@ bin/
 /ds-code
 .vscode/
 __debug_bin*
+
+# ignore docs
+internal/agent/docs/

@@ -3,7 +3,7 @@ package mcp
 import (
 	"strings"
 
-	"github.com/hejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
 

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/checkpoint"
+	"github.com/wzhejunqiu/ds-code/internal/checkpoint"
 )
 
 func TestStoreCreateAndRewind(t *testing.T) {

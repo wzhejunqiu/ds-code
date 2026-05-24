@@ -1,4 +1,4 @@
-module github.com/hejunqiu/ds-code
+module github.com/wzhejunqiu/ds-code
 
 go 1.26.3
 

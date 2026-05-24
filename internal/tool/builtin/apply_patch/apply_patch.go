@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	patchapply "github.com/hejunqiu/ds-code/internal/patch/apply"
-	"github.com/hejunqiu/ds-code/internal/permission"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	patchapply "github.com/wzhejunqiu/ds-code/internal/patch/apply"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
 // ApplyPatchTool applies Codex-style patch documents.

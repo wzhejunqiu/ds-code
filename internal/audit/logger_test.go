@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/audit"
+	"github.com/wzhejunqiu/ds-code/internal/audit"
 )
 
 func TestLogger_append(t *testing.T) {

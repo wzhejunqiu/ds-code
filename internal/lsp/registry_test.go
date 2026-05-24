@@ -3,7 +3,7 @@ package lsp
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 func TestServerForExt_go(t *testing.T) {

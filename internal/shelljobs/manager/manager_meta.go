@@ -3,7 +3,7 @@ package manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hejunqiu/ds-code/internal/shelljobs"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
 	"os"
 	"path/filepath"
 )

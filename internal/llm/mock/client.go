@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
 
 // Client is a test double that returns scripted responses per call.

@@ -7,16 +7,16 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	uipkg "github.com/hejunqiu/ds-code/internal/ui"
-	"github.com/hejunqiu/ds-code/internal/ui/slash"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/component"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/msg"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/overlay"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/session"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/subagent"
+	uipkg "github.com/wzhejunqiu/ds-code/internal/ui"
+	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/overlay"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/session"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabSelectFirst}

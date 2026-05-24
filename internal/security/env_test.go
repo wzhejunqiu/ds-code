@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/security"
+	"github.com/wzhejunqiu/ds-code/internal/security"
 )
 
 func TestSafeSubprocessEnv_excludesSecrets(t *testing.T) {

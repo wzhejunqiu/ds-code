@@ -6,10 +6,10 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/hejunqiu/ds-code/cmd/ds-code/app"
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/logging"
-	sessionsqlite "github.com/hejunqiu/ds-code/internal/session/sqlite"
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	sessionsqlite "github.com/wzhejunqiu/ds-code/internal/session/sqlite"
 	"github.com/spf13/cobra"
 )
 

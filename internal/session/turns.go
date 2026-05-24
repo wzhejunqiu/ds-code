@@ -1,6 +1,6 @@
 package session
 
-import "github.com/hejunqiu/ds-code/internal/role"
+import "github.com/wzhejunqiu/ds-code/internal/role"
 
 // UserTurn is one user message and all following assistant/tool messages until the next user.
 type UserTurn struct {

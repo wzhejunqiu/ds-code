@@ -7,7 +7,7 @@ package scenarios
 import (
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 )
 
 // StreamChunk is one SSE delta emission.

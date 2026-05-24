@@ -3,7 +3,7 @@ package globmatch_test
 import (
 	"testing"
 
-	"github.com/hejunqiu/ds-code/internal/tool/globmatch"
+	"github.com/wzhejunqiu/ds-code/internal/tool/globmatch"
 )
 
 func TestHasMeta(t *testing.T) {

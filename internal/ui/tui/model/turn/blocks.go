@@ -3,8 +3,8 @@ package turn
 import (
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
 func AppendPlanningBlock(s *state.State) {

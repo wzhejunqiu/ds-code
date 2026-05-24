@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/lsp/transport"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/lsp/transport"
 )
 
 // Diagnostic is a single LSP diagnostic item.

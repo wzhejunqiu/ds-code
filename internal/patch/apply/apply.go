@@ -2,8 +2,8 @@ package apply
 
 import (
 	"fmt"
-	"github.com/hejunqiu/ds-code/internal/patch"
-	wspkg "github.com/hejunqiu/ds-code/internal/workspace"
+	"github.com/wzhejunqiu/ds-code/internal/patch"
+	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
 	"os"
 	"path/filepath"
 	"strings"

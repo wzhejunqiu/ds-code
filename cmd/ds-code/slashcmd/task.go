@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/hejunqiu/ds-code/internal/agent/subagent"
-	"github.com/hejunqiu/ds-code/internal/billing"
-	"github.com/hejunqiu/ds-code/internal/session/subagentstore"
-	"github.com/hejunqiu/ds-code/internal/tool"
-	"github.com/hejunqiu/ds-code/internal/tool/register"
+	"github.com/wzhejunqiu/ds-code/internal/agent/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/register"
 )
 
 func Task(env *Env, args string) error {

@@ -3,7 +3,7 @@ package patch
 import (
 	"fmt"
 
-	wspkg "github.com/hejunqiu/ds-code/internal/workspace"
+	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
 )
 
 // ValidatePath resolves rel under workspace and ensures the result stays inside workspace.

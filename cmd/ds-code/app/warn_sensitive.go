@@ -3,8 +3,8 @@ package app
 import (
 	"io"
 
-	"github.com/hejunqiu/ds-code/internal/config"
-	"github.com/hejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 )
 
 // MaybeWarnSensitiveLog prints a red stderr warning when sensitive debug logging is enabled.

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hejunqiu/ds-code/internal/agent"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/chat"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/deps"
-	"github.com/hejunqiu/ds-code/internal/ui/tui/model/turn"
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
 )
 
 func TestFinalizeLastAssistant_onlyTouchesTrailingBlock(t *testing.T) {
