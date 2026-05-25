@@ -71,7 +71,7 @@ func (s *Service) Handle(ctx context.Context, inv agent.ToolInvocation, params P
 	if decision.Isolation == "worktree" && s.Worktrees != nil {
 		slug := worktreeSlug(inv.ToolCallID)
 		var err error
-		wtPath, wtBranch, err = s.Worktrees.Create(ctx, s.Cfg.ProjectRoot, slug)
+		wtPath, wtBranch, err = s.Worktrees.Create(ctx, s.Cfg.ProjectRoot, slug, worktreeOpts(s.Cfg))
 		if err != nil {
 			return "", err
 		}
@@ -330,3 +330,19 @@ func worktreeSlug(toolCallID string) string {
 	return slug
 }
 
+func worktreeOpts(cfg *config.Config) worktree.CreateOptions {
+	if cfg == nil {
+		return worktree.CreateOptions{SparsePaths: []string{"/*"}, SymlinkDirs: []string{"node_modules", ".venv", "vendor"}}
+	}
+	opts := worktree.CreateOptions{
+		SparsePaths: cfg.Tools.Agent.WorktreeSparsePaths,
+		SymlinkDirs: cfg.Tools.Agent.WorktreeSymlinkDirs,
+	}
+	if len(opts.SparsePaths) == 0 {
+		opts.SparsePaths = []string{"/*"}
+	}
+	if len(opts.SymlinkDirs) == 0 {
+		opts.SymlinkDirs = []string{"node_modules", ".venv", "vendor"}
+	}
+	return opts
+}

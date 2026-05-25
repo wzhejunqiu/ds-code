@@ -118,6 +118,8 @@ type AgentToolConfig struct {
 	AutoBackgroundAfter int           `mapstructure:"auto_background_after"`
 	ForkEnabled         bool          `mapstructure:"fork_enabled"`
 	WorktreeTTL         time.Duration `mapstructure:"worktree_ttl"`
+	WorktreeSparsePaths []string      `mapstructure:"worktree_sparse_paths"`
+	WorktreeSymlinkDirs []string      `mapstructure:"worktree_symlink_dirs"`
 }
 
 type PermissionConfig struct {

@@ -9,9 +9,18 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"go.uber.org/zap"
 )
 
 var slugRE = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+
+// CreateOptions configures sparse checkout and large-dir symlinks after worktree add.
+type CreateOptions struct {
+	SparsePaths []string
+	SymlinkDirs []string
+}
 
 // Manager creates and removes agent worktrees under a base directory.
 type Manager struct {
@@ -24,7 +33,7 @@ func NewManager(baseDir string) *Manager {
 }
 
 // Create adds a git worktree and branch for an agent run.
-func (m *Manager) Create(ctx context.Context, repoRoot, slug string) (path, branch string, err error) {
+func (m *Manager) Create(ctx context.Context, repoRoot, slug string, opts CreateOptions) (path, branch string, err error) {
 	if err := ValidateSlug(slug); err != nil {
 		return "", "", err
 	}
@@ -36,7 +45,49 @@ func (m *Manager) Create(ctx context.Context, repoRoot, slug string) (path, bran
 	if err := runGit(ctx, repoRoot, "worktree", "add", "-b", branch, path); err != nil {
 		return "", "", fmt.Errorf("worktree add: %w", err)
 	}
+	if err := applySparseCheckout(ctx, path, opts.SparsePaths); err != nil {
+		logging.L().Warn("worktree sparse-checkout failed", zap.String("path", path), zap.Error(err))
+	}
+	if err := linkLargeDirs(repoRoot, path, opts.SymlinkDirs); err != nil {
+		logging.L().Warn("worktree symlink dirs failed", zap.String("path", path), zap.Error(err))
+	}
 	return path, branch, nil
+}
+
+func applySparseCheckout(ctx context.Context, wtPath string, paths []string) error {
+	if len(paths) == 0 {
+		paths = []string{"/*"}
+	}
+	if err := runGit(ctx, wtPath, "sparse-checkout", "init", "--cone"); err != nil {
+		return err
+	}
+	args := append([]string{"sparse-checkout", "set"}, paths...)
+	return runGit(ctx, wtPath, args...)
+}
+
+func linkLargeDirs(repoRoot, wtPath string, dirs []string) error {
+	for _, dir := range dirs {
+		dir = strings.TrimSpace(dir)
+		if dir == "" || strings.Contains(dir, "..") {
+			continue
+		}
+		src := filepath.Join(repoRoot, dir)
+		info, err := os.Stat(src)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		dst := filepath.Join(wtPath, dir)
+		if _, err := os.Lstat(dst); err == nil {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return err
+		}
+		if err := os.Symlink(src, dst); err != nil {
+			return fmt.Errorf("symlink %s: %w", dir, err)
+		}
+	}
+	return nil
 }
 
 // Remove deletes a worktree and its branch.
