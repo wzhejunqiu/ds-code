@@ -65,7 +65,9 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 
 		// Ensure output directory exists
 		if outputPath != "" {
-			os.MkdirAll(filepath.Dir(outputPath), 0700)
+			if err := os.MkdirAll(filepath.Dir(outputPath), 0700); err != nil {
+				logging.L().Warn("create output dir failed", zap.String("run_id", run.ID), zap.Error(err))
+			}
 		}
 
 		startTime := time.Now()

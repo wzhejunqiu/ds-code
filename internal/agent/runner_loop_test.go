@@ -7,19 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 )
-
-func loopTestConfig() *config.Config {
-	return &config.Config{
-		LLM:     config.LLMConfig{MaxTokens: 4096},
-		Context: config.ContextConfig{ToolResultMaxChars: 100000},
-		Agent:   config.AgentConfig{MaxTurns: 25},
-	}
-}
 
 func TestAttachStreamHandlers_contentAndReasoning(t *testing.T) {
 	var content, reasoning []string

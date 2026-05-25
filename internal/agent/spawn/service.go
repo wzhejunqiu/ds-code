@@ -165,12 +165,13 @@ func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run sub
 
 	select {
 	case res := <-done:
+		cancel()
 		return s.finishSync(ctx, run, decision, parent, outputPath, res.summary, res.err)
 	case <-time.After(time.Duration(timeoutSec) * time.Second):
 		_ = s.Store.SetRunBackground(ctx, run.ID, true)
 		run.Background = true
 		s.BackgroundManager.RegisterPromoted(run.ID, decision.Definition.Type, run.Label)
-		go s.waitPromoted(ctx, run, decision, parent, outputPath, done)
+		go s.waitPromoted(ctx, run, decision, parent, outputPath, done, cancel)
 		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s","output_file":"%s"}`, run.ID, decision.Description, outputPath), nil
 	case <-ctx.Done():
 		cancel()
@@ -178,7 +179,8 @@ func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run sub
 	}
 }
 
-func (s *Service) waitPromoted(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, outputPath string, done <-chan executeResult) {
+func (s *Service) waitPromoted(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, outputPath string, done <-chan executeResult, cancel context.CancelFunc) {
+	defer cancel()
 	defer s.BackgroundManager.CompletePromoted(run.ID)
 	res := <-done
 	s.finishAsync(ctx, run, decision, parent, outputPath, res.summary, res.err)

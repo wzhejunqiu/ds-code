@@ -61,7 +61,7 @@ func BuildForkMessages(parentMessages []llm.Message, parentToolCalls []llm.ToolC
 	var sb strings.Builder
 	if len(parentToolCalls) > 0 {
 		for _, tc := range parentToolCalls {
-			sb.WriteString(fmt.Sprintf("\n<tool_result tool_call_id=%q>\n%s\n</tool_result>\n", tc.ID, ForkPlaceholder))
+			fmt.Fprintf(&sb, "\n<tool_result tool_call_id=%q>\n%s\n</tool_result>\n", tc.ID, ForkPlaceholder)
 		}
 	}
 	sb.WriteString("\n" + ForkBoilerplate + "\n\n")
