@@ -20,10 +20,26 @@ type APIContextView struct {
 	RenderedSystemOverride  string
 }
 
+// MergedSystemStatic returns the cache-stable system prefix (base + tools JSON).
+func (v *APIContextView) MergedSystemStatic() string {
+	if v.RenderedSystemOverride != "" {
+		return v.RenderedSystemOverride
+	}
+	return prompt.MergeSystemStatic(v.SystemPrompt, v.ToolsJSON)
+}
+
+// MergedSystemDynamic returns the per-turn variable system suffix.
+func (v *APIContextView) MergedSystemDynamic() string {
+	if v.RenderedSystemOverride != "" {
+		return ""
+	}
+	return prompt.MergeSystemDynamic(v.RuntimeEnv, v.AgentsMD, v.Rules, v.Skills, v.GitSnapshot, v.AgentOverlay)
+}
+
 // MergedSystem returns the single system string for the API.
 func (v *APIContextView) MergedSystem() string {
 	if v.RenderedSystemOverride != "" {
 		return v.RenderedSystemOverride
 	}
-	return prompt.MergeSystem(v.SystemPrompt, v.RuntimeEnv, v.AgentsMD, v.Rules, v.Skills, v.GitSnapshot, v.AgentOverlay)
+	return prompt.MergeSystemParts(v.MergedSystemStatic(), v.MergedSystemDynamic())
 }

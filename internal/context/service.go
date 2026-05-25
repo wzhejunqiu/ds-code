@@ -2,6 +2,8 @@ package context
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"time"
 
@@ -44,6 +46,9 @@ type Service struct {
 
 	// ForceAggressiveSnip sets keepRounds=0 during PrepareRequest (recovery snip retry).
 	ForceAggressiveSnip bool
+
+	// VerificationMode appends a per-round verification reminder (view layer only).
+	VerificationMode bool
 
 	collapse *collapseTracker
 }
@@ -123,6 +128,25 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 	view.Messages = SnipToolResults(view.Messages, snipRounds)
 	// L2 Micro: replace oversized tool results with SHA256 digests.
 	view.Messages = MicroCompress(view.Messages)
+
+	if s.ForkView == nil {
+		if reminder := BuildMetaReminder(sess, s.Cfg, time.Now()); reminder != "" {
+			view.Messages = prependMetaReminder(view.Messages, reminder)
+		}
+	}
+	if s.VerificationMode {
+		view.Messages = appendVerificationReminder(view.Messages)
+	}
+
+	static := view.MergedSystemStatic()
+	if static != "" {
+		sum := sha256.Sum256([]byte(static))
+		logging.L().Debug("prompt_cache_key",
+			zap.String("session_id", sessionID),
+			zap.String("static_hash", hex.EncodeToString(sum[:])),
+			zap.Int("static_chars", len(static)),
+		)
+	}
 
 	maxTokens := s.Cfg.LLM.MaxTokens
 	if maxTokens > deepseek.MaxOutputTokens {

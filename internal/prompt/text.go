@@ -14,4 +14,5 @@ const (
 	SectionSkill      = "\n\n## 当前 Skill\n"
 	SectionGit          = "\n\n## Git 快照\n\n以下为对话开始时刻的仓库状态快照，不会随对话进行而自动更新。\n\n"
 	SectionAgentOverlay = "\n\n<agent-type-overlay>\n"
+	SectionTools        = "\n\n## 工具定义（静态）\n"
 )

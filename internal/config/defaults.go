@@ -14,6 +14,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("llm.subagent.model", "deepseek-v4-flash")
 	v.SetDefault("llm.subagent.thinking.type", "disabled")
 	v.SetDefault("llm.subagent.reasoning_effort", "high")
+	v.SetDefault("llm.subagent.max_turns", 8)
 
 	v.SetDefault("context.window_tokens", 1_048_576)
 	v.SetDefault("context.max_output_tokens", 393_216)
@@ -30,7 +31,7 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("agent.max_turns", 25)
 
-	v.SetDefault("tools.parallel_tool_calls", false)
+	v.SetDefault("tools.parallel_tool_calls", true)
 	v.SetDefault("tools.defer_mcp", true)
 	v.SetDefault("tools.defer_builtin", []string{})
 	v.SetDefault("tools.read_file.max_lines", 500)
@@ -46,6 +47,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("tools.agent.fork_enabled", true)
 	v.SetDefault("tools.agent.auto_background_after", 120)
 	v.SetDefault("tools.agent.worktree_ttl", "24h")
+	v.SetDefault("tools.agent.worktree_sparse_paths", []string{"/*"})
+	v.SetDefault("tools.agent.worktree_symlink_dirs", []string{"node_modules", ".venv", "vendor"})
 
 	v.SetDefault("permission.mode", "ask")
 

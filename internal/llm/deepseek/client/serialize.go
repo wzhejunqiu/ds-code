@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/prompt"
@@ -64,10 +65,15 @@ func serializeToolCalls(calls []llm.ToolCall) []map[string]any {
 	return out
 }
 
-// ToolsToAPI converts tool definitions for the API.
+// ToolsToAPI converts tool definitions for the API (sorted by name for stable cache keys).
 func ToolsToAPI(tools []llm.ToolDef, strict bool) []map[string]any {
-	out := make([]map[string]any, len(tools))
-	for i, t := range tools {
+	sorted := make([]llm.ToolDef, len(tools))
+	copy(sorted, tools)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Name < sorted[j].Name
+	})
+	out := make([]map[string]any, len(sorted))
+	for i, t := range sorted {
 		fn := map[string]any{
 			"name":        t.Name,
 			"description": t.Description,
