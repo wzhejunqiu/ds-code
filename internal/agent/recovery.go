@@ -17,6 +17,7 @@ const (
 	maxRecoveryAttempts     = 3
 	maxRateLimitRetries     = 3
 	maxServerErrorRetries   = 2
+	continueRecoveryMsg     = "[Continue from where you left off. Do not repeat what you already said.]"
 )
 
 // chatWithRecovery wraps LLM.Chat with a multi-strategy recovery loop.
@@ -27,9 +28,12 @@ func (r *Runner) chatWithRecovery(ctx context.Context, sessionID string, req llm
 	for {
 		resp, err := r.LLM.Chat(ctx, currentReq)
 		if err == nil {
-			if isLengthFinishReason(resp.FinishReason) {
+			switch {
+			case isLengthFinishReason(resp.FinishReason):
 				err = fmt.Errorf("max_tokens: finish_reason=%s", resp.FinishReason)
-			} else {
+			case isEmptyTerminalResponse(resp):
+				err = fmt.Errorf("empty response")
+			default:
 				return resp, nil
 			}
 		}
@@ -86,18 +90,35 @@ func (r *Runner) chatWithRecovery(ctx context.Context, sessionID string, req llm
 				attempt++
 				continue
 			}
-			if state.OutputRecoveryCount < maxRecoveryAttempts {
-				state.OutputRecoveryCount++
-				state.Transition = TransOutputRecovery
-				currentReq.Messages = append(currentReq.Messages, llm.Message{
-					Role:    "user",
-					Content: "[Continue from where you left off. Do not repeat what you already said.]",
-				})
-				logging.L().Info("output recovery", zap.String("session_id", sessionID), zap.Int("count", state.OutputRecoveryCount))
+			if recovered, recErr := r.tryOutputRecovery(sessionID, state, &currentReq); recovered {
+				attempt++
+				continue
+			} else if recErr != nil {
+				return nil, recErr
+			}
+			return nil, fmt.Errorf("max output recovery exhausted: %w", err)
+
+		case isEmptyResponseError(err):
+			if recovered, recErr := r.tryOutputRecovery(sessionID, state, &currentReq); recovered {
+				attempt++
+				continue
+			} else if recErr != nil {
+				return nil, recErr
+			}
+			return nil, fmt.Errorf("output recovery exhausted: %w", err)
+
+		case llm.IsTransientNetworkError(err):
+			if state.NetworkRetryCount < maxRecoveryAttempts {
+				state.NetworkRetryCount++
+				state.Transition = TransNetworkRetry
+				logging.L().Info("transient network → retry",
+					zap.String("session_id", sessionID),
+					zap.Int("count", state.NetworkRetryCount),
+				)
 				attempt++
 				continue
 			}
-			return nil, fmt.Errorf("max output recovery exhausted: %w", err)
+			return nil, fmt.Errorf("network retries exhausted: %w", err)
 
 		case llm.IsRateLimit(err):
 			if attempt < maxRateLimitRetries {
@@ -143,6 +164,24 @@ func (r *Runner) chatWithRecovery(ctx context.Context, sessionID string, req llm
 	}
 }
 
+func (r *Runner) tryOutputRecovery(sessionID string, state *LoopState, req *llm.Request) (bool, error) {
+	if state.OutputRecoveryCount >= maxRecoveryAttempts {
+		return false, nil
+	}
+	state.OutputRecoveryCount++
+	state.Transition = TransOutputRecovery
+	appendContinueMessage(req)
+	logging.L().Info("output recovery", zap.String("session_id", sessionID), zap.Int("count", state.OutputRecoveryCount))
+	return true, nil
+}
+
+func appendContinueMessage(req *llm.Request) {
+	req.Messages = append(req.Messages, llm.Message{
+		Role:    "user",
+		Content: continueRecoveryMsg,
+	})
+}
+
 func (r *Runner) fallbackModel() string {
 	if r.Cfg.LLM.Subagent.FallbackModel != "" {
 		return r.Cfg.LLM.Subagent.FallbackModel
@@ -152,6 +191,13 @@ func (r *Runner) fallbackModel() string {
 
 func isMaxTokensError(err error) bool {
 	return llm.IsFinishReasonMaxTokens(err)
+}
+
+func isEmptyResponseError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "empty response")
 }
 
 func isServerError(err error) bool {
@@ -165,4 +211,18 @@ func isLengthFinishReason(reason string) bool {
 	default:
 		return false
 	}
+}
+
+func isEmptyTerminalResponse(resp *llm.Response) bool {
+	if resp == nil {
+		return true
+	}
+	if len(resp.ToolCalls) > 0 {
+		return false
+	}
+	if resp.Content != "" || resp.ReasoningContent != "" {
+		return false
+	}
+	reason := strings.ToLower(resp.FinishReason)
+	return reason == "" || reason == "stop"
 }

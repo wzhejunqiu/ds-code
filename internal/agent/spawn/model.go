@@ -20,6 +20,14 @@ func ResolveModel(paramsModel string, defModel string, cfg *config.Config) strin
 	return cfg.LLM.Model
 }
 
+// resolveSubagentMaxTurns returns the max sub-rounds for a child agent runner.
+func resolveSubagentMaxTurns(cfg *config.Config) int {
+	if cfg.LLM.Subagent.MaxTurns > 0 {
+		return cfg.LLM.Subagent.MaxTurns
+	}
+	return 8
+}
+
 func resolveAlias(alias string, cfg *config.Config) string {
 	switch alias {
 	case "sonnet", "opus", "haiku":

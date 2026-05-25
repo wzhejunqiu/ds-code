@@ -79,3 +79,21 @@ func TestBuildChildDirective_escapesQuotesAndNewlines(t *testing.T) {
 		t.Fatal("expected prompt content preserved")
 	}
 }
+
+func TestBuildForkMessages_directiveNotDoubleWrapped(t *testing.T) {
+	prompt := "fix \"bug\"\nline2"
+	msgs := spawn.BuildForkMessages(nil, nil, prompt)
+	if len(msgs) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(msgs))
+	}
+	content := msgs[0].Content
+	if strings.Count(content, "[directive:") != 1 {
+		t.Fatalf("expected exactly one directive wrapper, got %d in %q", strings.Count(content, "[directive:"), content)
+	}
+	if strings.Contains(content, `[directive: "Here's your specific task: "[directive:`) {
+		t.Fatalf("directive appears double-wrapped: %q", content)
+	}
+	if !strings.Contains(content, `\"bug\"`) {
+		t.Fatalf("expected JSON-escaped quotes in directive, got %q", content)
+	}
+}

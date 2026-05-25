@@ -53,6 +53,38 @@ func IsServerError(err error) bool {
 		strings.Contains(s, "service unavailable")
 }
 
+// IsTransientNetworkError reports whether err is a retryable transient network failure.
+func IsTransientNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := strings.ToLower(err.Error())
+	if IsContextTooLong(err) || IsRateLimit(err) {
+		return false
+	}
+	if strings.Contains(s, "invalid request") {
+		return false
+	}
+	phrases := []string{
+		"connection reset",
+		"connection refused",
+		"broken pipe",
+		"read: eof",
+		"i/o timeout",
+		"network timeout",
+		"dial tcp",
+		"connection closed",
+		"no such host",
+		"temporary failure",
+	}
+	for _, p := range phrases {
+		if strings.Contains(s, p) {
+			return true
+		}
+	}
+	return false
+}
+
 // IsFinishReasonMaxTokens reports whether err indicates output was truncated
 // because max_tokens was reached.
 func IsFinishReasonMaxTokens(err error) bool {

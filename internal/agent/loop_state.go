@@ -20,6 +20,7 @@ const (
 	TransSnipRetry            Transition = "snip_retry"
 	TransMaxTokensEscalate    Transition = "max_tokens_escalate"
 	TransOutputRecovery       Transition = "output_recovery"
+	TransNetworkRetry         Transition = "network_retry"
 	TransModelFallback        Transition = "model_fallback"
 	TransRateLimitRetry       Transition = "rate_limit_retry"
 	TransCompleted            Transition = "completed"
@@ -36,5 +37,6 @@ type LoopState struct {
 	SnipRetried         bool
 	MaxTokensEscalated  bool
 	OutputRecoveryCount int
+	NetworkRetryCount   int
 	FallbackTried       bool
 }

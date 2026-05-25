@@ -106,7 +106,7 @@ func ExecuteRun(
 		if mem := FormatAgentMemory("fork"); mem != "" {
 			rendered = rendered + "\n" + mem
 		}
-		forkMsgs := BuildForkMessages(fc.ParentMessages, fc.ParentToolCalls, buildChildDirective(run.Prompt))
+		forkMsgs := BuildForkMessages(fc.ParentMessages, fc.ParentToolCalls, run.Prompt)
 		if err := seedForkMessages(ctx, store, sess.ID, forkMsgs); err != nil {
 			return "", err
 		}
@@ -117,13 +117,13 @@ func ExecuteRun(
 			overlay = overlay + "\n" + mem
 		}
 		ctxSvc.AgentOverlay = overlay
+		if def.Type == "verification" {
+			ctxSvc.VerificationMode = true
+		}
 	}
 
 	if maxTurns <= 0 {
-		maxTurns = 8
-		if cfg.Agent.MaxTurns > 0 && cfg.Agent.MaxTurns < maxTurns {
-			maxTurns = cfg.Agent.MaxTurns
-		}
+		maxTurns = resolveSubagentMaxTurns(cfg)
 	}
 
 	childRunner := &agent.Runner{
