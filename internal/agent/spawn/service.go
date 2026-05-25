@@ -158,6 +158,12 @@ func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run sub
 
 	done := make(chan executeResult, 1)
 	runCtx, cancel := context.WithCancel(ctx)
+	promoted := false
+	defer func() {
+		if !promoted {
+			cancel()
+		}
+	}()
 	go func() {
 		summary, err := ExecuteRun(runCtx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0)
 		done <- executeResult{summary: summary, err: err}
@@ -165,16 +171,15 @@ func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run sub
 
 	select {
 	case res := <-done:
-		cancel()
 		return s.finishSync(ctx, run, decision, parent, outputPath, res.summary, res.err)
 	case <-time.After(time.Duration(timeoutSec) * time.Second):
+		promoted = true
 		_ = s.Store.SetRunBackground(ctx, run.ID, true)
 		run.Background = true
 		s.BackgroundManager.RegisterPromoted(run.ID, decision.Definition.Type, run.Label)
 		go s.waitPromoted(ctx, run, decision, parent, outputPath, done, cancel)
 		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s","output_file":"%s"}`, run.ID, decision.Description, outputPath), nil
 	case <-ctx.Done():
-		cancel()
 		return "", ctx.Err()
 	}
 }
