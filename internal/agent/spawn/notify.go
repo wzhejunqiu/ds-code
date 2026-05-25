@@ -1,10 +1,15 @@
 package spawn
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
+	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 )
 
 // NotificationPriority controls when a notification is drained into the main conversation.
@@ -18,40 +23,80 @@ const (
 
 // Notification is a completion/failure/kill notice for an async agent.
 type Notification struct {
-	AgentID     string
-	ToolUseID   string
-	OutputFile  string
-	Status      string // completed | failed | killed
-	Summary     string
-	Result      string
-	Usage       llm.Usage
-	DurationMS  int64
-	ToolUseCount int
+	AgentID        string
+	ToolUseID      string
+	OutputFile     string
+	Status         string // completed | failed | killed
+	Summary        string
+	Result         string
+	Usage          llm.Usage
+	DurationMS     int64
+	ToolUseCount   int
 	WorktreePath   string
 	WorktreeBranch string
 }
 
-// FormatXML renders the notification as an XML task-notification block.
-func (n Notification) FormatXML() string {
-	wt := ""
-	if n.WorktreePath != "" {
-		wt = fmt.Sprintf("\n  <worktree><worktreePath>%s</worktreePath><worktreeBranch>%s</worktreeBranch></worktree>",
-			n.WorktreePath, n.WorktreeBranch)
+type notificationPayload struct {
+	AgentID    string                    `json:"agent_id"`
+	ToolUseID  string                    `json:"tool_use_id"`
+	OutputFile string                    `json:"output_file,omitempty"`
+	Status     string                    `json:"status"`
+	Summary    string                    `json:"summary"`
+	Result     string                    `json:"result,omitempty"`
+	Usage      notificationUsagePayload  `json:"usage"`
+	Worktree   *notificationWorktree     `json:"worktree,omitempty"`
+}
+
+type notificationUsagePayload struct {
+	TotalTokens int   `json:"total_tokens"`
+	ToolUses    int   `json:"tool_uses"`
+	DurationMS  int64 `json:"duration_ms"`
+}
+
+type notificationWorktree struct {
+	Path   string `json:"path"`
+	Branch string `json:"branch"`
+}
+
+// notificationPriority picks PrioLater during an active parent turn, else PrioNext.
+func notificationPriority(ctx context.Context) NotificationPriority {
+	if agent.InActiveTurn(ctx) {
+		return PrioLater
 	}
-	return fmt.Sprintf(
-		`<task-notification>
-  <task-id>%s</task-id>
-  <tool-use-id>%s</tool-use-id>
-  <output-file>%s</output-file>
-  <status>%s</status>
-  <summary>%s</summary>
-  <result>%s</result>
-  <usage><total_tokens>%d</total_tokens><tool_uses>%d</tool_uses><duration_ms>%d</duration_ms></usage>%s
-</task-notification>`,
-		n.AgentID, n.ToolUseID, n.OutputFile, n.Status, n.Summary, n.Result,
-		n.Usage.PromptTokens+n.Usage.CompletionTokens, n.ToolUseCount, n.DurationMS,
-		wt,
-	)
+	return PrioNext
+}
+
+// Format renders the notification as a tagged JSON block for LLM consumption.
+func (n Notification) Format() string {
+	payload := notificationPayload{
+		AgentID:    n.AgentID,
+		ToolUseID:  n.ToolUseID,
+		OutputFile: n.OutputFile,
+		Status:     n.Status,
+		Summary:    n.Summary,
+		Result:     n.Result,
+		Usage: notificationUsagePayload{
+			TotalTokens: n.Usage.PromptTokens + n.Usage.CompletionTokens,
+			ToolUses:    n.ToolUseCount,
+			DurationMS:  n.DurationMS,
+		},
+	}
+	if n.WorktreePath != "" {
+		payload.Worktree = &notificationWorktree{
+			Path:   n.WorktreePath,
+			Branch: n.WorktreeBranch,
+		}
+	}
+	b, err := json.Marshal(payload)
+	if err != nil {
+		b = []byte(fmt.Sprintf(`{"agent_id":%q,"status":%q,"summary":"serialization error"}`, n.AgentID, n.Status))
+	}
+	return fmt.Sprintf("<task-notification>\n%s\n</task-notification>", b)
+}
+
+// FormatXML is an alias for Format (legacy name).
+func (n Notification) FormatXML() string {
+	return n.Format()
 }
 
 // NotificationQueue holds pending agent completion notices with dedup.
@@ -87,6 +132,23 @@ func (q *NotificationQueue) Drain(prio NotificationPriority) []Notification {
 	result := q.queues[prio]
 	delete(q.queues, prio)
 	return result
+}
+
+func countToolUses(ctx context.Context, subStore subagentstore.Store, runID string) int {
+	if subStore == nil || runID == "" {
+		return 0
+	}
+	msgs, err := subStore.ListMessages(ctx, runID)
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, m := range msgs {
+		if m.Role == role.Tool {
+			n++
+		}
+	}
+	return n
 }
 
 // HasPending reports whether any notifications are queued.

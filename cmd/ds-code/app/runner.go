@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	"github.com/wzhejunqiu/ds-code/internal/audit"
@@ -101,11 +102,14 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		Out:         out,
 		Audit:       auditLog,
 		Checkpoints: cpStore,
+		Hooks:       agent.LoadHooks(a.Cfg.ProjectRoot),
 	}
 	// Wire async agent notification draining from the spawn service.
 	if at, ok := bundle.reg.Get("agent"); ok {
 		if agt, ok := at.(*agenttool.AgentTool); ok {
 			svc := agt.SpawnService()
+			svc.Hooks = runner.Hooks
+			svc.ParentContext = ctxSvc
 			runner.DrainNotifications = func(ctx context.Context) string {
 				return formatNotifications(svc, spawn.PrioNow, spawn.PrioNext)
 			}
@@ -119,9 +123,35 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 					})
 				}
 			}
+			svc.CleanupExpiredWorktrees(context.Background())
 		}
 	}
 	return runner, store, ctxSvc, nil
+}
+
+func (a *App) spawnService(runner *agent.Runner) *spawn.Service {
+	if runner == nil || runner.Tools == nil {
+		return nil
+	}
+	at, ok := runner.Tools.Get("agent")
+	if !ok {
+		return nil
+	}
+	agt, ok := at.(*agenttool.AgentTool)
+	if !ok {
+		return nil
+	}
+	return agt.SpawnService()
+}
+
+func (a *App) cleanupSessionWorktrees(ctx context.Context, runner *agent.Runner, sessionID string) {
+	if svc := a.spawnService(runner); svc != nil && sessionID != "" {
+		svc.CleanupSessionWorktrees(ctx, sessionID)
+	}
+}
+
+func (a *App) spawnRunner(runner *agent.Runner) slashcmd.SpawnRunner {
+	return a.spawnService(runner)
 }
 
 func formatNotifications(svc *spawn.Service, prios ...spawn.NotificationPriority) string {

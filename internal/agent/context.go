@@ -6,12 +6,33 @@ import (
 
 type turnCallbacksKey struct{}
 
+type activeTurnKey struct{}
+
 type toolInvocationKey struct{}
 
 // ToolInvocation identifies the parent session and tool_call for a running tool.
 type ToolInvocation struct {
 	SessionID  string
 	ToolCallID string
+}
+
+// WithActiveTurn marks ctx as inside an active RunTurn (used for notification priority).
+func WithActiveTurn(ctx context.Context) context.Context {
+	return context.WithValue(ctx, activeTurnKey{}, true)
+}
+
+// WithoutActiveTurn clears the active turn marker.
+func WithoutActiveTurn(ctx context.Context) context.Context {
+	return context.WithValue(ctx, activeTurnKey{}, false)
+}
+
+// InActiveTurn reports whether the parent runner is executing a user turn.
+func InActiveTurn(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	v, ok := ctx.Value(activeTurnKey{}).(bool)
+	return ok && v
 }
 
 // WithToolInvocation stores parent session and tool call id for tools (e.g. task).

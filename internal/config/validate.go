@@ -70,6 +70,12 @@ func validate(cfg *Config) error {
 	if cfg.Context.CompactThresholdRatio <= 0 || cfg.Context.CompactThresholdRatio > 1 {
 		return fmt.Errorf("config: context.compact_threshold_ratio must be in (0,1], got %v", cfg.Context.CompactThresholdRatio)
 	}
+	if cfg.Context.CollapseThresholdRatio <= 0 || cfg.Context.CollapseThresholdRatio > 1 {
+		return fmt.Errorf("config: context.collapse_threshold_ratio must be in (0,1], got %v", cfg.Context.CollapseThresholdRatio)
+	}
+	if cfg.Context.SnipKeepRounds < 0 {
+		return fmt.Errorf("config: context.snip_keep_rounds must be >= 0, got %d", cfg.Context.SnipKeepRounds)
+	}
 	if !slices.Contains(allowedRunMode, cfg.RunMode) {
 		return fmt.Errorf("config: run_mode must be agent or plan, got %q", cfg.RunMode)
 	}

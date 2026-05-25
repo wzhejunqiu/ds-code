@@ -32,10 +32,16 @@ func ExecuteRun(
 	parentReg *tool.Registry,
 	subStore subagentstore.Store,
 	cb *agent.TurnCallbacks,
+	hooks *agent.HookManager,
 	maxTurns int,
 ) (string, error) {
 	if run.Prompt == "" && run.SpawnKind != subagentstore.SpawnFork {
 		return "", fmt.Errorf("spawn: empty prompt")
+	}
+
+	workspace := cfg.ProjectRoot
+	if run.WorktreePath != "" {
+		workspace = run.WorktreePath
 	}
 
 	permMode := def.PermissionMode
@@ -45,15 +51,23 @@ func ExecuteRun(
 	var perm *permission.Engine
 	switch {
 	case IsReadOnly(def) || permMode == "readonly":
-		perm = permission.NewEngine("readonly", cfg.ProjectRoot, false)
+		perm = permission.NewEngine("readonly", workspace, false)
 	case permMode == "bubble", permMode == "inherit", permMode == "":
 		// bubble: permission ask uses the parent's Prompter (TUI TUIPrompter when configured).
-		perm = parentPerm
+		if run.WorktreePath != "" {
+			perm = permission.NewEngine(parentPerm.Mode, workspace, parentPerm.Interactive)
+			perm.Prompter = parentPerm.Prompter
+		} else {
+			perm = parentPerm
+		}
 	default:
 		perm = parentPerm
 	}
 
 	childReg := FilterToolRegistry(parentReg, def, run.Background)
+	if run.WorktreePath != "" {
+		childReg = tool.RebindRegistryPerm(childReg, perm)
+	}
 
 	store := newSessionStore(subStore, run, permMode)
 	sess, err := store.CreateSession(
@@ -89,13 +103,20 @@ func ExecuteRun(
 			return "", fmt.Errorf("fork: missing parent context")
 		}
 		rendered := agent.RenderedSystemFromContext(ctx)
+		if mem := FormatAgentMemory("fork"); mem != "" {
+			rendered = rendered + "\n" + mem
+		}
 		forkMsgs := BuildForkMessages(fc.ParentMessages, fc.ParentToolCalls, buildChildDirective(run.Prompt))
 		if err := seedForkMessages(ctx, store, sess.ID, forkMsgs); err != nil {
 			return "", err
 		}
 		ctxSvc.ForkView = ctxpkg.BuildForkAPIContext(&ctxpkg.APIContextView{WindowTokens: cfg.Context.WindowTokens}, forkMsgs, rendered)
 	} else {
-		ctxSvc.AgentOverlay = SystemPromptOverlay(def)
+		overlay := SystemPromptOverlay(def)
+		if mem := FormatAgentMemory(def.Type); mem != "" {
+			overlay = overlay + "\n" + mem
+		}
+		ctxSvc.AgentOverlay = overlay
 	}
 
 	if maxTurns <= 0 {
@@ -114,6 +135,7 @@ func ExecuteRun(
 		Cfg:      cfg,
 		MaxTurns: maxTurns,
 		Out:      io.Discard,
+		Hooks:    hooks,
 	}
 
 	logging.L().Debug("spawn execute start",
@@ -126,6 +148,7 @@ func ExecuteRun(
 	var result *agent.TurnResult
 	var runErr error
 	if isFork {
+		ctx = WithQuerySource(ctx, QuerySourceFork)
 		result, runErr = childRunner.RunTurnSeeded(ctx, sess.ID, cb)
 	} else {
 		result, runErr = childRunner.RunTurn(ctx, sess.ID, run.Prompt, cb)
@@ -177,9 +200,15 @@ func llmMessageToSession(m llm.Message, sessionID string) session.Message {
 	return sm
 }
 
-func resolveThinkingType(cfg *config.Config, def AgentTypeDefinition) string {
-	if def.Type == "fork" {
-		return cfg.LLM.ResolveSubagentThinkingType()
+func resolveThinkingType(cfg *config.Config, def AgentTypeDefinition, parentThinking string, isFork bool) string {
+	if isFork || def.Type == "fork" {
+		if parentThinking != "" {
+			return parentThinking
+		}
+		if cfg.LLM.Thinking.Type != "" {
+			return cfg.LLM.Thinking.Type
+		}
+		return "enabled"
 	}
 	return "disabled"
 }

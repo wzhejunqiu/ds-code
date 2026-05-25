@@ -24,6 +24,7 @@ func (a *App) TrySlashLine(ctx context.Context, out io.Writer, runner *agent.Run
 		Store:     store,
 		CtxSvc:    ctxSvc,
 		SessionID: sessionID,
+		Spawn:     a.spawnRunner(runner),
 	}
 	return slashcmd.Handle(env, a, line)
 }

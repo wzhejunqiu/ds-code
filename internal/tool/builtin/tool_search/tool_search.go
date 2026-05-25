@@ -47,6 +47,10 @@ func (t *ToolSearchTool) Execute(ctx context.Context, args json.RawMessage) (str
 	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", in.ToolName)
 	}
-	schema, _ := json.MarshalIndent(tl.Schema(), "", "  ")
+	schemaMap, ok := t.Registry.FullSchema(in.ToolName)
+	if !ok {
+		return "", fmt.Errorf("unknown tool: %s", in.ToolName)
+	}
+	schema, _ := json.MarshalIndent(schemaMap, "", "  ")
 	return fmt.Sprintf("Tool: %s\nDescription: %s\nSchema:\n%s", tl.Name(), tl.Description(), string(schema)), nil
 }

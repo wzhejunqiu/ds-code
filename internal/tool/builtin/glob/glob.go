@@ -23,6 +23,12 @@ type GlobTool struct {
 
 func (t *GlobTool) Name() string { return "glob" }
 
+func (t *GlobTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *GlobTool) IsReadOnly() bool        { return true }
 func (t *GlobTool) IsConcurrencySafe() bool { return true }
 

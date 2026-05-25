@@ -14,7 +14,7 @@ import (
 )
 
 // SlashFunc handles a slash command line; writes output to out.
-type SlashFunc func(ctx context.Context, out io.Writer, sessionID *string, line string) (handled bool, err error)
+type SlashFunc func(ctx context.Context, out io.Writer, sessionID *string, line, activeAgentType string) (handled bool, err error)
 
 // Deps wires the TUI to the agent stack.
 type Deps struct {
@@ -26,6 +26,7 @@ type Deps struct {
 	SessionID   string
 	Version     string
 	HandleSlash SlashFunc
+	OnSessionEnd func(sessionID string)
 	PromptCh          chan permission.PromptRequest
 	Events            chan<- tea.Msg
 	BackgroundAgents  func() int

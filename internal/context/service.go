@@ -44,6 +44,8 @@ type Service struct {
 
 	// ForceAggressiveSnip sets keepRounds=0 during PrepareRequest (recovery snip retry).
 	ForceAggressiveSnip bool
+
+	collapse *collapseTracker
 }
 
 // BeginUserTurn resets per-user-turn breakdown cache (condition A).
@@ -94,24 +96,31 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 		return nil, 0, err
 	}
 
-	if s.shouldCompact(ctx, sessionID, sess) {
-		logging.L().Info("context compact triggered", zap.String("session_id", sessionID), zap.Int64("prompt_tokens", sess.PromptTokensTotal))
-		if err := s.CompactAPIContext(ctx, sessionID); err != nil {
-			logging.L().Warn("context compact failed", zap.String("session_id", sessionID), zap.Error(err))
-		}
-	}
-
 	view, err := s.BuildAPIContext(ctx, sessionID)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// L1 Snip: replace old tool results with placeholders (View layer, non-persisted).
-	keepRounds := s.keepRecentTurns()
-	if s.ForceAggressiveSnip {
-		keepRounds = 0
+	s.applyCollapseIfNeeded(ctx, sessionID, view)
+
+	if s.shouldCompact(ctx, sessionID, sess) {
+		logging.L().Info("context compact triggered", zap.String("session_id", sessionID), zap.Int64("prompt_tokens", sess.PromptTokensTotal))
+		if err := s.CompactAPIContext(ctx, sessionID); err != nil {
+			logging.L().Warn("context compact failed", zap.String("session_id", sessionID), zap.Error(err))
+		}
+		view, err = s.BuildAPIContext(ctx, sessionID)
+		if err != nil {
+			return nil, 0, err
+		}
+		s.applyCollapseIfNeeded(ctx, sessionID, view)
 	}
-	view.Messages = SnipToolResults(view.Messages, keepRounds)
+
+	// L1 Snip: replace old tool results with placeholders (View layer, non-persisted).
+	snipRounds := s.snipKeepRounds()
+	if s.ForceAggressiveSnip {
+		snipRounds = 0
+	}
+	view.Messages = SnipToolResults(view.Messages, snipRounds)
 	// L2 Micro: replace oversized tool results with SHA256 digests.
 	view.Messages = MicroCompress(view.Messages)
 

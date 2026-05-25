@@ -15,10 +15,11 @@ import (
 
 // Manager connects configured MCP servers and exposes their tools.
 type Manager struct {
-	servers []*Server
-	tools   []*adapterTool
-	byName  map[string]*adapterTool
-	mu      sync.RWMutex
+	servers   []*Server
+	tools     []*adapterTool
+	byName    map[string]*adapterTool
+	deferMCP  bool
+	mu        sync.RWMutex
 }
 
 // NewManager connects all configured MCP servers and discovers tools.
@@ -53,11 +54,12 @@ func NewManager(ctx context.Context, cfgs []config.MCPServerConfig, envBlacklist
 }
 
 // NewManagerFromConfig connects servers and discovers tools.
-func NewManagerFromConfig(ctx context.Context, cfgs []config.MCPServerConfig, strict bool, envBlacklist []*regexp.Regexp) (*Manager, error) {
+func NewManagerFromConfig(ctx context.Context, cfgs []config.MCPServerConfig, strict bool, deferMCP bool, envBlacklist []*regexp.Regexp) (*Manager, error) {
 	m, err := NewManager(ctx, cfgs, envBlacklist)
 	if err != nil {
 		return nil, err
 	}
+	m.deferMCP = deferMCP
 	if len(cfgs) == 0 {
 		return m, nil
 	}
@@ -86,7 +88,7 @@ func (m *Manager) DiscoverTools(ctx context.Context, strict bool) error {
 			zap.Int("tool_count", len(list)),
 		)
 		for _, t := range list {
-			ad := newAdapterTool(srv, t, strict)
+			ad := newAdapterTool(srv, t, strict, m.deferMCP)
 			if _, exists := m.byName[ad.Name()]; exists {
 				return fmt.Errorf("mcp: duplicate tool name %q", ad.Name())
 			}

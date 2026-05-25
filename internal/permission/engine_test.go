@@ -20,11 +20,41 @@ func TestEngine_askNonInteractive_deniesShell(t *testing.T) {
 	}
 }
 
-func TestEngine_readonly_deniesShell(t *testing.T) {
+func TestEngine_readonly_allowsGitStatus(t *testing.T) {
 	e := permission.NewEngine("readonly", t.TempDir(), true)
-	err := e.Check("shell", map[string]any{"command": "echo hi"})
+	if err := e.Check("shell", map[string]any{"command": "git status"}); err != nil {
+		t.Fatalf("git status should be allowed in readonly: %v", err)
+	}
+}
+
+func TestEngine_readonly_deniesShellHighRisk(t *testing.T) {
+	e := permission.NewEngine("readonly", t.TempDir(), true)
+	err := e.Check("shell", map[string]any{"command": "rm -rf /tmp/foo"})
 	if err == nil {
-		t.Fatal("expected error")
+		t.Fatal("expected error for rm -rf")
+	}
+}
+
+func TestEngine_readonly_deniesPrivilegedShell(t *testing.T) {
+	e := permission.NewEngine("readonly", t.TempDir(), true)
+	err := e.Check("shell", map[string]any{"command": "git push origin main"})
+	if err == nil {
+		t.Fatal("expected error for git push in readonly")
+	}
+}
+
+func TestEngine_askInteractive_shellAskSinglePrompt(t *testing.T) {
+	var prompts int
+	e := permission.NewEngine("ask", t.TempDir(), true)
+	e.Prompter = func(tool, summary string) (bool, error) {
+		prompts++
+		return true, nil
+	}
+	if err := e.Check("shell", map[string]any{"command": "git push origin main"}); err != nil {
+		t.Fatalf("git push: %v", err)
+	}
+	if prompts != 1 {
+		t.Fatalf("expected 1 prompt, got %d", prompts)
 	}
 }
 
@@ -233,7 +263,7 @@ func TestEngine_askInteractive_prompterRejects(t *testing.T) {
 
 func TestEngine_askInteractive_noPrompter(t *testing.T) {
 	e := permission.NewEngine("ask", t.TempDir(), true)
-	err := e.Check("shell", map[string]any{"command": "echo hi"})
+	err := e.Check("shell", map[string]any{"command": "git push origin main"})
 	if err == nil {
 		t.Fatal("expected error")
 	}

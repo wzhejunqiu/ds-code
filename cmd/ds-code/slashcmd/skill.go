@@ -1,9 +1,12 @@
 package slashcmd
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 )
 
@@ -28,12 +31,38 @@ func Skill(env *Env, args string) error {
 		}
 		return nil
 	}
-	text, err := ctxpkg.LoadSkill(env.Cfg.ProjectRoot, name)
+
+	meta, body, err := ctxpkg.LoadSkillWithMeta(env.Cfg.ProjectRoot, name)
 	if err != nil {
 		return err
 	}
+
+	if meta.ContextMode == "fork" {
+		if env.Spawn == nil || env.SessionID == nil {
+			return fmt.Errorf("skill fork requires an active session and spawn service")
+		}
+		inv := agent.ToolInvocation{
+			SessionID:  *env.SessionID,
+			ToolCallID: "skill:" + name,
+		}
+		out, err := env.Spawn.FromSkill(env.Ctx, inv, name, true)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(env.Out, out)
+		return nil
+	}
+
 	env.CtxSvc.ActiveSkill = name
-	env.CtxSvc.SkillsText = text
-	fmt.Fprintf(env.Out, "Activated skill %q (%d chars) for next requests.\n", name, len(text))
+	env.CtxSvc.SkillsText = body
+	fmt.Fprintf(env.Out, "Activated skill %q (%d chars) for next requests.\n", name, len(body))
 	return nil
+}
+
+// Ensure spawn.Service implements SpawnRunner at compile time.
+var _ SpawnRunner = (*spawn.Service)(nil)
+
+// IsSkillNotFork reports whether err is ErrSkillNotFork.
+func IsSkillNotFork(err error) bool {
+	return errors.Is(err, spawn.ErrSkillNotFork)
 }

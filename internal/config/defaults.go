@@ -18,7 +18,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("context.window_tokens", 1_048_576)
 	v.SetDefault("context.max_output_tokens", 393_216)
 	v.SetDefault("context.compact_threshold_ratio", 0.80)
+	v.SetDefault("context.collapse_threshold_ratio", 0.85)
 	v.SetDefault("context.keep_recent_turns", 6)
+	v.SetDefault("context.snip_keep_rounds", 3)
 	v.SetDefault("context.truncate_by", "chars")
 	v.SetDefault("context.tool_result_max_chars", 100_000)
 	v.SetDefault("context.at_reference_max_chars", 128_000)
@@ -29,6 +31,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("agent.max_turns", 25)
 
 	v.SetDefault("tools.parallel_tool_calls", false)
+	v.SetDefault("tools.defer_mcp", true)
+	v.SetDefault("tools.defer_builtin", []string{})
 	v.SetDefault("tools.read_file.max_lines", 500)
 	v.SetDefault("tools.read_file.max_bytes", 2<<20)
 	v.SetDefault("tools.grep.head_limit", 200)
@@ -41,6 +45,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("tools.agent.summary_max_chars", 16_000)
 	v.SetDefault("tools.agent.fork_enabled", true)
 	v.SetDefault("tools.agent.auto_background_after", 120)
+	v.SetDefault("tools.agent.worktree_ttl", "24h")
 
 	v.SetDefault("permission.mode", "ask")
 

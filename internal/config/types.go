@@ -57,10 +57,12 @@ type ThinkingConfig struct {
 }
 
 type ContextConfig struct {
-	WindowTokens           int     `mapstructure:"window_tokens"`
-	MaxOutputTokens        int     `mapstructure:"max_output_tokens"`
-	CompactThresholdRatio  float64 `mapstructure:"compact_threshold_ratio"`
-	KeepRecentTurns        int     `mapstructure:"keep_recent_turns"`
+	WindowTokens              int     `mapstructure:"window_tokens"`
+	MaxOutputTokens           int     `mapstructure:"max_output_tokens"`
+	CompactThresholdRatio     float64 `mapstructure:"compact_threshold_ratio"`
+	CollapseThresholdRatio    float64 `mapstructure:"collapse_threshold_ratio"`
+	KeepRecentTurns           int     `mapstructure:"keep_recent_turns"`
+	SnipKeepRounds            int     `mapstructure:"snip_keep_rounds"`
 	TruncateBy             string  `mapstructure:"truncate_by"`
 	ToolResultMaxChars     int     `mapstructure:"tool_result_max_chars"`
 	AtReferenceMaxChars    int     `mapstructure:"at_reference_max_chars"`
@@ -75,6 +77,8 @@ type AgentConfig struct {
 
 type ToolsConfig struct {
 	ParallelToolCalls bool              `mapstructure:"parallel_tool_calls"`
+	DeferMCP          bool              `mapstructure:"defer_mcp"`
+	DeferBuiltin      []string          `mapstructure:"defer_builtin"`
 	ReadFile          ReadFileToolConfig `mapstructure:"read_file"`
 	Grep              GrepToolConfig     `mapstructure:"grep"`
 	Glob              GlobToolConfig     `mapstructure:"glob"`
@@ -109,10 +113,11 @@ type ShellToolConfig struct {
 }
 
 type AgentToolConfig struct {
-	MaxParallel      int  `mapstructure:"max_parallel"`
-	SummaryMaxChars  int  `mapstructure:"summary_max_chars"`
-	AutoBackgroundAfter int `mapstructure:"auto_background_after"`
-	ForkEnabled      bool `mapstructure:"fork_enabled"`
+	MaxParallel         int           `mapstructure:"max_parallel"`
+	SummaryMaxChars     int           `mapstructure:"summary_max_chars"`
+	AutoBackgroundAfter int           `mapstructure:"auto_background_after"`
+	ForkEnabled         bool          `mapstructure:"fork_enabled"`
+	WorktreeTTL         time.Duration `mapstructure:"worktree_ttl"`
 }
 
 type PermissionConfig struct {

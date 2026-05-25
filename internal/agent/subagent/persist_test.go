@@ -59,7 +59,7 @@ func TestRun_persistsAgentMessagesNotMainSession(t *testing.T) {
 	register.ExploreTools(reg, cfg, perm, nil, false)
 
 	def, _ := spawn.NewRegistry().Resolve("Explore")
-	_, err = spawn.ExecuteRun(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, 0)
+	_, err = spawn.ExecuteRun(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

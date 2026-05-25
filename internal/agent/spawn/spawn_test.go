@@ -61,7 +61,7 @@ func TestRoute_ForkPath(t *testing.T) {
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	decision, err := spawn.Route(spawn.Params{
+	decision, err := spawn.Route(context.Background(), spawn.Params{
 		Prompt: "do something",
 	}, inv, reg, cfg, true)
 	if err != nil {
@@ -72,12 +72,30 @@ func TestRoute_ForkPath(t *testing.T) {
 	}
 }
 
+func TestRoute_ForkRejectsBackground(t *testing.T) {
+	cfg := testConfig()
+	cfg.Tools.Agent.ForkEnabled = true
+	reg := spawn.NewRegistry()
+	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
+
+	_, err := spawn.Route(context.Background(), spawn.Params{
+		Prompt:          "do something",
+		RunInBackground: true,
+	}, inv, reg, cfg, true)
+	if err == nil {
+		t.Fatal("expected error for fork with run_in_background")
+	}
+	if !strings.Contains(err.Error(), "run_in_background") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestRoute_ExplicitType(t *testing.T) {
 	cfg := testConfig()
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	decision, err := spawn.Route(spawn.Params{
+	decision, err := spawn.Route(context.Background(), spawn.Params{
 		SubagentType: "Explore",
 		Prompt:       "find stuff",
 	}, inv, reg, cfg, true)
@@ -98,7 +116,7 @@ func TestRoute_ForceBackground(t *testing.T) {
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	decision, err := spawn.Route(spawn.Params{
+	decision, err := spawn.Route(context.Background(), spawn.Params{
 		SubagentType: "verification",
 		Prompt:       "verify changes",
 	}, inv, reg, cfg, true)
@@ -116,7 +134,7 @@ func TestRoute_ExplicitBackground(t *testing.T) {
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	decision, err := spawn.Route(spawn.Params{
+	decision, err := spawn.Route(context.Background(), spawn.Params{
 		SubagentType:    "general-purpose",
 		Prompt:          "do work",
 		RunInBackground: true,
@@ -134,7 +152,7 @@ func TestRoute_UnknownType(t *testing.T) {
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	_, err := spawn.Route(spawn.Params{
+	_, err := spawn.Route(context.Background(), spawn.Params{
 		SubagentType: "nonexistent",
 		Prompt:       "do work",
 	}, inv, reg, cfg, true)
@@ -149,7 +167,7 @@ func TestRoute_DefaultType(t *testing.T) {
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	decision, err := spawn.Route(spawn.Params{
+	decision, err := spawn.Route(context.Background(), spawn.Params{
 		Prompt: "do work",
 	}, inv, reg, cfg, false)
 	if err != nil {
@@ -160,13 +178,31 @@ func TestRoute_DefaultType(t *testing.T) {
 	}
 }
 
+func TestRoute_RecursiveForkFromForkChild(t *testing.T) {
+	cfg := testConfig()
+	cfg.Tools.Agent.ForkEnabled = true
+	reg := spawn.NewRegistry()
+	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
+	msgs := []llm.Message{{Role: role.User, Content: spawn.ForkBoilerplate}}
+	ctx := spawn.WithQuerySource(context.Background(), spawn.QuerySourceFork)
+	ctx = agent.WithForkContext(ctx, agent.ForkContext{ParentMessages: msgs})
+
+	_, err := spawn.Route(ctx, spawn.Params{Prompt: "nested"}, inv, reg, cfg, true)
+	if err == nil {
+		t.Fatal("expected error when forking from fork child")
+	}
+	if !strings.Contains(err.Error(), "fork") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestRoute_NonInteractiveNoFork(t *testing.T) {
 	cfg := testConfig()
 	cfg.Tools.Agent.ForkEnabled = true
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	decision, err := spawn.Route(spawn.Params{
+	decision, err := spawn.Route(context.Background(), spawn.Params{
 		Prompt: "do work",
 	}, inv, reg, cfg, false)
 	if err != nil {
@@ -327,40 +363,43 @@ func TestNotificationQueue_PrioritySeparation(t *testing.T) {
 	}
 }
 
-func TestNotificationQueue_FormatXML(t *testing.T) {
+func TestNotificationQueue_FormatJSON(t *testing.T) {
 	n := spawn.Notification{
 		AgentID:      "a1",
 		ToolUseID:    "tc1",
 		OutputFile:   "/tmp/out",
 		Status:       "completed",
-		Summary:      "done",
-		Result:       "all good",
+		Summary:      `done with <tag> & "quotes"`,
+		Result:       "all good\nmultiline",
 		DurationMS:   1234,
 		ToolUseCount: 5,
 		Usage:        llm.Usage{PromptTokens: 100, CompletionTokens: 50},
 	}
-	xml := n.FormatXML()
-	if !strings.Contains(xml, "<task-notification>") {
-		t.Error("expected task-notification tag")
+	out := n.Format()
+	if !strings.Contains(out, "<task-notification>") || !strings.Contains(out, "</task-notification>") {
+		t.Error("expected task-notification wrapper tags")
 	}
-	if !strings.Contains(xml, "<status>completed</status>") {
-		t.Error("expected completed status")
+	if !strings.Contains(out, `"status":"completed"`) {
+		t.Error("expected JSON status field")
 	}
-	if !strings.Contains(xml, "a1") {
-		t.Error("expected agent ID")
+	if !strings.Contains(out, "a1") {
+		t.Error("expected agent ID in JSON")
+	}
+	if strings.Contains(out, "<status>completed</status>") {
+		t.Error("should not use legacy XML inner tags")
 	}
 }
 
-func TestNotificationQueue_FormatXML_WithWorktree(t *testing.T) {
+func TestNotificationQueue_FormatJSON_WithWorktree(t *testing.T) {
 	n := spawn.Notification{
 		AgentID:        "a1",
 		Status:         "completed",
 		WorktreePath:   "/tmp/wt",
 		WorktreeBranch: "wt-branch",
 	}
-	xml := n.FormatXML()
-	if !strings.Contains(xml, "<worktree>") {
-		t.Error("expected worktree info")
+	out := n.Format()
+	if !strings.Contains(out, `"worktree"`) || !strings.Contains(out, "/tmp/wt") {
+		t.Errorf("expected worktree in JSON, got %q", out)
 	}
 }
 

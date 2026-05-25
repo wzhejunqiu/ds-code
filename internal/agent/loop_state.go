@@ -37,5 +37,4 @@ type LoopState struct {
 	MaxTokensEscalated  bool
 	OutputRecoveryCount int
 	FallbackTried       bool
-	MaxTokensOverride   int
 }

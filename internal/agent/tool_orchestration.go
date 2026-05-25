@@ -56,26 +56,6 @@ func partitionToolCalls(reg *tool.Registry, calls []llm.ToolCall) []toolBatch {
 	return batches
 }
 
-// executeBatches runs partitioned batches: concurrent read tools via errgroup,
-// serial write tools one-by-one.
-func (r *Runner) executeBatches(ctx context.Context, sessionID string, batches []toolBatch) error {
-	for _, batch := range batches {
-		if batch.concurrent {
-			if err := r.runConcurrentBatch(ctx, sessionID, batch.calls); err != nil {
-				return err
-			}
-		} else {
-			if err := r.runSerialBatch(ctx, sessionID, batch.calls); err != nil {
-				return err
-			}
-		}
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-	}
-	return nil
-}
-
 func (r *Runner) runConcurrentBatch(ctx context.Context, sessionID string, calls []llm.ToolCall) error {
 	if len(calls) == 0 {
 		return nil

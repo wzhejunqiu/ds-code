@@ -3,19 +3,14 @@ package agent
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
-	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
-	"github.com/wzhejunqiu/ds-code/internal/llm/mock"
-	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
-	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 func loopTestConfig() *config.Config {
@@ -86,32 +81,6 @@ func TestFinishTerminalRound_writesOutWhenNoCallback(t *testing.T) {
 	msgs, _ := store.ListMessages(context.Background(), sess.ID)
 	if len(msgs) != 1 || msgs[0].Role != role.Assistant {
 		t.Fatalf("messages = %+v", msgs)
-	}
-}
-
-func TestChatWithCompactRetry_retriesAfterCompact(t *testing.T) {
-	cfg := loopTestConfig()
-	store := session.NewMemoryStore()
-	sess, err := store.NewSession("m", "max", "enabled", "auto", "agent")
-	if err != nil {
-		t.Fatal(err)
-	}
-	mockLLM := &mock.Client{
-		Errors:    []error{fmt.Errorf("context length exceeded")},
-		Responses: []*llm.Response{{Content: "ok"}},
-	}
-	perm := permission.NewEngine("auto", t.TempDir(), false)
-	reg := tool.NewRegistry()
-	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, LLM: mockLLM, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
-	r := &Runner{LLM: mockLLM, Context: ctxSvc, Cfg: cfg, Sessions: store}
-
-	req := llm.Request{Messages: []llm.Message{{Role: role.User, Content: "hi"}}}
-	resp, err := r.chatWithCompactRetry(context.Background(), sess.ID, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.Content != "ok" || len(mockLLM.Calls) != 2 {
-		t.Fatalf("resp=%+v calls=%d", resp, len(mockLLM.Calls))
 	}
 }
 

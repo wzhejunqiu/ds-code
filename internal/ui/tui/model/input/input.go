@@ -222,7 +222,8 @@ func RunSlash(s *state.State, line string) tea.Cmd {
 	return func() tea.Msg {
 		var buf bytes.Buffer
 		sid := s.SessionID
-		handled, err := d.HandleSlash(context.Background(), &buf, &sid, line)
+		activeAgentType := s.Subagents.ResolveActiveAgentType(s.ViewingSubagentID)
+		handled, err := d.HandleSlash(context.Background(), &buf, &sid, line, activeAgentType)
 		s.SessionID = sid
 		d.SessionID = sid
 		if err != nil {

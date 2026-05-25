@@ -25,10 +25,21 @@ type entry struct {
 	Time     string `json:"time"`
 	Tool     string `json:"tool"`
 	ArgsHash string `json:"args_hash"`
+	Decision string `json:"decision,omitempty"`
+	Reason   string `json:"reason,omitempty"`
 }
 
 // Log records a tool invocation (args hashed, not stored verbatim).
 func (l *Logger) Log(tool string, args []byte) error {
+	return l.logEntry(tool, args, "", "")
+}
+
+// LogWithReason records a tool invocation with classifier decision metadata.
+func (l *Logger) LogWithReason(tool string, args []byte, decision, reason string) error {
+	return l.logEntry(tool, args, decision, reason)
+}
+
+func (l *Logger) logEntry(tool string, args []byte, decision, reason string) error {
 	if l == nil || l.path == "" {
 		return nil
 	}
@@ -37,6 +48,8 @@ func (l *Logger) Log(tool string, args []byte) error {
 		Time:     time.Now().UTC().Format(time.RFC3339),
 		Tool:     tool,
 		ArgsHash: hex.EncodeToString(sum[:]),
+		Decision: decision,
+		Reason:   reason,
 	}
 	b, err := json.Marshal(e)
 	if err != nil {

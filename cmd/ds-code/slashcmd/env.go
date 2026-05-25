@@ -17,6 +17,13 @@ type Env struct {
 	Cfg       *config.Config
 	Runner    *agent.Runner
 	Store     session.Store
-	CtxSvc    *ctxpkg.Service
-	SessionID *string
+	CtxSvc          *ctxpkg.Service
+	SessionID       *string
+	ActiveAgentType string
+	Spawn           SpawnRunner
+}
+
+// SpawnRunner runs skill-fork spawns from slash commands.
+type SpawnRunner interface {
+	FromSkill(ctx context.Context, inv agent.ToolInvocation, skillName string, interactive bool) (string, error)
 }

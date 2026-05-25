@@ -1,27 +1,28 @@
-package subagent_test
+package subagent
 
-import (
-	"errors"
-	"testing"
+import "testing"
 
-	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
-)
-
-func TestRegistry_lifecycle(t *testing.T) {
-	var reg subagent.Registry
-	rec := reg.Start("sa-1", "probe", "read main.go", "Explore", false)
-	if rec.ID != "sa-1" || reg.Len() != 1 {
-		t.Fatalf("start: %+v len=%d", rec, reg.Len())
+func TestResolveActiveAgentType_viewingDetail(t *testing.T) {
+	r := &Registry{}
+	r.Start("a1", "label", "prompt", "Explore", false)
+	if got := r.ResolveActiveAgentType("a1"); got != "Explore" {
+		t.Fatalf("viewing detail = %q, want Explore", got)
 	}
-	reg.ToolStart("sa-1", "read_file", "Read main.go", "")
-	reg.ToolEnd("sa-1", "read_file", "Read main.go", "", "ok", false)
-	reg.End("sa-1", "summary text", nil)
-	got := reg.Get("sa-1")
-	if got.Status != subagent.StatusDone {
-		t.Fatalf("status=%v", got.Status)
+}
+
+func TestResolveActiveAgentType_singleRunning(t *testing.T) {
+	r := &Registry{}
+	r.Start("a1", "label", "prompt", "Explore", true)
+	if got := r.ResolveActiveAgentType(""); got != "Explore" {
+		t.Fatalf("single running = %q, want Explore", got)
 	}
-	reg.End("sa-2", "", errors.New("fail"))
-	if reg.Get("sa-2") != nil {
-		t.Fatal("expected missing sa-2")
+}
+
+func TestResolveActiveAgentType_multipleRunning(t *testing.T) {
+	r := &Registry{}
+	r.Start("a1", "one", "p1", "Explore", true)
+	r.Start("a2", "two", "p2", "Plan", true)
+	if got := r.ResolveActiveAgentType(""); got != "" {
+		t.Fatalf("multiple running should return empty, got %q", got)
 	}
 }

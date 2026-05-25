@@ -31,7 +31,7 @@ func stubServer(name string, tools []mcpsdk.Tool) *Server {
 }
 
 func TestNewManagerFromConfig_empty(t *testing.T) {
-	m, err := NewManagerFromConfig(context.Background(), nil, false, nil)
+	m, err := NewManagerFromConfig(context.Background(), nil, false, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestManager_Close_clearsState(t *testing.T) {
 
 func TestAdapterTool_descriptionFallback(t *testing.T) {
 	srv := stubServer("fs", nil)
-	ad := newAdapterTool(srv, mcpsdk.Tool{Name: "ping"}, false)
+	ad := newAdapterTool(srv, mcpsdk.Tool{Name: "ping"}, false, false)
 	if ad.Description() == "" {
 		t.Fatal("expected fallback description")
 	}
@@ -214,7 +214,7 @@ func TestAdapterTool_execute(t *testing.T) {
 			return `{"ok":true,"args":` + string(args) + `}`, nil
 		},
 	}
-	ad := newAdapterTool(srv, mcpsdk.Tool{Name: "echo", Description: "echo back"}, false)
+	ad := newAdapterTool(srv, mcpsdk.Tool{Name: "echo", Description: "echo back"}, false, false)
 	out, err := ad.Execute(context.Background(), json.RawMessage(`{"x":1}`))
 	if err != nil {
 		t.Fatal(err)

@@ -65,6 +65,29 @@ func (r *Registry) Get(id string) *Record {
 	return nil
 }
 
+// ResolveActiveAgentType picks the agent type for /remember routing.
+// Priority: viewing subagent detail, else sole running subagent, else "".
+func (r *Registry) ResolveActiveAgentType(viewingID string) string {
+	if r == nil {
+		return ""
+	}
+	if viewingID != "" {
+		if rec := r.Get(viewingID); rec != nil && rec.AgentType != "" {
+			return rec.AgentType
+		}
+	}
+	var running []*Record
+	for _, rec := range r.records {
+		if rec.Status == StatusRunning && rec.AgentType != "" {
+			running = append(running, rec)
+		}
+	}
+	if len(running) == 1 {
+		return running[0].AgentType
+	}
+	return ""
+}
+
 // Add appends a restored or externally built record.
 func (r *Registry) Add(rec *Record) {
 	if r == nil || rec == nil {

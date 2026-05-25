@@ -208,3 +208,11 @@ func (s *Service) keepRecentTurns() int {
 	}
 	return n
 }
+
+func (s *Service) snipKeepRounds() int {
+	n := s.Cfg.Context.SnipKeepRounds
+	if n <= 0 {
+		return 3
+	}
+	return n
+}

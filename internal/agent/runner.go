@@ -16,6 +16,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/security/classifier"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -38,8 +39,11 @@ type Runner struct {
 	Out              io.Writer
 	Audit            *audit.Logger
 	Checkpoints             *checkpoint.Store
+	Hooks                   *HookManager
 	DrainNotifications      NotificationFunc
 	DrainNotificationsLater DrainNotificationsLaterFunc
+
+	sessionStarted map[string]bool
 }
 
 // TurnResult is the outcome of a user turn.
@@ -57,7 +61,18 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 		ctx = r.enrichAgentForkContext(ctx, sessionID, tc)
 	}
 	rawArgs := []byte(tc.Arguments)
+	if r.Hooks != nil {
+		results := r.Hooks.Run(ctx, HookPreToolUse, hookInputForTool(sessionID, tc, rawArgs, nil))
+		rawArgs = applyPreToolUseResults(tc.Name, rawArgs, results)
+		tc.Arguments = string(rawArgs)
+	}
 	args := tool.ArgsMap(rawArgs)
+	if tc.Name == "shell" && r.Audit != nil {
+		if cmd, _ := args["command"].(string); cmd != "" {
+			dec, reason := classifier.Classify(cmd)
+			_ = r.Audit.LogWithReason(tc.Name, rawArgs, string(dec), reason)
+		}
+	}
 	if err := r.Perm.Check(tc.Name, args); err != nil {
 		logging.L().Info("tool denied", zap.String("session_id", sessionID), zap.String("tool", tc.Name), zap.Error(err))
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)
@@ -70,10 +85,13 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 		)
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, fmt.Errorf("checkpoint: %w", err))
 	}
-	if r.Audit != nil {
+	if r.Audit != nil && tc.Name != "shell" {
 		_ = r.Audit.Log(tc.Name, rawArgs)
 	}
 	out, err := r.Tools.Execute(WithToolInvocation(ctx, sessionID, tc.ID), tc.Name, rawArgs)
+	if r.Hooks != nil {
+		r.Hooks.Run(ctx, HookPostToolUse, hookInputForTool(sessionID, tc, rawArgs, err))
+	}
 	if err != nil {
 		logging.L().Info("tool error", zap.String("session_id", sessionID), zap.String("tool", tc.Name), zap.Error(err))
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)

@@ -44,6 +44,12 @@ type GrepTool struct {
 
 func (t *GrepTool) Name() string { return "grep" }
 
+func (t *GrepTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *GrepTool) IsReadOnly() bool        { return true }
 func (t *GrepTool) IsConcurrencySafe() bool { return true }
 

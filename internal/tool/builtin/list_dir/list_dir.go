@@ -24,6 +24,12 @@ type ListDirTool struct {
 
 func (t *ListDirTool) Name() string { return "list_dir" }
 
+func (t *ListDirTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *ListDirTool) IsReadOnly() bool        { return true }
 func (t *ListDirTool) IsConcurrencySafe() bool { return true }
 

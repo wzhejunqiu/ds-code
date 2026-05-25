@@ -38,6 +38,12 @@ func (t *ReadFileTool) Schema() map[string]any {
 
 func (t *ReadFileTool) PermissionLevel() permission.Level { return permission.LevelLow }
 
+func (t *ReadFileTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err

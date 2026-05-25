@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -17,9 +18,10 @@ type adapterTool struct {
 	desc       string
 	schema     map[string]any
 	level      permission.Level
+	deferLoad  bool
 }
 
-func newAdapterTool(srv *Server, t mcpsdk.Tool, strict bool) *adapterTool {
+func newAdapterTool(srv *Server, t mcpsdk.Tool, strict bool, deferLoad bool) *adapterTool {
 	return &adapterTool{
 		server:     srv,
 		mcpTool:    t.Name,
@@ -27,6 +29,7 @@ func newAdapterTool(srv *Server, t mcpsdk.Tool, strict bool) *adapterTool {
 		desc:       t.Description,
 		schema:     inputSchema(t, strict),
 		level:      ClassifyPermission(t),
+		deferLoad:  deferLoad,
 	}
 }
 
@@ -42,6 +45,17 @@ func (a *adapterTool) Description() string {
 func (a *adapterTool) Schema() map[string]any { return a.schema }
 
 func (a *adapterTool) PermissionLevel() permission.Level { return a.level }
+
+func (a *adapterTool) ShouldDefer() bool { return a.deferLoad }
+
+func (a *adapterTool) StubSchema() map[string]any {
+	return tool.ObjectSchema(map[string]any{
+		"_note": map[string]any{
+			"type":        "string",
+			"description": "Deferred MCP tool. Call tool_search before use.",
+		},
+	}, nil, false)
+}
 
 func (a *adapterTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	var result string

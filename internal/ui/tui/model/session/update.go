@@ -43,6 +43,9 @@ func UpdateSessionResumed(s *state.State, m msg.SessionResumedMsg, picker *compo
 		s.ErrLine = m.Err.Error()
 		return nil
 	}
+	if s.Deps.OnSessionEnd != nil && s.SessionID != "" {
+		s.Deps.OnSessionEnd(s.SessionID)
+	}
 	session.DropPending(s.Deps.Store, s.SessionID)
 	s.SessionID = m.SessionID
 	s.Deps.SessionID = m.SessionID

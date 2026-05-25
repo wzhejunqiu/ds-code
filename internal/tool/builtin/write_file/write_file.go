@@ -22,6 +22,12 @@ type WriteFileTool struct {
 
 func (t *WriteFileTool) Name() string { return "write_file" }
 
+func (t *WriteFileTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *WriteFileTool) Description() string { return DescWriteFile }
 
 func (t *WriteFileTool) Schema() map[string]any {

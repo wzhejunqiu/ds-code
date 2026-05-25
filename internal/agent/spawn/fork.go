@@ -1,6 +1,7 @@
 package spawn
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -51,12 +52,17 @@ func BuildForkMessages(parentMessages []llm.Message, parentToolCalls []llm.ToolC
 
 	if triggerIdx >= 0 {
 		out = append(out, parentMessages[:triggerIdx+1]...)
+	} else if len(parentMessages) > 0 {
+		// Skill fork and other non-agent triggers: include full parent API context.
+		out = append(out, parentMessages...)
 	}
 
-	// Build child user message: placeholder tool_results + boilerplate + directive
+	// Build child user message: placeholder tool_results (agent fork only) + boilerplate + directive
 	var sb strings.Builder
-	for _, tc := range parentToolCalls {
-		sb.WriteString(fmt.Sprintf("\n<tool_result tool_call_id=%q>\n%s\n</tool_result>\n", tc.ID, ForkPlaceholder))
+	if len(parentToolCalls) > 0 {
+		for _, tc := range parentToolCalls {
+			sb.WriteString(fmt.Sprintf("\n<tool_result tool_call_id=%q>\n%s\n</tool_result>\n", tc.ID, ForkPlaceholder))
+		}
 	}
 	sb.WriteString("\n" + ForkBoilerplate + "\n\n")
 	sb.WriteString(buildChildDirective(directive))
@@ -81,5 +87,9 @@ func IsInForkChild(messages []llm.Message) bool {
 
 // buildChildDirective wraps the task prompt in the plan-mandated directive tag.
 func buildChildDirective(prompt string) string {
-	return `[directive: "Here's your specific task: ` + prompt + `"]`
+	encoded, err := json.Marshal(prompt)
+	if err != nil {
+		encoded = []byte(`"` + strings.ReplaceAll(prompt, `"`, `\"`) + `"`)
+	}
+	return fmt.Sprintf(`[directive: "Here's your specific task: %s"]`, string(encoded))
 }

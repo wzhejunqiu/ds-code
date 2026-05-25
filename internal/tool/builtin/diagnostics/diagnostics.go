@@ -27,6 +27,12 @@ type DiagnosticsTool struct {
 
 func (t *DiagnosticsTool) Name() string { return "diagnostics" }
 
+func (t *DiagnosticsTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *DiagnosticsTool) IsReadOnly() bool        { return true }
 func (t *DiagnosticsTool) IsConcurrencySafe() bool { return true }
 

@@ -34,6 +34,12 @@ func (t *ApplyPatchTool) Schema() map[string]any {
 
 func (t *ApplyPatchTool) PermissionLevel() permission.Level { return permission.LevelHigh }
 
+func (t *ApplyPatchTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *ApplyPatchTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err

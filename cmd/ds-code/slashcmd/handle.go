@@ -135,6 +135,12 @@ func Handle(env *Env, host Host, line string) (handled bool, err error) {
 		}
 		return true, Skill(env, args)
 
+	case "remember":
+		if err := requireSessionEnv(env); err != nil {
+			return true, err
+		}
+		return true, Remember(env, args)
+
 	case "task":
 		if err := requireSessionEnv(env); err != nil {
 			return true, err

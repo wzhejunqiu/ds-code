@@ -81,7 +81,6 @@ func (r *Runner) chatWithRecovery(ctx context.Context, sessionID string, req llm
 			if !state.MaxTokensEscalated {
 				state.MaxTokensEscalated = true
 				state.Transition = TransMaxTokensEscalate
-				state.MaxTokensOverride = maxOutputTokensEscalate
 				currentReq.MaxTokens = maxOutputTokensEscalate
 				logging.L().Info("max_tokens → escalate to 64K", zap.String("session_id", sessionID))
 				attempt++

@@ -43,7 +43,7 @@ func (r *Registry) Get(name string) (Tool, bool) {
 	return t, ok
 }
 
-// Definitions returns tool defs for the LLM API.
+// Definitions returns tool defs for the LLM API (deferred tools use stub schemas).
 func (r *Registry) Definitions() []llm.ToolDef {
 	names := make([]string, 0, len(r.tools))
 	for n := range r.tools {
@@ -56,10 +56,36 @@ func (r *Registry) Definitions() []llm.ToolDef {
 		out = append(out, llm.ToolDef{
 			Name:        t.Name(),
 			Description: t.Description(),
-			Parameters:  t.Schema(),
+			Parameters:  r.parametersForLLM(t),
 		})
 	}
 	return out
+}
+
+// FullSchema returns the complete JSON schema for a tool (ignores defer stubs).
+func (r *Registry) FullSchema(name string) (map[string]any, bool) {
+	t, ok := r.Get(name)
+	if !ok {
+		return nil, false
+	}
+	return t.Schema(), true
+}
+
+func (r *Registry) parametersForLLM(t Tool) map[string]any {
+	if dt, ok := t.(DeferredTool); ok && dt.ShouldDefer() {
+		return dt.StubSchema()
+	}
+	return t.Schema()
+}
+
+// HasDeferredTools reports whether any registered tool uses deferred loading.
+func (r *Registry) HasDeferredTools() bool {
+	for _, t := range r.tools {
+		if dt, ok := t.(DeferredTool); ok && dt.ShouldDefer() {
+			return true
+		}
+	}
+	return false
 }
 
 // Execute runs a tool by name.

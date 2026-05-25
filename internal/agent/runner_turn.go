@@ -26,6 +26,8 @@ func (r *Runner) RunTurnSeeded(ctx context.Context, sessionID string, cb *TurnCa
 }
 
 func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *TurnCallbacks, opts runTurnOptions) (*TurnResult, error) {
+	ctx = WithActiveTurn(ctx)
+	defer func() { ctx = WithoutActiveTurn(ctx) }()
 	if cb != nil {
 		ctx = WithTurnCallbacks(ctx, cb)
 	}
@@ -42,6 +44,11 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 	}
 
 	if opts.appendUser {
+		existing, listErr := r.Sessions.ListMessages(ctx, sessionID)
+		if listErr != nil {
+			return nil, listErr
+		}
+		isFirstUser := len(existing) == 0
 		expanded, err := r.Context.ExpandUserText(userText)
 		if err != nil {
 			return nil, fmt.Errorf("expand @ references: %w", err)
@@ -52,6 +59,15 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			Content:   expanded,
 		}); err != nil {
 			return nil, err
+		}
+		if r.Hooks != nil && isFirstUser {
+			if r.sessionStarted == nil {
+				r.sessionStarted = make(map[string]bool)
+			}
+			if !r.sessionStarted[sessionID] {
+				r.sessionStarted[sessionID] = true
+				r.Hooks.Run(ctx, HookSessionStart, marshalHookInput(HookInput{SessionID: sessionID}))
+			}
 		}
 	}
 
@@ -70,6 +86,9 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		state.Round = round
 		state.Phase = PhasePrepare
 		if ctx.Err() != nil {
+			if r.Hooks != nil {
+				r.Hooks.Run(ctx, HookStop, marshalHookInput(HookInput{SessionID: sessionID, Error: ctx.Err().Error()}))
+			}
 			return nil, ctx.Err()
 		}
 		if round > 0 && cb != nil && cb.OnAssistantSegmentEnd != nil {
@@ -142,6 +161,12 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		}
 	}
 	logging.L().Warn("exceeded max sub-rounds", zap.String("session_id", sessionID), zap.Int("max", r.MaxTurns))
+	if r.Hooks != nil {
+		r.Hooks.Run(ctx, HookStop, marshalHookInput(HookInput{
+			SessionID: sessionID,
+			Error:     fmt.Sprintf("exceeded max sub-rounds (%d)", r.MaxTurns),
+		}))
+	}
 	return nil, fmt.Errorf("agent: exceeded max sub-rounds (%d)", r.MaxTurns)
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/apply_patch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/diagnostics"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/tool_search"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
 )
@@ -42,15 +43,35 @@ func RegisterReadOnly(reg *tool.Registry, d Deps) {
 	}
 }
 
+func deferBuiltinSet(cfg *config.Config) map[string]bool {
+	set := make(map[string]bool)
+	for _, n := range cfg.Tools.DeferBuiltin {
+		if n != "" {
+			set[n] = true
+		}
+	}
+	return set
+}
+
+func registerTool(reg *tool.Registry, t tool.Tool, deferNames map[string]bool) {
+	if deferNames[t.Name()] {
+		reg.Register(tool.WrapDeferred(t))
+		return
+	}
+	reg.Register(t)
+}
+
 // RegisterWrite registers mutating tools (agent mode only).
 func RegisterWrite(reg *tool.Registry, d Deps) {
-	reg.Register(&shell.ShellTool{Cfg: d.Cfg, Perm: d.Perm, Jobs: d.ShellJobs, Strict: d.Strict})
-	reg.Register(&apply_patch.ApplyPatchTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict})
-	reg.Register(&write_file.WriteFileTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict})
+	deferNames := deferBuiltinSet(d.Cfg)
+	registerTool(reg, &shell.ShellTool{Cfg: d.Cfg, Perm: d.Perm, Jobs: d.ShellJobs, Strict: d.Strict}, deferNames)
+	registerTool(reg, &apply_patch.ApplyPatchTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict}, deferNames)
+	registerTool(reg, &write_file.WriteFileTool{Cfg: d.Cfg, Perm: d.Perm, Strict: d.Strict}, deferNames)
 }
 
 // RegisterAgentExtras registers the agent tool and MCP for full agent mode.
 func RegisterAgentExtras(reg *tool.Registry, d Deps) {
+	reg.Register(&tool_search.ToolSearchTool{Registry: reg, Strict: d.Strict})
 	if d.LLM != nil {
 		reg.Register(agent.NewAgentTool(d.Cfg, d.Perm, d.LLM, d.Strict, d.Subagent, reg))
 	}

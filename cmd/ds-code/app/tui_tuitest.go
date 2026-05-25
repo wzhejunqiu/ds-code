@@ -58,10 +58,11 @@ func (a *App) RunTUIHarness(cmd *cobra.Command, sessionID string, reg *mockserve
 		SessionID: sessionID,
 		Version:   version.Version,
 		PromptCh:  promptCh,
-		HandleSlash: func(c context.Context, w io.Writer, sid *string, line string) (bool, error) {
+		HandleSlash: func(c context.Context, w io.Writer, sid *string, line, activeAgentType string) (bool, error) {
 			env := &slashcmd.Env{
 				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,
-				CtxSvc: ctxSvc, SessionID: sid,
+				CtxSvc: ctxSvc, SessionID: sid, Spawn: a.spawnRunner(runner),
+				ActiveAgentType: activeAgentType,
 			}
 			return slashcmd.Handle(env, a, line)
 		},

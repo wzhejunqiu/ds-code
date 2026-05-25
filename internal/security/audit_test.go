@@ -108,10 +108,10 @@ func TestS11_readonlyBlocksWriteFile(t *testing.T) {
 	}
 }
 
-func TestS14_readonlyBlocksShellWrite(t *testing.T) {
+func TestS14_readonlyBlocksShellHighRisk(t *testing.T) {
 	perm := permission.NewEngine("readonly", t.TempDir(), false)
-	err := perm.Check("shell", map[string]any{"command": "echo hi"})
+	err := perm.Check("shell", map[string]any{"command": "rm -rf /tmp/x"})
 	if err == nil {
-		t.Fatal("expected readonly shell deny")
+		t.Fatal("expected readonly deny for rm -rf")
 	}
 }

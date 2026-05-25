@@ -28,6 +28,12 @@ type ShellTool struct {
 
 func (t *ShellTool) Name() string { return "shell" }
 
+func (t *ShellTool) WithPerm(perm *permission.Engine) tool.Tool {
+	cp := *t
+	cp.Perm = perm
+	return &cp
+}
+
 func (t *ShellTool) Description() string { return DescShell }
 
 func (t *ShellTool) Schema() map[string]any {

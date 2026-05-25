@@ -44,8 +44,8 @@ func NewBackgroundManager(nq *NotificationQueue) *BackgroundManager {
 }
 
 // Start launches an agent run in a background goroutine.
-func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config, llmClient llm.Client, run subagentstore.Run, def AgentTypeDefinition, perm *permission.Engine, parentReg *tool.Registry, subStore subagentstore.Store, parentCallbacks *agent.TurnCallbacks, outputPath string) {
-	ctx, cancel := context.WithCancel(context.Background())
+func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config, llmClient llm.Client, run subagentstore.Run, def AgentTypeDefinition, perm *permission.Engine, parentReg *tool.Registry, subStore subagentstore.Store, parentCallbacks *agent.TurnCallbacks, outputPath string, hooks *agent.HookManager, failCleanup func(context.Context, subagentstore.Run)) {
+	ctx, cancel := DetachSpawnContext(parentCtx)
 	task := &BackgroundTask{
 		RunID:     run.ID,
 		AgentType: def.Type,
@@ -70,7 +70,7 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 
 		startTime := time.Now()
 		cb := agent.SubagentToolCallbacks(parentCallbacks, run.ID)
-		summary, runErr := ExecuteRun(ctx, cfg, llmClient, run, def, perm, parentReg, subStore, cb, 0)
+		summary, runErr := ExecuteRun(ctx, cfg, llmClient, run, def, perm, parentReg, subStore, cb, hooks, 0)
 
 		status := subagentstore.StatusCompleted
 		errMsg := ""
@@ -86,6 +86,16 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 
 		if finishErr := subStore.FinishRun(ctx, run.ID, status, errMsg); finishErr != nil {
 			logging.L().Warn("finish async agent failed", zap.String("run_id", run.ID), zap.Error(finishErr))
+		}
+		if hooks != nil {
+			in := agent.HookInput{AgentID: run.ID, AgentType: def.Type}
+			if runErr != nil {
+				in.Error = runErr.Error()
+			}
+			hooks.Run(ctx, agent.HookSubagentStop, agent.MarshalHookInput(in))
+		}
+		if failCleanup != nil && (runErr != nil || status == subagentstore.StatusKilled) {
+			failCleanup(ctx, run)
 		}
 
 		// Build notification
@@ -103,14 +113,17 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 		}
 
 		bm.notify.Enqueue(Notification{
-			AgentID:     run.ID,
-			ToolUseID:   run.ParentToolCallID,
-			OutputFile:  outputPath,
-			Status:      statusStr,
-			Summary:     summaryText,
-			Result:      summary,
-			DurationMS:  durationMS,
-		}, PrioNext)
+			AgentID:        run.ID,
+			ToolUseID:      run.ParentToolCallID,
+			OutputFile:     outputPath,
+			Status:         statusStr,
+			Summary:        summaryText,
+			Result:         summary,
+			DurationMS:     durationMS,
+			ToolUseCount:   countToolUses(ctx, subStore, run.ID),
+			WorktreePath:   run.WorktreePath,
+			WorktreeBranch: run.WorktreeBranch,
+		}, notificationPriority(parentCtx))
 
 		// Write output file
 		if outputPath != "" {

@@ -33,3 +33,9 @@ func QuerySourceFromContext(ctx context.Context) QuerySource {
 	}
 	return QuerySourceAgent
 }
+
+// DetachSpawnContext returns a cancellable context that preserves values from parent
+// (e.g. ForkContext, RenderedSystem) but is not cancelled when parent is.
+func DetachSpawnContext(parent context.Context) (context.Context, context.CancelFunc) {
+	return context.WithCancel(context.WithoutCancel(parent))
+}

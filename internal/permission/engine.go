@@ -9,6 +9,7 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/patch"
+	"github.com/wzhejunqiu/ds-code/internal/security/classifier"
 	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
 	"go.uber.org/zap"
 )
@@ -58,8 +59,19 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 }
 
 func (e *Engine) check(tool string, args map[string]any) error {
-	if tool == "shell" && isShellReadOnlyOp(args) {
+	if tool == "shell" && IsShellReadOnlyOp(args) {
 		return e.checkShellReadOnly(args)
+	}
+	if tool == "shell" {
+		if cmd, _ := args["command"].(string); cmd != "" {
+			handled, err := e.checkShellCommand(cmd)
+			if err != nil {
+				return err
+			}
+			if handled {
+				return nil
+			}
+		}
 	}
 	if e.isWriteTool(tool) && e.Mode == "readonly" {
 		return fmt.Errorf("%w: %s in readonly mode", ErrDenied, tool)
@@ -106,6 +118,13 @@ func (e *Engine) check(tool string, args map[string]any) error {
 	}
 
 	if e.isWriteTool(tool) && e.Mode == "ask" && e.Interactive {
+		if tool == "shell" {
+			if cmd, _ := args["command"].(string); cmd != "" {
+				if dec, _ := classifier.Classify(cmd); dec == classifier.Ask || dec == classifier.Allow {
+					return nil
+				}
+			}
+		}
 		if e.Prompter == nil {
 			return fmt.Errorf("%w: no prompter configured for ask mode", ErrDenied)
 		}
@@ -118,6 +137,47 @@ func (e *Engine) check(tool string, args map[string]any) error {
 		}
 	}
 	return nil
+}
+
+// checkShellCommand applies classifier rules for shell commands.
+// When handled is true, the caller should return immediately (no further write-tool checks).
+func (e *Engine) checkShellCommand(cmd string) (handled bool, err error) {
+	dec, reason := classifier.Classify(cmd)
+	switch dec {
+	case classifier.Deny:
+		return true, fmt.Errorf("%w: %s", ErrDenied, reason)
+	case classifier.Allow:
+		if err := e.checkSensitiveShell(cmd); err != nil {
+			return true, err
+		}
+		if e.Mode == "readonly" {
+			return true, nil
+		}
+		if e.Mode == "ask" && e.Interactive {
+			return true, nil
+		}
+		return false, nil
+	case classifier.Ask:
+		if e.Mode == "readonly" {
+			return true, fmt.Errorf("%w: %s", ErrDenied, reason)
+		}
+		if err := e.checkSensitiveShell(cmd); err != nil {
+			return true, err
+		}
+		if !e.Interactive || e.Prompter == nil {
+			return true, fmt.Errorf("%w: %s requires approval (non-interactive)", ErrDenied, reason)
+		}
+		ok, err := e.Prompter("shell", cmd)
+		if err != nil {
+			return true, err
+		}
+		if !ok {
+			return true, ErrRejected
+		}
+		return true, nil
+	default:
+		return false, nil
+	}
 }
 
 func (e *Engine) summarizeArgs(tool string, args map[string]any) string {
@@ -153,7 +213,8 @@ func (e *Engine) summarizeArgs(tool string, args map[string]any) string {
 	return ""
 }
 
-func isShellReadOnlyOp(args map[string]any) bool {
+// IsShellReadOnlyOp reports shell tool args that only list/poll background jobs.
+func IsShellReadOnlyOp(args map[string]any) bool {
 	if list, _ := args["list_jobs"].(bool); list {
 		return true
 	}

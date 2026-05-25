@@ -65,16 +65,23 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 		Version:   version.Version,
 		PromptCh:         promptCh,
 		BackgroundAgents: backgroundAgents,
-		HandleSlash: func(c context.Context, w io.Writer, sid *string, line string) (bool, error) {
+		HandleSlash: func(c context.Context, w io.Writer, sid *string, line, activeAgentType string) (bool, error) {
 			env := &slashcmd.Env{
 				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,
-				CtxSvc: ctxSvc, SessionID: sid,
+				CtxSvc: ctxSvc, SessionID: sid, Spawn: a.spawnRunner(runner),
+				ActiveAgentType: activeAgentType,
 			}
 			return slashcmd.Handle(env, a, line)
+		},
+		OnSessionEnd: func(sid string) {
+			runner.EndSessionHooks(context.Background(), sid)
+			a.cleanupSessionWorktrees(context.Background(), runner, sid)
 		},
 	}
 
 	_ = out
+	defer runner.EndSessionHooks(context.Background(), sessionID)
+	defer a.cleanupSessionWorktrees(context.Background(), runner, sessionID)
 	defer a.closeStore()
 	defer a.closeMCP()
 	defer a.closeLSP()

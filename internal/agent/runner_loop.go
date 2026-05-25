@@ -24,34 +24,6 @@ type subRoundStream struct {
 	planningDone    bool
 }
 
-func (r *Runner) chatWithCompactRetry(ctx context.Context, sessionID string, req llm.Request) (*llm.Response, error) {
-	resp, err := r.LLM.Chat(ctx, req)
-	if err == nil || !llm.IsContextTooLong(err) {
-		return resp, err
-	}
-	logging.L().Info("context too long, compacting", zap.String("session_id", sessionID))
-	if compactErr := r.Context.CompactAPIContext(ctx, sessionID); compactErr != nil {
-		logging.L().Debug("context compact retry failed",
-			zap.String("session_id", sessionID),
-			zap.Error(compactErr),
-		)
-		return nil, fmt.Errorf("context too long; compact failed: %w", compactErr)
-	}
-	view, maxTokens, prepErr := r.Context.PrepareRequest(ctx, sessionID)
-	if prepErr != nil {
-		return nil, prepErr
-	}
-	logging.L().Debug("context compact retry prepared",
-		zap.String("session_id", sessionID),
-		zap.Int("messages", len(view.Messages)),
-		zap.Int("max_tokens", maxTokens),
-	)
-	req.Messages = view.Messages
-	req.MergedSystem = view.MergedSystem()
-	req.MaxTokens = maxTokens
-	return r.LLM.Chat(ctx, req)
-}
-
 func (r *Runner) attachStreamHandlers(cb *TurnCallbacks, round int, stream *subRoundStream) func(llm.StreamDelta) {
 	if cb == nil {
 		return nil
@@ -125,6 +97,9 @@ func (r *Runner) finishTerminalRound(
 	)
 	if cb == nil && r.Out != nil && resp.Content != "" {
 		_, _ = io.WriteString(r.Out, resp.Content)
+	}
+	if r.Hooks != nil {
+		r.Hooks.Run(ctx, HookStop, marshalHookInput(HookInput{SessionID: sessionID}))
 	}
 	return result, nil
 }
