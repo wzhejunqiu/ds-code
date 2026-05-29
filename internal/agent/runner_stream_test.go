@@ -83,3 +83,51 @@ func TestRunner_streamsContentDeltasDuringOnStream(t *testing.T) {
 		t.Fatalf("want 3 streamed content chunks, got %d: %v", len(content), content)
 	}
 }
+
+func TestRunTurn_onUsageUpdate(t *testing.T) {
+	cfg := testConfig()
+	dir := t.TempDir()
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("deepseek-v4-pro", "max", "enabled", "auto", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var usageCalls int
+	var last llm.Usage
+	cb := &agent.TurnCallbacks{
+		OnUsageUpdate: func(u llm.Usage) {
+			usageCalls++
+			last = u
+		},
+	}
+
+	reg := tool.NewRegistry()
+	r := &agent.Runner{
+		LLM: &streamEmitClient{resp: &llm.Response{
+			Content:          "ok",
+			FinishReason:     "stop",
+			Usage:            llm.Usage{PromptTokens: 10, CompletionTokens: 5},
+		}},
+		Tools:    reg,
+		Perm:     permission.NewEngine("auto", dir, false),
+		Sessions: store,
+		Context: &ctxpkg.Service{
+			Cfg: cfg, Store: store, Tools: reg,
+			AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: permission.NewEngine("auto", dir, false)},
+		},
+		Cfg:      cfg,
+		MaxTurns: 5,
+		Out:      &bytes.Buffer{},
+	}
+
+	if _, err := r.RunTurn(context.Background(), sess.ID, "hi", cb); err != nil {
+		t.Fatal(err)
+	}
+	if usageCalls != 1 {
+		t.Fatalf("OnUsageUpdate calls = %d, want 1", usageCalls)
+	}
+	if last.PromptTokens != 10 || last.CompletionTokens != 5 {
+		t.Fatalf("usage = %+v", last)
+	}
+}

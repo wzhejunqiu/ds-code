@@ -43,10 +43,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.ResumeListMsg:
 		return m, session.UpdateResumeList(&m.State, msg, &m.resumePicker)
 	case tuimsg.SessionResumedMsg:
-		m.refreshStatus()
-		return m, session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatView, m.syncToolView)
+		return m, session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatView, m.syncToolView, m.refreshStatus)
 	case tuimsg.HistoryLoadedMsg:
-		return m, session.UpdateHistoryLoaded(&m.State, msg, m.syncChatView)
+		return m, session.UpdateHistoryLoaded(&m.State, msg, m.syncChatView, m.refreshStatus)
 	case tuimsg.ToolStartMsg:
 		return m, turn.UpdateToolStart(&m.State, msg, m.syncChatView, m.syncToolView)
 	case tuimsg.AssistantSegmentEndMsg:
@@ -56,7 +55,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.SubagentStartMsg:
 		return m, subagentui.UpdateStart(&m.State, msg, m.syncChatView)
 	case tuimsg.SubagentEndMsg:
-		return m, subagentui.UpdateEnd(&m.State, msg, m.syncChatView)
+		cmd := subagentui.UpdateEnd(&m.State, msg, m.syncChatView)
+		m.refreshStatus()
+		m.syncChatView()
+		return m, cmd
 	case tuimsg.SubagentToolStartMsg:
 		return m, subagentui.UpdateToolStart(&m.State, msg, m.syncChatView)
 	case tuimsg.SubagentToolEndMsg:
@@ -70,9 +72,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.TCasePickerMsg:
 		return m, tcase.UpdatePicker(&m.State, msg, &m.tcasePicker)
 	case tuimsg.TurnDoneMsg:
-		return m, turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt, statusTick)
-	case tuimsg.StatusRefreshMsg:
-		return m, overlay.UpdateStatusRefresh(&m.State, m.syncChatView, statusTick)
+		return m, turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt)
+	case tuimsg.UsageUpdateMsg:
+		m.refreshStatus()
+		m.syncChatView()
+		return m, nil
 	case tuimsg.ExitConfirmTimeoutMsg:
 		return m, overlay.UpdateExitConfirmTimeout(&m.State)
 	case tuimsg.PromptRequestMsg:

@@ -1,5 +1,7 @@
 package agent
 
+import "github.com/wzhejunqiu/ds-code/internal/llm"
+
 // TurnCallbacks receives streaming and tool events during RunTurn.
 // The TUI implements these in run.go (runTurnAsync → tea.Msg on deps.Events).
 // All hooks are optional; omit a field to skip that UI update.
@@ -19,4 +21,6 @@ type TurnCallbacks struct {
 	OnSubagentEnd       func(id, summary string, err error)
 	OnSubagentToolStart func(id, name, args, command string)
 	OnSubagentToolEnd   func(id, name, args, command, result string, isError bool)
+	// OnUsageUpdate: after each LLM sub-round AddUsage (prompt or completion tokens).
+	OnUsageUpdate func(u llm.Usage)
 }

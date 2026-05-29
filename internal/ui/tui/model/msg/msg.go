@@ -46,7 +46,7 @@ type TurnDoneMsg struct {
 	Result *agent.TurnResult
 	Err    error
 }
-type StatusRefreshMsg struct{}
+type UsageUpdateMsg struct{}
 type ThinkingTickMsg struct{}
 type PromptRequestMsg struct{ Req permission.PromptRequest }
 type OverlayCloseMsg struct{}

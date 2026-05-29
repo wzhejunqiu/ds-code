@@ -149,9 +149,7 @@ func RefreshStatus(s *state.State) {
 
 	next := ""
 	if s.Deps.Context != nil {
-		if bd := s.Deps.Context.CachedBreakdown(); bd != nil {
-			next = fmt.Sprintf(" · ctx ~%d", bd.Total())
-		} else if view, err := s.Deps.Context.BuildAPIContext(ctx, s.SessionID); err == nil {
+		if view, err := s.Deps.Context.BuildAPIContext(ctx, s.SessionID); err == nil {
 			if b, err := ctxpkg.CountBreakdown(view); err == nil {
 				next = fmt.Sprintf(" · ctx ~%d", b.Total())
 			}

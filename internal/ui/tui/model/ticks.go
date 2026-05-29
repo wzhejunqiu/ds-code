@@ -14,10 +14,6 @@ const (
 	thinkingCoarseTick = time.Second
 )
 
-func statusTick() tea.Cmd {
-	return tea.Tick(2*time.Second, func(time.Time) tea.Msg { return msg.StatusRefreshMsg{} })
-}
-
 func thinkingTickAfter(interval time.Duration) tea.Cmd {
 	return tea.Tick(interval, func(time.Time) tea.Msg { return msg.ThinkingTickMsg{} })
 }

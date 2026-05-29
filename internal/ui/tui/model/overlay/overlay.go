@@ -31,12 +31,6 @@ func UpdateHelp(s *state.State, m msg.HelpOverlayMsg) tea.Cmd {
 	return nil
 }
 
-func UpdateStatusRefresh(s *state.State, syncChat func(), statusTick func() tea.Cmd) tea.Cmd {
-	view.RefreshStatus(s)
-	syncChat()
-	return statusTick()
-}
-
 func UpdateExitConfirmTimeout(s *state.State) tea.Cmd {
 	if s.ExitConfirmPending && time.Since(s.ExitConfirmArmedAt) >= uipkg.ExitConfirmTimeout {
 		ClearExitConfirm(s)

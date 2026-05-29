@@ -59,7 +59,6 @@ func New(d *deps.Deps) *Model {
 func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.listenPrompt(),
-		statusTick(),
 		session.LoadInitialHistory(&m.State),
 	)
 }

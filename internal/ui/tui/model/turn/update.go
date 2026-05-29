@@ -17,7 +17,6 @@ import (
 type SyncFn func()
 type NextThinkingTickFn func() tea.Cmd
 type ListenPromptFn func() tea.Cmd
-type StatusTickFn func() tea.Cmd
 
 func UpdateStreamContent(s *state.State, m msg.StreamContentMsg, sync SyncFn) tea.Cmd {
 	if !EventsAllowed(s) {
@@ -125,7 +124,7 @@ func UpdateTurnStarted(s *state.State, m msg.TurnStartedMsg, sync SyncFn) tea.Cm
 	return nil
 }
 
-func UpdateTurnDone(s *state.State, m msg.TurnDoneMsg, sync SyncFn, refreshStatus func(), listen ListenPromptFn, tick StatusTickFn) tea.Cmd {
+func UpdateTurnDone(s *state.State, m msg.TurnDoneMsg, sync SyncFn, refreshStatus func(), listen ListenPromptFn) tea.Cmd {
 	s.Running = false
 	s.TurnCancel = nil
 	s.TurnEscPending = false
@@ -165,5 +164,5 @@ func UpdateTurnDone(s *state.State, m msg.TurnDoneMsg, sync SyncFn, refreshStatu
 	)
 	refreshStatus()
 	sync()
-	return tea.Batch(listen(), tick())
+	return listen()
 }

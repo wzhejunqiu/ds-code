@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
@@ -149,6 +150,9 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 			sendAgentEvent(events, msg.SubagentToolEndMsg{
 				SubagentID: id, Name: name, Args: args, Command: command, Result: result, IsError: isError,
 			}, true)
+		},
+		OnUsageUpdate: func(_ llm.Usage) {
+			sendAgentEvent(events, msg.UsageUpdateMsg{}, true)
 		},
 	}
 

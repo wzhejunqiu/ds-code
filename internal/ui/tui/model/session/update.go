@@ -37,7 +37,7 @@ func UpdateResumeList(s *state.State, m msg.ResumeListMsg, picker *component.Pic
 	return nil
 }
 
-func UpdateSessionResumed(s *state.State, m msg.SessionResumedMsg, picker *component.Picker, syncChat, syncTool func()) tea.Cmd {
+func UpdateSessionResumed(s *state.State, m msg.SessionResumedMsg, picker *component.Picker, syncChat, syncTool func(), refreshStatus func()) tea.Cmd {
 	s.ResumePending = false
 	if m.Err != nil {
 		s.ErrLine = m.Err.Error()
@@ -62,10 +62,13 @@ func UpdateSessionResumed(s *state.State, m msg.SessionResumedMsg, picker *compo
 	s.ErrLine = ""
 	syncChat()
 	syncTool()
+	if refreshStatus != nil {
+		refreshStatus()
+	}
 	return nil
 }
 
-func UpdateHistoryLoaded(s *state.State, m msg.HistoryLoadedMsg, syncChat func()) tea.Cmd {
+func UpdateHistoryLoaded(s *state.State, m msg.HistoryLoadedMsg, syncChat func(), refreshStatus func()) tea.Cmd {
 	if m.Err != nil {
 		s.ErrLine = m.Err.Error()
 		return nil
@@ -76,6 +79,9 @@ func UpdateHistoryLoaded(s *state.State, m msg.HistoryLoadedMsg, syncChat func()
 	}
 	if m.Subagents.Len() > 0 {
 		s.Subagents = m.Subagents
+	}
+	if refreshStatus != nil {
+		refreshStatus()
 	}
 	return nil
 }
