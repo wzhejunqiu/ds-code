@@ -185,7 +185,7 @@ jobs:
             "golang:${GO_VERSION}-alpine" \
             sh -ec '
               apk add --no-cache gcc g++ musl-dev curl tar
-              ./scripts/fetch-tokenizers-lib.sh
+              sh ./scripts/fetch-tokenizers-lib.sh
               VERSION=$(sed -n "s/^var Version = \"\(.*\)\"/\\1/p" internal/version/version.go)
               LDFLAGS="-X github.com/wzhejunqiu/ds-code/internal/version.Version=${VERSION} -X main.gitCommit=${GITHUB_SHA}"
               go build -ldflags "$LDFLAGS" -o dist/ds-code ./cmd/ds-code

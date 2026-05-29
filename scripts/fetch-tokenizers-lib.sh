@@ -12,8 +12,8 @@ if [ -n "${TOKENIZERS_ARCH:-}" ]; then
 else
   arch="$(uname -m)"
   case "$arch" in
-    arm64|aarch64) arch="arm64" ;;
-    x86_64|amd64) arch="x86_64" ;;
+  arm64 | aarch64) arch="arm64" ;;
+  x86_64 | amd64) arch="x86_64" ;;
   esac
 fi
 
