@@ -6,12 +6,16 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/third_party/tokenizers"
 mkdir -p "$DEST"
 
-os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-arch="$(uname -m)"
-case "$arch" in
-  arm64|aarch64) arch="arm64" ;;
-  x86_64|amd64) arch="x86_64" ;;
-esac
+os="${TOKENIZERS_OS:-$(uname -s | tr '[:upper:]' '[:lower:]')}"
+if [ -n "${TOKENIZERS_ARCH:-}" ]; then
+  arch="$TOKENIZERS_ARCH"
+else
+  arch="$(uname -m)"
+  case "$arch" in
+    arm64|aarch64) arch="arm64" ;;
+    x86_64|amd64) arch="x86_64" ;;
+  esac
+fi
 
 url="https://github.com/daulet/tokenizers/releases/latest/download/libtokenizers.${os}-${arch}.tar.gz"
 echo "Fetching $url"

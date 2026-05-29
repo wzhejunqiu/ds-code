@@ -87,3 +87,118 @@ jobs:
 
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  build:
+    needs: [test]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            artifact: ds-code-linux-amd64
+          - runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            tokenizers_arch: x86_64
+            artifact: ds-code-linux-x86_64
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            tokenizers_arch: arm64
+            artifact: ds-code-linux-arm64
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            tokenizers_arch: aarch64
+            artifact: ds-code-linux-aarch64
+          - runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            tokenizers_arch: musl-amd64
+            cc: musl-gcc
+            musl: true
+            artifact: ds-code-linux-musl-amd64
+          - runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            tokenizers_arch: musl-x86_64
+            cc: musl-gcc
+            musl: true
+            artifact: ds-code-linux-musl-x86_64
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            tokenizers_arch: musl-arm64
+            cc: musl-gcc
+            musl: true
+            artifact: ds-code-linux-musl-arm64
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            tokenizers_arch: musl-aarch64
+            cc: musl-gcc
+            musl: true
+            artifact: ds-code-linux-musl-aarch64
+          - runner: macos-latest
+            goos: darwin
+            goarch: arm64
+            artifact: ds-code-darwin-arm64
+          - runner: macos-latest
+            goos: darwin
+            goarch: arm64
+            tokenizers_arch: aarch64
+            artifact: ds-code-darwin-aarch64
+          - runner: macos-latest
+            goos: darwin
+            goarch: amd64
+            tokenizers_arch: x86_64
+            cc: clang -arch x86_64
+            artifact: ds-code-darwin-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install musl toolchain
+        if: matrix.musl == true
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Install tokenizers static lib
+        env:
+          TOKENIZERS_ARCH: ${{ matrix.tokenizers_arch }}
+        run: ./scripts/fetch-tokenizers-lib.sh
+
+      - name: Build
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          if [ -n "${{ matrix.cc }}" ]; then
+            export CC="${{ matrix.cc }}"
+          fi
+          mkdir -p dist
+          VERSION="$(sed -n 's/^var Version = "\(.*\)"/\1/p' internal/version/version.go)"
+          LDFLAGS="-X github.com/wzhejunqiu/ds-code/internal/version.Version=${VERSION} -X main.gitCommit=${GITHUB_SHA}"
+          go build -ldflags "$LDFLAGS" -o dist/ds-code ./cmd/ds-code
+
+      - name: Verify
+        run: |
+          if [ "${{ matrix.goarch }}" = "amd64" ] && [ "${{ matrix.goos }}" = "darwin" ]; then
+            arch -x86_64 ./dist/ds-code version
+          else
+            ./dist/ds-code version
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/ds-code
+          if-no-files-found: error
