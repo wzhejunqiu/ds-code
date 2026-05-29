@@ -213,7 +213,7 @@ jobs:
             docker run --rm \
               -v "${GITHUB_WORKSPACE}/dist/ds-code:/ds-code:ro" \
               "golang:${GO_VERSION}-alpine" \
-              /ds-code version
+              sh -ec 'apk add --no-cache libstdc++ libgcc && /ds-code version'
           elif [ "${{ matrix.goarch }}" = "amd64" ] && [ "${{ matrix.goos }}" = "darwin" ]; then
             arch -x86_64 ./dist/ds-code version
           else
