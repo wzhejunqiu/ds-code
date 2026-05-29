@@ -2,9 +2,6 @@ package spawn
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -20,19 +17,19 @@ import (
 
 // BackgroundManager tracks in-flight async agents and drains completion notifications.
 type BackgroundManager struct {
-	mu       sync.Mutex
-	tasks    map[string]*BackgroundTask
-	notify   *NotificationQueue
+	mu     sync.Mutex
+	tasks  map[string]*BackgroundTask
+	notify *NotificationQueue
 }
 
 // BackgroundTask is one running async agent.
 type BackgroundTask struct {
-	RunID      string
-	AgentType  string
-	Label      string
-	StartTime  time.Time
-	Cancel     context.CancelFunc
-	Done       chan struct{}
+	RunID     string
+	AgentType string
+	Label     string
+	StartTime time.Time
+	Cancel    context.CancelFunc
+	Done      chan struct{}
 }
 
 // NewBackgroundManager creates a manager backed by a notification queue.
@@ -44,7 +41,7 @@ func NewBackgroundManager(nq *NotificationQueue) *BackgroundManager {
 }
 
 // Start launches an agent run in a background goroutine.
-func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config, llmClient llm.Client, run subagentstore.Run, def AgentTypeDefinition, perm *permission.Engine, parentReg *tool.Registry, subStore subagentstore.Store, parentCallbacks *agent.TurnCallbacks, outputPath string, hooks *agent.HookManager, failCleanup func(context.Context, subagentstore.Run)) {
+func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config, llmClient llm.Client, run subagentstore.Run, def AgentTypeDefinition, perm *permission.Engine, parentReg *tool.Registry, subStore subagentstore.Store, parentCallbacks *agent.TurnCallbacks, hooks *agent.HookManager, failCleanup func(context.Context, subagentstore.Run)) {
 	ctx, cancel := DetachSpawnContext(parentCtx)
 	task := &BackgroundTask{
 		RunID:     run.ID,
@@ -62,13 +59,6 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 	go func() {
 		defer close(task.Done)
 		defer cancel()
-
-		// Ensure output directory exists
-		if outputPath != "" {
-			if err := os.MkdirAll(filepath.Dir(outputPath), 0700); err != nil {
-				logging.L().Warn("create output dir failed", zap.String("run_id", run.ID), zap.Error(err))
-			}
-		}
 
 		startTime := time.Now()
 		cb := agent.SubagentToolCallbacks(parentCallbacks, run.ID)
@@ -100,37 +90,26 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 			failCleanup(ctx, run)
 		}
 
-		// Build notification
-		statusStr := "completed"
-		switch status {
-		case subagentstore.StatusError:
-			statusStr = "failed"
-		case subagentstore.StatusKilled:
-			statusStr = "killed"
-		}
-
-		summaryText := fmt.Sprintf("Agent %q %s", run.Label, statusStr)
-		if runErr != nil {
-			summaryText = fmt.Sprintf("Agent %q failed: %s", run.Label, runErr.Error())
-		}
-
-		bm.notify.Enqueue(Notification{
+		statusStr := agentStatusString(status)
+		summaryText := agentSummaryText(run.Label, statusStr, runErr)
+		delivered := DeliverResult(cfg.ProjectDataDir, run.ParentSessionID, run.ParentToolCallID, summary, statusStr, runErr, cfg)
+		n := Notification{
 			AgentID:        run.ID,
 			ToolUseID:      run.ParentToolCallID,
-			OutputFile:     outputPath,
 			Status:         statusStr,
 			Summary:        summaryText,
-			Result:         summary,
 			DurationMS:     durationMS,
 			ToolUseCount:   countToolUses(ctx, subStore, run.ID),
 			WorktreePath:   run.WorktreePath,
 			WorktreeBranch: run.WorktreeBranch,
-		}, notificationPriority(parentCtx))
-
-		// Write output file
-		if outputPath != "" {
-			writeOutputFile(outputPath, summary, statusStr, runErr)
 		}
+		if delivered.Inline {
+			n.Result = delivered.Body
+		} else {
+			n.OutputFile = delivered.OutputPath
+		}
+
+		bm.notify.Enqueue(n, notificationPriority(parentCtx))
 
 		bm.mu.Lock()
 		delete(bm.tasks, run.ID)
@@ -194,18 +173,4 @@ func (bm *BackgroundManager) List() []BackgroundTask {
 		out = append(out, *t)
 	}
 	return out
-}
-
-func writeOutputFile(path, summary, status string, err error) {
-	f, fileErr := os.Create(path)
-	if fileErr != nil {
-		logging.L().Warn("cannot create output file", zap.String("path", path), zap.Error(fileErr))
-		return
-	}
-	defer f.Close()
-	fmt.Fprintf(f, "status: %s\n", status)
-	if err != nil {
-		fmt.Fprintf(f, "error: %s\n", err.Error())
-	}
-	fmt.Fprintf(f, "\n%s\n", summary)
 }

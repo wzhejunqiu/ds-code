@@ -13,6 +13,12 @@ func TestIsContextTooLong_positive(t *testing.T) {
 		"context is too long for this model",
 		"request exceeds the context limit",
 		"too many tokens in context",
+		"HTTP 413",
+		"status code 413",
+		"status: 413",
+		"error 413",
+		"request too large",
+		"payload too large",
 	}
 	for _, msg := range cases {
 		if !IsContextTooLong(errors.New(msg)) {
@@ -26,6 +32,7 @@ func TestIsContextTooLong_negative(t *testing.T) {
 		"network timeout",
 		"wrong context menu",
 		"connection reset",
+		"error code 4130",
 		"",
 	}
 	for _, msg := range cases {

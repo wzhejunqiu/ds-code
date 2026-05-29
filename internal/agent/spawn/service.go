@@ -81,11 +81,6 @@ func (s *Service) Handle(ctx context.Context, inv agent.ToolInvocation, params P
 		}
 	}
 
-	outputPath := ""
-	if decision.Background {
-		outputPath = agentOutputPath(s.Cfg.ProjectDataDir, inv.SessionID, inv.ToolCallID)
-	}
-
 	run, err := s.Store.CreateRun(ctx, subagentstore.CreateRunParams{
 		ParentSessionID:  inv.SessionID,
 		ParentToolCallID: inv.ToolCallID,
@@ -97,7 +92,7 @@ func (s *Service) Handle(ctx context.Context, inv agent.ToolInvocation, params P
 		ReasoningEffort:  s.Cfg.LLM.ResolveSubagentReasoningEffort(),
 		ThinkingType:     resolveThinkingType(s.Cfg, decision.Definition, s.parentSessionThinking(ctx, inv.SessionID), decision.IsFork),
 		Background:       decision.Background,
-		OutputPath:       outputPath,
+		OutputPath:       "",
 		IsolationMode:    decision.Isolation,
 		WorktreePath:     wtPath,
 		WorktreeBranch:   wtBranch,
@@ -132,11 +127,11 @@ func (s *Service) Handle(ctx context.Context, inv agent.ToolInvocation, params P
 	}
 
 	if decision.Background {
-		s.BackgroundManager.Start(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, parent, outputPath, s.Hooks, s.cleanupWorktreeImmediate)
-		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s","output_file":"%s"}`, run.ID, decision.Description, outputPath), nil
+		s.BackgroundManager.Start(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, parent, s.Hooks, s.cleanupWorktreeImmediate)
+		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s"}`, run.ID, decision.Description), nil
 	}
 
-	return s.runSync(ctx, inv, run, decision, parent, outputPath)
+	return s.runSync(ctx, inv, run, decision, parent)
 }
 
 type executeResult struct {
@@ -144,16 +139,12 @@ type executeResult struct {
 	err     error
 }
 
-func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, outputPath string) (string, error) {
+func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks) (string, error) {
 	cb := agent.SubagentToolCallbacks(parent, run.ID)
 	timeoutSec := s.Cfg.Tools.Agent.AutoBackgroundAfter
 	if timeoutSec <= 0 {
 		summary, runErr := ExecuteRun(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0)
-		return s.finishSync(ctx, run, decision, parent, outputPath, summary, runErr)
-	}
-
-	if outputPath == "" {
-		outputPath = agentOutputPath(s.Cfg.ProjectDataDir, inv.SessionID, inv.ToolCallID)
+		return s.finishSync(ctx, run, decision, parent, summary, runErr)
 	}
 
 	done := make(chan executeResult, 1)
@@ -171,27 +162,27 @@ func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run sub
 
 	select {
 	case res := <-done:
-		return s.finishSync(ctx, run, decision, parent, outputPath, res.summary, res.err)
+		return s.finishSync(ctx, run, decision, parent, res.summary, res.err)
 	case <-time.After(time.Duration(timeoutSec) * time.Second):
 		promoted = true
 		_ = s.Store.SetRunBackground(ctx, run.ID, true)
 		run.Background = true
 		s.BackgroundManager.RegisterPromoted(run.ID, decision.Definition.Type, run.Label)
-		go s.waitPromoted(ctx, run, decision, parent, outputPath, done, cancel)
-		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s","output_file":"%s"}`, run.ID, decision.Description, outputPath), nil
+		go s.waitPromoted(ctx, run, decision, parent, done, cancel)
+		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s"}`, run.ID, decision.Description), nil
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}
 }
 
-func (s *Service) waitPromoted(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, outputPath string, done <-chan executeResult, cancel context.CancelFunc) {
+func (s *Service) waitPromoted(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, done <-chan executeResult, cancel context.CancelFunc) {
 	defer cancel()
 	defer s.BackgroundManager.CompletePromoted(run.ID)
 	res := <-done
-	s.finishAsync(ctx, run, decision, parent, outputPath, res.summary, res.err)
+	s.finishAsync(ctx, run, decision, parent, res.summary, res.err)
 }
 
-func (s *Service) finishSync(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, outputPath string, summary string, runErr error) (string, error) {
+func (s *Service) finishSync(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, summary string, runErr error) (string, error) {
 	status := subagentstore.StatusCompleted
 	errMsg := ""
 	if runErr != nil {
@@ -215,13 +206,12 @@ func (s *Service) finishSync(ctx context.Context, run subagentstore.Run, decisio
 	if runErr != nil {
 		return "", runErr
 	}
-	if decision.Description != "" {
-		return fmt.Sprintf("[%s]\n%s", decision.Description, summary), nil
-	}
-	return summary, nil
+	statusStr := "completed"
+	delivered := DeliverResult(s.Cfg.ProjectDataDir, run.ParentSessionID, run.ParentToolCallID, summary, statusStr, nil, s.Cfg)
+	return formatSyncToolReturn(decision.Description, delivered), nil
 }
 
-func (s *Service) finishAsync(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, outputPath, summary string, runErr error) {
+func (s *Service) finishAsync(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, summary string, runErr error) {
 	startTime := run.CreatedAt
 	status := subagentstore.StatusCompleted
 	errMsg := ""
@@ -246,32 +236,25 @@ func (s *Service) finishAsync(ctx context.Context, run subagentstore.Run, decisi
 		s.Hooks.Run(ctx, agent.HookSubagentStop, agent.MarshalHookInput(in))
 	}
 
-	statusStr := "completed"
-	switch status {
-	case subagentstore.StatusError:
-		statusStr = "failed"
-	case subagentstore.StatusKilled:
-		statusStr = "killed"
-	}
-	summaryText := fmt.Sprintf("Agent %q %s", run.Label, statusStr)
-	if runErr != nil {
-		summaryText = fmt.Sprintf("Agent %q failed: %s", run.Label, runErr.Error())
-	}
-	s.NotifyQueue.Enqueue(Notification{
+	statusStr := agentStatusString(status)
+	summaryText := agentSummaryText(run.Label, statusStr, runErr)
+	delivered := DeliverResult(s.Cfg.ProjectDataDir, run.ParentSessionID, run.ParentToolCallID, summary, statusStr, runErr, s.Cfg)
+	n := Notification{
 		AgentID:        run.ID,
 		ToolUseID:      run.ParentToolCallID,
-		OutputFile:     outputPath,
 		Status:         statusStr,
 		Summary:        summaryText,
-		Result:         summary,
 		DurationMS:     durationMS,
 		ToolUseCount:   countToolUses(ctx, s.Store, run.ID),
 		WorktreePath:   run.WorktreePath,
 		WorktreeBranch: run.WorktreeBranch,
-	}, notificationPriority(ctx))
-	if outputPath != "" {
-		writeOutputFile(outputPath, summary, statusStr, runErr)
 	}
+	if delivered.Inline {
+		n.Result = delivered.Body
+	} else {
+		n.OutputFile = delivered.OutputPath
+	}
+	s.NotifyQueue.Enqueue(n, notificationPriority(ctx))
 	if parent != nil && parent.OnSubagentEnd != nil {
 		parent.OnSubagentEnd(run.ID, summary, runErr)
 	}
@@ -279,6 +262,24 @@ func (s *Service) finishAsync(ctx context.Context, run subagentstore.Run, decisi
 		zap.String("run_id", run.ID),
 		zap.String("status", statusStr),
 	)
+}
+
+func agentStatusString(status subagentstore.Status) string {
+	switch status {
+	case subagentstore.StatusError:
+		return "failed"
+	case subagentstore.StatusKilled:
+		return "killed"
+	default:
+		return "completed"
+	}
+}
+
+func agentSummaryText(label, statusStr string, runErr error) string {
+	if runErr != nil {
+		return fmt.Sprintf("Agent %q failed: %s", label, runErr.Error())
+	}
+	return fmt.Sprintf("Agent %q %s", label, statusStr)
 }
 
 // DrainNotifications returns pending completion notices for injection into the main conversation.

@@ -34,14 +34,11 @@ Issues: [anything unresolved, or "None"]
 </fork-boilerplate>`
 
 // BuildForkMessages constructs the child agent conversation from the parent's
-// API messages. It clones the triggering assistant message (all tool_use blocks)
-// and appends a single user message with identical placeholder tool_results
-// plus the fork directive.
+// API messages. It clones the triggering assistant message (all tool_use blocks),
+// appends role=tool placeholder results, then a user message with boilerplate + directive.
 func BuildForkMessages(parentMessages []llm.Message, parentToolCalls []llm.ToolCall, directive string) []llm.Message {
-	out := make([]llm.Message, 0, len(parentMessages)+2)
+	out := make([]llm.Message, 0, len(parentMessages)+len(parentToolCalls)+1)
 
-	// Copy history up to (but not including) the triggering assistant message.
-	// Find the last assistant message that contains the agent tool_call.
 	triggerIdx := -1
 	for i := len(parentMessages) - 1; i >= 0; i-- {
 		if parentMessages[i].Role == role.Assistant && len(parentMessages[i].ToolCalls) > 0 {
@@ -53,18 +50,21 @@ func BuildForkMessages(parentMessages []llm.Message, parentToolCalls []llm.ToolC
 	if triggerIdx >= 0 {
 		out = append(out, parentMessages[:triggerIdx+1]...)
 	} else if len(parentMessages) > 0 {
-		// Skill fork and other non-agent triggers: include full parent API context.
 		out = append(out, parentMessages...)
 	}
 
-	// Build child user message: placeholder tool_results (agent fork only) + boilerplate + directive
-	var sb strings.Builder
-	if len(parentToolCalls) > 0 {
-		for _, tc := range parentToolCalls {
-			fmt.Fprintf(&sb, "\n<tool_result tool_call_id=%q>\n%s\n</tool_result>\n", tc.ID, ForkPlaceholder)
-		}
+	for _, tc := range parentToolCalls {
+		out = append(out, llm.Message{
+			Role:       role.Tool,
+			ToolCallID: tc.ID,
+			Name:       tc.Name,
+			Content:    ForkPlaceholder,
+		})
 	}
-	sb.WriteString("\n" + ForkBoilerplate + "\n\n")
+
+	var sb strings.Builder
+	sb.WriteString(ForkBoilerplate)
+	sb.WriteString("\n\n")
 	sb.WriteString(buildChildDirective(directive))
 
 	out = append(out, llm.Message{

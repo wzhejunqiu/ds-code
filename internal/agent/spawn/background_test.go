@@ -95,7 +95,7 @@ func TestBackgroundManager_enqueuePrioLater(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bm.Start(agent.WithActiveTurn(context.Background()), cfg, mockLLM, run, def, perm, reg, sub, nil, "", nil, nil)
+	bm.Start(agent.WithActiveTurn(context.Background()), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil)
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) && bm.RunningCount() > 0 {
@@ -155,16 +155,16 @@ func TestBackgroundManager_enqueuePrioNextWhenIdle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bm.Start(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, "", nil, nil)
+	bm.Start(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil)
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) && bm.RunningCount() > 0 {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	next := q.Drain(spawn.PrioNext)
+	next := q.Drain(spawn.PrioNow)
 	if len(next) != 1 {
-		t.Fatalf("expected 1 PrioNext notification, got %d", len(next))
+		t.Fatalf("expected 1 PrioNow notification, got %d", len(next))
 	}
 	if later := q.Drain(spawn.PrioLater); len(later) != 0 {
 		t.Fatalf("expected no PrioLater, got %d", len(later))

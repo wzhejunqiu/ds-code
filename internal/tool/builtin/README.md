@@ -16,7 +16,7 @@
 | `shell` | [shell/shell.md](shell/shell.md) | Highest | agent only |
 | `apply_patch` | [apply_patch/apply_patch.md](apply_patch/apply_patch.md) | High | agent only |
 | `write_file` | [write_file/write_file.md](write_file/write_file.md) | High | agent only |
-| `task` | [task/task.md](task/task.md) | Low | agent only（需 LLM） |
+| `agent` | [agent/agent.go](agent/agent.go) | Low | agent only（需 LLM） |
 
 ## 注册与运行模式
 
@@ -31,13 +31,13 @@ BuildRegistry(runMode, deps)
   ├─ RegisterWrite      → 仅 agent（runMode != "plan"）
   │    ├─ shell, apply_patch, write_file
   └─ RegisterAgentExtras
-       ├─ task（需 llm.Client）
+       ├─ agent（需 llm.Client）
        └─ MCP 工具（mcp__*）
 ```
 
 - **Plan 模式**：只读探索 + 可选 `web_fetch` / `diagnostics`；禁止写盘与 shell。
-- **Agent 模式**：完整写工具与子代理 `task`。
-- **Subagent（`task` 内）**：仅 `RegisterExploreTools`，权限引擎为 `readonly`。
+- **Agent 模式**：完整写工具与子代理 `agent`。
+- **Subagent（`agent` 内）**：按类型过滤工具池；Explore/Plan 为 `readonly`。
 
 实现入口：[`setup/setup.go`](../setup/setup.go)、[`register/explore.go`](../register/explore.go)；各工具见 `<tool>/` 子目录。
 

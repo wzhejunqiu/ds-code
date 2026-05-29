@@ -231,9 +231,9 @@ DeepSeek V4（`deepseek-v4-pro` / `deepseek-v4-flash`）：**上下文 1,048,576
 
 ### 子代理 / 并行探索（Phase 6）
 
-- `internal/agent/subagent`：只读 Runner，**无 write/shell**；受 S3 同一敏感路径 denylist。
-- 主 Runner 仅通过内置 **`task` 工具** 或 TUI `/task` 派发；并发上限 `tools.task.max_parallel`（默认 3）。
-- **Canonical 回注**：摘要作为 `role=tool`、`tool` 名 `task` 写入 API `Messages` 与历史层；摘要 ≤ `tools.task.summary_max_chars`。
+- `internal/agent/spawn`：子代理 Runner，按类型配置工具集；受 S3 同一敏感路径 denylist。
+- 主 Runner 仅通过内置 **`agent` 工具** 或 TUI `/agent` 派发；并发上限 `tools.agent.max_parallel`（默认 3）。
+- **Canonical 回注**：摘要作为 `role=tool`、`tool` 名 `agent` 写入 API `Messages` 与历史层；摘要 ≤ `tools.agent.summary_max_chars`。
 - **持久化**：完整 subagent transcript 在 `subagent_runs` / `subagent_messages`（schema v3）；主 `BuildAPIContext` 不读子表；用量按需 `usageagg` 聚合。
 - 对标 Claude Code `Task` / explore subagent。
 
@@ -674,7 +674,7 @@ github.com/mark3labs/mcp-go
 | `/mode` 作用域 | **per-session**（`sessions.model`） |
 | `apply_patch` 对齐 Codex | 需完善 diff 解析与失败回滚测试 |
 | strict schema Phase 2 | beta API；**全部** completions 走 beta；schema 须 `additionalProperties: false` |
-| 子代理并行 | Token/成本上升；`tools.task.max_parallel` 默认 3 |
+| 子代理并行 | Token/成本上升；`tools.agent.max_parallel` 默认 3 |
 | Web 工具 | Phase 6；SSRF → allowlist + 默认关 |
 | Checkpoint | Phase 7；可先仅记录 patch 不快照全量 |
 | CGO + tokenizer | 条件 A 无 CGO 时用 `CharCounter` 并标注「估算」 |

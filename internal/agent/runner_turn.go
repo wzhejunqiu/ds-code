@@ -144,6 +144,9 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		if err := r.Sessions.AddUsage(ctx, sessionID, resp.Usage); err != nil {
 			logging.L().Warn("add usage failed", zap.String("session_id", sessionID), zap.Error(err))
 		}
+		if r.Context != nil && resp.Usage.PromptTokens > 0 {
+			r.Context.RecordPromptUsage(sessionID, resp.Usage.PromptTokens)
+		}
 		result.Usage = resp.Usage
 		result.SubRounds = round + 1
 

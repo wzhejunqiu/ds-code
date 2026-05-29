@@ -19,6 +19,7 @@ type ContextPanelData struct {
 	Session      session.Session
 	MainSnapshot session.UsageSnapshot
 	SubSnapshot  session.UsageSnapshot
+	ByAgentType  []usageagg.AgentTypeUsage
 	Snapshot     session.UsageSnapshot
 	Cost         usageagg.CostBreakdown
 	Breakdown    ctxpkg.ContextBreakdown
@@ -50,10 +51,15 @@ func BuildContextPanelData(ctx context.Context, cfg *config.Config, main session
 	if err != nil {
 		return ContextPanelData{}, err
 	}
+	byType, err := usageagg.UsageByAgentType(ctx, sub, sess.ID)
+	if err != nil {
+		return ContextPanelData{}, err
+	}
 	return ContextPanelData{
 		Session:      sess,
 		MainSnapshot: mainSnap,
 		SubSnapshot:  subSnap,
+		ByAgentType:  byType,
 		Snapshot:     total,
 		Cost:         cost,
 		Breakdown:    bd,
@@ -78,6 +84,10 @@ func FormatContextPanel(d ContextPanelData) string {
 		fmt.Fprintf(&b, "  (subagent runs) in %d · out %d   %s\n",
 			d.SubSnapshot.PromptTokensTotal, d.SubSnapshot.CompletionTokensTotal,
 			billing.FormatCNY(d.Cost.SubagentCNY))
+		for _, row := range d.ByAgentType {
+			fmt.Fprintf(&b, "    %s: in %d · out %d\n",
+				row.AgentType, row.Snapshot.PromptTokensTotal, row.Snapshot.CompletionTokensTotal)
+		}
 	}
 	fmt.Fprintf(&b, "Compact: prompt_total >= %d → B; next est >= %d → A\n\n",
 		d.Threshold, d.Threshold)

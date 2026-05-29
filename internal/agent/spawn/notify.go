@@ -2,8 +2,8 @@ package spawn
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/wzhejunqiu/ds-code/internal/agent"
@@ -17,8 +17,8 @@ type NotificationPriority int
 
 const (
 	PrioNow   NotificationPriority = iota // injected before next user message
-	PrioNext                               // drained at start of next RunTurn
-	PrioLater                              // drained when idle
+	PrioNext                                 // drained at start of next RunTurn
+	PrioLater                                // drained when idle
 )
 
 // Notification is a completion/failure/kill notice for an async agent.
@@ -28,7 +28,7 @@ type Notification struct {
 	OutputFile     string
 	Status         string // completed | failed | killed
 	Summary        string
-	Result         string
+	Result         string // inline body when not spilled (Format uses when OutputFile empty)
 	Usage          llm.Usage
 	DurationMS     int64
 	ToolUseCount   int
@@ -36,62 +36,36 @@ type Notification struct {
 	WorktreeBranch string
 }
 
-type notificationPayload struct {
-	AgentID    string                    `json:"agent_id"`
-	ToolUseID  string                    `json:"tool_use_id"`
-	OutputFile string                    `json:"output_file,omitempty"`
-	Status     string                    `json:"status"`
-	Summary    string                    `json:"summary"`
-	Result     string                    `json:"result,omitempty"`
-	Usage      notificationUsagePayload  `json:"usage"`
-	Worktree   *notificationWorktree     `json:"worktree,omitempty"`
-}
-
-type notificationUsagePayload struct {
-	TotalTokens int   `json:"total_tokens"`
-	ToolUses    int   `json:"tool_uses"`
-	DurationMS  int64 `json:"duration_ms"`
-}
-
-type notificationWorktree struct {
-	Path   string `json:"path"`
-	Branch string `json:"branch"`
-}
-
-// notificationPriority picks PrioLater during an active parent turn, else PrioNext.
+// notificationPriority picks PrioLater during an active parent turn, else PrioNow.
 func notificationPriority(ctx context.Context) NotificationPriority {
 	if agent.InActiveTurn(ctx) {
 		return PrioLater
 	}
-	return PrioNext
+	return PrioNow
 }
 
-// Format renders the notification as a tagged JSON block for LLM consumption.
+// Format renders the notification as XML for LLM consumption (no usage block).
 func (n Notification) Format() string {
-	payload := notificationPayload{
-		AgentID:    n.AgentID,
-		ToolUseID:  n.ToolUseID,
-		OutputFile: n.OutputFile,
-		Status:     n.Status,
-		Summary:    n.Summary,
-		Result:     n.Result,
-		Usage: notificationUsagePayload{
-			TotalTokens: n.Usage.PromptTokens + n.Usage.CompletionTokens,
-			ToolUses:    n.ToolUseCount,
-			DurationMS:  n.DurationMS,
-		},
+	var b strings.Builder
+	b.WriteString("<task-notification>\n")
+	fmt.Fprintf(&b, "  <task-id>%s</task-id>\n", xmlEscapeText(n.AgentID))
+	fmt.Fprintf(&b, "  <tool-use-id>%s</tool-use-id>\n", xmlEscapeText(n.ToolUseID))
+	if n.OutputFile != "" {
+		fmt.Fprintf(&b, "  <output-file>%s</output-file>\n", xmlEscapeText(n.OutputFile))
+	}
+	fmt.Fprintf(&b, "  <status>%s</status>\n", xmlEscapeText(n.Status))
+	fmt.Fprintf(&b, "  <summary>%s</summary>\n", xmlEscapeText(n.Summary))
+	if n.OutputFile == "" && n.Result != "" {
+		fmt.Fprintf(&b, "  <result>%s</result>\n", xmlEscapeText(n.Result))
 	}
 	if n.WorktreePath != "" {
-		payload.Worktree = &notificationWorktree{
-			Path:   n.WorktreePath,
-			Branch: n.WorktreeBranch,
-		}
+		b.WriteString("  <worktree>\n")
+		fmt.Fprintf(&b, "    <worktreePath>%s</worktreePath>\n", xmlEscapeText(n.WorktreePath))
+		fmt.Fprintf(&b, "    <worktreeBranch>%s</worktreeBranch>\n", xmlEscapeText(n.WorktreeBranch))
+		b.WriteString("  </worktree>\n")
 	}
-	b, err := json.Marshal(payload)
-	if err != nil {
-		b = []byte(fmt.Sprintf(`{"agent_id":%q,"status":%q,"summary":"serialization error"}`, n.AgentID, n.Status))
-	}
-	return fmt.Sprintf("<task-notification>\n%s\n</task-notification>", b)
+	b.WriteString("</task-notification>")
+	return b.String()
 }
 
 // FormatXML is an alias for Format (legacy name).

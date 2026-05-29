@@ -15,6 +15,12 @@ func IsContextTooLong(err error) bool {
 		"context is too long",
 		"exceeds the context",
 		"too many tokens",
+		"request too large",
+		"payload too large",
+		"http 413",
+		"status code 413",
+		"status: 413",
+		"error 413",
 	}
 	for _, p := range phrases {
 		if strings.Contains(s, p) {

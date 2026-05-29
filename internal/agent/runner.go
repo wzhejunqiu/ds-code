@@ -43,6 +43,9 @@ type Runner struct {
 	DrainNotifications      NotificationFunc
 	DrainNotificationsLater DrainNotificationsLaterFunc
 
+	// ForSubagent marks a child-agent runner (uses llm.subagent.fallback_model on 5xx).
+	ForSubagent bool
+
 	sessionStarted map[string]bool
 }
 

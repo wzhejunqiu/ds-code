@@ -39,16 +39,43 @@ func TestCountToolUses(t *testing.T) {
 	}
 }
 
-func TestNotificationFormat_includesToolUses(t *testing.T) {
+func TestNotificationFormat_inlineXML(t *testing.T) {
 	n := Notification{
-		AgentID:      "a1",
-		Status:       "completed",
-		ToolUseCount: 3,
-		DurationMS:   100,
+		AgentID:   "a1",
+		ToolUseID: "tc1",
+		Status:    "completed",
+		Summary:   `Agent "x" completed`,
+		Result:    "short <result>",
 	}
 	out := n.Format()
-	if !strings.Contains(out, `"tool_uses":3`) {
-		t.Fatalf("expected tool_uses in JSON, got %q", out)
+	if !strings.Contains(out, "<task-notification>") {
+		t.Fatal("expected wrapper")
+	}
+	if !strings.Contains(out, "<result>short &lt;result&gt;</result>") {
+		t.Fatalf("expected escaped result, got %q", out)
+	}
+	if strings.Contains(out, "<usage>") || strings.Contains(out, "total_tokens") {
+		t.Fatal("usage should not appear in notification")
+	}
+	if strings.Contains(out, "<output-file>") {
+		t.Fatal("inline should not have output-file")
+	}
+}
+
+func TestNotificationFormat_spillXML(t *testing.T) {
+	n := Notification{
+		AgentID:    "a1",
+		ToolUseID:  "tc1",
+		OutputFile: "/tmp/out.output",
+		Status:     "completed",
+		Summary:    `Agent "x" completed`,
+	}
+	out := n.Format()
+	if !strings.Contains(out, "<output-file>/tmp/out.output</output-file>") {
+		t.Fatalf("expected output-file, got %q", out)
+	}
+	if strings.Contains(out, "<result>") {
+		t.Fatal("spill should not have result")
 	}
 }
 
@@ -69,7 +96,7 @@ func TestNotificationPriority_activeTurn(t *testing.T) {
 		t.Fatalf("active turn: got %v, want PrioLater", got)
 	}
 	ctx = agent.WithoutActiveTurn(ctx)
-	if got := notificationPriority(ctx); got != PrioNext {
-		t.Fatalf("idle: got %v, want PrioNext", got)
+	if got := notificationPriority(ctx); got != PrioNow {
+		t.Fatalf("idle: got %v, want PrioNow", got)
 	}
 }

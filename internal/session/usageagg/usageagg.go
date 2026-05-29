@@ -47,3 +47,39 @@ func SubagentOnly(ctx context.Context, sub subagentstore.Store, parentSessionID 
 	snap.Billed = int(snap.PromptTokensTotal + snap.CompletionTokensTotal)
 	return snap, nil
 }
+
+// AgentTypeUsage is token usage grouped by agent type for one parent session.
+type AgentTypeUsage struct {
+	AgentType string
+	Snapshot  session.UsageSnapshot
+}
+
+// UsageByAgentType aggregates agent_runs usage grouped by AgentType.
+func UsageByAgentType(ctx context.Context, sub subagentstore.Store, parentSessionID string) ([]AgentTypeUsage, error) {
+	if sub == nil {
+		return nil, nil
+	}
+	runs, err := sub.ListRuns(ctx, parentSessionID)
+	if err != nil {
+		return nil, err
+	}
+	byType := make(map[string]*session.UsageSnapshot)
+	order := make([]string, 0)
+	for _, r := range runs {
+		if _, ok := byType[r.AgentType]; !ok {
+			byType[r.AgentType] = &session.UsageSnapshot{}
+			order = append(order, r.AgentType)
+		}
+		s := byType[r.AgentType]
+		s.PromptTokensTotal += r.PromptTokensTotal
+		s.CompletionTokensTotal += r.CompletionTokensTotal
+		s.PromptCacheHitTokensTotal += r.PromptCacheHitTokensTotal
+	}
+	out := make([]AgentTypeUsage, 0, len(order))
+	for _, typ := range order {
+		snap := *byType[typ]
+		snap.Billed = int(snap.PromptTokensTotal + snap.CompletionTokensTotal)
+		out = append(out, AgentTypeUsage{AgentType: typ, Snapshot: snap})
+	}
+	return out, nil
+}

@@ -50,7 +50,8 @@ type Service struct {
 	// VerificationMode appends a per-round verification reminder (view layer only).
 	VerificationMode bool
 
-	collapse *collapseTracker
+	collapse     *collapseTracker
+	promptUsage  *promptUsage
 }
 
 // BeginUserTurn resets per-user-turn breakdown cache (condition A).
@@ -141,9 +142,11 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 	static := view.MergedSystemStatic()
 	if static != "" {
 		sum := sha256.Sum256([]byte(static))
+		hash := hex.EncodeToString(sum[:])
+		s.noteStaticHash(sessionID, hash)
 		logging.L().Debug("prompt_cache_key",
 			zap.String("session_id", sessionID),
-			zap.String("static_hash", hex.EncodeToString(sum[:])),
+			zap.String("static_hash", hash),
 			zap.Int("static_chars", len(static)),
 		)
 	}

@@ -1,11 +1,10 @@
-package subagent_test
+package spawn_test
 
 import (
 	"context"
 	"strings"
 	"testing"
 
-	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
@@ -19,7 +18,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool/register"
 )
 
-func TestRun_persistsAgentMessagesNotMainSession(t *testing.T) {
+func TestExecuteRun_persistsAgentMessagesNotMainSession(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &config.Config{
 		ProjectRoot: dir,
@@ -134,6 +133,3 @@ func TestBuildAPIContext_ignoresAgentTable(t *testing.T) {
 		}
 	}
 }
-
-// Ensure agent package is used
-var _ = agent.SubagentSummaryTruncated

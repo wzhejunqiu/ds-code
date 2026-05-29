@@ -13,24 +13,23 @@ func TestBuildForkMessages_placeholderIdentical(t *testing.T) {
 	calls := []llm.ToolCall{{ID: "c1", Name: "agent"}, {ID: "c2", Name: "read_file"}}
 	msgs1 := spawn.BuildForkMessages(nil, calls, "task one")
 	msgs2 := spawn.BuildForkMessages(nil, calls, "task two")
-	if len(msgs1) != 1 || len(msgs2) != 1 {
-		t.Fatalf("expected single user message")
+	if len(msgs1) != 3 || len(msgs2) != 3 {
+		t.Fatalf("expected 2 tool + 1 user messages, got %d and %d", len(msgs1), len(msgs2))
 	}
-	p1 := msgs1[0].Content
-	p2 := msgs2[0].Content
-	idx1 := strings.Index(p1, spawn.ForkPlaceholder)
-	idx2 := strings.Index(p2, spawn.ForkPlaceholder)
-	if idx1 < 0 || idx2 < 0 {
-		t.Fatal("missing placeholder")
+	for i := 0; i < 2; i++ {
+		if msgs1[i].Role != role.Tool || msgs2[i].Role != role.Tool {
+			t.Fatalf("expected tool messages at index %d", i)
+		}
+		if msgs1[i].Content != spawn.ForkPlaceholder || msgs2[i].Content != spawn.ForkPlaceholder {
+			t.Fatal("placeholder content must be byte-identical")
+		}
 	}
-	// Placeholder region must be byte-identical; only directive differs.
-	before1 := p1[:strings.Index(p1, "[directive:")]
-	before2 := p2[:strings.Index(p2, "[directive:")]
+	u1 := msgs1[2].Content
+	u2 := msgs2[2].Content
+	before1 := u1[:strings.Index(u1, "[directive:")]
+	before2 := u2[:strings.Index(u2, "[directive:")]
 	if before1 != before2 {
-		t.Fatalf("placeholder prefix mismatch:\n%q\nvs\n%q", before1, before2)
-	}
-	if !strings.Contains(p1, "[directive:") || !strings.Contains(p2, "[directive:") {
-		t.Fatal("expected directive wrapper")
+		t.Fatalf("user prefix mismatch:\n%q\nvs\n%q", before1, before2)
 	}
 }
 
@@ -50,9 +49,6 @@ func TestBuildForkMessages_PreservesHistoryWithoutTriggerAssistant(t *testing.T)
 	last := result[len(result)-1]
 	if last.Role != role.User {
 		t.Fatalf("last role = %s, want user", last.Role)
-	}
-	if strings.Contains(last.Content, spawn.ForkPlaceholder) {
-		t.Fatal("skill fork should not include tool_result placeholders")
 	}
 	if !strings.Contains(last.Content, spawn.ForkBoilerplate) {
 		t.Fatal("expected fork boilerplate in last message")

@@ -283,16 +283,24 @@ func TestBuildForkMessages_BasicStructure(t *testing.T) {
 	}
 
 	result := spawn.BuildForkMessages(parentMessages, parentToolCalls, "forked directive")
-	if len(result) < 2 {
-		t.Fatalf("expected at least 2 messages, got %d", len(result))
+	if len(result) != 4 {
+		t.Fatalf("expected history(2) + tool + user = 4, got %d", len(result))
 	}
 
-	last := result[len(result)-1]
+	toolMsg := result[2]
+	if toolMsg.Role != role.Tool {
+		t.Errorf("expected tool message, got %s", toolMsg.Role)
+	}
+	if toolMsg.Content != spawn.ForkPlaceholder {
+		t.Error("expected fork placeholder in tool message")
+	}
+	if toolMsg.ToolCallID != "call_1" {
+		t.Errorf("tool_call_id=%q want call_1", toolMsg.ToolCallID)
+	}
+
+	last := result[3]
 	if last.Role != role.User {
 		t.Errorf("expected last message to be user, got %s", last.Role)
-	}
-	if !strings.Contains(last.Content, "Fork started — processing in background") {
-		t.Error("expected fork placeholder in last message")
 	}
 	if !strings.Contains(last.Content, "[directive:") || !strings.Contains(last.Content, "forked directive") {
 		t.Error("expected directive in last message")
@@ -363,43 +371,43 @@ func TestNotificationQueue_PrioritySeparation(t *testing.T) {
 	}
 }
 
-func TestNotificationQueue_FormatJSON(t *testing.T) {
+func TestNotificationQueue_FormatXML(t *testing.T) {
 	n := spawn.Notification{
-		AgentID:      "a1",
-		ToolUseID:    "tc1",
-		OutputFile:   "/tmp/out",
-		Status:       "completed",
-		Summary:      `done with <tag> & "quotes"`,
-		Result:       "all good\nmultiline",
-		DurationMS:   1234,
-		ToolUseCount: 5,
-		Usage:        llm.Usage{PromptTokens: 100, CompletionTokens: 50},
+		AgentID:   "a1",
+		ToolUseID: "tc1",
+		Status:    "completed",
+		Summary:   `done with <tag> & "quotes"`,
+		Result:    "all good\nmultiline",
 	}
 	out := n.Format()
 	if !strings.Contains(out, "<task-notification>") || !strings.Contains(out, "</task-notification>") {
 		t.Error("expected task-notification wrapper tags")
 	}
-	if !strings.Contains(out, `"status":"completed"`) {
-		t.Error("expected JSON status field")
+	if !strings.Contains(out, "<status>completed</status>") {
+		t.Error("expected XML status element")
 	}
-	if !strings.Contains(out, "a1") {
-		t.Error("expected agent ID in JSON")
+	if !strings.Contains(out, "<task-id>a1</task-id>") {
+		t.Error("expected task-id in XML")
 	}
-	if strings.Contains(out, "<status>completed</status>") {
-		t.Error("should not use legacy XML inner tags")
+	if strings.Contains(out, `"status"`) {
+		t.Error("should not use JSON")
+	}
+	if strings.Contains(out, "total_tokens") {
+		t.Error("usage should not appear")
 	}
 }
 
-func TestNotificationQueue_FormatJSON_WithWorktree(t *testing.T) {
+func TestNotificationQueue_FormatXML_WithWorktree(t *testing.T) {
 	n := spawn.Notification{
 		AgentID:        "a1",
 		Status:         "completed",
+		Summary:        "done",
 		WorktreePath:   "/tmp/wt",
 		WorktreeBranch: "wt-branch",
 	}
 	out := n.Format()
-	if !strings.Contains(out, `"worktree"`) || !strings.Contains(out, "/tmp/wt") {
-		t.Errorf("expected worktree in JSON, got %q", out)
+	if !strings.Contains(out, "<worktreePath>/tmp/wt</worktreePath>") {
+		t.Errorf("expected worktree in XML, got %q", out)
 	}
 }
 

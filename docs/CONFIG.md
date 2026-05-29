@@ -361,8 +361,10 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |
 | `tools.shell.timeout` | duration | **120s** | `shell` 同步执行超时 |
 | `tools.shell.env_blacklist` | []string | `[]` | 子进程环境变量名正则黑名单（与内置 secret 键名过滤为 OR）；作用于 `shell`、后台 job、MCP stdio |
-| `tools.task.max_parallel` | int | **3** | 子代理 `task` 并发上限 |
-| `tools.task.summary_max_chars` | int | **16000** | 子代理摘要字符上限（约 4K tokens 量级） |
+| `tools.agent.max_parallel` | int | **3** | 子代理 `agent` 并发上限 |
+| `tools.agent.summary_max_chars` | int | **16000** | 子代理摘要字符上限（超长结果写入 output-file） |
+| `tools.agent.fork_enabled` | bool | **true** | 交互模式下省略 `subagent_type` 时启用 Fork |
+| `tools.agent.auto_background_after` | int | **120** | 同步子代理超过该秒数后提升为后台 |
 
 ### 5.12 `lsp` — Language Server（Phase 6）
 

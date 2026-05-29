@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -127,15 +128,16 @@ func ExecuteRun(
 	}
 
 	childRunner := &agent.Runner{
-		LLM:      llmClient,
-		Tools:    childReg,
-		Perm:     perm,
-		Sessions: store,
-		Context:  ctxSvc,
-		Cfg:      cfg,
-		MaxTurns: maxTurns,
-		Out:      io.Discard,
-		Hooks:    hooks,
+		LLM:         llmClient,
+		Tools:       childReg,
+		Perm:        perm,
+		Sessions:    store,
+		Context:     ctxSvc,
+		Cfg:         cfg,
+		MaxTurns:    maxTurns,
+		Out:         io.Discard,
+		Hooks:       hooks,
+		ForSubagent: true,
 	}
 
 	logging.L().Debug("spawn execute start",
@@ -214,21 +216,20 @@ func resolveThinkingType(cfg *config.Config, def AgentTypeDefinition, parentThin
 }
 
 func trimSummary(s string, cfg *config.Config) string {
-	max := cfg.Tools.Agent.SummaryMaxChars
-	if max <= 0 {
-		max = 16_000
-	}
-	if len(s) <= max {
+	max := summaryMaxChars(cfg)
+	if utf8.RuneCountInString(s) <= max {
 		return s
 	}
-	truncated := s[:max]
-	for len(truncated) > 0 && len(truncated) >= max-3 {
-		if utf8.ValidString(truncated) {
+	var b strings.Builder
+	n := 0
+	for _, r := range s {
+		if n >= max {
 			break
 		}
-		truncated = truncated[:len(truncated)-1]
+		b.WriteRune(r)
+		n++
 	}
-	return truncated + agent.SubagentSummaryTruncated
+	return b.String() + agent.SubagentSummaryTruncated
 }
 
 // sessionStore adapts subagentstore.Store to session.Store for one agent run.

@@ -175,6 +175,30 @@ func RefreshStatus(s *state.State) {
 		snap.PromptTokensTotal, snap.CompletionTokensTotal, snap.PromptCacheHitTokensTotal, costLabel, next)
 }
 
+// FooterLeft builds the left footer hint string (exported for tests).
+func FooterLeft(s *state.State) string {
+	footerLeft := "? for shortcuts · ↓ subagents · Ctrl+O tool details"
+	if s.Deps != nil && s.Deps.BackgroundAgents != nil {
+		if n := s.Deps.BackgroundAgents(); n > 0 {
+			footerLeft = fmt.Sprintf("%d agents running in background · ", n) + footerLeft
+		}
+	}
+	if s.ToolDetailsVisible {
+		footerLeft += " (on)"
+	}
+	if s.SubagentNav == state.SubagentNavDetail {
+		footerLeft = "← back · ↓ list · Ctrl+O tool details"
+	} else if s.SubagentNav == state.SubagentNavList {
+		footerLeft = "↑↓ select · Enter view · ← back"
+	} else if s.Running {
+		footerLeft = "Esc cancel · ↓ subagents · Ctrl+R reasoning · Ctrl+O tool details"
+		if s.ToolDetailsVisible {
+			footerLeft += " (on)"
+		}
+	}
+	return footerLeft
+}
+
 func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model) string {
 	if s.Width == 0 {
 		return style.App.Render("Loading…\n")
@@ -201,25 +225,7 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	b.WriteString(layout.InputFrame(s.Width, inputBody))
 	b.WriteString("\n")
 
-	footerLeft := "? for shortcuts · ↓ subagents · Ctrl+O tool details"
-	if s.Deps != nil && s.Deps.BackgroundAgents != nil {
-		if n := s.Deps.BackgroundAgents(); n > 0 {
-			footerLeft = fmt.Sprintf("%d agents running in background · ", n) + footerLeft
-		}
-	}
-	if s.ToolDetailsVisible {
-		footerLeft += " (on)"
-	}
-	if s.SubagentNav == state.SubagentNavDetail {
-		footerLeft = "← back · ↓ list · Ctrl+O tool details"
-	} else if s.SubagentNav == state.SubagentNavList {
-		footerLeft = "↑↓ select · Enter view · ← back"
-	} else if s.Running {
-		footerLeft = "Esc cancel · ↓ subagents · Ctrl+R reasoning · Ctrl+O tool details"
-		if s.ToolDetailsVisible {
-			footerLeft += " (on)"
-		}
-	}
+	footerLeft := FooterLeft(s)
 	b.WriteString(layout.Footer(s.Width, footerLeft, s.StatusRight))
 
 	if s.SensitiveLogWarn != "" {

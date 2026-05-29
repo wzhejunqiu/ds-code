@@ -85,5 +85,5 @@ func (s *Service) FromSkill(ctx context.Context, inv agent.ToolInvocation, skill
 			AgentType: "fork",
 		}))
 	}
-	return s.runSync(ctx, inv, run, decision, parent, "")
+	return s.runSync(ctx, inv, run, decision, parent)
 }

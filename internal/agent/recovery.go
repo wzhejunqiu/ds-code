@@ -183,8 +183,10 @@ func appendContinueMessage(req *llm.Request) {
 }
 
 func (r *Runner) fallbackModel() string {
-	if r.Cfg.LLM.Subagent.FallbackModel != "" {
-		return r.Cfg.LLM.Subagent.FallbackModel
+	if r.ForSubagent {
+		if r.Cfg.LLM.Subagent.FallbackModel != "" {
+			return r.Cfg.LLM.Subagent.FallbackModel
+		}
 	}
 	return r.Cfg.LLM.FallbackModel
 }
