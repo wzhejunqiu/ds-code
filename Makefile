@@ -1,4 +1,6 @@
-.PHONY: build build-tui-test test test-tui test-integration verify-release lint vet staticcheck vuln install fetch-tokenizers
+.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release lint vet staticcheck vuln install fetch-tokenizers
+
+COVERPROFILE ?= coverage.out
 
 TOKENIZERS_LIB := third_party/tokenizers/libtokenizers.a
 
@@ -28,6 +30,14 @@ install: $(TOKENIZERS_LIB)
 
 test: $(TOKENIZERS_LIB)
 	go test -race -count=1 ./...
+
+cover: $(TOKENIZERS_LIB)
+	go test -race -count=1 -coverprofile=$(COVERPROFILE) ./...
+	go tool cover -func=$(COVERPROFILE) | tail -1
+
+cover-html: cover
+	go tool cover -html=$(COVERPROFILE) -o coverage.html
+	@echo "wrote coverage.html"
 
 build-tui-test: $(TOKENIZERS_LIB)
 	go build -tags=tuitest -ldflags "$(LDFLAGS)" -o bin/ds-code-tui-test ./cmd/ds-code-tui-test

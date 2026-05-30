@@ -7,6 +7,8 @@ third_party/tokenizers/libtokenizers.a
 .code-review-graph/
 plans/
 bin/
+coverage.out
+coverage.html
 /ds-code
 .vscode/
 __debug_bin*
