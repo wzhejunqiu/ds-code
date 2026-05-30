@@ -29,11 +29,20 @@ func (t *ReadFileTool) IsConcurrencySafe() bool { return true }
 func (t *ReadFileTool) Description() string { return DescReadFile }
 
 func (t *ReadFileTool) Schema() map[string]any {
+	maxLines := t.configuredMaxLines()
 	return tool.ObjectSchema(map[string]any{
 		"path":   map[string]any{"type": "string", "description": builtin.SchemaPathFileRelOrAbs},
-		"offset": map[string]any{"type": "integer", "description": builtin.SchemaOffset},
-		"limit":  map[string]any{"type": "integer", "description": builtin.SchemaLimit},
+		"offset": map[string]any{"type": "integer", "description": SchemaOffset},
+		"limit":  map[string]any{"type": "integer", "description": fmt.Sprintf(SchemaLimitFmt, maxLines)},
 	}, []string{"path"}, t.Strict)
+}
+
+func (t *ReadFileTool) configuredMaxLines() int {
+	maxLines := t.Cfg.Tools.ReadFile.MaxLines
+	if maxLines <= 0 {
+		maxLines = 2000
+	}
+	return maxLines
 }
 
 func (t *ReadFileTool) PermissionLevel() permission.Level { return permission.LevelLow }
@@ -64,10 +73,7 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", err
 	}
 
-	maxLines := t.Cfg.Tools.ReadFile.MaxLines
-	if maxLines <= 0 {
-		maxLines = 500
-	}
+	maxLines := t.configuredMaxLines()
 	maxBytes := t.Cfg.Tools.ReadFile.MaxBytes
 	if maxBytes <= 0 {
 		maxBytes = 2 << 20
@@ -86,7 +92,7 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", err
 	}
 
-	return formatReadFileOutput(abs, start, end, rangeTruncated)
+	return formatReadFileOutput(abs, start, end, rangeTruncated, maxLines)
 }
 
 func resolveReadOffsetLimit(offset, limit, maxLines int) (readStart, readEnd int, truncated bool, err error) {
@@ -109,7 +115,7 @@ func resolveReadOffsetLimit(offset, limit, maxLines int) (readStart, readEnd int
 	return readStart, readEnd, truncated, nil
 }
 
-func formatReadFileOutput(abs string, start, end int, rangeTruncated bool) (string, error) {
+func formatReadFileOutput(abs string, start, end int, rangeTruncated bool, maxLines int) (string, error) {
 	f, err := os.Open(abs)
 	if err != nil {
 		return "", err
@@ -145,7 +151,7 @@ func formatReadFileOutput(abs string, start, end int, rangeTruncated bool) (stri
 		return fmt.Sprintf(ResultEmptyOffsetBeyond, start, lineNo), nil
 	}
 	if rangeTruncated {
-		out.WriteString(MsgTruncatedMaxLines)
+		out.WriteString(fmt.Sprintf(MsgTruncatedMaxLines, maxLines))
 	}
 	if moreAfter > 0 {
 		fmt.Fprintf(&out, MsgMoreLinesNotShown, moreAfter)

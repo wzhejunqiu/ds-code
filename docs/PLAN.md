@@ -170,7 +170,7 @@ DeepSeek V4（`deepseek-v4-pro` / `deepseek-v4-flash`）：**上下文 1,048,576
 
 | 工具 | 职责 | 权限 | 上下文相关约束 |
 |------|------|------|----------------|
-| `read_file` | 读文件（`start`/`end` 行范围） | 低 | 默认最多 **500 行**/次；`max_bytes` 超限拒绝 |
+| `read_file` | 读文件（`start`/`end` 行范围） | 低 | 默认最多 **2000 行**/次；`max_bytes` 超限拒绝 |
 | `apply_patch` | Codex 式 unified diff；失败原子回滚 | 高 | 单 patch 变更行数上限（可配置） |
 | `write_file` | 新建或**整文件**覆盖（无对应 diff 时） | 高 | 优先 `apply_patch` 编辑已有文件 |
 | `grep` | 正则搜索 | 低 | 默认 **head_limit 200**；尊重 `.gitignore` |

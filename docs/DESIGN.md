@@ -583,7 +583,7 @@ MCP 工具名：`mcp__{server}__{tool}`。
 
 | 工具 | Phase | Permission | 截断 |
 |------|-------|------------|------|
-| `read_file` | 1 | Low | 500 行 + max_chars |
+| `read_file` | 1 | Low | 2000 行 + max_chars |
 | `grep` | 1 | Low | head_limit 200 |
 | `shell` | 1 | Highest | max_chars |
 | `glob` / `list_dir` | 1.5 | Low | 条数上限 |

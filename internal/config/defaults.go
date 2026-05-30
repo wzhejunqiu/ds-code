@@ -34,7 +34,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("tools.parallel_tool_calls", true)
 	v.SetDefault("tools.defer_mcp", true)
 	v.SetDefault("tools.defer_builtin", []string{})
-	v.SetDefault("tools.read_file.max_lines", 500)
+	v.SetDefault("tools.read_file.max_lines", 2000)
 	v.SetDefault("tools.read_file.max_bytes", 2<<20)
 	v.SetDefault("tools.grep.head_limit", 200)
 	v.SetDefault("tools.glob.max_results", 100)

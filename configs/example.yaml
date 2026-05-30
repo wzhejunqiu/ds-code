@@ -51,7 +51,7 @@ agent:
 tools:
   parallel_tool_calls: false
   read_file:
-    max_lines: 500
+    max_lines: 2000
   grep:
     head_limit: 200
   glob:

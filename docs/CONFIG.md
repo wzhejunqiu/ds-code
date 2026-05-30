@@ -356,7 +356,7 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.parallel_tool_calls` | bool | **true** | 预留：是否允许同一 assistant 多条 `tool_calls` 并行。当前 Runner **未读取**此键；相邻只读且 concurrency-safe 的工具（如 `read_file`、`grep`）已由 [`tool_orchestration`](../internal/agent/tool_orchestration.go) 自动并发，写工具串行 |
 | `tools.defer_builtin` | []string | **`[]`** | 内建写工具名列表；命中项以 stub schema 注册，完整参数经 `tool_search` 查询（见 [§5.11.1](#5111-延迟加载defer与-tool_search)） |
 | `tools.defer_mcp` | bool | **true** | `true` 时全部 `mcp__*` 工具以 stub schema 注册；完整参数同样经 `tool_search` |
-| `tools.read_file.max_lines` | int | **500** | 单次 `read_file` 默认行上限（`offset`/`limit` 亦受此限） |
+| `tools.read_file.max_lines` | int | **2000** | 未指定 `limit` 时读取整个文件的上限；显式 `limit` 亦受此限 |
 | `tools.read_file.max_bytes` | int | **2097152** (2MiB) | 文件总大小上限；超限拒绝整次读取 |
 | `tools.grep.head_limit` | int | **200** | `grep` 在 `content`（匹配行）与 `files_with_matches`（文件数）模式下的上限；`count` 模式忽略 |
 | `tools.glob.max_results` | int | **100** | `glob` / `list_dir` 结果条数上限 |

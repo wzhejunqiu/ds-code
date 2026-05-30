@@ -376,7 +376,7 @@ Go SDK：`thinking` 放请求体顶层或 `extra_body`（与 [官方 Python 样�
 
 | 机制 | 默认策略 | 目的 |
 |------|----------|------|
-| `read_file` | `start`/`end` 闭区间 + `max_lines`（默认 500）+ `max_bytes`（默认 2MiB） | 按行扫描，避免整文件读入 |
+| `read_file` | `start`/`end` 闭区间 + `max_lines`（默认 2000）+ `max_bytes`（默认 2MiB） | 默认读整个文件（最多 max_lines 行），按行扫描 |
 | `grep` | `head_limit` 默认 200 条匹配 | 限制搜索结果体积 |
 | `@` 引用 | 单文件 + 总计 ≤ `at_reference_max_chars` | 预加载不撑爆 prompt |
 | `apply_patch` | 拒绝单 patch 变更行数超阈值（可配置） | 防止超大 diff 回注 |

@@ -554,7 +554,7 @@ func testConfig() *config.Config {
 			ToolResultMaxChars: 100000,
 		},
 		Tools: config.ToolsConfig{
-			ReadFile: config.ReadFileToolConfig{MaxLines: 500},
+			ReadFile: config.ReadFileToolConfig{MaxLines: 2000},
 			Grep:     config.GrepToolConfig{HeadLimit: 200},
 		},
 		Agent: config.AgentConfig{MaxTurns: 25},

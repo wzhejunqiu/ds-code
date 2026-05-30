@@ -16,7 +16,7 @@
 |------|------|------|------|
 | `path` | string | 是 | 相对项目根的路径，或落在工作区内的绝对路径 |
 | `offset` | integer | 否 | 起始行号（1-based），默认从第 1 行 |
-| `limit` | integer | 否 | 最多读取行数；未指定时使用配置的 `max_lines` |
+| `limit` | integer | 否 | 最多读取行数；省略时读取整个文件（最多 max_lines 行） |
 
 ## 用法示例
 
@@ -31,9 +31,9 @@
 ## 返回格式
 
 - 每行：`{行号}|{行内容}\n`
-- 若 `limit` 超过配置上限：末尾附加 `... truncated to max_lines; adjust offset/limit to continue`
-- 若范围内之后还有行：`... N more lines not shown`
-- 若 `offset` 超出文件长度：`(empty: offset N beyond file length M)`
+- 若 `limit` 超过配置上限：末尾附加 `... 已按 {N} 行截断；请调整 offset/limit 继续`
+- 若范围内之后还有行：`... 还有 {N} 行未显示`
+- 若 `offset` 超出文件长度：`（空：offset {N} 超出文件长度 {M}）`
 
 TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展示。
 
@@ -50,7 +50,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 | 键 | 默认 | 说明 |
 |----|------|------|
-| `tools.read_file.max_lines` | 500 | 单次最多返回行数 |
+| `tools.read_file.max_lines` | 2000 | 单次最多返回行数（默认读取整个文件时的上限） |
 | `tools.read_file.max_bytes` | 2097152 | 文件大小上限（字节） |
 
 ## 权限与安全
@@ -60,7 +60,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 ## 设计思想
 
-- **分页优先**：鼓励模型用 `offset`/`limit` 分段读大文件，而不是依赖截断尾巴。
+- **默认全读**：仅传 `path` 时读取整个文件（最多 max_lines 行）；超大文件用 `offset`/`limit` 分段。
 - **行号前缀**：输出带 `N|` 前缀，便于与 `apply_patch` 的 `@@` 上下文及 TUI 引用对齐。
 - **先 Stat 后读**：超大文件在打开前拒绝，保护内存与 token 预算。
 

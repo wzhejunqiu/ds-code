@@ -42,6 +42,55 @@ func TestReadFile_offsetLimit(t *testing.T) {
 	}
 }
 
+func TestReadFile_defaultReadsWholeFile(t *testing.T) {
+	root := t.TempDir()
+	var b strings.Builder
+	for i := 1; i <= 100; i++ {
+		fmt.Fprintf(&b, "L%d\n", i)
+	}
+	if err := os.WriteFile(filepath.Join(root, "f.txt"), []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	tool := readFileTool(t, root, 2000, 1<<20)
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "f.txt"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "1|L1") || !strings.Contains(out, "100|L100") {
+		t.Fatalf("expected full file: %q", out)
+	}
+	if strings.Contains(out, "未显示") || strings.Contains(out, "max_lines") {
+		t.Fatalf("unexpected truncation hint: %q", out)
+	}
+}
+
+func TestReadFile_defaultTruncatesAtMaxLines(t *testing.T) {
+	root := t.TempDir()
+	var b strings.Builder
+	for i := 1; i <= 2500; i++ {
+		fmt.Fprintf(&b, "L%d\n", i)
+	}
+	if err := os.WriteFile(filepath.Join(root, "big.txt"), []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	tool := readFileTool(t, root, 2000, 1<<20)
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "big.txt"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "2000|L2000") {
+		t.Fatalf("expected line 2000: %q", out)
+	}
+	if strings.Contains(out, "2500|") {
+		t.Fatalf("should not include line 2500: %q", out)
+	}
+	if !strings.Contains(out, "还有 500 行未显示") {
+		t.Fatalf("expected more-lines hint: %q", out)
+	}
+}
+
 func TestReadFile_maxLinesTruncatesLimit(t *testing.T) {
 	root := t.TempDir()
 	var b strings.Builder
@@ -61,8 +110,11 @@ func TestReadFile_maxLinesTruncatesLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "max_lines") {
+	if !strings.Contains(out, "已按 10 行截断") {
 		t.Fatalf("expected truncation hint: %q", out)
+	}
+	if !strings.Contains(out, "还有 90 行未显示") {
+		t.Fatalf("expected more-lines hint: %q", out)
 	}
 }
 

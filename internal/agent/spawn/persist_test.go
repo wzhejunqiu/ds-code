@@ -25,7 +25,7 @@ func TestExecuteRun_persistsAgentMessagesNotMainSession(t *testing.T) {
 		LLM:         config.LLMConfig{Model: "m", MaxTokens: 4096},
 		Context:     config.ContextConfig{ToolResultMaxChars: 50_000},
 		Tools: config.ToolsConfig{
-			ReadFile: config.ReadFileToolConfig{MaxLines: 500},
+			ReadFile: config.ReadFileToolConfig{MaxLines: 2000},
 			Agent:    config.AgentToolConfig{SummaryMaxChars: 8000},
 		},
 		Agent: config.AgentConfig{MaxTurns: 5},
