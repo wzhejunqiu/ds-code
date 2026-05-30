@@ -290,9 +290,13 @@ func TestRunner_exceededMaxSubRounds(t *testing.T) {
 		FinishReason: "tool_calls",
 	}
 	responses := make([]*llm.Response, 0, 4)
-	for range 4 {
+	for range 3 {
 		responses = append(responses, toolResp)
 	}
+	responses = append(responses, &llm.Response{
+		Content:      "Reached tool limit; here is progress so far.",
+		FinishReason: "stop",
+	})
 	mockLLM := &mock.Client{Responses: responses}
 
 	perm := permission.NewEngine("auto", t.TempDir(), false)
@@ -309,12 +313,28 @@ func TestRunner_exceededMaxSubRounds(t *testing.T) {
 		MaxTurns: 3,
 	}
 
-	_, err = r.RunTurn(context.Background(), sess.ID, "loop", nil)
-	if err == nil {
-		t.Fatal("expected max sub-rounds error")
+	result, err := r.RunTurn(context.Background(), sess.ID, "loop", nil)
+	if err != nil {
+		t.Fatalf("expected soft landing, got err: %v", err)
 	}
-	if !strings.Contains(err.Error(), "exceeded max sub-rounds") {
-		t.Fatalf("err = %v", err)
+	if result == nil || result.SubRounds != 3 {
+		t.Fatalf("result = %+v, want SubRounds=3", result)
+	}
+	msgs, _ := store.ListMessages(context.Background(), sess.ID)
+	var systemMsg, summaryAssistant string
+	for _, m := range msgs {
+		if m.Role == role.System && strings.Contains(m.Content, "Reached max sub-rounds") {
+			systemMsg = m.Content
+		}
+		if m.Role == role.Assistant && m.Content == "Reached tool limit; here is progress so far." {
+			summaryAssistant = m.Content
+		}
+	}
+	if systemMsg == "" {
+		t.Fatal("expected system event for max sub-rounds")
+	}
+	if summaryAssistant == "" {
+		t.Fatal("expected summary assistant message")
 	}
 }
 

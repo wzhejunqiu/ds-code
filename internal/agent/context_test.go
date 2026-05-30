@@ -30,3 +30,35 @@ func TestTurnCallbacksFromContext(t *testing.T) {
 		t.Fatal("expected nil without context value")
 	}
 }
+
+func TestActiveTurn_deferredClearsHolder(t *testing.T) {
+	ctx := context.Background()
+	run := func() {
+		ctx = agent.WithActiveTurn(ctx)
+		defer agent.WithoutActiveTurn(ctx)
+		if !agent.InActiveTurn(ctx) {
+			t.Fatal("expected active during turn")
+		}
+	}
+	run()
+	if agent.InActiveTurn(ctx) {
+		t.Fatal("expected inactive after turn ended")
+	}
+}
+
+func TestActiveTurn_nestedRunTurnKeepsParentActive(t *testing.T) {
+	ctx := agent.WithActiveTurn(context.Background())
+	defer agent.WithoutActiveTurn(ctx)
+
+	child := func() {
+		childCtx := agent.WithActiveTurn(ctx)
+		defer agent.WithoutActiveTurn(childCtx)
+		if !agent.InActiveTurn(ctx) {
+			t.Fatal("expected parent active during nested turn")
+		}
+	}
+	child()
+	if !agent.InActiveTurn(ctx) {
+		t.Fatal("expected parent active after nested turn ended")
+	}
+}

@@ -27,7 +27,7 @@ func (r *Runner) RunTurnSeeded(ctx context.Context, sessionID string, cb *TurnCa
 
 func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *TurnCallbacks, opts runTurnOptions) (*TurnResult, error) {
 	ctx = WithActiveTurn(ctx)
-	defer func() { ctx = WithoutActiveTurn(ctx) }()
+	defer WithoutActiveTurn(ctx)
 	if cb != nil {
 		ctx = WithTurnCallbacks(ctx, cb)
 	}
@@ -167,14 +167,7 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			r.DrainNotificationsLater(ctx, sessionID)
 		}
 	}
-	logging.L().Warn("exceeded max sub-rounds", zap.String("session_id", sessionID), zap.Int("max", r.MaxTurns))
-	if r.Hooks != nil {
-		r.Hooks.Run(ctx, HookStop, marshalHookInput(HookInput{
-			SessionID: sessionID,
-			Error:     fmt.Sprintf("exceeded max sub-rounds (%d)", r.MaxTurns),
-		}))
-	}
-	return nil, fmt.Errorf("agent: exceeded max sub-rounds (%d)", r.MaxTurns)
+	return r.finishMaxTurnsExceeded(ctx, sessionID, sess, turnStart, result, state, cb)
 }
 
 // DrainNotificationsLaterFunc appends PrioLater async agent notices to the main session.

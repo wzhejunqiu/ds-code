@@ -104,6 +104,62 @@ func (r *Runner) finishTerminalRound(
 	return result, nil
 }
 
+func (r *Runner) finishMaxTurnsExceeded(
+	ctx context.Context,
+	sessionID string,
+	sess session.Session,
+	turnStart time.Time,
+	result *TurnResult,
+	state *LoopState,
+	cb *TurnCallbacks,
+) (*TurnResult, error) {
+	logging.L().Warn("exceeded max sub-rounds", zap.String("session_id", sessionID), zap.Int("max", r.MaxTurns))
+	state.Transition = TransMaxTurns
+
+	if err := r.Sessions.AppendMessage(ctx, session.Message{
+		SessionID: sessionID,
+		Role:      role.System,
+		Content:   fmt.Sprintf(maxTurnsSystemEventFmt, r.MaxTurns),
+	}); err != nil {
+		return nil, err
+	}
+	if err := r.Sessions.AppendMessage(ctx, session.Message{
+		SessionID: sessionID,
+		Role:      role.User,
+		Content:   maxTurnsSummaryPrompt,
+	}); err != nil {
+		return nil, err
+	}
+
+	view, maxTokens, err := r.Context.PrepareRequest(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	stream := &subRoundStream{}
+	req := llm.Request{
+		MergedSystem:    view.MergedSystem(),
+		Messages:        view.Messages,
+		Model:           sess.Model,
+		MaxTokens:       maxTokens,
+		Stream:          true,
+		ThinkingType:    sess.ThinkingType,
+		ReasoningEffort: sess.ReasoningEffort,
+		UserID:          cacheScope(sessionID),
+		StrictTools:     r.Cfg.LLM.StrictTools,
+	}
+	req.OnStream = r.attachStreamHandlers(cb, r.MaxTurns, stream)
+
+	resp, err := r.chatWithRecovery(ctx, sessionID, req, state)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.Sessions.AddUsage(ctx, sessionID, resp.Usage); err != nil {
+		logging.L().Warn("add usage failed", zap.String("session_id", sessionID), zap.Error(err))
+	}
+	result.Usage = resp.Usage
+	return r.finishTerminalRound(ctx, sessionID, sess.Model, resp, stream, turnStart, result, cb)
+}
+
 func (r *Runner) runToolCalls(
 	ctx context.Context,
 	sessionID string,

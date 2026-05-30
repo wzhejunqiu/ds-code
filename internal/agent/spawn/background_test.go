@@ -170,3 +170,66 @@ func TestBackgroundManager_enqueuePrioNextWhenIdle(t *testing.T) {
 		t.Fatalf("expected no PrioLater, got %d", len(later))
 	}
 }
+
+func TestBackgroundManager_enqueuePrioNowAfterTurnEnds(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &config.Config{
+		ProjectRoot:    dir,
+		ProjectDataDir: dir,
+		LLM:            config.LLMConfig{Model: "m", MaxTokens: 4096},
+		Context:        config.ContextConfig{ToolResultMaxChars: 50_000},
+		Tools:          config.ToolsConfig{Agent: config.AgentToolConfig{SummaryMaxChars: 8000}},
+		Agent:          config.AgentConfig{MaxTurns: 5},
+	}
+	mockLLM := &mock.Client{
+		Responses: []*llm.Response{{Content: "done", FinishReason: "stop"}},
+		Delay:     150 * time.Millisecond,
+	}
+	sub := subagentstore.NewMemoryStore()
+	perm := permission.NewEngine("readonly", dir, false)
+	reg := tool.NewRegistry()
+	register.ExploreTools(reg, cfg, perm, nil, false)
+
+	run, err := sub.CreateRun(context.Background(), subagentstore.CreateRunParams{
+		ParentSessionID:  "parent",
+		ParentToolCallID: "tc-async",
+		AgentType:        "Explore",
+		SpawnKind:        subagentstore.SpawnAsync,
+		Label:            "bg",
+		Prompt:           "work",
+		Model:            "m",
+		Background:       true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	q := spawn.NewNotificationQueue()
+	bm := spawn.NewBackgroundManager(q)
+	def, err := spawn.NewRegistry().Resolve("Explore")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentCtx := agent.WithActiveTurn(context.Background())
+	bm.Start(parentCtx, cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil)
+	agent.WithoutActiveTurn(parentCtx)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && bm.RunningCount() > 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if bm.RunningCount() > 0 {
+		t.Fatal("background agent did not finish in time")
+	}
+
+	now := q.Drain(spawn.PrioNow)
+	if len(now) != 1 {
+		t.Fatalf("expected 1 PrioNow notification after turn ended, got %d", len(now))
+	}
+	if now[0].AgentID != run.ID {
+		t.Fatalf("AgentID = %q, want %q", now[0].AgentID, run.ID)
+	}
+	if later := q.Drain(spawn.PrioLater); len(later) != 0 {
+		t.Fatalf("expected no PrioLater, got %d", len(later))
+	}
+}

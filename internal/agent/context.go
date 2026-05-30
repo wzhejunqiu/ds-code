@@ -2,11 +2,17 @@ package agent
 
 import (
 	"context"
+	"sync/atomic"
 )
 
 type turnCallbacksKey struct{}
 
 type activeTurnKey struct{}
+
+// activeTurnHolder tracks nested RunTurn scopes (parent + subagent) with a refcount.
+type activeTurnHolder struct {
+	count atomic.Int32
+}
 
 type toolInvocationKey struct{}
 
@@ -18,12 +24,29 @@ type ToolInvocation struct {
 
 // WithActiveTurn marks ctx as inside an active RunTurn (used for notification priority).
 func WithActiveTurn(ctx context.Context) context.Context {
-	return context.WithValue(ctx, activeTurnKey{}, true)
+	if h, ok := ctx.Value(activeTurnKey{}).(*activeTurnHolder); ok {
+		h.count.Add(1)
+		return ctx
+	}
+	h := &activeTurnHolder{}
+	h.count.Store(1)
+	return context.WithValue(ctx, activeTurnKey{}, h)
 }
 
-// WithoutActiveTurn clears the active turn marker.
+// WithoutActiveTurn decrements the active turn refcount on the shared holder.
 func WithoutActiveTurn(ctx context.Context) context.Context {
-	return context.WithValue(ctx, activeTurnKey{}, false)
+	if h, ok := ctx.Value(activeTurnKey{}).(*activeTurnHolder); ok {
+		for {
+			v := h.count.Load()
+			if v <= 0 {
+				break
+			}
+			if h.count.CompareAndSwap(v, v-1) {
+				break
+			}
+		}
+	}
+	return ctx
 }
 
 // InActiveTurn reports whether the parent runner is executing a user turn.
@@ -31,8 +54,8 @@ func InActiveTurn(ctx context.Context) bool {
 	if ctx == nil {
 		return false
 	}
-	v, ok := ctx.Value(activeTurnKey{}).(bool)
-	return ok && v
+	h, ok := ctx.Value(activeTurnKey{}).(*activeTurnHolder)
+	return ok && h.count.Load() > 0
 }
 
 // WithToolInvocation stores parent session and tool call id for tools (e.g. task).
