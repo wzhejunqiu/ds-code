@@ -2,8 +2,10 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -54,5 +56,23 @@ func TestHookManager_runsStopHook(t *testing.T) {
 	results := hm.Run(context.Background(), HookStop, `{"session_id":"s1"}`)
 	if len(results) != 1 || results[0].Error != nil {
 		t.Fatalf("Stop hook failed: %+v", results)
+	}
+}
+
+func TestMarshalHookInput_maxTurnsTransition(t *testing.T) {
+	raw := MarshalHookInput(HookInput{
+		SessionID:  "s1",
+		Transition: string(TransMaxTurns),
+		Error:      "exceeded max sub-rounds (3)",
+	})
+	var m map[string]string
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		t.Fatal(err)
+	}
+	if m["transition"] != string(TransMaxTurns) {
+		t.Fatalf("transition = %q", m["transition"])
+	}
+	if !strings.Contains(m["error"], "exceeded max sub-rounds") {
+		t.Fatalf("error = %q", m["error"])
 	}
 }

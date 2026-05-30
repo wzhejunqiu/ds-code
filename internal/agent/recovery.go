@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -57,7 +58,7 @@ func (r *Runner) chatWithRecovery(ctx context.Context, sessionID string, req llm
 				if prepErr != nil {
 					return nil, prepErr
 				}
-				currentReq.Messages = view.Messages
+				currentReq.Messages = mergePreparedMessages(view.Messages, state.EphemeralTail)
 				currentReq.MergedSystem = view.MergedSystem()
 				currentReq.MaxTokens = maxTokens
 				attempt++
@@ -73,7 +74,7 @@ func (r *Runner) chatWithRecovery(ctx context.Context, sessionID string, req llm
 				if prepErr != nil {
 					return nil, prepErr
 				}
-				currentReq.Messages = view.Messages
+				currentReq.Messages = mergePreparedMessages(view.Messages, state.EphemeralTail)
 				currentReq.MergedSystem = view.MergedSystem()
 				currentReq.MaxTokens = maxTokens
 				attempt++
@@ -173,6 +174,14 @@ func (r *Runner) tryOutputRecovery(sessionID string, state *LoopState, req *llm.
 	appendContinueMessage(req)
 	logging.L().Info("output recovery", zap.String("session_id", sessionID), zap.Int("count", state.OutputRecoveryCount))
 	return true, nil
+}
+
+func mergePreparedMessages(viewMsgs []llm.Message, tail []llm.Message) []llm.Message {
+	if len(tail) == 0 {
+		return viewMsgs
+	}
+	msgs := slices.Clone(viewMsgs)
+	return append(msgs, tail...)
 }
 
 func appendContinueMessage(req *llm.Request) {

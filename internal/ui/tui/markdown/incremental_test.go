@@ -65,6 +65,21 @@ func TestRenderIncrementalUnclosedFenceRendersTail(t *testing.T) {
 	}
 }
 
+func TestHasUnclosedFence_proseWithoutFenceMarker(t *testing.T) {
+	if ParagraphStableCount("para one\n\npara two\n\npara three") != 2 {
+		t.Fatalf("stable paragraphs = %d, want 2", ParagraphStableCount("para one\n\npara two\n\npara three"))
+	}
+	if ParagraphStableCount("Use ``` syntax in prose") != 0 {
+		t.Fatal("single paragraph with inline triple-backtick should not be treated as unclosed fence")
+	}
+	if ParagraphStableCount("para one\n\nUse ``` syntax in prose") != 1 {
+		t.Fatalf("stable paragraphs = %d, want 1 (inline backtick must not disable cache)", ParagraphStableCount("para one\n\nUse ``` syntax in prose"))
+	}
+	if ParagraphStableCount("before\n\n```go\npartial") != 0 {
+		t.Fatal("expected unclosed fence tail to disable paragraph cache")
+	}
+}
+
 func TestRenderIncrementalNilCacheMatchesFullRender(t *testing.T) {
 	content := "## Title\n\nHello **world**"
 	full, err := Render(content, 40)

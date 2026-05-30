@@ -155,7 +155,20 @@ func renderTailPart(p part, width int, cache *SegmentCache) (string, error) {
 }
 
 func hasUnclosedFence(text string) bool {
-	return strings.Contains(text, "```")
+	inFence := false
+	for _, line := range strings.Split(text, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !inFence {
+			if isFenceOpenLine(trimmed) {
+				inFence = true
+			}
+			continue
+		}
+		if trimmed == "```" {
+			inFence = false
+		}
+	}
+	return inFence
 }
 
 func splitParagraphs(text string) []string {

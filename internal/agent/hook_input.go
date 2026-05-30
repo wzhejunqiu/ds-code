@@ -12,7 +12,10 @@ type HookInput struct {
 	Tool       string `json:"tool,omitempty"`
 	ToolCallID string `json:"tool_call_id,omitempty"`
 	Args       string `json:"args,omitempty"`
+	// Error carries failure text for tool hooks. On HookStop, read Transition first:
+	// transition "max_turns" uses error as informational context, not hook failure.
 	Error      string `json:"error,omitempty"`
+	Transition string `json:"transition,omitempty"` // e.g. max_turns on HookStop
 	AgentID    string `json:"agent_id,omitempty"`
 	AgentType  string `json:"agent_type,omitempty"`
 }

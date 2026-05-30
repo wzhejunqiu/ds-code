@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/session"
@@ -42,13 +43,34 @@ func TestUpdate_usageUpdateMsg_refreshesStatus(t *testing.T) {
 	}
 }
 
-func TestInit_noStatusRefreshTick(t *testing.T) {
+func TestInit_noPeriodicStatusTick(t *testing.T) {
 	m := New(&deps.Deps{
+		Cfg:       &config.Config{ProjectRoot: t.TempDir()},
 		Store:     session.NewMemoryStore(),
 		SessionID: "sess",
 	})
 	cmd := m.Init()
 	if cmd == nil {
 		t.Fatal("Init returned nil cmd")
+	}
+	assertNoUsageUpdateMsg(t, cmd())
+}
+
+func assertNoUsageUpdateMsg(t *testing.T, msg tea.Msg) {
+	t.Helper()
+	if msg == nil {
+		return
+	}
+	if _, ok := msg.(tuimsg.UsageUpdateMsg); ok {
+		t.Fatal("Init must not schedule UsageUpdateMsg")
+	}
+	switch m := msg.(type) {
+	case tea.BatchMsg:
+		for _, sub := range m {
+			if sub == nil {
+				continue
+			}
+			assertNoUsageUpdateMsg(t, sub())
+		}
 	}
 }

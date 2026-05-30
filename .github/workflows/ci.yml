@@ -87,3 +87,41 @@ jobs:
 
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  build-musl-smoke:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (musl)
+        run: |
+          mkdir -p dist
+          GO_VERSION="$(awk '/^go / {split($2,a,"."); print a[1]"."a[2]}' go.mod)"
+          RELEASE_VERSION="$(git describe --tags --always --dirty | sed 's/^v//')"
+          GIT_COMMIT="$(git rev-parse HEAD)"
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/work" \
+            -w /work \
+            -e CGO_ENABLED=1 \
+            -e GOOS=linux \
+            -e GOARCH=amd64 \
+            -e TOKENIZERS_ARCH=musl-amd64 \
+            -e CGO_LDFLAGS="-static -static-libgcc -static-libstdc++" \
+            -e RELEASE_VERSION="${RELEASE_VERSION}" \
+            -e GIT_COMMIT="${GIT_COMMIT}" \
+            "golang:${GO_VERSION}-alpine" \
+            sh -ec '
+              apk add --no-cache gcc g++ musl-dev curl tar file
+              sh ./scripts/fetch-tokenizers-lib.sh
+              LDFLAGS="-X github.com/wzhejunqiu/ds-code/internal/version.Version=${RELEASE_VERSION} -X main.gitCommit=${GIT_COMMIT}"
+              go build -ldflags "$LDFLAGS" -o dist/ds-code ./cmd/ds-code
+              file dist/ds-code | grep -q "statically linked"
+            '
+
+      - name: Verify (musl)
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/dist/ds-code:/ds-code:ro" \
+            alpine:3.21 \
+            /ds-code version

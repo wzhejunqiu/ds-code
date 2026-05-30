@@ -141,21 +141,12 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			zap.Int("content_chars", len(resp.Content)),
 		)
 
-		if err := r.Sessions.AddUsage(ctx, sessionID, resp.Usage); err != nil {
-			logging.L().Warn("add usage failed", zap.String("session_id", sessionID), zap.Error(err))
-		}
-		if cb != nil && cb.OnUsageUpdate != nil &&
-			(resp.Usage.PromptTokens > 0 || resp.Usage.CompletionTokens > 0) {
-			cb.OnUsageUpdate(resp.Usage)
-		}
-		if r.Context != nil && resp.Usage.PromptTokens > 0 {
-			r.Context.RecordPromptUsage(sessionID, resp.Usage.PromptTokens)
-		}
+		r.applySubRoundUsage(ctx, sessionID, resp.Usage, cb)
 		result.Usage = resp.Usage
 		result.SubRounds = round + 1
 
 		if len(resp.ToolCalls) == 0 {
-			return r.finishTerminalRound(ctx, sessionID, sess.Model, resp, stream, turnStart, result, cb)
+			return r.finishTerminalRound(ctx, sessionID, sess.Model, resp, stream, turnStart, result, cb, HookInput{SessionID: sessionID})
 		}
 		if err := r.appendAssistantWithTools(ctx, sessionID, sess.Model, resp, stream); err != nil {
 			return nil, err

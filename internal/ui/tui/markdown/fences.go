@@ -20,7 +20,7 @@ func splitByFences(content string) []part {
 	var parts []part
 	rest := content
 	for {
-		start := strings.Index(rest, "```")
+		start := findNextFenceOpen(rest)
 		if start < 0 {
 			if rest != "" {
 				parts = append(parts, part{text: rest})
@@ -55,6 +55,48 @@ func splitByFences(content string) []part {
 		}
 	}
 	return parts
+}
+
+func findNextFenceOpen(s string) int {
+	offset := 0
+	for {
+		nl := strings.Index(s[offset:], "\n")
+		var line string
+		lineStart := offset
+		if nl < 0 {
+			line = s[offset:]
+			offset = len(s)
+		} else {
+			line = s[offset : offset+nl]
+			offset += nl + 1
+		}
+		if isFenceOpenLine(strings.TrimSpace(line)) {
+			if idx := strings.Index(line, "```"); idx >= 0 {
+				return lineStart + idx
+			}
+			return lineStart + len(line) - len(strings.TrimLeft(line, " \t"))
+		}
+		if nl < 0 {
+			break
+		}
+	}
+	return -1
+}
+
+func isFenceOpenLine(line string) bool {
+	if !strings.HasPrefix(line, "```") {
+		return false
+	}
+	rest := strings.TrimSpace(line[3:])
+	if rest == "" {
+		return true
+	}
+	for _, r := range rest {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '-' && r != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 func findClosingFenceLine(s string) int {

@@ -1,5 +1,7 @@
 package agent
 
+import "github.com/wzhejunqiu/ds-code/internal/llm"
+
 // LoopPhase tracks which stage of the agent loop is executing.
 type LoopPhase int
 
@@ -39,4 +41,5 @@ type LoopState struct {
 	OutputRecoveryCount int
 	NetworkRetryCount   int
 	FallbackTried       bool
+	EphemeralTail       []llm.Message // API-only messages re-appended after PrepareRequest
 }

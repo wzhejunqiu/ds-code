@@ -53,6 +53,19 @@ func (r *Runner) attachStreamHandlers(cb *TurnCallbacks, round int, stream *subR
 	}
 }
 
+func (r *Runner) applySubRoundUsage(ctx context.Context, sessionID string, usage llm.Usage, cb *TurnCallbacks) {
+	if err := r.Sessions.AddUsage(ctx, sessionID, usage); err != nil {
+		logging.L().Warn("add usage failed", zap.String("session_id", sessionID), zap.Error(err))
+	}
+	if cb != nil && cb.OnUsageUpdate != nil &&
+		(usage.PromptTokens > 0 || usage.CompletionTokens > 0) {
+		cb.OnUsageUpdate(usage)
+	}
+	if r.Context != nil && usage.PromptTokens > 0 {
+		r.Context.RecordPromptUsage(sessionID, usage.PromptTokens)
+	}
+}
+
 func (r *Runner) finishTerminalRound(
 	ctx context.Context,
 	sessionID string,
@@ -62,6 +75,7 @@ func (r *Runner) finishTerminalRound(
 	turnStart time.Time,
 	result *TurnResult,
 	cb *TurnCallbacks,
+	stopHook HookInput,
 ) (*TurnResult, error) {
 	turnDur := time.Since(turnStart)
 	reasoningDur := stream.timing.duration()
@@ -99,7 +113,11 @@ func (r *Runner) finishTerminalRound(
 		_, _ = io.WriteString(r.Out, resp.Content)
 	}
 	if r.Hooks != nil {
-		r.Hooks.Run(ctx, HookStop, marshalHookInput(HookInput{SessionID: sessionID}))
+		in := stopHook
+		if in.SessionID == "" {
+			in.SessionID = sessionID
+		}
+		r.Hooks.Run(ctx, HookStop, marshalHookInput(in))
 	}
 	return result, nil
 }
@@ -123,22 +141,16 @@ func (r *Runner) finishMaxTurnsExceeded(
 	}); err != nil {
 		return nil, err
 	}
-	if err := r.Sessions.AppendMessage(ctx, session.Message{
-		SessionID: sessionID,
-		Role:      role.User,
-		Content:   maxTurnsSummaryPrompt,
-	}); err != nil {
-		return nil, err
-	}
-
 	view, maxTokens, err := r.Context.PrepareRequest(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
+	state.EphemeralTail = []llm.Message{{Role: role.User, Content: maxTurnsSummaryPrompt}}
+
 	stream := &subRoundStream{}
 	req := llm.Request{
 		MergedSystem:    view.MergedSystem(),
-		Messages:        view.Messages,
+		Messages:        mergePreparedMessages(view.Messages, state.EphemeralTail),
 		Model:           sess.Model,
 		MaxTokens:       maxTokens,
 		Stream:          true,
@@ -150,14 +162,22 @@ func (r *Runner) finishMaxTurnsExceeded(
 	req.OnStream = r.attachStreamHandlers(cb, r.MaxTurns, stream)
 
 	resp, err := r.chatWithRecovery(ctx, sessionID, req, state)
+	stopHook := HookInput{
+		SessionID:  sessionID,
+		Transition: string(TransMaxTurns),
+		Error:      fmt.Sprintf("exceeded max sub-rounds (%d)", r.MaxTurns),
+	}
 	if err != nil {
-		return nil, err
+		stopHook.Error = err.Error()
+		resp = &llm.Response{
+			Content:      fmt.Sprintf(maxTurnsSummaryFailedFmt, err),
+			FinishReason: "stop",
+		}
+	} else {
+		r.applySubRoundUsage(ctx, sessionID, resp.Usage, cb)
+		result.Usage = resp.Usage
 	}
-	if err := r.Sessions.AddUsage(ctx, sessionID, resp.Usage); err != nil {
-		logging.L().Warn("add usage failed", zap.String("session_id", sessionID), zap.Error(err))
-	}
-	result.Usage = resp.Usage
-	return r.finishTerminalRound(ctx, sessionID, sess.Model, resp, stream, turnStart, result, cb)
+	return r.finishTerminalRound(ctx, sessionID, sess.Model, resp, stream, turnStart, result, cb, stopHook)
 }
 
 func (r *Runner) runToolCalls(

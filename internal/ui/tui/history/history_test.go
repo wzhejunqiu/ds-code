@@ -57,6 +57,24 @@ func TestBlocksFromMessages_reasoningBeforeTools(t *testing.T) {
 	}
 }
 
+func TestBlocksFromMessages_maxTurnsSoftLandingShape(t *testing.T) {
+	msgs := []session.Message{
+		{Role: role.User, Content: "real question"},
+		{Role: role.System, Content: "[ds-code] Reached max sub-rounds (3). Summarizing progress."},
+		{Role: role.Assistant, Content: "summary reply"},
+	}
+	blocks := BlocksFromMessages(msgs, false, "")
+	if len(blocks) != 2 {
+		t.Fatalf("got %d blocks, want user + assistant (system event hidden)", len(blocks))
+	}
+	if blocks[0].Role != chat.RoleUser || blocks[0].Content != "real question" {
+		t.Fatalf("first block = %+v", blocks[0])
+	}
+	if blocks[1].Role != chat.RoleAssistant || blocks[1].Content != "summary reply" {
+		t.Fatalf("second block = %+v", blocks[1])
+	}
+}
+
 func TestBlocksFromMessages_interruptSystemMessage(t *testing.T) {
 	msgs := []session.Message{
 		{Role: role.User, Content: "hello"},

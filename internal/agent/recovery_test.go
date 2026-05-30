@@ -82,6 +82,38 @@ func TestChatWithRecovery_retriesAfterCompact(t *testing.T) {
 	}
 }
 
+func TestChatWithRecovery_preservesEphemeralTailOnCompact(t *testing.T) {
+	cfg := recoveryTestConfig()
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("m", "max", "enabled", "auto", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mockLLM := &mock.Client{
+		Errors:    []error{fmt.Errorf("context length exceeded")},
+		Responses: []*llm.Response{{Content: "summary ok"}},
+	}
+	perm := permission.NewEngine("auto", t.TempDir(), false)
+	reg := tool.NewRegistry()
+	ctxSvc := &ctxpkg.Service{Cfg: cfg, Store: store, Tools: reg, LLM: mockLLM, AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}}
+	r := &Runner{LLM: mockLLM, Context: ctxSvc, Cfg: cfg, Sessions: store}
+
+	tail := []llm.Message{{Role: role.User, Content: maxTurnsSummaryPrompt}}
+	req := llm.Request{Messages: mergePreparedMessages([]llm.Message{{Role: role.User, Content: "hi"}}, tail)}
+	state := &LoopState{EphemeralTail: tail}
+	resp, err := r.chatWithRecovery(context.Background(), sess.ID, req, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Content != "summary ok" || len(mockLLM.Calls) != 2 {
+		t.Fatalf("resp=%+v calls=%d", resp, len(mockLLM.Calls))
+	}
+	last := mockLLM.Calls[1].Messages[len(mockLLM.Calls[1].Messages)-1]
+	if last.Content != maxTurnsSummaryPrompt {
+		t.Fatalf("retry tail = %q, want summary prompt", last.Content)
+	}
+}
+
 func TestChatWithRecovery_emptyResponseRetries(t *testing.T) {
 	cfg := recoveryTestConfig()
 	store := session.NewMemoryStore()

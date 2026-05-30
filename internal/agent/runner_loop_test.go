@@ -62,6 +62,7 @@ func TestFinishTerminalRound_writesOutWhenNoCallback(t *testing.T) {
 		time.Now(),
 		result,
 		nil,
+		HookInput{SessionID: sess.ID},
 	)
 	if err != nil {
 		t.Fatal(err)

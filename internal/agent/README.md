@@ -57,6 +57,10 @@
 
 `context.Context` 取消会在子轮次之间、工具之间中止执行。
 
+### MaxTurns soft landing
+
+达到 `MaxTurns` 时写入 history-only 的 system 事件，再发起**无工具**的摘要 LLM 请求（摘要 prompt 仅注入 API 消息，**不**持久化为 user 行）。`HookStop` 的 `HOOK_INPUT` 含 `transition: "max_turns"` 与 `error` 说明超限。Hook 脚本判断 stop 原因应读 `transition`，勿单独以 `error` 非空视为失败。摘要 LLM 失败时写入 fallback assistant 消息并完成 soft landing。
+
 ## 相关包
 
 - **`internal/agent/subagent`** — `task` 工具 / slash 子 agent 使用的短时只读 `Runner`（见 subagent README）。
