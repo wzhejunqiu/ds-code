@@ -13,6 +13,7 @@ import (
 	mcpsvc "github.com/wzhejunqiu/ds-code/internal/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	toolsetup "github.com/wzhejunqiu/ds-code/internal/tool/setup"
@@ -25,7 +26,7 @@ type toolBundle struct {
 	deps   toolsetup.Deps
 }
 
-func (a *App) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.GitignoreMatcher, strict bool, llmClient llm.Client, runMode string) (*toolBundle, error) {
+func (a *App) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.GitignoreMatcher, strict bool, llmClient llm.Client, runMode runmode.RunMode) (*toolBundle, error) {
 	var lspMgr *lsp.Manager
 	if a.Cfg.LSP.Enabled {
 		if a.lspMgr == nil {
@@ -97,20 +98,27 @@ func (a *App) rebindRunnerTools(runner *agent.Runner, ctxSvc *ctxpkg.Service, bu
 
 // SetRunMode implements slashcmd.Host.
 func (a *App) SetRunMode(ctx context.Context, env *slashcmd.Env, mode string) error {
-	env.Cfg.RunMode = mode
+	rm, err := runmode.Parse(mode)
+	if err != nil {
+		return err
+	}
+	if !rm.Configured() {
+		return fmt.Errorf("invalid run_mode %q", mode)
+	}
+	env.Cfg.RunMode = rm
 	if err := env.Store.UpdateSession(ctx, *env.SessionID, func(s *session.Session) error {
-		s.RunMode = mode
+		s.RunMode = rm
 		return nil
 	}); err != nil {
 		return err
 	}
 	gi, _ := tool.LoadGitignore(env.Cfg.ProjectRoot)
-	bundle, err := a.buildTools(ctx, env.Runner.Perm, gi, env.Cfg.LLM.StrictTools, env.Runner.LLM, mode)
+	bundle, err := a.buildTools(ctx, env.Runner.Perm, gi, env.Cfg.LLM.StrictTools, env.Runner.LLM, rm)
 	if err != nil {
 		return err
 	}
 	a.rebindRunnerTools(env.Runner, env.CtxSvc, bundle)
-	fmt.Fprintf(env.Out, "Run mode set to %s (tools updated for this session).\n", mode)
+	fmt.Fprintf(env.Out, "Run mode set to %s (tools updated for this session).\n", rm)
 	return nil
 }
 

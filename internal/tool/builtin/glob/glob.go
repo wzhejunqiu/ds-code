@@ -21,7 +21,7 @@ type GlobTool struct {
 	Strict    bool
 }
 
-func (t *GlobTool) Name() string { return "glob" }
+func (t *GlobTool) Name() string { return tool.NameGlob.String() }
 
 func (t *GlobTool) WithPerm(perm *permission.Engine) tool.Tool {
 	cp := *t

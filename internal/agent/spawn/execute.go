@@ -21,8 +21,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// ExecuteRun creates a child Runner from a filtered tool pool, runs one turn,
-// and returns a summary string. This is used for both Sync and Async paths.
+// ExecuteRun assembles a restricted child Runner, runs one turn, and returns a summary.
+// Used by both sync and async spawn paths.
 func ExecuteRun(
 	ctx context.Context,
 	cfg *config.Config,
@@ -40,6 +40,7 @@ func ExecuteRun(
 		return "", fmt.Errorf("spawn: empty prompt")
 	}
 
+	// Worktree isolation runs tools against the detached checkout, not project root.
 	workspace := cfg.ProjectRoot
 	if run.WorktreePath != "" {
 		workspace = run.WorktreePath
@@ -47,15 +48,16 @@ func ExecuteRun(
 
 	permMode := def.PermissionMode
 	if permMode == "" {
-		permMode = "inherit"
+		permMode = AgentPermModeInherit
 	}
 	var perm *permission.Engine
 	switch {
-	case IsReadOnly(def) || permMode == "readonly":
+	case IsReadOnly(def) || permMode == AgentPermModeReadonly:
 		perm = permission.NewEngine("readonly", workspace, false)
-	case permMode == "bubble", permMode == "inherit", permMode == "":
+	case permMode == AgentPermModeBubble, permMode == AgentPermModeInherit:
 		// bubble: permission ask uses the parent's Prompter (TUI TUIPrompter when configured).
 		if run.WorktreePath != "" {
+			// Rebind workspace while keeping parent Prompter for bubble-up asks.
 			perm = permission.NewEngine(parentPerm.Mode, workspace, parentPerm.Interactive)
 			perm.Prompter = parentPerm.Prompter
 		} else {
@@ -65,18 +67,20 @@ func ExecuteRun(
 		perm = parentPerm
 	}
 
+	// Layer 1 always strips agent; background runs get an async tool whitelist.
 	childReg := FilterToolRegistry(parentReg, def, run.Background)
 	if run.WorktreePath != "" {
 		childReg = tool.RebindRegistryPerm(childReg, perm)
 	}
 
+	// Single-run adapter: subagentstore rows masquerade as a session.Store.
 	store := newSessionStore(subStore, run, permMode)
 	sess, err := store.CreateSession(
 		run.Model,
 		cfg.LLM.ResolveSubagentReasoningEffort(),
 		run.ThinkingType,
-		permMode,
-		"agent",
+		permMode.ToSessionMode(),
+		session.RunModeAgent,
 	)
 	if err != nil {
 		return "", err
@@ -99,12 +103,13 @@ func ExecuteRun(
 
 	isFork := run.SpawnKind == subagentstore.SpawnFork
 	if isFork {
+		// Fork shares parent API prefix; only the trailing user directive differs.
 		fc, ok := agent.ForkContextFromContext(ctx)
 		if !ok {
 			return "", fmt.Errorf("fork: missing parent context")
 		}
 		rendered := agent.RenderedSystemFromContext(ctx)
-		if mem := FormatAgentMemory("fork"); mem != "" {
+		if mem := FormatAgentMemory(AgentTypeFork.String()); mem != "" {
 			rendered = rendered + "\n" + mem
 		}
 		forkMsgs := BuildForkMessages(fc.ParentMessages, fc.ParentToolCalls, run.Prompt)
@@ -114,11 +119,11 @@ func ExecuteRun(
 		ctxSvc.ForkView = ctxpkg.BuildForkAPIContext(&ctxpkg.APIContextView{WindowTokens: cfg.Context.WindowTokens}, forkMsgs, rendered)
 	} else {
 		overlay := SystemPromptOverlay(def)
-		if mem := FormatAgentMemory(def.Type); mem != "" {
+		if mem := FormatAgentMemory(def.Type.String()); mem != "" {
 			overlay = overlay + "\n" + mem
 		}
 		ctxSvc.AgentOverlay = overlay
-		if def.Type == "verification" {
+		if def.Type == AgentTypeVerification {
 			ctxSvc.VerificationMode = true
 		}
 	}
@@ -142,7 +147,7 @@ func ExecuteRun(
 
 	logging.L().Debug("spawn execute start",
 		zap.String("run_id", run.ID),
-		zap.String("agent_type", def.Type),
+		zap.String("agent_type", def.Type.String()),
 		zap.String("spawn_kind", string(run.SpawnKind)),
 		zap.Int("prompt_chars", len(run.Prompt)),
 	)
@@ -151,6 +156,7 @@ func ExecuteRun(
 	var runErr error
 	if isFork {
 		ctx = WithQuerySource(ctx, QuerySourceFork)
+		// Messages already seeded; RunTurnSeeded continues from fork prefix.
 		result, runErr = childRunner.RunTurnSeeded(ctx, sess.ID, cb)
 	} else {
 		result, runErr = childRunner.RunTurn(ctx, sess.ID, run.Prompt, cb)
@@ -168,6 +174,7 @@ func ExecuteRun(
 		zap.Int("prompt_tokens", result.Usage.PromptTokens),
 	)
 
+	// Prefer visible assistant content; fall back to reasoning when content is empty.
 	summary := result.FinalContent
 	if summary == "" {
 		summary = result.FinalReasoning
@@ -175,6 +182,7 @@ func ExecuteRun(
 	return trimSummary(summary, cfg), nil
 }
 
+// seedForkMessages persists pre-built fork API messages before RunTurnSeeded.
 func seedForkMessages(ctx context.Context, store *sessionStore, sessionID string, msgs []llm.Message) error {
 	for _, m := range msgs {
 		sm := llmMessageToSession(m, sessionID)
@@ -185,6 +193,7 @@ func seedForkMessages(ctx context.Context, store *sessionStore, sessionID string
 	return nil
 }
 
+// llmMessageToSession converts a fork seed message into a session.Message row.
 func llmMessageToSession(m llm.Message, sessionID string) session.Message {
 	sm := session.Message{
 		SessionID:        sessionID,
@@ -202,8 +211,10 @@ func llmMessageToSession(m llm.Message, sessionID string) session.Message {
 	return sm
 }
 
+// resolveThinkingType picks thinking mode for a new run.
+// Fork inherits the parent session; other sub-agents default to disabled.
 func resolveThinkingType(cfg *config.Config, def AgentTypeDefinition, parentThinking string, isFork bool) string {
-	if isFork || def.Type == "fork" {
+	if isFork || def.Type == AgentTypeFork {
 		if parentThinking != "" {
 			return parentThinking
 		}
@@ -215,6 +226,7 @@ func resolveThinkingType(cfg *config.Config, def AgentTypeDefinition, parentThin
 	return "disabled"
 }
 
+// trimSummary caps summary length and appends a truncation marker when clipped.
 func trimSummary(s string, cfg *config.Config) string {
 	max := summaryMaxChars(cfg)
 	if utf8.RuneCountInString(s) <= max {
@@ -233,22 +245,25 @@ func trimSummary(s string, cfg *config.Config) string {
 }
 
 // sessionStore adapts subagentstore.Store to session.Store for one agent run.
+// All session IDs map to a single subagent Run row.
 type sessionStore struct {
-	sub      subagentstore.Store
-	runID    string
-	run      subagentstore.Run
-	permMode string
+	sub      subagentstore.Store // underlying sub-agent persistence
+	runID    string              // fixed run ID for all session operations
+	run      subagentstore.Run   // cached run metadata for token totals
+	// Agent-level perm mode; mapped to session.PermissionMode in toSession when applicable.
+	permMode AgentPermMode
 }
 
-func newSessionStore(sub subagentstore.Store, run subagentstore.Run, permMode string) *sessionStore {
+func newSessionStore(sub subagentstore.Store, run subagentstore.Run, permMode AgentPermMode) *sessionStore {
 	return &sessionStore{sub: sub, runID: run.ID, run: run, permMode: permMode}
 }
 
-func (s *sessionStore) CreateSession(model, effort, thinking, permMode, runMode string) (session.Session, error) {
+// CreateSession returns a synthetic session backed by the subagent run metadata.
+func (s *sessionStore) CreateSession(model, effort, thinking string, permMode session.PermissionMode, runMode session.RunMode) (session.Session, error) {
 	return s.toSession(), nil
 }
 
-func (s *sessionStore) NewSession(model, effort, thinking, permMode, runMode string) (session.Session, error) {
+func (s *sessionStore) NewSession(model, effort, thinking string, permMode session.PermissionMode, runMode session.RunMode) (session.Session, error) {
 	return s.CreateSession(model, effort, thinking, permMode, runMode)
 }
 
@@ -256,6 +271,7 @@ func (s *sessionStore) Create(_ context.Context, sess session.Session) error {
 	return fmt.Errorf("agent session store: create not supported")
 }
 
+// Get refreshes run metadata from subagentstore and projects it as a session.
 func (s *sessionStore) Get(ctx context.Context, _ string) (session.Session, error) {
 	r, err := s.sub.GetRun(ctx, s.runID)
 	if err != nil {
@@ -285,6 +301,7 @@ func (s *sessionStore) AddUsage(ctx context.Context, _ string, u llm.Usage) erro
 	return s.sub.AddUsage(ctx, s.runID, u)
 }
 
+// UpdateSession mirrors token totals from Runner back onto the in-memory run snapshot.
 func (s *sessionStore) UpdateSession(ctx context.Context, _ string, fn func(*session.Session) error) error {
 	sess := s.toSession()
 	if err := fn(&sess); err != nil {
@@ -306,8 +323,8 @@ func (s *sessionStore) toSession() session.Session {
 		Model:                     s.run.Model,
 		ReasoningEffort:           s.run.ReasoningEffort,
 		ThinkingType:              s.run.ThinkingType,
-		PermissionMode:            s.permMode,
-		RunMode:                   "agent",
+		PermissionMode:            s.permMode.ToSessionMode(),
+		RunMode:                   session.RunModeAgent,
 		PromptTokensTotal:         s.run.PromptTokensTotal,
 		CompletionTokensTotal:     s.run.CompletionTokensTotal,
 		PromptCacheHitTokensTotal: s.run.PromptCacheHitTokensTotal,
@@ -316,6 +333,7 @@ func (s *sessionStore) toSession() session.Session {
 	}
 }
 
+// subagentMessageToSession maps a subagent transcript row to session.Message.
 func subagentMessageToSession(m subagentstore.Message) session.Message {
 	return session.Message{
 		ID:                   m.ID,
@@ -338,6 +356,7 @@ func subagentMessageToSession(m subagentstore.Message) session.Message {
 	}
 }
 
+// sessionMessageToSubagent maps a session.Message row back to subagentstore.Message.
 func sessionMessageToSubagent(m session.Message, runID string) subagentstore.Message {
 	return subagentstore.Message{
 		ID:                   m.ID,

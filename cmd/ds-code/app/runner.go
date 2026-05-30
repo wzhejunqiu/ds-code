@@ -25,7 +25,7 @@ import (
 func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Service, error) {
 	logging.L().Info("building agent runner",
 		zap.String("project_root", a.Cfg.ProjectRoot),
-		zap.String("run_mode", a.Cfg.RunMode),
+		zap.String("run_mode", a.Cfg.RunMode.String()),
 		zap.String("permission", a.Cfg.Permission.Mode),
 	)
 	store, err := a.openStore()

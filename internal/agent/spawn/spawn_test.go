@@ -105,7 +105,7 @@ func TestRoute_ExplicitType(t *testing.T) {
 	if decision.IsFork {
 		t.Error("expected non-fork when subagent_type is explicit")
 	}
-	if decision.Definition.Type != "Explore" {
+	if decision.Definition.Type != spawn.AgentTypeExplore {
 		t.Errorf("expected Explore, got %s", decision.Definition.Type)
 	}
 }
@@ -173,7 +173,7 @@ func TestRoute_DefaultType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if decision.Definition.Type != "general-purpose" {
+	if decision.Definition.Type != spawn.AgentTypeGeneralPurpose {
 		t.Errorf("expected general-purpose as default, got %s", decision.Definition.Type)
 	}
 }
@@ -223,7 +223,7 @@ func TestFilterToolRegistry_GlobalBlock(t *testing.T) {
 	reg.Register(dummy)
 
 	filtered := spawn.FilterToolRegistry(reg, spawn.AgentTypeDefinition{
-		Type:  "general-purpose",
+		Type:  spawn.AgentTypeGeneralPurpose,
 		Tools: []string{"*"},
 	}, false)
 
@@ -241,9 +241,9 @@ func TestFilterToolRegistry_TypeDisallowed(t *testing.T) {
 	reg.Register(&write_file.WriteFileTool{Cfg: testConfig(), Perm: testPerm(), Strict: false})
 
 	filtered := spawn.FilterToolRegistry(reg, spawn.AgentTypeDefinition{
-		Type:            "Explore",
+		Type:            spawn.AgentTypeExplore,
 		Tools:           []string{"*"},
-		DisallowedTools: []string{"write_file"},
+		DisallowedTools: []tool.Name{tool.NameWriteFile},
 	}, false)
 
 	if _, ok := filtered.Get("read_file"); !ok {
@@ -258,7 +258,7 @@ func TestFilterToolRegistry_AsyncWhitelist(t *testing.T) {
 	reg := testRegistry()
 
 	filtered := spawn.FilterToolRegistry(reg, spawn.AgentTypeDefinition{
-		Type:  "general-purpose",
+		Type:  spawn.AgentTypeGeneralPurpose,
 		Tools: []string{"*"},
 	}, true)
 
@@ -321,8 +321,8 @@ func TestBuildForkMessages_EmptyHistory(t *testing.T) {
 
 func TestNotificationQueue_EnqueueAndDrain(t *testing.T) {
 	q := spawn.NewNotificationQueue()
-	q.Enqueue(spawn.Notification{AgentID: "a1", Status: "completed"}, spawn.PrioNext)
-	q.Enqueue(spawn.Notification{AgentID: "a2", Status: "completed"}, spawn.PrioNext)
+	q.Enqueue(spawn.Notification{AgentID: "a1", Status: spawn.ResultCompleted}, spawn.PrioNext)
+	q.Enqueue(spawn.Notification{AgentID: "a2", Status: spawn.ResultCompleted}, spawn.PrioNext)
 
 	next := q.Drain(spawn.PrioNext)
 	if len(next) != 2 {
@@ -375,7 +375,7 @@ func TestNotificationQueue_FormatXML(t *testing.T) {
 	n := spawn.Notification{
 		AgentID:   "a1",
 		ToolUseID: "tc1",
-		Status:    "completed",
+		Status:    spawn.ResultCompleted,
 		Summary:   `done with <tag> & "quotes"`,
 		Result:    "all good\nmultiline",
 	}
@@ -400,7 +400,7 @@ func TestNotificationQueue_FormatXML(t *testing.T) {
 func TestNotificationQueue_FormatXML_WithWorktree(t *testing.T) {
 	n := spawn.Notification{
 		AgentID:        "a1",
-		Status:         "completed",
+		Status:         spawn.ResultCompleted,
 		Summary:        "done",
 		WorktreePath:   "/tmp/wt",
 		WorktreeBranch: "wt-branch",
@@ -415,7 +415,7 @@ func TestNotificationQueue_FormatXML_WithWorktree(t *testing.T) {
 
 func TestResolveModel_ParamsOverride(t *testing.T) {
 	cfg := testConfig()
-	result := spawn.ResolveModel("sonnet", "inherit", cfg)
+	result := spawn.ResolveModel("sonnet", spawn.ModelInherit, cfg)
 	if result != cfg.LLM.Model {
 		t.Errorf("params model alias should resolve to main model, got %s", result)
 	}
@@ -423,7 +423,7 @@ func TestResolveModel_ParamsOverride(t *testing.T) {
 
 func TestResolveModel_DefOverride(t *testing.T) {
 	cfg := testConfig()
-	result := spawn.ResolveModel("", "specific-model-v2", cfg)
+	result := spawn.ResolveModel("", spawn.ModelSelection("specific-model-v2"), cfg)
 	if result != "specific-model-v2" {
 		t.Errorf("definition model should take priority, got %s", result)
 	}
@@ -432,7 +432,7 @@ func TestResolveModel_DefOverride(t *testing.T) {
 func TestResolveModel_SubagentConfig(t *testing.T) {
 	cfg := testConfig()
 	cfg.LLM.Subagent.Model = "sub-model"
-	result := spawn.ResolveModel("", "", cfg)
+	result := spawn.ResolveModel("", spawn.ModelSelection(""), cfg)
 	if result != "sub-model" {
 		t.Errorf("expected sub-model from config, got %s", result)
 	}
@@ -441,7 +441,7 @@ func TestResolveModel_SubagentConfig(t *testing.T) {
 func TestResolveModel_FallbackToMain(t *testing.T) {
 	cfg := testConfig()
 	cfg.LLM.Subagent.Model = ""
-	result := spawn.ResolveModel("", "", cfg)
+	result := spawn.ResolveModel("", spawn.ModelSelection(""), cfg)
 	if result != cfg.LLM.Model {
 		t.Errorf("expected fallback to main model, got %s", result)
 	}
@@ -468,7 +468,7 @@ func TestRegistry_ResolveEmptyDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if def.Type != "general-purpose" {
+	if def.Type != spawn.AgentTypeGeneralPurpose {
 		t.Errorf("expected general-purpose default, got %s", def.Type)
 	}
 }
@@ -494,7 +494,7 @@ func TestIsReadOnly_ExplicitFlag(t *testing.T) {
 }
 
 func TestIsReadOnly_PermissionMode(t *testing.T) {
-	def := spawn.AgentTypeDefinition{PermissionMode: "readonly"}
+	def := spawn.AgentTypeDefinition{PermissionMode: spawn.AgentPermModeReadonly}
 	if !spawn.IsReadOnly(def) {
 		t.Error("readonly permission mode should be read-only")
 	}

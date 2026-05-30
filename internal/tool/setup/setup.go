@@ -6,6 +6,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	mcpsvc "github.com/wzhejunqiu/ds-code/internal/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -82,10 +83,10 @@ func RegisterAgentExtras(reg *tool.Registry, d Deps) {
 }
 
 // BuildRegistry creates a tool registry for the given run mode.
-func BuildRegistry(runMode string, d Deps) *tool.Registry {
+func BuildRegistry(runMode runmode.RunMode, d Deps) *tool.Registry {
 	reg := tool.NewRegistry()
 	RegisterReadOnly(reg, d)
-	if runMode == "plan" {
+	if runMode == runmode.Plan {
 		return reg
 	}
 	RegisterWrite(reg, d)

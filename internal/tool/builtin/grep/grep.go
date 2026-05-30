@@ -42,7 +42,7 @@ type GrepTool struct {
 	Strict    bool
 }
 
-func (t *GrepTool) Name() string { return "grep" }
+func (t *GrepTool) Name() string { return tool.NameGrep.String() }
 
 func (t *GrepTool) WithPerm(perm *permission.Engine) tool.Tool {
 	cp := *t

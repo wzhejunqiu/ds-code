@@ -9,6 +9,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
@@ -22,7 +23,7 @@ func testEnv(t *testing.T, store session.Store) (*Env, string) {
 		ProjectRoot: t.TempDir(),
 		LLM:         config.LLMConfig{Model: "deepseek-v4-pro", ReasoningEffort: "high", Thinking: config.ThinkingConfig{Type: "enabled"}},
 		Permission:  config.PermissionConfig{Mode: "readonly"},
-		RunMode:     "agent",
+		RunMode:     runmode.Agent,
 	}, store)
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +34,7 @@ func testEnv(t *testing.T, store session.Store) (*Env, string) {
 		ProjectRoot: dir,
 		LLM:         config.LLMConfig{Model: "deepseek-v4-pro", ReasoningEffort: "high", Thinking: config.ThinkingConfig{Type: "enabled"}},
 		Permission:  config.PermissionConfig{Mode: "readonly"},
-		RunMode:     "agent",
+		RunMode:     runmode.Agent,
 	}
 	return &Env{
 		Ctx:       context.Background(),

@@ -59,7 +59,7 @@ func NewAgentTool(cfg *config.Config, perm *permission.Engine, llmClient llm.Cli
 	}
 }
 
-func (t *AgentTool) Name() string { return "agent" }
+func (t *AgentTool) Name() string { return tool.NameAgent.String() }
 
 func (t *AgentTool) Description() string { return DescAgent }
 

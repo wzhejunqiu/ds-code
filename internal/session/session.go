@@ -12,8 +12,8 @@ type Session struct {
 	Model                     string
 	ReasoningEffort           string
 	ThinkingType              string
-	PermissionMode            string
-	RunMode                   string
+	PermissionMode            PermissionMode
+	RunMode                   RunMode
 	CompactSummary            string
 	CompactUpToMessageID      int64
 	PromptTokensTotal         int64

@@ -20,7 +20,7 @@ func CreateSession(cfg *config.Config, store session.Store) (session.Session, er
 		cfg.LLM.Model,
 		cfg.LLM.ReasoningEffort,
 		cfg.LLM.Thinking.Type,
-		cfg.Permission.Mode,
+		session.PermissionMode(cfg.Permission.Mode),
 		cfg.RunMode,
 	)
 }
@@ -98,7 +98,7 @@ func Permissions(env *Env, args string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(env.Out, "permission.mode: %s (session), runner: %s\n", sess.PermissionMode, env.Runner.Perm.Mode)
+		fmt.Fprintf(env.Out, "permission.mode: %s (session), runner: %s\n", sess.PermissionMode.String(), env.Runner.Perm.Mode)
 		return nil
 	}
 	mode, confirmed, err := parsePermissionArgs(args)
@@ -119,7 +119,11 @@ func Permissions(env *Env, args string) error {
 			env.Runner.Perm.Prompter = nil
 		}
 		_ = env.Store.UpdateSession(env.Ctx, *env.SessionID, func(s *session.Session) error {
-			s.PermissionMode = mode
+			pm := session.PermissionMode(mode)
+			if !pm.Valid() {
+				return fmt.Errorf("invalid permission mode %q", mode)
+			}
+			s.PermissionMode = pm
 			return nil
 		})
 		fmt.Fprintf(env.Out, "permission.mode set to %s\n", mode)

@@ -20,7 +20,7 @@ type WriteFileTool struct {
 	Strict bool
 }
 
-func (t *WriteFileTool) Name() string { return "write_file" }
+func (t *WriteFileTool) Name() string { return tool.NameWriteFile.String() }
 
 func (t *WriteFileTool) WithPerm(perm *permission.Engine) tool.Tool {
 	cp := *t

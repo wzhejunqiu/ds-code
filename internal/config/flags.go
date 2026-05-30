@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 )
 
 // applyChangedFlags merges only CLI flags the user explicitly set (highest priority).
@@ -67,7 +68,7 @@ func applyChangedFlags(cfg *Config, cmd *cobra.Command) error {
 			return err
 		}
 		if v {
-			cfg.RunMode = "plan"
+			cfg.RunMode = runmode.Plan
 		}
 	}
 	return nil

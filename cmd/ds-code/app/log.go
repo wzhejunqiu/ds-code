@@ -15,7 +15,7 @@ func LogConfigResolved(cfg *config.Config) {
 		zap.String("project_root", cfg.ProjectRoot),
 		zap.String("model", cfg.LLM.Model),
 		zap.String("permission_mode", cfg.Permission.Mode),
-		zap.String("run_mode", cfg.RunMode),
+		zap.String("run_mode", cfg.RunMode.String()),
 		zap.Int("log_verbosity", cfg.LogVerbosity),
 		zap.Bool("allow_log_sensitive_data", cfg.AllowLogSensitiveData),
 		zap.Int("mcp_servers", len(cfg.MCP.Servers)),

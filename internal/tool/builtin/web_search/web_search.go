@@ -17,7 +17,7 @@ type WebSearchTool struct {
 	Strict bool
 }
 
-func (t *WebSearchTool) Name() string { return "web_search" }
+func (t *WebSearchTool) Name() string { return tool.NameWebSearch.String() }
 
 func (t *WebSearchTool) IsReadOnly() bool        { return true }
 func (t *WebSearchTool) IsConcurrencySafe() bool { return true }

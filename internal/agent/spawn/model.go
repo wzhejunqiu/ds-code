@@ -7,12 +7,12 @@ import "github.com/wzhejunqiu/ds-code/internal/config"
 // 2. Agent type definition override (unless "inherit")
 // 3. Config llm.subagent.model
 // 4. Fall back to main model
-func ResolveModel(paramsModel string, defModel string, cfg *config.Config) string {
+func ResolveModel(paramsModel string, defModel ModelSelection, cfg *config.Config) string {
 	if paramsModel != "" {
 		return resolveAlias(paramsModel, cfg)
 	}
-	if defModel != "" && defModel != "inherit" {
-		return resolveAlias(defModel, cfg)
+	if !defModel.Inherit() {
+		return resolveAlias(defModel.String(), cfg)
 	}
 	if cfg.LLM.Subagent.Model != "" {
 		return cfg.LLM.Subagent.Model

@@ -6,6 +6,8 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
+	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
 func TestApp_openStore(t *testing.T) {
@@ -37,7 +39,7 @@ func TestApp_createSession(t *testing.T) {
 			Thinking:        config.ThinkingConfig{Type: "enabled"},
 		},
 		Permission: config.PermissionConfig{Mode: "readonly"},
-		RunMode:    "agent",
+		RunMode:    runmode.Agent,
 	}
 	a := New(cfg)
 	store, err := a.openStore()
@@ -52,7 +54,7 @@ func TestApp_createSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Model != cfg.LLM.Model || got.PermissionMode != "readonly" {
+	if got.Model != cfg.LLM.Model || got.PermissionMode != session.PermissionModeReadonly {
 		t.Fatalf("session = %+v", got)
 	}
 }

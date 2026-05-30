@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
@@ -16,7 +17,7 @@ func TestApp_TrySlashLine_nilSession(t *testing.T) {
 		ProjectRoot: dir,
 		LLM:         config.LLMConfig{Model: "m", ReasoningEffort: "high", Thinking: config.ThinkingConfig{Type: "enabled"}},
 		Permission:  config.PermissionConfig{Mode: "readonly"},
-		RunMode:     "agent",
+		RunMode:     runmode.Agent,
 	}
 	a := New(cfg)
 	store := session.NewMemoryStore()

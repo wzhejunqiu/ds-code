@@ -50,7 +50,7 @@ func ShouldSpillResult(summary string, maxChars int) bool {
 }
 
 // DeliverResult decides inline vs spill and optionally writes the output file.
-func DeliverResult(dataDir, sessionID, toolCallID, summary, status string, runErr error, cfg *config.Config) DeliveredResult {
+func DeliverResult(dataDir, sessionID, toolCallID, summary string, status ResultStatus, runErr error, cfg *config.Config) DeliveredResult {
 	if !ShouldSpillResult(summary, summaryMaxChars(cfg)) {
 		return DeliveredResult{Inline: true, Body: summary}
 	}
@@ -68,9 +68,9 @@ func DeliverResult(dataDir, sessionID, toolCallID, summary, status string, runEr
 }
 
 // formatSpillPointer is the short JSON returned to the parent when result is spilled.
-func formatSpillPointer(status, outputPath string) string {
+func formatSpillPointer(status ResultStatus, outputPath string) string {
 	b, err := json.Marshal(map[string]string{
-		"status":      status,
+		"status":      status.String(),
 		"output_file": outputPath,
 	})
 	if err != nil {
@@ -91,7 +91,7 @@ func formatSyncToolReturn(description string, delivered DeliveredResult) string 
 }
 
 // writeOutputFile persists the full subagent summary to disk.
-func writeOutputFile(path, summary, status string, err error) {
+func writeOutputFile(path, summary string, status ResultStatus, err error) {
 	f, fileErr := os.Create(path)
 	if fileErr != nil {
 		logging.L().Warn("cannot create output file", zap.String("path", path), zap.Error(fileErr))

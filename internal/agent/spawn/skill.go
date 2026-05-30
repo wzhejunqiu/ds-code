@@ -33,7 +33,7 @@ func (s *Service) FromSkill(ctx context.Context, inv agent.ToolInvocation, skill
 	if err != nil {
 		return "", err
 	}
-	def.Type = "fork"
+	def.Type = AgentTypeFork
 	decision := RouteDecision{
 		SpawnKind:   subagentstore.SpawnFork,
 		IsFork:      true,
@@ -46,7 +46,7 @@ func (s *Service) FromSkill(ctx context.Context, inv agent.ToolInvocation, skill
 	run, err := s.Store.CreateRun(ctx, subagentstore.CreateRunParams{
 		ParentSessionID:  inv.SessionID,
 		ParentToolCallID: inv.ToolCallID,
-		AgentType:        "fork",
+		AgentType:        AgentTypeFork.String(),
 		SpawnKind:        subagentstore.SpawnFork,
 		Label:            truncateLabel(decision.Description, body, 48),
 		Prompt:           body,
@@ -82,7 +82,7 @@ func (s *Service) FromSkill(ctx context.Context, inv agent.ToolInvocation, skill
 		s.Hooks.Run(ctx, agent.HookSubagentStart, agent.MarshalHookInput(agent.HookInput{
 			SessionID: inv.SessionID,
 			AgentID:   run.ID,
-			AgentType: "fork",
+			AgentType: AgentTypeFork.String(),
 		}))
 	}
 	return s.runSync(ctx, inv, run, decision, parent)

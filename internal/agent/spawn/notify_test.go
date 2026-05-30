@@ -39,11 +39,40 @@ func TestCountToolUses(t *testing.T) {
 	}
 }
 
+func TestResultStatusFromStore(t *testing.T) {
+	tests := []struct {
+		status subagentstore.Status
+		want   ResultStatus
+		err    bool
+	}{
+		{subagentstore.StatusCompleted, ResultCompleted, false},
+		{subagentstore.StatusError, ResultFailed, false},
+		{subagentstore.StatusKilled, ResultKilled, false},
+		{subagentstore.StatusRunning, "", true},
+		{subagentstore.Status("unknown"), "", true},
+	}
+	for _, tt := range tests {
+		got, err := resultStatusFromStore(tt.status)
+		if tt.err {
+			if err == nil {
+				t.Fatalf("status %q: expected error", tt.status)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("status %q: unexpected error: %v", tt.status, err)
+		}
+		if got != tt.want {
+			t.Fatalf("status %q: got %q, want %q", tt.status, got, tt.want)
+		}
+	}
+}
+
 func TestNotificationFormat_inlineXML(t *testing.T) {
 	n := Notification{
 		AgentID:   "a1",
 		ToolUseID: "tc1",
-		Status:    "completed",
+		Status:    ResultCompleted,
 		Summary:   `Agent "x" completed`,
 		Result:    "short <result>",
 	}
@@ -67,7 +96,7 @@ func TestNotificationFormat_spillXML(t *testing.T) {
 		AgentID:    "a1",
 		ToolUseID:  "tc1",
 		OutputFile: "/tmp/out.output",
-		Status:     "completed",
+		Status:     ResultCompleted,
 		Summary:    `Agent "x" completed`,
 	}
 	out := n.Format()
@@ -81,7 +110,7 @@ func TestNotificationFormat_spillXML(t *testing.T) {
 
 func TestNotificationQueue_asyncCompletionUsesPrioLater(t *testing.T) {
 	q := NewNotificationQueue()
-	q.Enqueue(Notification{AgentID: "async-1", Status: "completed"}, PrioLater)
+	q.Enqueue(Notification{AgentID: "async-1", Status: ResultCompleted}, PrioLater)
 	if later := q.Drain(PrioLater); len(later) != 1 {
 		t.Fatalf("expected 1 PrioLater notification, got %d", len(later))
 	}

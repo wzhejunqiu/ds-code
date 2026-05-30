@@ -22,7 +22,7 @@ type ListDirTool struct {
 	Strict    bool
 }
 
-func (t *ListDirTool) Name() string { return "list_dir" }
+func (t *ListDirTool) Name() string { return tool.NameListDir.String() }
 
 func (t *ListDirTool) WithPerm(perm *permission.Engine) tool.Tool {
 	cp := *t

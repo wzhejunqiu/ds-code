@@ -26,7 +26,7 @@ func BuildMetaReminder(sess session.Session, cfg *config.Config, now time.Time) 
 		fmt.Fprintf(&b, "model: %s\n", sess.Model)
 	}
 	if sess.RunMode != "" {
-		fmt.Fprintf(&b, "run_mode: %s\n", sess.RunMode)
+		fmt.Fprintf(&b, "run_mode: %s\n", sess.RunMode.String())
 	}
 	b.WriteString("</system-reminder>")
 	return b.String()

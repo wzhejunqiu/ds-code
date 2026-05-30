@@ -22,7 +22,6 @@ var allowedThinking = []string{"enabled", "disabled"}
 var allowedEffort = []string{"high", "max"}
 var allowedPermission = []string{"readonly", "ask", "auto"}
 var allowedTruncateBy = []string{"chars", "tokenizer"}
-var allowedRunMode = []string{"agent", "plan"}
 
 // rejectForbiddenKeys blocks secrets and fixed paths from YAML (see docs/CONFIG.md).
 func rejectForbiddenKeys(v *viper.Viper) error {
@@ -76,7 +75,7 @@ func validate(cfg *Config) error {
 	if cfg.Context.SnipKeepRounds < 0 {
 		return fmt.Errorf("config: context.snip_keep_rounds must be >= 0, got %d", cfg.Context.SnipKeepRounds)
 	}
-	if !slices.Contains(allowedRunMode, cfg.RunMode) {
+	if !cfg.RunMode.Configured() {
 		return fmt.Errorf("config: run_mode must be agent or plan, got %q", cfg.RunMode)
 	}
 	compiled, err := compileEnvBlacklist(cfg.Tools.Shell.EnvBlacklist)

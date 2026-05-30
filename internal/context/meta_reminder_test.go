@@ -13,7 +13,7 @@ import (
 
 func TestBuildMetaReminder(t *testing.T) {
 	cfg := &config.Config{ProjectRoot: "/proj"}
-	sess := session.Session{Model: "deepseek-v4-pro", RunMode: "agent"}
+	sess := session.Session{Model: "deepseek-v4-pro", RunMode: session.RunModeAgent}
 	now := time.Date(2026, 5, 25, 12, 0, 0, 0, time.UTC)
 	got := BuildMetaReminder(sess, cfg, now)
 	if !strings.Contains(got, "date: 2026-05-25") {

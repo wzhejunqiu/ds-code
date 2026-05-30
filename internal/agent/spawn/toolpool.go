@@ -25,13 +25,13 @@ func FilterToolRegistry(parent *tool.Registry, def AgentTypeDefinition, backgrou
 }
 
 // globalDisallowedTools returns tools forbidden for ALL child agents (Layer 1).
-func globalDisallowedTools() []string {
-	return []string{"agent"}
+func globalDisallowedTools() []tool.Name {
+	return []tool.Name{tool.NameAgent}
 }
 
-func isBlocked(name string, blocked []string) bool {
+func isBlocked(name string, blocked []tool.Name) bool {
 	for _, b := range blocked {
-		if name == b {
+		if b.Matches(name) {
 			return true
 		}
 	}
@@ -40,18 +40,18 @@ func isBlocked(name string, blocked []string) bool {
 
 // isAsyncTool checks whether a tool is permitted for background (async) agents.
 func isAsyncTool(name string) bool {
-	return asyncAllowed[name]
+	return asyncAllowed[tool.Name(name)]
 }
 
-var asyncAllowed = map[string]bool{
-	"read_file":   true,
-	"glob":        true,
-	"grep":        true,
-	"list_dir":    true,
-	"diagnostics": true,
-	"web_fetch":   true,
-	"web_search":  true,
-	"shell":       true,
-	"write_file":  true,
-	"apply_patch": true,
+var asyncAllowed = map[tool.Name]bool{
+	tool.NameReadFile:    true,
+	tool.NameGlob:        true,
+	tool.NameGrep:        true,
+	tool.NameListDir:     true,
+	tool.NameDiagnostics: true,
+	tool.NameWebFetch:    true,
+	tool.NameWebSearch:   true,
+	tool.NameShell:       true,
+	tool.NameWriteFile:   true,
+	tool.NameApplyPatch:  true,
 }

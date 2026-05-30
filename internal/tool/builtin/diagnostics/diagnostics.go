@@ -25,7 +25,7 @@ type DiagnosticsTool struct {
 	Strict    bool
 }
 
-func (t *DiagnosticsTool) Name() string { return "diagnostics" }
+func (t *DiagnosticsTool) Name() string { return tool.NameDiagnostics.String() }
 
 func (t *DiagnosticsTool) WithPerm(perm *permission.Engine) tool.Tool {
 	cp := *t

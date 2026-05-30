@@ -8,6 +8,7 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
@@ -32,7 +33,7 @@ func TestCheckpointRewind_requiresYes(t *testing.T) {
 		ProjectRoot: t.TempDir(),
 		LLM:         config.LLMConfig{Model: "m", ReasoningEffort: "high", Thinking: config.ThinkingConfig{Type: "enabled"}},
 		Permission:  config.PermissionConfig{Mode: "readonly"},
-		RunMode:     "agent",
+		RunMode:     runmode.Agent,
 	}, store)
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +63,7 @@ func TestCheckpointRewind_nilRunner(t *testing.T) {
 		ProjectRoot: t.TempDir(),
 		LLM:         config.LLMConfig{Model: "m", ReasoningEffort: "high", Thinking: config.ThinkingConfig{Type: "enabled"}},
 		Permission:  config.PermissionConfig{Mode: "readonly"},
-		RunMode:     "agent",
+		RunMode:     runmode.Agent,
 	}, store)
 	if err != nil {
 		t.Fatal(err)

@@ -67,7 +67,7 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-func (s *Store) CreateSession(model, effort, thinking, permMode, runMode string) (session.Session, error) {
+func (s *Store) CreateSession(model, effort, thinking string, permMode session.PermissionMode, runMode session.RunMode) (session.Session, error) {
 	now := time.Now().UTC()
 	snap := billing.SnapshotForModel(model)
 	sess := session.Session{

@@ -6,6 +6,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm/mock"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/tool/setup"
 )
 
@@ -15,8 +16,8 @@ func TestBuildRegistry_planOmitsWriteTools(t *testing.T) {
 	perm := permission.NewEngine("ask", dir, false)
 	deps := setup.Deps{Cfg: cfg, Perm: perm, Strict: false, LLM: &mock.Client{}}
 
-	plan := setup.BuildRegistry("plan", deps)
-	agent := setup.BuildRegistry("agent", deps)
+	plan := setup.BuildRegistry(runmode.Plan, deps)
+	agent := setup.BuildRegistry(runmode.Agent, deps)
 
 	for _, name := range []string{"read_file", "grep", "glob", "list_dir"} {
 		if _, ok := plan.Get(name); !ok {
@@ -41,7 +42,7 @@ func TestBuildRegistry_planWithWebFetch(t *testing.T) {
 		LSP:         config.LSPConfig{Enabled: false},
 	}
 	perm := permission.NewEngine("readonly", dir, false)
-	reg := setup.BuildRegistry("plan", setup.Deps{Cfg: cfg, Perm: perm, Strict: false})
+	reg := setup.BuildRegistry(runmode.Plan, setup.Deps{Cfg: cfg, Perm: perm, Strict: false})
 	if _, ok := reg.Get("web_fetch"); !ok {
 		t.Fatal("plan with fetch_enabled should register web_fetch")
 	}

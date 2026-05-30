@@ -13,7 +13,7 @@ func TestResolveThinkingType_forkInheritsParent(t *testing.T) {
 			Subagent: config.SubagentLLMConfig{Thinking: config.ThinkingConfig{Type: "disabled"}},
 		},
 	}
-	got := resolveThinkingType(cfg, AgentTypeDefinition{Type: "fork"}, "enabled", true)
+	got := resolveThinkingType(cfg, AgentTypeDefinition{Type: AgentTypeFork}, "enabled", true)
 	if got != "enabled" {
 		t.Fatalf("fork should inherit parent thinking, got %q", got)
 	}
@@ -23,7 +23,7 @@ func TestResolveThinkingType_nonForkDisabled(t *testing.T) {
 	cfg := &config.Config{
 		LLM: config.LLMConfig{Thinking: config.ThinkingConfig{Type: "enabled"}},
 	}
-	got := resolveThinkingType(cfg, AgentTypeDefinition{Type: "Explore"}, "enabled", false)
+	got := resolveThinkingType(cfg, AgentTypeDefinition{Type: AgentTypeExplore}, "enabled", false)
 	if got != "disabled" {
 		t.Fatalf("non-fork subagent should disable thinking, got %q", got)
 	}

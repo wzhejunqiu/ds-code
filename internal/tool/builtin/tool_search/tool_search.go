@@ -17,7 +17,7 @@ type ToolSearchTool struct {
 	Strict   bool
 }
 
-func (t *ToolSearchTool) Name() string        { return "tool_search" }
+func (t *ToolSearchTool) Name() string { return tool.NameToolSearch.String() }
 func (t *ToolSearchTool) IsReadOnly() bool    { return true }
 func (t *ToolSearchTool) IsConcurrencySafe() bool { return true }
 

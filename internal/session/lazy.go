@@ -51,7 +51,7 @@ func (l *LazyStore) dropPending(id string) {
 	l.mu.Unlock()
 }
 
-func (l *LazyStore) CreateSession(model, effort, thinking, permMode, runMode string) (Session, error) {
+func (l *LazyStore) CreateSession(model, effort, thinking string, permMode PermissionMode, runMode RunMode) (Session, error) {
 	now := time.Now().UTC()
 	sess := Session{
 		ID:              uuid.NewString(),

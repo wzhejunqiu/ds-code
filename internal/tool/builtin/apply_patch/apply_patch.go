@@ -19,7 +19,7 @@ type ApplyPatchTool struct {
 	Strict bool
 }
 
-func (t *ApplyPatchTool) Name() string { return "apply_patch" }
+func (t *ApplyPatchTool) Name() string { return tool.NameApplyPatch.String() }
 
 func (t *ApplyPatchTool) Description() string { return DescApplyPatch }
 

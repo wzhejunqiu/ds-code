@@ -12,6 +12,36 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 )
 
+// ResultStatus is the outward-facing completion label for tool returns and notifications.
+type ResultStatus string
+
+const (
+	ResultCompleted ResultStatus = "completed"
+	ResultFailed    ResultStatus = "failed"
+	ResultKilled    ResultStatus = "killed"
+)
+
+// String returns the wire-format status label.
+func (s ResultStatus) String() string {
+	return string(s)
+}
+
+// resultStatusFromStore maps a terminal persisted run status to the outward-facing label.
+func resultStatusFromStore(status subagentstore.Status) (ResultStatus, error) {
+	switch status {
+	case subagentstore.StatusCompleted:
+		return ResultCompleted, nil
+	case subagentstore.StatusError:
+		return ResultFailed, nil
+	case subagentstore.StatusKilled:
+		return ResultKilled, nil
+	case subagentstore.StatusRunning:
+		return "", fmt.Errorf("spawn: running status has no result label")
+	default:
+		return "", fmt.Errorf("spawn: unknown subagent status %q", status)
+	}
+}
+
 // NotificationPriority controls when a notification is drained into the main conversation.
 type NotificationPriority int
 
@@ -26,7 +56,7 @@ type Notification struct {
 	AgentID        string
 	ToolUseID      string
 	OutputFile     string
-	Status         string // completed | failed | killed
+	Status         ResultStatus // completed | failed | killed
 	Summary        string
 	Result         string // inline body when not spilled (Format uses when OutputFile empty)
 	Usage          llm.Usage
@@ -53,7 +83,7 @@ func (n Notification) Format() string {
 	if n.OutputFile != "" {
 		fmt.Fprintf(&b, "  <output-file>%s</output-file>\n", xmlEscapeText(n.OutputFile))
 	}
-	fmt.Fprintf(&b, "  <status>%s</status>\n", xmlEscapeText(n.Status))
+	fmt.Fprintf(&b, "  <status>%s</status>\n", xmlEscapeText(n.Status.String()))
 	fmt.Fprintf(&b, "  <summary>%s</summary>\n", xmlEscapeText(n.Summary))
 	if n.OutputFile == "" && n.Result != "" {
 		fmt.Fprintf(&b, "  <result>%s</result>\n", xmlEscapeText(n.Result))

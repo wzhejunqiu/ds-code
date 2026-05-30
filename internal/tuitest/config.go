@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 )
 
 // HarnessConfig builds a Config for TUI integration tests.
@@ -23,7 +24,7 @@ func HarnessConfig(mockBaseURL, projectRoot string) (*config.Config, error) {
 		ProjectRoot:    projectRoot,
 		ProjectID:      config.ProjectID(projectRoot),
 		ProjectDataDir: dataDir,
-		RunMode:        "agent",
+		RunMode:        runmode.Agent,
 		LLM: config.LLMConfig{
 			BaseURL:         mockBaseURL,
 			Model:           "deepseek-v4-pro",

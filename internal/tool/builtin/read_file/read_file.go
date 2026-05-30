@@ -21,7 +21,7 @@ type ReadFileTool struct {
 	Strict bool
 }
 
-func (t *ReadFileTool) Name() string { return "read_file" }
+func (t *ReadFileTool) Name() string { return tool.NameReadFile.String() }
 
 func (t *ReadFileTool) IsReadOnly() bool        { return true }
 func (t *ReadFileTool) IsConcurrencySafe() bool { return true }

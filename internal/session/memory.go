@@ -29,16 +29,16 @@ func NewMemoryStore() *MemoryStore {
 }
 
 // CreateSession implements Store.
-func (m *MemoryStore) CreateSession(model, effort, thinking, permMode, runMode string) (Session, error) {
+func (m *MemoryStore) CreateSession(model, effort, thinking string, permMode PermissionMode, runMode RunMode) (Session, error) {
 	return m.newSession(model, effort, thinking, permMode, runMode)
 }
 
 // NewSession creates a session with defaults from config fields.
-func (m *MemoryStore) NewSession(model, effort, thinking, permMode, runMode string) (Session, error) {
+func (m *MemoryStore) NewSession(model, effort, thinking string, permMode PermissionMode, runMode RunMode) (Session, error) {
 	return m.newSession(model, effort, thinking, permMode, runMode)
 }
 
-func (m *MemoryStore) newSession(model, effort, thinking, permMode, runMode string) (Session, error) {
+func (m *MemoryStore) newSession(model, effort, thinking string, permMode PermissionMode, runMode RunMode) (Session, error) {
 	now := time.Now().UTC()
 	s := Session{
 		ID:              uuid.NewString(),

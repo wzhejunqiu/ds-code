@@ -54,7 +54,7 @@ func TestShouldSpillResult_byteCeiling(t *testing.T) {
 
 func TestDeliverResult_inline(t *testing.T) {
 	cfg := testCfg(16000)
-	d := DeliverResult(t.TempDir(), "sess", "tc", "hello", "completed", nil, cfg)
+	d := DeliverResult(t.TempDir(), "sess", "tc", "hello", ResultCompleted, nil, cfg)
 	if !d.Inline || d.Body != "hello" || d.OutputPath != "" {
 		t.Fatalf("unexpected inline delivery: %+v", d)
 	}
@@ -64,7 +64,7 @@ func TestDeliverResult_spill(t *testing.T) {
 	dir := t.TempDir()
 	cfg := testCfg(2048)
 	long := strings.Repeat("x", 2049)
-	d := DeliverResult(dir, "sess", "tc", long, "completed", nil, cfg)
+	d := DeliverResult(dir, "sess", "tc", long, ResultCompleted, nil, cfg)
 	if d.Inline || d.OutputPath == "" {
 		t.Fatalf("expected spill, got %+v", d)
 	}
@@ -81,7 +81,7 @@ func TestDeliverResult_inlineWithinDefaultLimit(t *testing.T) {
 	dir := t.TempDir()
 	cfg := testCfg(16000)
 	summary := strings.Repeat("y", 3000)
-	d := DeliverResult(dir, "sess", "tc", summary, "completed", nil, cfg)
+	d := DeliverResult(dir, "sess", "tc", summary, ResultCompleted, nil, cfg)
 	if !d.Inline || d.Body != summary {
 		t.Fatalf("expected inline for 3000 runes with max 16000, got %+v", d)
 	}

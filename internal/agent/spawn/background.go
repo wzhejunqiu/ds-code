@@ -25,7 +25,7 @@ type BackgroundManager struct {
 // BackgroundTask is one running async agent.
 type BackgroundTask struct {
 	RunID     string
-	AgentType string
+	AgentType AgentType
 	Label     string
 	StartTime time.Time
 	Cancel    context.CancelFunc
@@ -80,7 +80,7 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 			logging.L().Warn("finish async agent failed", zap.String("run_id", run.ID), zap.Error(finishErr))
 		}
 		if hooks != nil {
-			in := agent.HookInput{AgentID: run.ID, AgentType: def.Type}
+			in := agent.HookInput{AgentID: run.ID, AgentType: def.Type.String()}
 			if runErr != nil {
 				in.Error = runErr.Error()
 			}
@@ -90,13 +90,17 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 			failCleanup(ctx, run)
 		}
 
-		statusStr := agentStatusString(status)
-		summaryText := agentSummaryText(run.Label, statusStr, runErr)
-		delivered := DeliverResult(cfg.ProjectDataDir, run.ParentSessionID, run.ParentToolCallID, summary, statusStr, runErr, cfg)
+		resultStatus, err := resultStatusFromStore(status)
+		if err != nil {
+			logging.L().Error("map subagent result status", zap.String("run_id", run.ID), zap.Error(err))
+			return
+		}
+		summaryText := agentSummaryText(run.Label, resultStatus, runErr)
+		delivered := DeliverResult(cfg.ProjectDataDir, run.ParentSessionID, run.ParentToolCallID, summary, resultStatus, runErr, cfg)
 		n := Notification{
 			AgentID:        run.ID,
 			ToolUseID:      run.ParentToolCallID,
-			Status:         statusStr,
+			Status:         resultStatus,
 			Summary:        summaryText,
 			DurationMS:     durationMS,
 			ToolUseCount:   countToolUses(ctx, subStore, run.ID),
@@ -117,7 +121,7 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 
 		logging.L().Info("async agent finished",
 			zap.String("run_id", run.ID),
-			zap.String("status", statusStr),
+			zap.String("status", resultStatus.String()),
 			zap.Int64("duration_ms", durationMS),
 		)
 	}()
@@ -134,7 +138,7 @@ func (bm *BackgroundManager) Kill(runID string) {
 }
 
 // RegisterPromoted records a sync agent that was promoted to background without starting a new goroutine.
-func (bm *BackgroundManager) RegisterPromoted(runID, agentType, label string) {
+func (bm *BackgroundManager) RegisterPromoted(runID string, agentType AgentType, label string) {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 	bm.tasks[runID] = &BackgroundTask{

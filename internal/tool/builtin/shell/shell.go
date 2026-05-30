@@ -26,7 +26,7 @@ type ShellTool struct {
 	Strict bool
 }
 
-func (t *ShellTool) Name() string { return "shell" }
+func (t *ShellTool) Name() string { return tool.NameShell.String() }
 
 func (t *ShellTool) WithPerm(perm *permission.Engine) tool.Tool {
 	cp := *t

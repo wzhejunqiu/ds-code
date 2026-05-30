@@ -24,7 +24,7 @@ type WebFetchTool struct {
 	Strict bool
 }
 
-func (t *WebFetchTool) Name() string { return "web_fetch" }
+func (t *WebFetchTool) Name() string { return tool.NameWebFetch.String() }
 
 func (t *WebFetchTool) IsReadOnly() bool        { return true }
 func (t *WebFetchTool) IsConcurrencySafe() bool { return true }

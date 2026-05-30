@@ -4,6 +4,8 @@ package config
 import (
 	"regexp"
 	"time"
+
+	"github.com/wzhejunqiu/ds-code/internal/runmode"
 )
 
 // Config is the merged runtime configuration for ds-code.
@@ -20,7 +22,7 @@ type Config struct {
 	MCP              MCPConfig            `mapstructure:"mcp"`
 	Web              WebConfig            `mapstructure:"web"`
 	LSP              LSPConfig            `mapstructure:"lsp"`
-	RunMode          string               `mapstructure:"run_mode"`
+	RunMode          runmode.RunMode      `mapstructure:"run_mode"`
 	LogVerbosity          int  `mapstructure:"-"`
 	AllowLogSensitiveData bool `mapstructure:"-"`
 	JSONOutput            bool `mapstructure:"-"`

@@ -20,7 +20,7 @@ func TestExecuteRun_rebindsWorktreePerm(t *testing.T) {
 		Perm: parentPerm,
 	})
 
-	childReg := spawn.FilterToolRegistry(reg, spawn.AgentTypeDefinition{Type: "general-purpose"}, false)
+	childReg := spawn.FilterToolRegistry(reg, spawn.AgentTypeDefinition{Type: spawn.AgentTypeGeneralPurpose}, false)
 	childReg = tool.RebindRegistryPerm(childReg, childPerm)
 
 	tl, ok := childReg.Get("read_file")

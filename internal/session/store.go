@@ -8,7 +8,7 @@ import (
 
 // Store persists sessions and messages.
 type Store interface {
-	CreateSession(model, effort, thinking, permMode, runMode string) (Session, error)
+	CreateSession(model, effort, thinking string, permMode PermissionMode, runMode RunMode) (Session, error)
 	Create(ctx context.Context, s Session) error
 	Get(ctx context.Context, id string) (Session, error)
 	ListMessages(ctx context.Context, sessionID string) ([]Message, error)
