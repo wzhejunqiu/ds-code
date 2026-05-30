@@ -11,8 +11,8 @@ func renderUserBlock(content string, width int) []string {
 	return renderHighlightedBlock(userPrompt, content, width, lipgloss.Width(userPrompt))
 }
 
-func renderAssistantBlock(content string, width int) []string {
-	return markdown.RenderPrefixedBlock(assistantBullet, &styleBullet, content, width, lipgloss.Width(assistantBullet))
+func renderAssistantBlock(content string, width int, mdCache *markdown.SegmentCache) []string {
+	return markdown.RenderPrefixedBlock(assistantBullet, &styleBullet, content, width, lipgloss.Width(assistantBullet), mdCache)
 }
 
 func renderHighlightedBlock(prefix, content string, width, indent int) []string {

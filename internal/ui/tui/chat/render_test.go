@@ -99,7 +99,7 @@ func TestFormatThinkingDuration(t *testing.T) {
 
 func TestRenderAssistantMarkdown(t *testing.T) {
 	content := "# Title\n\n**bold** and `code`"
-	lines := renderAssistantBlock(content, 60)
+	lines := renderAssistantBlock(content, 60, nil)
 	joined := strings.Join(lines, "\n")
 	if !headingTextPresent(joined, "Title") || !strings.Contains(joined, "bold") {
 		t.Fatalf("expected rendered markdown text:\n%s", joined)

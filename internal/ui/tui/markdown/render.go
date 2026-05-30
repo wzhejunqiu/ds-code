@@ -9,11 +9,23 @@ import (
 
 // Render converts markdown to styled terminal text at the given width.
 func Render(content string, width int) (out string, err error) {
+	return RenderWithCache(content, width, nil)
+}
+
+// RenderWithCache renders markdown, optionally reusing stable segment cache.
+func RenderWithCache(content string, width int, cache *SegmentCache) (out string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("markdown render panic: %v", r)
 		}
 	}()
+	if cache == nil {
+		return renderFull(content, width)
+	}
+	return RenderIncremental(content, width, cache)
+}
+
+func renderFull(content string, width int) (string, error) {
 	if width < 1 {
 		width = 1
 	}
@@ -22,19 +34,10 @@ func Render(content string, width int) (out string, err error) {
 		return "", nil
 	}
 	var b strings.Builder
-	for _, part := range parts {
-		segment := part.text
-		innerWidth := width
-		if part.fenced {
-			segment = fencedMarkdown(part.lang, part.code)
-			innerWidth = codeBlockInnerWidth(width)
-		}
-		rendered, err := renderSegment(segment, innerWidth)
+	for _, p := range parts {
+		rendered, err := renderPart(p, width)
 		if err != nil {
 			return "", err
-		}
-		if part.fenced {
-			rendered = boxRenderedCodeBlock(rendered)
 		}
 		b.WriteString(rendered)
 	}
@@ -54,7 +57,7 @@ func renderSegment(content string, width int) (string, error) {
 
 // RenderPrefixedBlock renders markdown with a leading prefix on the first line.
 // prefixStyle must not be copied after use; pass a pointer to a long-lived Style value.
-func RenderPrefixedBlock(prefix string, prefixStyle *lipgloss.Style, content string, width, indent int) []string {
+func RenderPrefixedBlock(prefix string, prefixStyle *lipgloss.Style, content string, width, indent int, mdCache *SegmentCache) []string {
 	bodyWidth := width - indent
 	if bodyWidth < 1 {
 		bodyWidth = 1
@@ -64,7 +67,7 @@ func RenderPrefixedBlock(prefix string, prefixStyle *lipgloss.Style, content str
 		return nil
 	}
 
-	rendered, err := Render(trimmed, bodyWidth)
+	rendered, err := RenderWithCache(trimmed, bodyWidth, mdCache)
 	if err != nil || strings.TrimSpace(rendered) == "" {
 		return RenderPlainPrefixedBlock(prefix, prefixStyle, content, width, indent)
 	}

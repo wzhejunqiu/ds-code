@@ -63,7 +63,7 @@ jobs:
         run: ./scripts/fetch-tokenizers-lib.sh
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           version-file: .golangci-lint-version
 

@@ -10,7 +10,7 @@ func Run(deps Deps) error {
 	deps.Events = events
 	d := deps
 	m := newSafeModel(&d)
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithoutCatchPanics())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithoutCatchPanics())
 	go func() {
 		for msg := range events {
 			p.Send(msg)

@@ -5,9 +5,11 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/session"
 	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
@@ -20,13 +22,17 @@ import (
 // Model is the Bubble Tea model for the ds-code TUI.
 type Model struct {
 	state.State
-	chatVP         viewport.Model
-	toolVP         viewport.Model
-	input          textinput.Model
-	completePicker component.Picker
-	resumePicker   component.Picker
-	subagentPicker component.Picker
-	tcasePicker    component.Picker
+	chatVP            viewport.Model
+	toolVP            viewport.Model
+	input             textinput.Model
+	completePicker    component.Picker
+	resumePicker      component.Picker
+	subagentPicker    component.Picker
+	tcasePicker       component.Picker
+	chatRenderCache   chat.RenderCache
+	mdSegmentCache    markdown.SegmentCache
+	headerCache       view.HeaderCache
+	chatSyncScheduled bool
 }
 
 // New builds a Model from runtime dependencies.
@@ -77,12 +83,8 @@ func (m *Model) listenPrompt() tea.Cmd {
 	}
 }
 
-func (m *Model) syncChatView() {
-	view.SyncChat(&m.State, &m.chatVP, &m.toolVP, &m.input)
-}
-
 func (m *Model) syncToolView() {
-	view.SyncTool(&m.State, &m.chatVP, &m.toolVP, &m.input)
+	view.SyncTool(&m.State, &m.chatVP, &m.toolVP, &m.input, m.syncCaches())
 }
 
 func (m *Model) syncAllViews() {
@@ -97,10 +99,6 @@ func (m *Model) syncAllViews() {
 	if m.Overlay == state.OverlayTCase && len(m.TCaseItems) > 0 {
 		tcase.SyncPicker(&m.State, &m.tcasePicker)
 	}
-}
-
-func (m *Model) refreshStatus() {
-	view.RefreshStatus(&m.State)
 }
 
 func (m *Model) View() string {

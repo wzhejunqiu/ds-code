@@ -33,8 +33,9 @@ func TestUpdate_usageUpdateMsg_refreshesStatus(t *testing.T) {
 	}
 
 	m.StatusRight = ""
-	if _, cmd := m.Update(tuimsg.UsageUpdateMsg{}); cmd != nil {
-		t.Fatalf("expected no cmd, got %v", cmd)
+	_, cmd := m.Update(tuimsg.UsageUpdateMsg{})
+	if cmd == nil {
+		t.Fatal("expected deferred sync cmd")
 	}
 	if !strings.Contains(m.StatusRight, "in 42") {
 		t.Fatalf("after UsageUpdateMsg StatusRight = %q, want in 42", m.StatusRight)

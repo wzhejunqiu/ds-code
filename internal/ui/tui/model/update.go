@@ -26,15 +26,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m.updateInput(msg)
 	case tuimsg.StreamContentMsg:
-		return m, turn.UpdateStreamContent(&m.State, msg, m.syncChatView)
+		turn.UpdateStreamContent(&m.State, msg, func() {})
+		return m, m.scheduleSyncChatView()
 	case tuimsg.StreamReasoningMsg:
-		return m, turn.UpdateStreamReasoning(&m.State, msg, m.syncChatView, m.nextThinkingTickCmd)
+		cmd := turn.UpdateStreamReasoning(&m.State, msg, func() {}, m.nextThinkingTickCmd)
+		return m, tea.Batch(cmd, m.scheduleSyncChatView())
 	case tuimsg.PlanningStartMsg:
-		return m, turn.UpdatePlanningStart(&m.State, m.syncChatView, m.nextThinkingTickCmd)
+		cmd := turn.UpdatePlanningStart(&m.State, func() {}, m.nextThinkingTickCmd)
+		return m, tea.Batch(cmd, m.scheduleSyncChatView())
 	case tuimsg.PlanningEndMsg:
-		return m, turn.UpdatePlanningEnd(&m.State, m.syncChatView)
+		turn.UpdatePlanningEnd(&m.State, func() {})
+		return m, m.scheduleSyncChatView()
 	case tuimsg.ThinkingTickMsg:
-		return m, turn.UpdateThinkingTick(&m.State, m.syncChatView, m.nextThinkingTickCmd)
+		if turn.NeedsThinkingTick(&m.State) || turn.NeedsPlanningTick(&m.State) {
+			cmd := turn.UpdateThinkingTick(&m.State, func() {}, m.nextThinkingTickCmd)
+			return m, tea.Batch(cmd, m.scheduleSyncChatView())
+		}
+		return m, nil
 	case tuimsg.SlashOutputMsg:
 		m.refreshStatus()
 		return m, session.UpdateSlashOutput(&m.State, msg, m.syncChatView)
@@ -43,13 +51,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.ResumeListMsg:
 		return m, session.UpdateResumeList(&m.State, msg, &m.resumePicker)
 	case tuimsg.SessionResumedMsg:
-		return m, session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatView, m.syncToolView, m.refreshStatus)
+		return m, session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatViewResetting, m.syncToolView, m.refreshStatus)
 	case tuimsg.HistoryLoadedMsg:
-		return m, session.UpdateHistoryLoaded(&m.State, msg, m.syncChatView, m.refreshStatus)
+		return m, session.UpdateHistoryLoaded(&m.State, msg, m.syncChatViewResetting, m.refreshStatus)
 	case tuimsg.ToolStartMsg:
 		return m, turn.UpdateToolStart(&m.State, msg, m.syncChatView, m.syncToolView)
 	case tuimsg.AssistantSegmentEndMsg:
-		return m, turn.UpdateAssistantSegmentEnd(&m.State)
+		turn.UpdateAssistantSegmentEnd(&m.State)
+		return m, m.scheduleSyncChatView()
 	case tuimsg.ToolEndMsg:
 		return m, turn.UpdateToolEnd(&m.State, msg, m.syncChatView, m.syncToolView)
 	case tuimsg.SubagentStartMsg:
@@ -72,9 +81,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.TCasePickerMsg:
 		return m, tcase.UpdatePicker(&m.State, msg, &m.tcasePicker)
 	case tuimsg.TurnDoneMsg:
+		m.mdSegmentCache.Reset()
 		return m, turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt)
 	case tuimsg.UsageUpdateMsg:
 		m.refreshStatus()
+		return m, m.scheduleSyncChatView()
+	case chatSyncFlushMsg:
+		m.chatSyncScheduled = false
 		m.syncChatView()
 		return m, nil
 	case tuimsg.ExitConfirmTimeoutMsg:
@@ -89,7 +102,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
-	if cmd, handled := subagentui.HandleNavKey(&m.State, msg, &m.subagentPicker, m.syncChatView); handled {
+	if cmd, handled := subagentui.HandleNavKey(&m.State, msg, &m.subagentPicker, m.syncChatViewResetting); handled {
 		return cmd, true
 	}
 	return overlay.HandleKey(&m.State, msg, overlay.KeyDeps{

@@ -12,17 +12,52 @@ import (
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/session/usageagg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/layout"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
-	"github.com/wzhejunqiu/ds-code/internal/billing"
-	"github.com/wzhejunqiu/ds-code/internal/session/usageagg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
 
 const runningTurnHint = "Press Esc to cancel the current turn"
+
+// SyncCaches holds optional render caches for chat sync.
+type SyncCaches struct {
+	Chat   *chat.RenderCache
+	MD     *markdown.SegmentCache
+	Header *HeaderCache
+}
+
+// HeaderCache caches the header segment inside the chat viewport.
+type HeaderCache struct {
+	text string
+	key  headerCacheKey
+}
+
+type headerCacheKey struct {
+	width          int
+	hasSession     bool
+	costCNY        float64
+	subagentNav    state.SubagentNav
+	model          string
+	thinking       string
+	projectRoot    string
+	version        string
+	breadcrumb     string
+}
+
+// Invalidate clears the cached header.
+func (c *HeaderCache) Invalidate() {
+	if c == nil {
+		return
+	}
+	c.text = ""
+	c.key = headerCacheKey{}
+}
 
 func ContentLineCount(s string) int {
 	s = strings.TrimRight(s, "\n")
@@ -32,7 +67,7 @@ func ContentLineCount(s string) int {
 	return strings.Count(s, "\n") + 1
 }
 
-func ChatViewportContent(s *state.State, width int) string {
+func buildHeader(s *state.State, width int) string {
 	if width < 10 {
 		width = 10
 	}
@@ -46,22 +81,98 @@ func ChatViewportContent(s *state.State, width int) string {
 			hdr += "\n" + style.FooterHint.Render(crumb+"  (← back to list)")
 		}
 	}
-	body := chat.Render(s.Chat, width, time.Now(), s.ToolDetailsVisible)
+	return hdr
+}
+
+func headerKey(s *state.State, width int) headerCacheKey {
+	key := headerCacheKey{
+		width:       width,
+		hasSession:  s.HasSession,
+		costCNY:     s.HeaderCostCNY,
+		subagentNav: s.SubagentNav,
+		version:     s.Deps.Version,
+	}
+	if s.HasSession {
+		key.model = s.HeaderSession.Model
+		key.thinking = s.HeaderSession.ThinkingType
+	}
+	if s.Deps != nil && s.Deps.Cfg != nil {
+		key.projectRoot = s.Deps.Cfg.ProjectRoot
+	}
+	if s.SubagentNav == state.SubagentNavDetail {
+		key.breadcrumb = subagentui.DetailBreadcrumb(s)
+	}
+	return key
+}
+
+func buildHeaderCached(s *state.State, width int, cache *HeaderCache) string {
+	key := headerKey(s, width)
+	if cache != nil && cache.text != "" && cache.key == key {
+		return cache.text
+	}
+	text := buildHeader(s, width)
+	if cache != nil {
+		cache.text = text
+		cache.key = key
+	}
+	return text
+}
+
+func buildChatBody(s *state.State, width int, caches *SyncCaches) (text string, lineCount int) {
+	if width < 10 {
+		width = 10
+	}
+	var chatCache *chat.RenderCache
+	var mdCache *markdown.SegmentCache
+	if caches != nil {
+		chatCache = caches.Chat
+		mdCache = caches.MD
+	}
+	text = chat.RenderCached(s.Chat, width, time.Now(), s.ToolDetailsVisible, chatCache, mdCache)
+	lineCount = ContentLineCount(text)
+	return text, lineCount
+}
+
+func joinViewportContent(hdr, body string) string {
 	if body == "" {
 		return hdr
 	}
 	return hdr + "\n\n" + body
 }
 
-func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model) {
+func buildViewportContent(s *state.State, width int, caches *SyncCaches) (content string, lineCount int) {
+	if width < 10 {
+		width = 10
+	}
+	hdr := buildHeaderCached(s, width, cacheHeader(caches))
+	body, _ := buildChatBody(s, width, caches)
+	content = joinViewportContent(hdr, body)
+	lineCount = ContentLineCount(content)
+	return content, lineCount
+}
+
+// ChatViewportContent renders header+body (legacy helper for tests).
+func ChatViewportContent(s *state.State, width int) string {
+	content, _ := buildViewportContent(s, width, nil)
+	return content
+}
+
+func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model, caches *SyncCaches) {
 	if s.Width == 0 {
 		return
 	}
+	innerW := s.Width - 2
+	if innerW < 10 {
+		innerW = 10
+	}
+
 	atBottom := chatVP.AtBottom()
 	yoff := chatVP.YOffset
-	Layout(s, chatVP, toolVP, input)
-	text := ChatViewportContent(s, chatVP.Width)
-	chatVP.SetContent(text)
+
+	content, chatLines := buildViewportContent(s, innerW, caches)
+
+	Layout(s, chatVP, toolVP, input, chatLines)
+	chatVP.SetContent(content)
 	if atBottom {
 		chatVP.GotoBottom()
 	} else {
@@ -69,13 +180,25 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 	}
 }
 
-func SyncTool(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model) {
+func cacheHeader(caches *SyncCaches) *HeaderCache {
+	if caches == nil {
+		return nil
+	}
+	return caches.Header
+}
+
+func SyncTool(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model, caches *SyncCaches) {
 	toolVP.SetContent(strings.Join(s.ToolLines, "\n"))
-	Layout(s, chatVP, toolVP, input)
+	innerW := s.Width - 2
+	if innerW < 10 {
+		innerW = 10
+	}
+	_, chatLines := buildViewportContent(s, innerW, caches)
+	Layout(s, chatVP, toolVP, input, chatLines)
 	toolVP.GotoBottom()
 }
 
-func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model) {
+func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model, chatLines int) {
 	if s.Width == 0 {
 		return
 	}
@@ -117,7 +240,6 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 		maxChatH = 1
 	}
 
-	chatLines := ContentLineCount(ChatViewportContent(s, innerW))
 	chatH := chatLines
 	if chatH > maxChatH {
 		chatH = maxChatH
@@ -126,6 +248,11 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	if chatVP != nil {
 		chatVP.Width = innerW
 		chatVP.Height = chatH
+		delta := chatH / 3
+		if delta < 3 {
+			delta = 3
+		}
+		chatVP.MouseWheelDelta = delta
 	}
 	if toolVP != nil {
 		toolVP.Width = innerW
