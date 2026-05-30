@@ -10,7 +10,7 @@
 
 | 模式                       | 注册                   |
 | -------------------------- | ---------------------- |
-| plan / agent / task 子代理 | `RegisterExploreTools` |
+| plan / agent / subagent | `register.ExploreTools` |
 
 ## 参数 Schema
 
@@ -31,11 +31,11 @@
 ## 用法示例
 
 ```json
-{"pattern": "RegisterExploreTools", "path": "internal/tool"}
+{"pattern": "ExploreTools", "path": "internal/tool/register"}
 ```
 
 ```json
-{"pattern": "func.*Execute", "path": "internal/tool/builtin/read_file.go", "output_mode": "content"}
+{"pattern": "func.*Execute", "path": "internal/tool/builtin/read_file/read_file.go", "output_mode": "content"}
 ```
 
 ```json

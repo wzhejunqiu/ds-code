@@ -8,7 +8,7 @@
 
 | 模式                       | 注册                   |
 | -------------------------- | ---------------------- |
-| plan / agent / task 子代理 | `RegisterExploreTools` |
+| plan / agent / subagent | `register.ExploreTools` |
 
 ## 参数 Schema
 

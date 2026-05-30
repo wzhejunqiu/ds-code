@@ -11,6 +11,8 @@
 | agent | `RegisterWrite` |
 | plan | **不注册** |
 
+可通过 `tools.defer_builtin` 延迟暴露完整 schema；需先调用 `tool_search`。
+
 ## 参数 Schema
 
 | 字段 | 类型 | 必填 | 说明 |

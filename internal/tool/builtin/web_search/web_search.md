@@ -9,7 +9,7 @@
 | 状态 | 说明 |
 |------|------|
 | 代码存在 | `web_search.go` |
-| 运行时 | `setup.RegisterAgentExtras` 中注释：`web_search remains disabled until a search provider is wired` |
+| 运行时 | `RegisterAgentExtras` 未注册；`_ = d.Cfg.Web.SearchEnabled` 占位，待 provider 接入后再接线 |
 
 即使手动注册，在 `web.search_enabled: false` 或未配置 provider 时，`Execute` 也会报错。
 

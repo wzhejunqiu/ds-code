@@ -1,7 +1,7 @@
 # ds-code 配置参考
 
-> 文档版本：v1.2  
-> 更新日期：2026-05-16  
+> 文档版本：v1.3  
+> 更新日期：2026-05-31  
 > 状态：实现基线（与 [PLAN.md](PLAN.md) v0.13+ 对齐）  
 > 相关：[DESIGN.md](DESIGN.md)（模块实现）、[llm-deepseek.md](llm-deepseek.md)（API 字段与模型契约）
 
@@ -353,18 +353,59 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 
 | 键 | 类型 | 默认 | 说明 |
 |----|------|------|------|
-| `tools.parallel_tool_calls` | bool | **false** | 同一 assistant 多条 `tool_calls` 是否并行执行 |
-| `tools.read_file.max_lines` | int | **500** | 单次 `read_file` 默认行上限（`start`/`end` 闭区间亦受此限） |
+| `tools.parallel_tool_calls` | bool | **true** | 预留：是否允许同一 assistant 多条 `tool_calls` 并行。当前 Runner **未读取**此键；相邻只读且 concurrency-safe 的工具（如 `read_file`、`grep`）已由 [`tool_orchestration`](../internal/agent/tool_orchestration.go) 自动并发，写工具串行 |
+| `tools.defer_builtin` | []string | **`[]`** | 内建写工具名列表；命中项以 stub schema 注册，完整参数经 `tool_search` 查询（见 [§5.11.1](#5111-延迟加载defer与-tool_search)） |
+| `tools.defer_mcp` | bool | **true** | `true` 时全部 `mcp__*` 工具以 stub schema 注册；完整参数同样经 `tool_search` |
+| `tools.read_file.max_lines` | int | **500** | 单次 `read_file` 默认行上限（`offset`/`limit` 亦受此限） |
 | `tools.read_file.max_bytes` | int | **2097152** (2MiB) | 文件总大小上限；超限拒绝整次读取 |
 | `tools.grep.head_limit` | int | **200** | `grep` 在 `content`（匹配行）与 `files_with_matches`（文件数）模式下的上限；`count` 模式忽略 |
 | `tools.glob.max_results` | int | **100** | `glob` / `list_dir` 结果条数上限 |
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |
 | `tools.shell.timeout` | duration | **120s** | `shell` 同步执行超时 |
+| `tools.shell.max_background` | int | **5** | 后台 shell 任务数量上限 |
+| `tools.shell.background_output_max_bytes` | int | **262144** | 单次轮询后台任务返回的最大输出字节 |
 | `tools.shell.env_blacklist` | []string | `[]` | 子进程环境变量名正则黑名单（与内置 secret 键名过滤为 OR）；作用于 `shell`、后台 job、MCP stdio |
 | `tools.agent.max_parallel` | int | **3** | 子代理 `agent` 并发上限 |
 | `tools.agent.summary_max_chars` | int | **16000** | 子代理摘要字符上限（超长结果写入 output-file） |
 | `tools.agent.fork_enabled` | bool | **true** | 交互模式下省略 `subagent_type` 时启用 Fork |
 | `tools.agent.auto_background_after` | int | **120** | 同步子代理超过该秒数后提升为后台 |
+| `tools.agent.worktree_ttl` | duration | **24h** | `isolation: worktree` 子代理 worktree 保留时长 |
+| `tools.agent.worktree_sparse_paths` | []string | **`["/*"]`** | worktree sparse checkout 路径模式 |
+| `tools.agent.worktree_symlink_dirs` | []string | **`["node_modules", ".venv", "vendor"]`** | 从父工作区 symlink 到 worktree 的目录名 |
+
+Per-tool 设计说明见 [`internal/tool/builtin/README.md`](../internal/tool/builtin/README.md)。
+
+#### 5.11.1 延迟加载（defer）与 `tool_search`
+
+为缩小发给 LLM 的工具 schema 体积，内建写工具与 MCP 工具可**延迟暴露完整 JSON Schema**；运行时 `Execute` 行为与未 defer 时相同。
+
+| 组件 | 说明 |
+|------|------|
+| `tools.defer_builtin` | 列出需 defer 的内建工具名，如 `shell`、`apply_patch`、`write_file`；由 [`setup.RegisterWrite`](../internal/tool/setup/setup.go) 经 `WrapDeferred` 注册 |
+| `tools.defer_mcp` | 为 `true` 时，MCP Manager 注册的全部 `mcp__{server}__{tool}` 使用 stub schema |
+| **`tool_search`** | agent 模式下始终注册的内建工具；参数 `tool_name` 返回该工具的完整 schema 与描述（见 [`tool_search.md`](../internal/tool/builtin/tool_search/tool_search.md)） |
+
+典型工作流：
+
+1. LLM 在工具列表中看到 stub schema（仅 `_note` 字段，提示先调用 `tool_search`）。
+2. 调用 `tool_search`，例如 `{"tool_name": "apply_patch"}`。
+3. 再调用目标工具并传入正确参数。
+
+约束：
+
+- **Plan 模式**不注册写工具、`tool_search` 与 MCP defer 写类工具，通常无需 defer。
+- `tool_search` 本身不可 defer。
+- stub 与完整 schema 的实现见 [`internal/tool/deferred_wrapper.go`](../internal/tool/deferred_wrapper.go) 与 [`internal/mcp/tool.go`](../internal/mcp/tool.go)。
+
+配置示例：
+
+```yaml
+tools:
+  defer_builtin:
+    - shell
+    - apply_patch
+  defer_mcp: true
+```
 
 ### 5.12 `lsp` — Language Server（Phase 6）
 
@@ -506,3 +547,4 @@ ds-code --model deepseek-v4-flash --permission-mode readonly -p "解释 main 函
 | 2026-05-16 | 项目目录内 `sessions.db` / `audit.jsonl` / `checkpoints/` 路径均不可配置；`--audit-log` 仅为开关 |
 | 2026-05-16 | v1.1：`agent`/`tools` 键；compact A/B/C；`git_snapshot_max_chars`；`@dir` 限制；非 TTY ask 行为 |
 | 2026-05-16 | v1.2：`lsp.*` 与 `lsp.servers`；多语言 diagnostics（DESIGN §9.5） |
+| 2026-05-31 | v1.3：`tools.defer_builtin` / `tools.defer_mcp` / `tool_search`；补全 `tools.shell.*` 与 `tools.agent.worktree_*`；`parallel_tool_calls` 默认与实现说明 |

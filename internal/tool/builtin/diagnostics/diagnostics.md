@@ -22,7 +22,7 @@ LSP 关闭时不注册；调用时若被误注册也会返回 `LSP is disabled i
 ## 用法示例
 
 ```json
-{"paths": ["internal/tool/builtin/read_file.go"]}
+{"paths": ["internal/tool/builtin/read_file/read_file.go"]}
 ```
 
 ```json

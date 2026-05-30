@@ -11,6 +11,8 @@
 | agent | `RegisterWrite` |
 | plan | **不注册** |
 
+可通过 `tools.defer_builtin` 延迟暴露完整 schema；需先调用 `tool_search`。
+
 依赖 `setup.Deps.ShellJobs`（`shelljobs/manager.Manager`）；为 `nil` 时仅支持同步模式。
 
 ## 参数 Schema
