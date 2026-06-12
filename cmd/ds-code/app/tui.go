@@ -4,13 +4,13 @@ import (
 	"context"
 	"io"
 
+	"github.com/spf13/cobra"
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	agenttool "github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui"
 	"github.com/wzhejunqiu/ds-code/internal/version"
-	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -56,13 +56,13 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 		}
 	}
 	deps := tui.Deps{
-		Cfg:       a.Cfg,
-		Runner:    runner,
-		Store:     store,
-		Subagent:  subStore,
-		Context:   ctxSvc,
-		SessionID: sessionID,
-		Version:   version.Version,
+		Cfg:              a.Cfg,
+		Runner:           runner,
+		Store:            store,
+		Subagent:         subStore,
+		Context:          ctxSvc,
+		SessionID:        sessionID,
+		Version:          version.Version,
 		PromptCh:         promptCh,
 		BackgroundAgents: backgroundAgents,
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line, activeAgentType string) (bool, error) {

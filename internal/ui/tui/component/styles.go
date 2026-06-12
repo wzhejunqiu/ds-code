@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	styleItem = lipgloss.NewStyle().Foreground(theme.Text)
+	styleItem         = lipgloss.NewStyle().Foreground(theme.Text)
 	styleItemSelected = lipgloss.NewStyle().
 				Background(theme.UserBg).
 				Foreground(theme.Text).

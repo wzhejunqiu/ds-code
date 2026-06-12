@@ -10,18 +10,18 @@ import (
 )
 
 type KeyDeps struct {
-	HandleResumeEnter   func() (tea.Cmd, bool)
-	HandleResumeKey     func(tea.KeyMsg) bool
-	HandleCompleteKey   func(tea.KeyMsg) bool
-	HandleTCaseEnter    func() (tea.Cmd, bool)
-	HandleTCaseKey      func(tea.KeyMsg) bool
-	HandlePromptKey     func(tea.KeyMsg) tea.Cmd
-	ListenPrompt        func() tea.Cmd
-	RequestCancelTurn   func()
-	ShowHelp            func() tea.Cmd
-	ShowContext         func() tea.Cmd
-	SyncChat            func()
-	ExitTimeout         func() tea.Cmd
+	HandleResumeEnter func() (tea.Cmd, bool)
+	HandleResumeKey   func(tea.KeyMsg) bool
+	HandleCompleteKey func(tea.KeyMsg) bool
+	HandleTCaseEnter  func() (tea.Cmd, bool)
+	HandleTCaseKey    func(tea.KeyMsg) bool
+	HandlePromptKey   func(tea.KeyMsg) tea.Cmd
+	ListenPrompt      func() tea.Cmd
+	RequestCancelTurn func()
+	ShowHelp          func() tea.Cmd
+	ShowContext       func() tea.Cmd
+	SyncChat          func()
+	ExitTimeout       func() tea.Cmd
 }
 
 func HandleKey(s *state.State, msg tea.KeyMsg, d KeyDeps) (tea.Cmd, bool) {

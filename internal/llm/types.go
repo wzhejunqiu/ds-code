@@ -23,8 +23,8 @@ type Message struct {
 
 // ToolCall is a function tool invocation from the assistant.
 type ToolCall struct {
-	ID       string
-	Name     string
+	ID        string
+	Name      string
 	Arguments string
 }
 

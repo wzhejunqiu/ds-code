@@ -9,17 +9,17 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/session"
-	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
-	"github.com/wzhejunqiu/ds-code/internal/billing"
 	"github.com/wzhejunqiu/ds-code/internal/session/usageagg"
+	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/layout"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
-	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
 
@@ -39,15 +39,15 @@ type HeaderCache struct {
 }
 
 type headerCacheKey struct {
-	width          int
-	hasSession     bool
-	costCNY        float64
-	subagentNav    state.SubagentNav
-	model          string
-	thinking       string
-	projectRoot    string
-	version        string
-	breadcrumb     string
+	width       int
+	hasSession  bool
+	costCNY     float64
+	subagentNav state.SubagentNav
+	model       string
+	thinking    string
+	projectRoot string
+	version     string
+	breadcrumb  string
 }
 
 // Invalidate clears the cached header.

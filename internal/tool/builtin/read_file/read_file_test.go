@@ -103,9 +103,9 @@ func TestReadFile_maxLinesTruncatesLimit(t *testing.T) {
 
 	tool := readFileTool(t, root, 10, 1<<20)
 	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
-		"path":  "big.txt",
+		"path":   "big.txt",
 		"offset": 1,
-		"limit": 10000,
+		"limit":  10000,
 	}))
 	if err != nil {
 		t.Fatal(err)

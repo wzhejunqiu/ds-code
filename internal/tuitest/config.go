@@ -51,9 +51,9 @@ func HarnessConfig(mockBaseURL, projectRoot string) (*config.Config, error) {
 			Glob:              config.GlobToolConfig{MaxResults: 100},
 			Shell:             config.ShellToolConfig{Timeout: 120 * time.Second},
 		},
-		MCP: config.MCPConfig{Servers: nil},
-		Web: config.WebConfig{FetchEnabled: false, SearchEnabled: false},
-		LSP: config.LSPConfig{Enabled: false},
+		MCP:   config.MCPConfig{Servers: nil},
+		Web:   config.WebConfig{FetchEnabled: false, SearchEnabled: false},
+		LSP:   config.LSPConfig{Enabled: false},
 		Audit: config.AuditConfig{Enabled: false},
 	}, nil
 }

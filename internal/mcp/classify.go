@@ -3,8 +3,8 @@ package mcp
 import (
 	"strings"
 
-	"github.com/wzhejunqiu/ds-code/internal/permission"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 // ClassifyPermission maps MCP tool metadata to ds-code permission levels.

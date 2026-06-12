@@ -7,17 +7,17 @@ import (
 
 // APIContextView is the snapshot for the next API request.
 type APIContextView struct {
-	SystemPrompt            string
-	RuntimeEnv              string
-	AgentsMD                string
-	Rules                   string
-	Skills                  string
-	GitSnapshot             string
-	AgentOverlay            string
-	ToolsJSON               string
-	Messages                []llm.Message
-	WindowTokens            int
-	RenderedSystemOverride  string
+	SystemPrompt           string
+	RuntimeEnv             string
+	AgentsMD               string
+	Rules                  string
+	Skills                 string
+	GitSnapshot            string
+	AgentOverlay           string
+	ToolsJSON              string
+	Messages               []llm.Message
+	WindowTokens           int
+	RenderedSystemOverride string
 }
 
 // MergedSystemStatic returns the cache-stable system prefix (base + tools JSON).

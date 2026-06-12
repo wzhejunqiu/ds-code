@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	pricesMu          sync.RWMutex
-	activePrices      = copyDefaultPrices()
+	pricesMu           sync.RWMutex
+	activePrices       = copyDefaultPrices()
 	activeTableVersion = DefaultPriceTableVersion
 )
 

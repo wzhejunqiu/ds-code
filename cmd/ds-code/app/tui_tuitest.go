@@ -6,13 +6,13 @@ import (
 	"context"
 	"io"
 
+	"github.com/spf13/cobra"
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui"
 	"github.com/wzhejunqiu/ds-code/internal/version"
-	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 

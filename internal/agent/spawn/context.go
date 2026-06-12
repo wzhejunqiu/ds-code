@@ -13,12 +13,12 @@ type querySourceKey struct{}
 type QuerySource string
 
 const (
-	QuerySourceAgent       QuerySource = "agent:builtin:general-purpose"
-	QuerySourceExplore     QuerySource = "agent:builtin:explore"
-	QuerySourcePlan        QuerySource = "agent:builtin:plan"
-	QuerySourceVerify      QuerySource = "agent:builtin:verification"
-	QuerySourceFork        QuerySource = "agent:builtin:fork"
-	QuerySourceSkill       QuerySource = "skill:fork"
+	QuerySourceAgent   QuerySource = "agent:builtin:general-purpose"
+	QuerySourceExplore QuerySource = "agent:builtin:explore"
+	QuerySourcePlan    QuerySource = "agent:builtin:plan"
+	QuerySourceVerify  QuerySource = "agent:builtin:verification"
+	QuerySourceFork    QuerySource = "agent:builtin:fork"
+	QuerySourceSkill   QuerySource = "skill:fork"
 )
 
 // WithQuerySource attaches a spawn source label to ctx.

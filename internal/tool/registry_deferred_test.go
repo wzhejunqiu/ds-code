@@ -12,11 +12,13 @@ type stubTool struct {
 	name string
 }
 
-func (s *stubTool) Name() string                                           { return s.name }
-func (s *stubTool) Description() string                                    { return "desc" }
-func (s *stubTool) Schema() map[string]any                                 { return ObjectSchema(map[string]any{"full": map[string]any{"type": "string"}}, []string{"full"}, false) }
+func (s *stubTool) Name() string        { return s.name }
+func (s *stubTool) Description() string { return "desc" }
+func (s *stubTool) Schema() map[string]any {
+	return ObjectSchema(map[string]any{"full": map[string]any{"type": "string"}}, []string{"full"}, false)
+}
 func (s *stubTool) Execute(ctx context.Context, _ json.RawMessage) (string, error) { return "ok", nil }
-func (s *stubTool) PermissionLevel() permission.Level                      { return permission.LevelLow }
+func (s *stubTool) PermissionLevel() permission.Level                              { return permission.LevelLow }
 
 func TestRegistry_DeferredDefinitions(t *testing.T) {
 	reg := NewRegistry()

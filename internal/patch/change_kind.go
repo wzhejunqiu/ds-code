@@ -4,9 +4,9 @@ package patch
 type ChangeKind int
 
 const (
-	ChangeAdd ChangeKind = iota // *** Add File:
-	ChangeDelete                // *** Delete File:
-	ChangeUpdate                // *** Update File:
+	ChangeAdd    ChangeKind = iota // *** Add File:
+	ChangeDelete                   // *** Delete File:
+	ChangeUpdate                   // *** Update File:
 )
 
 func (k ChangeKind) String() string {

@@ -1,9 +1,9 @@
 package app
 
 import (
+	"github.com/spf13/cobra"
 	"github.com/wzhejunqiu/ds-code/internal/billing"
 	"github.com/wzhejunqiu/ds-code/internal/config"
-	"github.com/spf13/cobra"
 )
 
 // BootstrapConfig loads config, applies user billing overrides, and merges CLI flags.

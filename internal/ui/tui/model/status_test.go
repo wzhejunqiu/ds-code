@@ -9,8 +9,8 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/session"
-	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 )
 
 func TestUpdate_usageUpdateMsg_refreshesStatus(t *testing.T) {

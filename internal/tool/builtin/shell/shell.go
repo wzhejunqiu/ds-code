@@ -1,8 +1,8 @@
 package shell
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"

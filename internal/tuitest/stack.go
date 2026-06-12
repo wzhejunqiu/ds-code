@@ -9,8 +9,8 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
-	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"

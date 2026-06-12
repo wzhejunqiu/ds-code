@@ -247,9 +247,9 @@ func trimSummary(s string, cfg *config.Config) string {
 // sessionStore adapts subagentstore.Store to session.Store for one agent run.
 // All session IDs map to a single subagent Run row.
 type sessionStore struct {
-	sub      subagentstore.Store // underlying sub-agent persistence
-	runID    string              // fixed run ID for all session operations
-	run      subagentstore.Run   // cached run metadata for token totals
+	sub   subagentstore.Store // underlying sub-agent persistence
+	runID string              // fixed run ID for all session operations
+	run   subagentstore.Run   // cached run metadata for token totals
 	// Agent-level perm mode; mapped to session.PermissionMode in toSession when applicable.
 	permMode AgentPermMode
 }

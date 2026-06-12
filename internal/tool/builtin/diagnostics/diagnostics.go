@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/lsp"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/wzhejunqiu/ds-code/internal/config"
 	mcpsdk "github.com/mark3labs/mcp-go/mcp"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 func TestFormatToolResult_text(t *testing.T) {

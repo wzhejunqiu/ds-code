@@ -11,38 +11,38 @@ import (
 // Config is the merged runtime configuration for ds-code.
 // Fields tagged mapstructure:"-" are filled after YAML/CLI merge (paths, API key, CLI-only).
 type Config struct {
-	LLM            LLMConfig            `mapstructure:"llm"`
-	Context          ContextConfig        `mapstructure:"context"`
-	Agent            AgentConfig          `mapstructure:"agent"`
-	Tools            ToolsConfig          `mapstructure:"tools"`
-	Permission       PermissionConfig     `mapstructure:"permission"`
-	BTW              BTWConfig            `mapstructure:"btw"`
-	NonInteractive   NonInteractiveConfig `mapstructure:"non_interactive"`
-	Audit            AuditConfig            `mapstructure:"audit"`
-	MCP              MCPConfig            `mapstructure:"mcp"`
-	Web              WebConfig            `mapstructure:"web"`
-	LSP              LSPConfig            `mapstructure:"lsp"`
-	RunMode          runmode.RunMode      `mapstructure:"run_mode"`
-	LogVerbosity          int  `mapstructure:"-"`
-	AllowLogSensitiveData bool `mapstructure:"-"`
-	JSONOutput            bool `mapstructure:"-"`
-	Prompt           string               `mapstructure:"-"`
-	ProjectRoot      string               `mapstructure:"-"`
-	ProjectID        string               `mapstructure:"-"`
-	ProjectDataDir   string               `mapstructure:"-"`
-	APIKey           string               `mapstructure:"-"`
+	LLM                   LLMConfig            `mapstructure:"llm"`
+	Context               ContextConfig        `mapstructure:"context"`
+	Agent                 AgentConfig          `mapstructure:"agent"`
+	Tools                 ToolsConfig          `mapstructure:"tools"`
+	Permission            PermissionConfig     `mapstructure:"permission"`
+	BTW                   BTWConfig            `mapstructure:"btw"`
+	NonInteractive        NonInteractiveConfig `mapstructure:"non_interactive"`
+	Audit                 AuditConfig          `mapstructure:"audit"`
+	MCP                   MCPConfig            `mapstructure:"mcp"`
+	Web                   WebConfig            `mapstructure:"web"`
+	LSP                   LSPConfig            `mapstructure:"lsp"`
+	RunMode               runmode.RunMode      `mapstructure:"run_mode"`
+	LogVerbosity          int                  `mapstructure:"-"`
+	AllowLogSensitiveData bool                 `mapstructure:"-"`
+	JSONOutput            bool                 `mapstructure:"-"`
+	Prompt                string               `mapstructure:"-"`
+	ProjectRoot           string               `mapstructure:"-"`
+	ProjectID             string               `mapstructure:"-"`
+	ProjectDataDir        string               `mapstructure:"-"`
+	APIKey                string               `mapstructure:"-"`
 }
 
 type LLMConfig struct {
-	BaseURL         string             `mapstructure:"base_url"`
-	Model           string             `mapstructure:"model"`
-	MaxTokens       int                `mapstructure:"max_tokens"`
-	Timeout         time.Duration      `mapstructure:"timeout"`
-	StrictTools     bool               `mapstructure:"strict_tools"`
-	Thinking        ThinkingConfig     `mapstructure:"thinking"`
-	ReasoningEffort string             `mapstructure:"reasoning_effort"`
-	Subagent        SubagentLLMConfig  `mapstructure:"subagent"`
-	FallbackModel   string             `mapstructure:"fallback_model"`
+	BaseURL         string            `mapstructure:"base_url"`
+	Model           string            `mapstructure:"model"`
+	MaxTokens       int               `mapstructure:"max_tokens"`
+	Timeout         time.Duration     `mapstructure:"timeout"`
+	StrictTools     bool              `mapstructure:"strict_tools"`
+	Thinking        ThinkingConfig    `mapstructure:"thinking"`
+	ReasoningEffort string            `mapstructure:"reasoning_effort"`
+	Subagent        SubagentLLMConfig `mapstructure:"subagent"`
+	FallbackModel   string            `mapstructure:"fallback_model"`
 }
 
 // SubagentLLMConfig holds LLM settings for sub-agents spawned via the agent tool.
@@ -59,12 +59,12 @@ type ThinkingConfig struct {
 }
 
 type ContextConfig struct {
-	WindowTokens              int     `mapstructure:"window_tokens"`
-	MaxOutputTokens           int     `mapstructure:"max_output_tokens"`
-	CompactThresholdRatio     float64 `mapstructure:"compact_threshold_ratio"`
-	CollapseThresholdRatio    float64 `mapstructure:"collapse_threshold_ratio"`
-	KeepRecentTurns           int     `mapstructure:"keep_recent_turns"`
-	SnipKeepRounds            int     `mapstructure:"snip_keep_rounds"`
+	WindowTokens           int     `mapstructure:"window_tokens"`
+	MaxOutputTokens        int     `mapstructure:"max_output_tokens"`
+	CompactThresholdRatio  float64 `mapstructure:"compact_threshold_ratio"`
+	CollapseThresholdRatio float64 `mapstructure:"collapse_threshold_ratio"`
+	KeepRecentTurns        int     `mapstructure:"keep_recent_turns"`
+	SnipKeepRounds         int     `mapstructure:"snip_keep_rounds"`
 	TruncateBy             string  `mapstructure:"truncate_by"`
 	ToolResultMaxChars     int     `mapstructure:"tool_result_max_chars"`
 	AtReferenceMaxChars    int     `mapstructure:"at_reference_max_chars"`
@@ -78,9 +78,9 @@ type AgentConfig struct {
 }
 
 type ToolsConfig struct {
-	ParallelToolCalls bool              `mapstructure:"parallel_tool_calls"`
-	DeferMCP          bool              `mapstructure:"defer_mcp"`
-	DeferBuiltin      []string          `mapstructure:"defer_builtin"`
+	ParallelToolCalls bool               `mapstructure:"parallel_tool_calls"`
+	DeferMCP          bool               `mapstructure:"defer_mcp"`
+	DeferBuiltin      []string           `mapstructure:"defer_builtin"`
 	ReadFile          ReadFileToolConfig `mapstructure:"read_file"`
 	Grep              GrepToolConfig     `mapstructure:"grep"`
 	Glob              GlobToolConfig     `mapstructure:"glob"`
@@ -107,10 +107,10 @@ type ApplyPatchConfig struct {
 }
 
 type ShellToolConfig struct {
-	Timeout                  time.Duration `mapstructure:"timeout"`
-	MaxBackground            int           `mapstructure:"max_background"`
-	BackgroundOutputMaxBytes int           `mapstructure:"background_output_max_bytes"`
-	EnvBlacklist             []string      `mapstructure:"env_blacklist"`
+	Timeout                  time.Duration    `mapstructure:"timeout"`
+	MaxBackground            int              `mapstructure:"max_background"`
+	BackgroundOutputMaxBytes int              `mapstructure:"background_output_max_bytes"`
+	EnvBlacklist             []string         `mapstructure:"env_blacklist"`
 	EnvBlacklistCompiled     []*regexp.Regexp `mapstructure:"-"`
 }
 
@@ -160,19 +160,19 @@ type WebConfig struct {
 }
 
 type LSPConfig struct {
-	Enabled              bool                       `mapstructure:"enabled"`
-	IdleShutdown         time.Duration              `mapstructure:"idle_shutdown"`
-	DiagnosticsTimeout   time.Duration              `mapstructure:"diagnostics_timeout"`
-	MaxFilesPerCall      int                        `mapstructure:"max_files_per_call"`
-	MaxIssuesPerFile     int                        `mapstructure:"max_issues_per_file"`
-	WarmupOnStart        []string                   `mapstructure:"warmup_on_start"`
-	Servers              map[string]LSPServerConfig `mapstructure:"servers"`
+	Enabled            bool                       `mapstructure:"enabled"`
+	IdleShutdown       time.Duration              `mapstructure:"idle_shutdown"`
+	DiagnosticsTimeout time.Duration              `mapstructure:"diagnostics_timeout"`
+	MaxFilesPerCall    int                        `mapstructure:"max_files_per_call"`
+	MaxIssuesPerFile   int                        `mapstructure:"max_issues_per_file"`
+	WarmupOnStart      []string                   `mapstructure:"warmup_on_start"`
+	Servers            map[string]LSPServerConfig `mapstructure:"servers"`
 }
 
 type LSPServerConfig struct {
-	Command     string            `mapstructure:"command"`
-	Args        []string          `mapstructure:"args"`
-	Extensions  []string          `mapstructure:"extensions"`
-	Env         map[string]string `mapstructure:"env"`
-	Disabled    bool              `mapstructure:"disabled"`
+	Command    string            `mapstructure:"command"`
+	Args       []string          `mapstructure:"args"`
+	Extensions []string          `mapstructure:"extensions"`
+	Env        map[string]string `mapstructure:"env"`
+	Disabled   bool              `mapstructure:"disabled"`
 }

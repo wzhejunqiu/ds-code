@@ -6,8 +6,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/wzhejunqiu/ds-code/internal/llm"
-	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 	tokdeepseek "github.com/wzhejunqiu/ds-code/internal/tokenizer/deepseek"
 )
 

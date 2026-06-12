@@ -2,7 +2,6 @@ package agent
 
 import (
 	"testing"
-
 )
 
 func TestApplyPreToolUseResults_shellCommand(t *testing.T) {

@@ -26,55 +26,30 @@ jobs:
           - runner: ubuntu-latest
             goos: linux
             goarch: amd64
-            artifact: ds-code-linux-amd64
-          - runner: ubuntu-latest
-            goos: linux
-            goarch: amd64
             tokenizers_arch: x86_64
-            artifact: ds-code-linux-x86_64
+            artifact: ds-code-linux-amd64
           - runner: ubuntu-24.04-arm
             goos: linux
             goarch: arm64
             tokenizers_arch: arm64
             artifact: ds-code-linux-arm64
-          - runner: ubuntu-24.04-arm
-            goos: linux
-            goarch: arm64
-            tokenizers_arch: aarch64
-            artifact: ds-code-linux-aarch64
           - runner: ubuntu-latest
             goos: linux
             goarch: amd64
             tokenizers_arch: musl-amd64
             musl: true
             artifact: ds-code-linux-musl-amd64
-          - runner: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            tokenizers_arch: musl-x86_64
-            musl: true
-            artifact: ds-code-linux-musl-x86_64
           - runner: ubuntu-24.04-arm
             goos: linux
             goarch: arm64
             tokenizers_arch: musl-arm64
             musl: true
             artifact: ds-code-linux-musl-arm64
-          - runner: ubuntu-24.04-arm
-            goos: linux
-            goarch: arm64
-            tokenizers_arch: musl-aarch64
-            musl: true
-            artifact: ds-code-linux-musl-aarch64
-          - runner: macos-latest
-            goos: darwin
-            goarch: arm64
-            artifact: ds-code-darwin-arm64
           - runner: macos-latest
             goos: darwin
             goarch: arm64
             tokenizers_arch: aarch64
-            artifact: ds-code-darwin-aarch64
+            artifact: ds-code-darwin-arm64
           - runner: macos-latest
             goos: darwin
             goarch: amd64
@@ -165,6 +140,21 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Extract release notes from CHANGELOG
+        id: changelog
+        run: |
+          RELEASE_VERSION="${RELEASE_TAG#v}"
+          chmod +x ./scripts/extract-changelog.sh
+          {
+            echo 'body<<EOF'
+            ./scripts/extract-changelog.sh "$RELEASE_VERSION"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -181,4 +171,5 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          body: ${{ steps.changelog.outputs.body }}
           files: release/*

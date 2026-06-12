@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
-	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
 )
 
 func TestHandleNavKey_downOpensList(t *testing.T) {

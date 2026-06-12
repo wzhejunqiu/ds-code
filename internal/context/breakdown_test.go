@@ -5,8 +5,8 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
-	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 )
 
 func TestCountBreakdown_invariant(t *testing.T) {

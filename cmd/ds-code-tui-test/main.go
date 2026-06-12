@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/tuitest"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
-	"github.com/spf13/cobra"
 )
 
 func main() {

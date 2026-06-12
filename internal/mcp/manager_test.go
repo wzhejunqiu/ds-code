@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
-	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
 
 func newTestManager(servers ...*Server) *Manager {

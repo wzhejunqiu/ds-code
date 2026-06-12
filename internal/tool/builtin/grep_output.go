@@ -4,9 +4,9 @@ import "fmt"
 
 // Grep output_mode values (shared with grep tool and TUI display).
 const (
-	GrepOutputContent           = "content"
-	GrepOutputFilesWithMatches  = "files_with_matches"
-	GrepOutputCount             = "count"
+	GrepOutputContent          = "content"
+	GrepOutputFilesWithMatches = "files_with_matches"
+	GrepOutputCount            = "count"
 )
 
 // ParseGrepOutputMode normalizes and validates grep output_mode (empty → files_with_matches).

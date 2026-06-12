@@ -27,8 +27,8 @@ func writeMinimalFixture(dir string) error {
 		return err
 	}
 	files := map[string]string{
-		"AGENTS.md": "# harness\n",
-		"sample.go": "package main\n\nfunc Hello() string { return \"hello\" }\n",
+		"AGENTS.md":           "# harness\n",
+		"sample.go":           "package main\n\nfunc Hello() string { return \"hello\" }\n",
 		"sample_multiline.go": "package main\n\nfunc Hello() string {\n\treturn \"hello\"\n}\n",
 	}
 	for name, body := range files {

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
-	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
 
 // adapterTool implements tool.Tool for one MCP tool.

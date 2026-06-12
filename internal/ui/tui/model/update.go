@@ -8,9 +8,9 @@ import (
 	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/overlay"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/session"
-	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/tcase"
-	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/tcase"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
 )
 
@@ -145,10 +145,10 @@ func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		RequestCancelTurn: func() {
 			turn.RequestCancel(&m.State, m.syncChatView)
 		},
-		ShowHelp:     input.ShowHelp,
-		ShowContext:  func() tea.Cmd { return input.ShowContext(&m.State) },
-		SyncChat:     m.syncChatView,
-		ExitTimeout:  exitConfirmTimeoutTick,
+		ShowHelp:    input.ShowHelp,
+		ShowContext: func() tea.Cmd { return input.ShowContext(&m.State) },
+		SyncChat:    m.syncChatView,
+		ExitTimeout: exitConfirmTimeoutTick,
 	})
 }
 

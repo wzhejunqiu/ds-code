@@ -1,8 +1,8 @@
 # ds-code 从零建设与安全审计基线
 
-> 文档版本：v0.13  
-> 更新日期：2026-05-16  
-> 状态：草案，待讨论确认后进入实现
+> 文档版本：v0.14  
+> 更新日期：2026-06-12  
+> 状态：v0.1.0 首版已发布，持续迭代
 
 ## 概述
 
@@ -23,7 +23,7 @@
 
 ## 现状
 
-仓库已有 **tokenizer**（`internal/tokenizer/deepseek`、`cmd/count-tokens`）与 `go.mod`；**Agent / TUI / session 等待实现**。架构见 **[DESIGN.md](DESIGN.md)**。
+v0.1.0 已实现 Agent / Plan 双模式、Bubble Tea TUI、DeepSeek V4 客户端、Codex 式 `apply_patch`、SQLite 会话与 compact、checkpoint、MCP、LSP diagnostics、子代理、Rules/Skills、权限沙箱与费用估算。模块与流程见 **[DESIGN.md](DESIGN.md)**；配置见 **[CONFIG.md](CONFIG.md)**。
 
 ---
 

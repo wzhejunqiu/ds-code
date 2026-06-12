@@ -47,8 +47,8 @@ type NotificationPriority int
 
 const (
 	PrioNow   NotificationPriority = iota // injected before next user message
-	PrioNext                                 // drained at start of next RunTurn
-	PrioLater                                // drained when idle
+	PrioNext                              // drained at start of next RunTurn
+	PrioLater                             // drained when idle
 )
 
 // Notification is a completion/failure/kill notice for an async agent.

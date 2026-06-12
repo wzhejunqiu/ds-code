@@ -6,11 +6,11 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	sessionsqlite "github.com/wzhejunqiu/ds-code/internal/session/sqlite"
-	"github.com/spf13/cobra"
 )
 
 // SessionsCmd lists saved sessions for the current project.

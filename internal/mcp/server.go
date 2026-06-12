@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
+	mcpclient "github.com/mark3labs/mcp-go/client"
+	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/security"
-	mcpclient "github.com/mark3labs/mcp-go/client"
-	mcpsdk "github.com/mark3labs/mcp-go/mcp"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 	"go.uber.org/zap"
 )
 
@@ -55,7 +56,7 @@ func ConnectServer(ctx context.Context, cfg config.MCPServerConfig, envBlacklist
 	initReq.Params.ProtocolVersion = mcpsdk.LATEST_PROTOCOL_VERSION
 	initReq.Params.ClientInfo = mcpsdk.Implementation{
 		Name:    "ds-code",
-		Version: "0.1.0",
+		Version: version.Version,
 	}
 	if _, err := c.Initialize(ctx, initReq); err != nil {
 		_ = c.Close()

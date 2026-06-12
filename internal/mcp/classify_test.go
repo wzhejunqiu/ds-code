@@ -3,9 +3,9 @@ package mcp_test
 import (
 	"testing"
 
+	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
-	mcpsdk "github.com/mark3labs/mcp-go/mcp"
 )
 
 func TestClassifyPermission_readOnlyHint(t *testing.T) {

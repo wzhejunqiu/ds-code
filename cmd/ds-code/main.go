@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/commands"
 	"github.com/wzhejunqiu/ds-code/internal/config"
@@ -11,7 +12,6 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/version"
 	"github.com/wzhejunqiu/ds-code/internal/versioninfo"
-	"github.com/spf13/cobra"
 )
 
 var gitCommit string // set at release build via -ldflags; empty uses vcs info from go build

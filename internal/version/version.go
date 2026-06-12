@@ -1,5 +1,6 @@
 package version
 
-// Version is the ds-code release version (single source of truth).
-// Release builds may override via -ldflags "-X .../internal/version.Version=...".
-var Version = "0.1.0-dev"
+// Version is the default for local/dev builds ("dev").
+// Official release versions are injected only via GitHub Release tag:
+// -ldflags "-X github.com/wzhejunqiu/ds-code/internal/version.Version=<tag>"
+var Version = "dev"

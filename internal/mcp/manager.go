@@ -15,11 +15,11 @@ import (
 
 // Manager connects configured MCP servers and exposes their tools.
 type Manager struct {
-	servers   []*Server
-	tools     []*adapterTool
-	byName    map[string]*adapterTool
-	deferMCP  bool
-	mu        sync.RWMutex
+	servers  []*Server
+	tools    []*adapterTool
+	byName   map[string]*adapterTool
+	deferMCP bool
+	mu       sync.RWMutex
 }
 
 // NewManager connects all configured MCP servers and discovers tools.

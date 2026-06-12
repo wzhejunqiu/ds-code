@@ -16,8 +16,8 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
-	"github.com/wzhejunqiu/ds-code/internal/security/classifier"
 	"github.com/wzhejunqiu/ds-code/internal/role"
+	"github.com/wzhejunqiu/ds-code/internal/security/classifier"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"go.uber.org/zap"
@@ -29,15 +29,15 @@ type NotificationFunc func(ctx context.Context) string
 
 // Runner executes the agent loop.
 type Runner struct {
-	LLM              llm.Client
-	Tools            *tool.Registry
-	Perm             *permission.Engine
-	Sessions         session.Store
-	Context          *ctxpkg.Service
-	Cfg              *config.Config
-	MaxTurns         int
-	Out              io.Writer
-	Audit            *audit.Logger
+	LLM                     llm.Client
+	Tools                   *tool.Registry
+	Perm                    *permission.Engine
+	Sessions                session.Store
+	Context                 *ctxpkg.Service
+	Cfg                     *config.Config
+	MaxTurns                int
+	Out                     io.Writer
+	Audit                   *audit.Logger
 	Checkpoints             *checkpoint.Store
 	Hooks                   *HookManager
 	DrainNotifications      NotificationFunc

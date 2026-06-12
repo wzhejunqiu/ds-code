@@ -35,9 +35,9 @@ type SubagentToolStartMsg struct {
 	Name, Args, Command string
 }
 type SubagentToolEndMsg struct {
-	SubagentID                    string
+	SubagentID                  string
 	Name, Args, Command, Result string
-	IsError                       bool
+	IsError                     bool
 }
 type AssistantSegmentEndMsg struct{}
 type PlanningStartMsg struct{}

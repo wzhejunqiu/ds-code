@@ -20,18 +20,18 @@ const (
 
 // Record holds UI state for one subagent exploration.
 type Record struct {
-	ID                 string
-	Label              string
-	Prompt             string
-	ParentToolCallID   string
-	Status             Status
-	AgentType          string
-	Background         bool
-	Chat               []chat.Block
-	ToolLines          []string
-	StartedAt          time.Time
-	EndedAt            time.Time
-	Err                string
+	ID               string
+	Label            string
+	Prompt           string
+	ParentToolCallID string
+	Status           Status
+	AgentType        string
+	Background       bool
+	Chat             []chat.Block
+	ToolLines        []string
+	StartedAt        time.Time
+	EndedAt          time.Time
+	Err              string
 }
 
 // Registry stores subagent runs for the current main session turn history.
@@ -114,9 +114,9 @@ func (r *Registry) Start(id, label, prompt, agentType string, background bool) *
 		blk.AppendContent(prompt)
 		rec.Chat = append(rec.Chat, blk)
 		rec.Chat = append(rec.Chat, chat.Block{
-			Role:              chat.RoleAssistant,
-			Streaming:         true,
-			ReasoningOpen:     false,
+			Role:               chat.RoleAssistant,
+			Streaming:          true,
+			ReasoningOpen:      false,
 			ReasoningStartedAt: time.Now(),
 		})
 	}

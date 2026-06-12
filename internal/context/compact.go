@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/wzhejunqiu/ds-code/internal/llm"
-	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"go.uber.org/zap"
 )
@@ -104,8 +104,8 @@ func (s *Service) summarize(ctx context.Context, sess session.Session, transcrip
 		Messages:     []llm.Message{{Role: role.User, Content: prompt}},
 		Model:        sess.Model,
 		MaxTokens:    maxOut,
-		Stream:        false,
-		ThinkingType:  "disabled",
+		Stream:       false,
+		ThinkingType: "disabled",
 		StrictTools:  s.Cfg.LLM.StrictTools,
 		UserID:       "compact-" + sess.ID,
 	})

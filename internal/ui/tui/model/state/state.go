@@ -60,13 +60,13 @@ type State struct {
 	ReasoningAll       bool
 	ToolDetailsVisible bool
 
-	StatusRight       string
-	ErrLine           string
-	SensitiveLogWarn  string
+	StatusRight      string
+	ErrLine          string
+	SensitiveLogWarn string
 
-	HeaderSession  session.Session
-	HeaderCostCNY  float64
-	HasSession     bool
+	HeaderSession session.Session
+	HeaderCostCNY float64
+	HasSession    bool
 
 	ExitConfirmPending bool
 	ExitConfirmKey     string

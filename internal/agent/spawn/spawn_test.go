@@ -13,10 +13,10 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/read_file"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/glob"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/read_file"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
 )
 
 func testConfig() *config.Config {
@@ -539,15 +539,15 @@ func TestRenderedSystemFromContext_Empty(t *testing.T) {
 // --- dummyTool for testing ---
 
 type dummyTool struct {
-	name           string
-	readOnly       bool
+	name            string
+	readOnly        bool
 	concurrencySafe bool
 }
 
-func (d *dummyTool) Name() string                     { return d.name }
-func (d *dummyTool) Description() string              { return "dummy" }
-func (d *dummyTool) Schema() map[string]any           { return map[string]any{} }
+func (d *dummyTool) Name() string                                                 { return d.name }
+func (d *dummyTool) Description() string                                          { return "dummy" }
+func (d *dummyTool) Schema() map[string]any                                       { return map[string]any{} }
 func (d *dummyTool) Execute(_ context.Context, _ json.RawMessage) (string, error) { return "", nil }
-func (d *dummyTool) PermissionLevel() permission.Level { return permission.LevelLow }
-func (d *dummyTool) IsReadOnly() bool                 { return d.readOnly }
-func (d *dummyTool) IsConcurrencySafe() bool          { return d.concurrencySafe }
+func (d *dummyTool) PermissionLevel() permission.Level                            { return permission.LevelLow }
+func (d *dummyTool) IsReadOnly() bool                                             { return d.readOnly }
+func (d *dummyTool) IsConcurrencySafe() bool                                      { return d.concurrencySafe }

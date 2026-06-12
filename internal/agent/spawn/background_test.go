@@ -21,12 +21,12 @@ import (
 func TestSyncPromote_returnsBeforeCompletion(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &config.Config{
-		ProjectRoot:     dir,
-		ProjectDataDir:  dir,
-		LLM:             config.LLMConfig{Model: "m", MaxTokens: 4096},
-		Context:         config.ContextConfig{ToolResultMaxChars: 50_000},
-		Tools:           config.ToolsConfig{Agent: config.AgentToolConfig{AutoBackgroundAfter: 1, SummaryMaxChars: 8000}},
-		Agent:           config.AgentConfig{MaxTurns: 5},
+		ProjectRoot:    dir,
+		ProjectDataDir: dir,
+		LLM:            config.LLMConfig{Model: "m", MaxTokens: 4096},
+		Context:        config.ContextConfig{ToolResultMaxChars: 50_000},
+		Tools:          config.ToolsConfig{Agent: config.AgentToolConfig{AutoBackgroundAfter: 1, SummaryMaxChars: 8000}},
+		Agent:          config.AgentConfig{MaxTurns: 5},
 	}
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{{Content: "done", FinishReason: "stop"}},

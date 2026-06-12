@@ -9,10 +9,10 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/prompt"
 	"github.com/wzhejunqiu/ds-code/internal/role"
-	"github.com/wzhejunqiu/ds-code/internal/logging"
-	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -22,13 +22,13 @@ import (
 
 // Service builds API context and prepares requests.
 type Service struct {
-	Cfg        *config.Config
-	Store      session.Store
-	Subagent   subagentstore.Store
-	Tools      *tool.Registry
-	LLM        llm.Client
-	AgentsMD   string
-	Rules      string
+	Cfg         *config.Config
+	Store       session.Store
+	Subagent    subagentstore.Store
+	Tools       *tool.Registry
+	LLM         llm.Client
+	AgentsMD    string
+	Rules       string
 	ActiveSkill string
 	SkillsText  string
 
@@ -50,8 +50,8 @@ type Service struct {
 	// VerificationMode appends a per-round verification reminder (view layer only).
 	VerificationMode bool
 
-	collapse     *collapseTracker
-	promptUsage  *promptUsage
+	collapse    *collapseTracker
+	promptUsage *promptUsage
 }
 
 // BeginUserTurn resets per-user-turn breakdown cache (condition A).

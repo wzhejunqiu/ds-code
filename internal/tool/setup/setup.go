@@ -2,15 +2,14 @@ package setup
 
 import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
-	"github.com/wzhejunqiu/ds-code/internal/lsp"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/lsp"
 	mcpsvc "github.com/wzhejunqiu/ds-code/internal/mcp"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
-	"github.com/wzhejunqiu/ds-code/internal/tool/register"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/apply_patch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/diagnostics"
@@ -18,6 +17,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/tool_search"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
+	"github.com/wzhejunqiu/ds-code/internal/tool/register"
 )
 
 // Deps holds shared dependencies for tool registration.

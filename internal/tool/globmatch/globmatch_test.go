@@ -26,9 +26,9 @@ func TestHasMeta(t *testing.T) {
 
 func TestSplitPath(t *testing.T) {
 	tests := []struct {
-		path         string
-		wantBase     string
-		wantPattern  string
+		path        string
+		wantBase    string
+		wantPattern string
 	}{
 		{"internal/tool", "internal/tool", ""},
 		{"internal/tool/grep.go", "internal/tool/grep.go", ""},

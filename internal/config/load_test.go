@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/spf13/cobra"
+	"github.com/wzhejunqiu/ds-code/internal/config"
 )
 
 func TestResolveProjectRoot_gitWorktreeFile(t *testing.T) {
@@ -129,9 +129,9 @@ func TestApplyCLIDerived_verboseCount(t *testing.T) {
 
 func TestApplyCLIDerived_allowLogSensitiveData(t *testing.T) {
 	tests := []struct {
-		name  string
-		args  []string
-		want  bool
+		name string
+		args []string
+		want bool
 	}{
 		{"vv_and_flag", []string{"-vv", "--allow-log-sensitive-data"}, true},
 		{"flag_without_vv", []string{"--allow-log-sensitive-data"}, false},

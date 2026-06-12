@@ -366,9 +366,9 @@ func TestRunner_exceededMaxSubRounds_onUsageUpdate(t *testing.T) {
 		responses = append(responses, toolResp)
 	}
 	responses = append(responses, &llm.Response{
-		Content:          "summary",
-		FinishReason:     "stop",
-		Usage:            llm.Usage{PromptTokens: 20, CompletionTokens: 5},
+		Content:      "summary",
+		FinishReason: "stop",
+		Usage:        llm.Usage{PromptTokens: 20, CompletionTokens: 5},
 	})
 	mockLLM := &mock.Client{Responses: responses}
 

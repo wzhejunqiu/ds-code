@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/glamour/ansi"
 	glamourStyles "github.com/charmbracelet/glamour/styles"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
 	"github.com/muesli/termenv"
+	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
 )
 
 var (

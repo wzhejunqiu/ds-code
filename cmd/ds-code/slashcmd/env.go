@@ -12,11 +12,11 @@ import (
 
 // Env carries runtime state for a single slash command invocation.
 type Env struct {
-	Ctx       context.Context
-	Out       io.Writer
-	Cfg       *config.Config
-	Runner    *agent.Runner
-	Store     session.Store
+	Ctx             context.Context
+	Out             io.Writer
+	Cfg             *config.Config
+	Runner          *agent.Runner
+	Store           session.Store
 	CtxSvc          *ctxpkg.Service
 	SessionID       *string
 	ActiveAgentType string

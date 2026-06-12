@@ -105,9 +105,9 @@ func TestRunTurn_onUsageUpdate(t *testing.T) {
 	reg := tool.NewRegistry()
 	r := &agent.Runner{
 		LLM: &streamEmitClient{resp: &llm.Response{
-			Content:          "ok",
-			FinishReason:     "stop",
-			Usage:            llm.Usage{PromptTokens: 10, CompletionTokens: 5},
+			Content:      "ok",
+			FinishReason: "stop",
+			Usage:        llm.Usage{PromptTokens: 10, CompletionTokens: 5},
 		}},
 		Tools:    reg,
 		Perm:     permission.NewEngine("auto", dir, false),

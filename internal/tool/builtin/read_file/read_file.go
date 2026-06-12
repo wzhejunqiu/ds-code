@@ -151,7 +151,7 @@ func formatReadFileOutput(abs string, start, end int, rangeTruncated bool, maxLi
 		return fmt.Sprintf(ResultEmptyOffsetBeyond, start, lineNo), nil
 	}
 	if rangeTruncated {
-		out.WriteString(fmt.Sprintf(MsgTruncatedMaxLines, maxLines))
+		fmt.Fprintf(&out, MsgTruncatedMaxLines, maxLines)
 	}
 	if moreAfter > 0 {
 		fmt.Fprintf(&out, MsgMoreLinesNotShown, moreAfter)

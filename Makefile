@@ -1,4 +1,4 @@
-.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release lint vet staticcheck vuln install fetch-tokenizers
+.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release lint vet staticcheck vuln install fetch-tokenizers check-commit check-push install-hooks
 
 COVERPROFILE ?= coverage.out
 
@@ -13,6 +13,7 @@ GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null)
 _VERSION_FILE := $(shell sed -n 's/^var Version = "\(.*\)"/\1/p' internal/version/version.go)
 VERSION ?= $(_VERSION_FILE)
 VERSION_PKG := github.com/wzhejunqiu/ds-code/internal/version
+# Release builds override Version via GitHub Release workflow ldflags.
 LDFLAGS := -X $(VERSION_PKG).Version=$(VERSION)
 ifneq ($(GIT_COMMIT),)
 LDFLAGS += -X main.gitCommit=$(GIT_COMMIT)
@@ -68,3 +69,16 @@ staticcheck: $(TOKENIZERS_LIB)
 
 vuln: $(TOKENIZERS_LIB)
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+check-commit: $(TOKENIZERS_LIB)
+	./scripts/pre-commit-check.sh
+
+check-push: $(TOKENIZERS_LIB)
+	./scripts/check-gofmt.sh
+	$(MAKE) vet lint
+
+install-hooks:
+	git config --local core.hooksPath .githooks
+	chmod +x .githooks/pre-commit .githooks/pre-push \
+		scripts/check-gofmt.sh scripts/pre-commit-check.sh scripts/lint-packages.sh
+	@echo "git hooks installed (.githooks → check-commit / check-push)"

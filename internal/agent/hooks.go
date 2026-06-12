@@ -16,13 +16,13 @@ import (
 type HookEvent string
 
 const (
-	HookPreToolUse      HookEvent = "PreToolUse"
-	HookPostToolUse     HookEvent = "PostToolUse"
-	HookStop            HookEvent = "Stop"
-	HookSubagentStart   HookEvent = "SubagentStart"
-	HookSubagentStop    HookEvent = "SubagentStop"
-	HookSessionStart    HookEvent = "SessionStart"
-	HookSessionEnd      HookEvent = "SessionEnd"
+	HookPreToolUse    HookEvent = "PreToolUse"
+	HookPostToolUse   HookEvent = "PostToolUse"
+	HookStop          HookEvent = "Stop"
+	HookSubagentStart HookEvent = "SubagentStart"
+	HookSubagentStop  HookEvent = "SubagentStop"
+	HookSessionStart  HookEvent = "SessionStart"
+	HookSessionEnd    HookEvent = "SessionEnd"
 )
 
 // HookConfig is a single hook definition from .ds-code/hooks.json.

@@ -3,10 +3,10 @@ package commands
 import (
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
-	"github.com/spf13/cobra"
 )
 
 // ResumeCmd resumes an interactive TUI session by ID.
