@@ -68,8 +68,8 @@ make install-hooks
 
 | Hook | 命令 | 检查范围 |
 |------|------|----------|
-| pre-commit | `make check-commit` | 暂存区 `.go` 文件及其 package：gofmt、vet、golangci-lint |
-| pre-push | `make check-push` | 全仓 gofmt、vet、lint（对齐 CI lint job） |
+| pre-commit | `make check-commit` | 暂存区 `.go` 文件及其 package：gofmt、vet、golangci-lint；全仓 govulncheck |
+| pre-push | `make check-push` | 全仓 gofmt、vet、lint、govulncheck（对齐 CI lint / vuln job） |
 
 紧急绕过（不推荐）：`git commit --no-verify` / `git push --no-verify`
 

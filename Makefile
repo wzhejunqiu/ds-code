@@ -72,13 +72,14 @@ vuln: $(TOKENIZERS_LIB)
 
 check-commit: $(TOKENIZERS_LIB)
 	./scripts/pre-commit-check.sh
+	$(MAKE) vuln
 
 check-push: $(TOKENIZERS_LIB)
 	./scripts/check-gofmt.sh
-	$(MAKE) vet lint
+	$(MAKE) vet lint vuln
 
 install-hooks:
 	git config --local core.hooksPath .githooks
 	chmod +x .githooks/pre-commit .githooks/pre-push \
 		scripts/check-gofmt.sh scripts/pre-commit-check.sh scripts/lint-packages.sh
-	@echo "git hooks installed (.githooks → check-commit / check-push)"
+	@echo "git hooks installed (.githooks → check-commit / check-push, includes vuln)"

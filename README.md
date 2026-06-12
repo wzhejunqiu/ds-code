@@ -33,6 +33,17 @@ export DEEPSEEK_API_KEY=sk-...
 | Alpine / musl Linux x86_64 | `ds-code-linux-musl-amd64.tar.gz` |
 | Alpine / musl Linux ARM64 | `ds-code-linux-musl-arm64.tar.gz` |
 
+**Windows 用户**：当前 Release **不提供**原生 Windows 二进制。建议在 [WSL2](https://learn.microsoft.com/zh-cn/windows/wsl/install)（Ubuntu 等 Linux 发行版）中安装，使用上表中的 **`ds-code-linux-amd64`**（x86_64 PC）或 **`ds-code-linux-arm64`**（ARM PC）。在 WSL 终端里解压、加入 PATH 后，用法与 Linux 相同。
+
+```bash
+# WSL2 内示例（x86_64）
+curl -LO https://github.com/wzhejunqiu/ds-code/releases/download/v0.1.0/ds-code-linux-amd64.tar.gz
+tar xzf ds-code-linux-amd64.tar.gz
+chmod +x ds-code
+mkdir -p ~/.local/bin && mv ds-code ~/.local/bin/
+export PATH="$HOME/.local/bin:$PATH"
+```
+
 示例（macOS Apple Silicon）：
 
 ```bash
