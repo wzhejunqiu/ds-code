@@ -1,23 +1,49 @@
 name: Release
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
-      tag:
-        description: Release tag to build (e.g. v0.1.0)
+      version:
+        description: "Release version tag (e.g. v0.1.0)"
         required: true
         type: string
+      draft:
+        description: "Create as draft release"
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
-env:
-  RELEASE_TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
-
 jobs:
+  validate:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check version tag format
+        run: |
+          version='${{ inputs.version }}'
+          if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::version must look like v0.1.0 or v0.1.0-beta.1"
+            exit 1
+          fi
+
+  ci:
+    name: CI
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build:
+    name: Build (${{ matrix.artifact }})
+    needs: ci
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -59,8 +85,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_TAG }}
 
       - uses: actions/setup-go@v5
         if: matrix.musl != true
@@ -76,10 +100,12 @@ jobs:
 
       - name: Build (musl)
         if: matrix.musl == true
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           mkdir -p dist
           GO_VERSION="$(awk '/^go / {split($2,a,"."); print a[1]"."a[2]}' go.mod)"
-          RELEASE_VERSION="${RELEASE_TAG#v}"
+          VERSION="${RELEASE_VERSION#v}"
           GIT_COMMIT="$(git rev-parse HEAD)"
           docker run --rm \
             -v "${GITHUB_WORKSPACE}:/work" \
@@ -89,7 +115,7 @@ jobs:
             -e GOARCH="${{ matrix.goarch }}" \
             -e TOKENIZERS_ARCH="${{ matrix.tokenizers_arch }}" \
             -e CGO_LDFLAGS="-static -static-libgcc -static-libstdc++" \
-            -e RELEASE_VERSION="${RELEASE_VERSION}" \
+            -e RELEASE_VERSION="${VERSION}" \
             -e GIT_COMMIT="${GIT_COMMIT}" \
             "golang:${GO_VERSION}-alpine" \
             sh -ec '
@@ -106,14 +132,15 @@ jobs:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           if [ -n "${{ matrix.cc }}" ]; then
             export CC="${{ matrix.cc }}"
           fi
           mkdir -p dist
-          RELEASE_VERSION="${RELEASE_TAG#v}"
+          VERSION="${RELEASE_VERSION#v}"
           GIT_COMMIT="$(git rev-parse HEAD)"
-          LDFLAGS="-X github.com/wzhejunqiu/ds-code/internal/version.Version=${RELEASE_VERSION} -X main.gitCommit=${GIT_COMMIT}"
+          LDFLAGS="-X github.com/wzhejunqiu/ds-code/internal/version.Version=${VERSION} -X main.gitCommit=${GIT_COMMIT}"
           go build -ldflags "$LDFLAGS" -o dist/ds-code ./cmd/ds-code
 
       - name: Verify
@@ -136,18 +163,17 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: github.event_name == 'release'
+    name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_TAG }}
 
       - name: Extract release notes from CHANGELOG
         id: changelog
         run: |
-          RELEASE_VERSION="${RELEASE_TAG#v}"
+          RELEASE_VERSION="${{ inputs.version }}"
+          RELEASE_VERSION="${RELEASE_VERSION#v}"
           chmod +x ./scripts/extract-changelog.sh
           {
             echo 'body<<EOF'
@@ -170,6 +196,10 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.version }}
+          target_commitish: ${{ github.sha }}
           body: ${{ steps.changelog.outputs.body }}
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
           files: release/*

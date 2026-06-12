@@ -26,7 +26,7 @@ make install
 
 - 源码 / `make build` 默认版本为 `dev`（见 `internal/version/version.go`）
 - **正式发布版本**仅由 GitHub Release tag 经 CI ldflags 注入，不在源码中维护版本号
-- 发版：在 GitHub 创建 Release（由 GitHub 创建 tag），触发 `.github/workflows/release.yml`；Release 说明自动从 `CHANGELOG.md` 对应版本段提取，无需手填 Description
+- 发版：GitHub Actions → **Release** workflow → Run workflow，填写 `version`（如 `v0.1.0`）；workflow 先跑 CI，再多平台构建，最后在 `github.sha` 上创建 tag 与 Release。Release 说明自动从 `CHANGELOG.md` 对应版本段提取，无需手填 Description
 
 ## Tokenizer 与 CGO
 
