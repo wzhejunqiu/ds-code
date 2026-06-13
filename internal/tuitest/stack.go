@@ -12,6 +12,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 )
@@ -37,6 +38,7 @@ func NewHarness() (*Stack, error) {
 // NewStack creates an isolated harness stack for tests.
 func NewStack(t testing.TB) (*Stack, error) {
 	t.Helper()
+	testutil.IsolatedHome(t)
 	s, err := newStackCore(false)
 	if err != nil {
 		return nil, err

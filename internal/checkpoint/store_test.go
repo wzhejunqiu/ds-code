@@ -7,9 +7,11 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/checkpoint"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestStoreCreateAndRewind(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	store, err := checkpoint.OpenStore(root)
 	if err != nil {

@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/billing"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestSetupFromUserConfig(t *testing.T) {
-	dir := t.TempDir()
+	dir := testutil.IsolatedHome(t)
 	userDir := filepath.Join(dir, ".ds-code", "config")
 	if err := os.MkdirAll(userDir, 0o700); err != nil {
 		t.Fatal(err)
@@ -25,7 +26,6 @@ func TestSetupFromUserConfig(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(userDir, "config.yaml"), []byte(yaml), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HOME", dir)
 	billing.ResetPricesForTest()
 	t.Cleanup(billing.ResetPricesForTest)
 

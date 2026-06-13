@@ -102,7 +102,7 @@ func runScenario(t *testing.T, name string) (*Stack, *model.Model) {
 	}
 
 	events := make(chan tea.Msg, 256)
-	deps := stack.Deps(sess.ID, func(context.Context, io.Writer, *string, string) (bool, error) {
+	deps := stack.Deps(sess.ID, func(context.Context, io.Writer, *string, string, string) (bool, error) {
 		return false, nil
 	})
 	deps.Events = events

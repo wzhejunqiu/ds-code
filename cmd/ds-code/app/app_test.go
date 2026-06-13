@@ -8,9 +8,11 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/runmode"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestApp_openStore(t *testing.T) {
+	testutil.IsolatedHome(t)
 	dir := t.TempDir()
 	a := New(&config.Config{ProjectRoot: dir, LLM: config.LLMConfig{Model: "test"}})
 	store, err := a.openStore()
@@ -30,6 +32,7 @@ func TestApp_openStore(t *testing.T) {
 }
 
 func TestApp_createSession(t *testing.T) {
+	testutil.IsolatedHome(t)
 	dir := t.TempDir()
 	cfg := &config.Config{
 		ProjectRoot: dir,

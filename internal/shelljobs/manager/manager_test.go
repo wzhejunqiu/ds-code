@@ -9,9 +9,11 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestManager_backgroundJobCompletes(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	mgr, err := manager.Open(root, config.ShellToolConfig{
 		MaxBackground:            3,
@@ -47,6 +49,7 @@ func TestManager_backgroundJobCompletes(t *testing.T) {
 }
 
 func TestManager_cancelJob(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	mgr, err := manager.Open(root, config.ShellToolConfig{MaxBackground: 2})
 	if err != nil {

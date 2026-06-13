@@ -8,13 +8,11 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestRemember_activeAgentType(t *testing.T) {
-	dir := t.TempDir()
-	oldHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer func() { _ = os.Setenv("HOME", oldHome) }()
+	dir := testutil.IsolatedHome(t)
 
 	var out bytes.Buffer
 	env := &Env{
@@ -36,10 +34,7 @@ func TestRemember_activeAgentType(t *testing.T) {
 }
 
 func TestRemember_appendsSameSlot(t *testing.T) {
-	dir := t.TempDir()
-	oldHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer func() { _ = os.Setenv("HOME", oldHome) }()
+	dir := testutil.IsolatedHome(t)
 
 	var out bytes.Buffer
 	env := &Env{

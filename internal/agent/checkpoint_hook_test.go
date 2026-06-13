@@ -13,11 +13,13 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/llm/mock"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
 )
 
 func TestRunner_createsCheckpointBeforeWriteFile(t *testing.T) {
+	testutil.IsolatedHome(t)
 	dir := t.TempDir()
 	target := filepath.Join(dir, "out.txt")
 	store := session.NewMemoryStore()

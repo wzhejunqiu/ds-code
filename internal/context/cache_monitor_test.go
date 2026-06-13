@@ -7,9 +7,11 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestRecordPromptUsage_detectsDrop(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	cleanup, err := logging.Setup(logging.Options{ProjectRoot: root, Verbosity: 1})
 	if err != nil {

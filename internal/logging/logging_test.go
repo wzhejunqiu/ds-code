@@ -8,10 +8,12 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 	"go.uber.org/zap"
 )
 
 func TestSetup_writesToProjectLogsDir(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	cleanup, err := logging.Setup(logging.Options{ProjectRoot: root, Verbosity: 1})
 	if err != nil {
@@ -31,6 +33,7 @@ func TestSetup_writesToProjectLogsDir(t *testing.T) {
 }
 
 func TestSetup_verbosityLevels(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 
 	cleanup0, err := logging.Setup(logging.Options{ProjectRoot: root, Verbosity: 0})

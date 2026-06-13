@@ -10,10 +10,12 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
 )
 
 func TestShellTool_backgroundAndPoll(t *testing.T) {
+	testutil.IsolatedHome(t)
 	dir := t.TempDir()
 	cfg := &config.Config{
 		ProjectRoot: dir,

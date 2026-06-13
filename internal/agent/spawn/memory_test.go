@@ -4,13 +4,12 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestLoadAgentMemory_truncatesAndPicksRecent(t *testing.T) {
-	dir := t.TempDir()
-	oldHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer func() { _ = os.Setenv("HOME", oldHome) }()
+	dir := testutil.IsolatedHome(t)
 
 	agentDir := filepath.Join(dir, ".ds-code", "agent-memory", "Explore")
 	if err := os.MkdirAll(agentDir, 0o700); err != nil {
@@ -29,10 +28,7 @@ func TestLoadAgentMemory_truncatesAndPicksRecent(t *testing.T) {
 }
 
 func TestSaveAgentMemory_appends(t *testing.T) {
-	dir := t.TempDir()
-	oldHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer func() { _ = os.Setenv("HOME", oldHome) }()
+	dir := testutil.IsolatedHome(t)
 
 	if err := SaveAgentMemory("Explore", "user", "first note"); err != nil {
 		t.Fatal(err)

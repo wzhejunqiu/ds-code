@@ -8,9 +8,11 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
 func TestLogRequestDebug_redactedByDefault(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	cleanup, err := logging.Setup(logging.Options{ProjectRoot: root, Verbosity: 2})
 	if err != nil {
@@ -42,6 +44,7 @@ func TestLogRequestDebug_redactedByDefault(t *testing.T) {
 }
 
 func TestLogRequestDebug_fullBodyWhenAllowed(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	cleanup, err := logging.Setup(logging.Options{
 		ProjectRoot:        root,
@@ -74,6 +77,7 @@ func TestLogRequestDebug_fullBodyWhenAllowed(t *testing.T) {
 }
 
 func TestLogResponseDebug(t *testing.T) {
+	testutil.IsolatedHome(t)
 	root := t.TempDir()
 	cleanup, err := logging.Setup(logging.Options{ProjectRoot: root, Verbosity: 2})
 	if err != nil {
