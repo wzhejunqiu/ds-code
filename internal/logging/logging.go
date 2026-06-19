@@ -97,6 +97,12 @@ func swap(l *zap.Logger) *zap.Logger {
 	return prev
 }
 
+// ReplaceForTest swaps the global logger and returns a restore function (tests only).
+func ReplaceForTest(l *zap.Logger) func() {
+	prev := swap(l)
+	return func() { swap(prev) }
+}
+
 func newCore(ws zapcore.WriteSyncer, level zapcore.Level) zapcore.Core {
 	encCfg := zap.NewProductionEncoderConfig()
 	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder

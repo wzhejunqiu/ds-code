@@ -100,3 +100,78 @@ func TestAtExpander_sshDirAllowed(t *testing.T) {
 		t.Fatalf("expected @.ssh/config content: %q", out)
 	}
 }
+
+func TestAtExpander_dirIgnoresSkipDirs(t *testing.T) {
+	dir := t.TempDir()
+	nm := filepath.Join(dir, "node_modules", "pkg")
+	if err := os.MkdirAll(nm, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nm, "lib.go"), []byte("package lib\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Context: config.ContextConfig{AtReferenceMaxChars: 10000, AtDirMaxFiles: 20},
+		Tools:   config.ToolsConfig{Search: config.SearchToolConfig{SkipDirs: []string{"node_modules"}}},
+	}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	out, err := exp.Expand("load @node_modules/pkg/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "package lib") {
+		t.Fatalf("@dir should ignore skip_dirs: %q", out)
+	}
+}
+
+func TestAtExpander_dirIgnoresGitignore(t *testing.T) {
+	dir := t.TempDir()
+	ignored := filepath.Join(dir, "ignored")
+	if err := os.MkdirAll(ignored, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ignored, "code.go"), []byte("package ignored\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000, AtDirMaxFiles: 20}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	out, err := exp.Expand("see @ignored/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "package ignored") {
+		t.Fatalf("@dir should ignore gitignore: %q", out)
+	}
+}
+
+func TestAtExpander_dirAllowsNodeModules(t *testing.T) {
+	dir := t.TempDir()
+	nm := filepath.Join(dir, "node_modules", "left-pad")
+	if err := os.MkdirAll(nm, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nm, "index.js"), []byte("module.exports = {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000, AtDirMaxFiles: 20}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	out, err := exp.Expand("inspect @node_modules/left-pad/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "module.exports") {
+		t.Fatalf("expected node_modules content: %q", out)
+	}
+}

@@ -199,6 +199,30 @@ func TestEngine_auto_allowsShellBenignRead(t *testing.T) {
 	}
 }
 
+func TestEngine_checkReadablePath_dotDotInside(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "pkg")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(dir, "util.go")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e := permission.NewEngine("auto", root, true)
+	got, err := e.CheckReadablePath("pkg/../pkg/util.go")
+	if err != nil {
+		t.Fatalf("CheckReadablePath: %v", err)
+	}
+	want, _ := filepath.EvalSymlinks(file)
+	if want == "" {
+		want = file
+	}
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
 func TestEngine_resolvePath_allowsDotDotInside(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, "pkg")

@@ -118,6 +118,18 @@ func TestDisplay_LegacyMCPPrefix(t *testing.T) {
 	}
 }
 
+func TestFormatMCPCallDisplay_emptyArgs(t *testing.T) {
+	if got := tool.FormatMCPCallDisplay("srv", "tool", []byte(`{}`)); got != "MCP srv · tool" {
+		t.Fatalf("empty {} should not append JSON: %q", got)
+	}
+	if got := tool.FormatMCPCallDisplay("srv", "tool", []byte(`null`)); got != "MCP srv · tool" {
+		t.Fatalf("null args should not append JSON: %q", got)
+	}
+	if got := tool.FormatMCPCallDisplay("srv", "tool", nil); got != "MCP srv · tool" {
+		t.Fatalf("nil args should not append JSON: %q", got)
+	}
+}
+
 type stubMCPTool struct{ name string }
 
 func (s *stubMCPTool) Name() string        { return s.name }

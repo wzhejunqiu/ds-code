@@ -2,6 +2,7 @@ package clipboard
 
 import (
 	"encoding/base64"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -20,4 +21,12 @@ func TestEncodeOSC52(t *testing.T) {
 	if string(decoded) != "hello" {
 		t.Fatalf("got %q", decoded)
 	}
+}
+
+func TestClipboard_write_platform(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("platform clipboard test only on darwin/linux CI")
+	}
+	// Best-effort: ensure Write does not panic; may fail without display server.
+	_ = Write("ds-code-test-clipboard")
 }

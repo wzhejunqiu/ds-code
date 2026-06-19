@@ -1,6 +1,11 @@
 package permission
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
+)
 
 func TestTokenizeShellCmd(t *testing.T) {
 	got := tokenizeShellCmd(`cat .env && echo "hi there"`)
@@ -71,11 +76,55 @@ func TestEngine_shell_allowsGoTestEllipsis(t *testing.T) {
 	}
 }
 
+func TestCheckPathCandidate_allowsGoTestEllipsis(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, false)
+	if err := e.checkPathCandidate("./..."); err != nil {
+		t.Fatalf("./... should be allowed: %v", err)
+	}
+}
+
+func TestEngine_shell_gitDiffGoTest(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, true)
+	cmds := []string{
+		"git diff origin/main...v0.1.1 --stat",
+		"git log origin/main..v0.1.1",
+		"go test ./...",
+	}
+	for _, cmd := range cmds {
+		if err := e.Check("shell", map[string]any{"command": cmd}); err != nil {
+			t.Fatalf("command %q should be allowed: %v", cmd, err)
+		}
+	}
+}
+
 func TestCheckShellDenylistPaths_embeddedLiteral(t *testing.T) {
 	root := t.TempDir()
 	e := NewEngine("auto", root, true)
 	err := e.checkShellDenylistPaths(`python3 -c "open('.env').read()"`)
 	if err == nil {
 		t.Fatal("expected deny for embedded .env")
+	}
+}
+
+func TestEngine_shell_deniesSpillAbsPath(t *testing.T) {
+	root := t.TempDir()
+	testutil.IsolatedHome(t)
+	store := &resultstore.Store{ProjectRoot: root}
+	spillPath, err := store.Save("sess-1", "call_abc", "secret mcp output")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine("auto", root, false)
+	e.ProjectRoot = root
+	e.SpillSessionID = "sess-1"
+
+	cmd := "cat " + spillPath
+	if err := e.Check("shell", map[string]any{"command": cmd}); err == nil {
+		t.Fatal("shell should deny reading spill absolute path outside workspace")
+	}
+	if _, err := e.CheckReadablePath(spillPath); err != nil {
+		t.Fatalf("read_file should allow same spill path: %v", err)
 	}
 }

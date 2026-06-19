@@ -10,8 +10,13 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/read_file"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestReadFile_offsetLimit(t *testing.T) {
@@ -174,6 +179,60 @@ func TestReadFile_allowsEmptyFile(t *testing.T) {
 	}
 	if out != "" && !strings.Contains(out, "超出文件长度 0") {
 		t.Fatalf("out = %q", out)
+	}
+}
+
+func TestReadFile_allowsMCPSpill(t *testing.T) {
+	root := t.TempDir()
+	testutil.IsolatedHome(t)
+	store := &resultstore.Store{ProjectRoot: root}
+	spillBody := strings.Repeat("mcp-full-", 100)
+	spillPath, err := store.Save("sess-read", "call_1", spillBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	perm := permission.NewEngine("auto", root, false)
+	perm.ProjectRoot = root
+	perm.SpillSessionID = "sess-read"
+	cfg := &config.Config{
+		ProjectRoot: root,
+		Tools:       config.ToolsConfig{ReadFile: config.ReadFileToolConfig{MaxLines: 500, MaxBytes: 1 << 20}},
+	}
+	tool := &read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": spillPath}))
+	if err != nil {
+		t.Fatalf("read spill: %v", err)
+	}
+	if !strings.Contains(out, "mcp-full-") {
+		t.Fatalf("expected spill content: %q", out)
+	}
+}
+
+func TestReadFile_nonTextLogsInfo(t *testing.T) {
+	core, logs := observer.New(zap.InfoLevel)
+	restore := logging.ReplaceForTest(zap.New(core))
+	defer restore()
+
+	root := t.TempDir()
+	png := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	if err := os.WriteFile(filepath.Join(root, "img.png"), png, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tool := readFileTool(t, root, 500, 1<<20)
+	_, _ = tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "img.png"}))
+
+	entries := logs.FilterMessage("read_file skipped non-text file")
+	if entries.Len() != 1 {
+		t.Fatalf("expected info log, got %d", entries.Len())
+	}
+	ctx := entries.All()[0].ContextMap()
+	if ctx["path"] != "img.png" {
+		t.Fatalf("path field = %v", ctx["path"])
+	}
+	if ctx["abs"] == nil || ctx["abs"] == "" {
+		t.Fatal("expected abs field in log")
 	}
 }
 

@@ -783,8 +783,42 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 
 - **S3 denylist** 与 `permission_mode` 无关：`readonly` / `ask` / `auto` 均禁止读/写/ shell 访问敏感路径；`auto` 仅省略写操作确认，**不**放宽密钥路径。
 - **MCP 写操作**与内置工具**同一** `Check` 入口（S6）。
-- **Workspace** = `project_root`；路径：`filepath.Clean`、禁止 `..` 逃逸、symlink 解析（S2）。
+- **Workspace** = 当前工具工作目录（主会话为 `project_root`；worktree 子代理为 detached checkout）；路径经 `filepath.Clean` + join、`EvalSymlinks`、`ensureUnder`（S2），**不再**对相对路径做 `..` 子串预拦截（v0.1.2）。
 - 非 TTY + `ask`：返回 `ErrPermissionNeedTTY`，不阻塞。
+
+### 10.3 Engine 路径 API 一览（v0.1.2）
+
+`permission.Engine` 为路径策略**唯一对外入口**（读、写、枚举跳过）。`internal/tool/*` 不直接 import `workspace` 做权限校验。
+
+#### 10.3.1 组装字段
+
+| 字段 | 来源 | 用途 |
+|------|------|------|
+| `Workspace string` | 当前 checkout（主会话 `project_root`；worktree 子代理为 worktree 路径） | S2 边界解析根 |
+| `ProjectRoot string` | `cfg.ProjectRoot`（**非** `perm.Workspace`） | spill `project_id`、`resolveMCPSpillRead` |
+| `SpillSessionID string` | `RunTurn` 入口设置 `sessionID` | spill **仅当前 session** 可读 |
+
+`spawn/execute.go` 凡**新建** `*permission.Engine` 的分支均须 `perm.ProjectRoot = cfg.ProjectRoot`；复用父 `perm` 时已在主 Runner 设置。
+
+#### 10.3.2 路径 API
+
+| API | 语义 | 调用方 |
+|-----|------|--------|
+| `ResolvePath(rel)` | 仅 S2（`@file`/`@dir/` 展开） | `context/atref.go` |
+| `ResolveAccessPath(rel, intent)` | S2 + S3（`PathRead`/`PathWrite`） | 内部；shell 路径 token |
+| `CheckReadablePath(rel)` | S2 + S3；**另**放行本 session `mcp-result/<id>/*.txt` 绝对路径 | `read_file`、`grep` 等读工具 |
+| `CheckWritablePath(rel)` | `ResolveAccessPath(rel, PathWrite)` | `apply_patch`、`write_file` |
+| `CheckAbsPath(abs, intent)` | 绝对路径 S2（+ S3 当 `PathRead`/`PathWrite`） | `filecandidate.ValidateGlobMatches`（`PathBoundary` 仅 S2） |
+| `SkipSensitiveAbs(abs)` | S3 敏感目录/文件 skip（非 error） | `grep`/`glob`/`list_dir` Walk、`MakeFileCandidate` |
+
+#### 10.3.3 glob / filecandidate 语义
+
+- `ValidateGlobMatches`：`CheckAbsPath(abs, PathBoundary)` — 越界 **error**，敏感路径不在这里报错。
+- `MakeFileCandidate` / WalkDir：`SkipSensitiveAbs` — 敏感条目 **skip**，不中断整次枚举。
+
+#### 10.3.4 MCP spill 只读例外
+
+`read_file` 经 `CheckReadablePath` → `resolveMCPSpillRead` 允许读本 project **当前 session** 下 `~/.ds-code/projects/<id>/mcp-result/<session_id>/*.txt`（须绝对路径）。`shell` 访问 spill 绝对路径仍拒绝；`agents/*.output` 子代理摘要 **不**扩展放行。
 
 ---
 

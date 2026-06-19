@@ -18,7 +18,12 @@ func RebindRegistryPerm(reg *Registry, perm *permission.Engine) *Registry {
 	}
 	out := NewRegistry()
 	for _, t := range reg.All() {
-		out.Register(rebindTool(t, perm))
+		rebound := rebindTool(t, perm)
+		if server, ok := reg.MCPServerForTool(t.Name()); ok {
+			out.RegisterMCPTool(rebound, server)
+		} else {
+			out.Register(rebound)
+		}
 	}
 	return out
 }

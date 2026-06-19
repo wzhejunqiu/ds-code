@@ -19,7 +19,11 @@ func FilterToolRegistry(parent *tool.Registry, def AgentTypeDefinition, backgrou
 		if background && !isAsyncTool(t.Name()) {
 			continue
 		}
-		child.Register(t)
+		if server, ok := parent.MCPServerForTool(t.Name()); ok {
+			child.RegisterMCPTool(t, server)
+		} else {
+			child.Register(t)
+		}
 	}
 	return child
 }

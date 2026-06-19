@@ -48,3 +48,13 @@ func TestIgnoredInScope_gitAlwaysFiltered(t *testing.T) {
 		t.Fatal(".git must always be filtered even when path=.git")
 	}
 }
+
+func TestSearchSkip_invalidConfigEntries(t *testing.T) {
+	m := searchskip.New([]string{"../outside", "/etc", "", "node_modules"})
+	if !m.SkipDir("node_modules") {
+		t.Fatal("valid skip_dirs entry should still apply")
+	}
+	if !m.IgnoredInScope("node_modules/pkg/index.js", ".") {
+		t.Fatal("valid skip_dirs should filter under wide scope")
+	}
+}

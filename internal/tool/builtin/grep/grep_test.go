@@ -416,6 +416,51 @@ func TestGrepTool_explicitSkipDirPath(t *testing.T) {
 	}
 }
 
+func TestGrepTool_explicitGitPathEmpty(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("needle in git\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	g := newGrepTool(t, dir, 50, searchskip.New(nil))
+	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": ".git"})
+	out, err := g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(out) != "" && out != "无匹配" {
+		t.Fatalf("path=.git should yield empty result, got %q", out)
+	}
+}
+
+func TestGrepTool_planModeNoGitignore(t *testing.T) {
+	dir := t.TempDir()
+	ignored := filepath.Join(dir, "ignoredpkg")
+	if err := os.MkdirAll(ignored, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignoredpkg/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ignored, "hit.go"), []byte("package ignored\nneedle\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	g := newGrepTool(t, dir, 50, searchskip.New(nil))
+	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": "ignoredpkg"})
+	out, err := g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "hit.go") {
+		t.Fatalf("plan/explore grep should not follow gitignore: %q", out)
+	}
+}
+
 func TestGrepTool_descNoGitignore(t *testing.T) {
 	if strings.Contains(grep.DescGrep, "gitignore") {
 		t.Fatalf("DescGrep must not mention gitignore: %q", grep.DescGrep)
