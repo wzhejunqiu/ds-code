@@ -48,7 +48,7 @@ func TestExecuteRun_verificationVerdict(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	summary, err := spawn.ExecuteRun(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, 1)
+	summary, err := spawn.ExecuteRun(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, 1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

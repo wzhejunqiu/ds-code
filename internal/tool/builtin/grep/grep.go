@@ -18,6 +18,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 	"github.com/wzhejunqiu/ds-code/internal/tool/globmatch"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
 const (
@@ -36,10 +37,10 @@ const (
 
 // GrepTool searches file contents with a regex.
 type GrepTool struct {
-	Cfg       *config.Config
-	Perm      *permission.Engine
-	Gitignore *tool.GitignoreMatcher
-	Strict    bool
+	Cfg        *config.Config
+	Perm       *permission.Engine
+	SearchSkip *searchskip.Matcher
+	Strict     bool
 }
 
 func (t *GrepTool) Name() string { return tool.NameGrep.String() }
@@ -159,8 +160,18 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	}
 }
 
-func (t *GrepTool) gitignoreIgnored(rel string) bool {
-	return t.Gitignore != nil && t.Gitignore.Ignored(rel)
+func (t *GrepTool) searchIgnored(rel, scopeRoot string) bool {
+	if t.SearchSkip == nil {
+		return false
+	}
+	return t.SearchSkip.IgnoredInScope(rel, scopeRoot)
+}
+
+func (t *GrepTool) searchSkipDir(rel, walkRoot string) bool {
+	if t.SearchSkip == nil {
+		return rel == ".git" || strings.HasPrefix(rel, ".git/")
+	}
+	return t.SearchSkip.ShouldSkipWalkDir(rel, walkRoot)
 }
 
 func (t *GrepTool) collectCandidates(ctx context.Context, searchPath string) ([]builtin.FileCandidate, error) {
@@ -196,16 +207,20 @@ func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]b
 			return ctx.Err()
 		}
 		if d.IsDir() {
-			if d.Name() == ".git" {
-				return filepath.SkipDir
+			relWalk, _ := filepath.Rel(root, path)
+			if relWalk != "." {
+				fullRel := filepath.ToSlash(filepath.Join(searchPath, relWalk))
+				if t.searchSkipDir(fullRel, searchPath) {
+					return filepath.SkipDir
+				}
 			}
-			if permission.IsSensitiveAbs(path) {
+			if t.Perm.SkipSensitiveAbs(path) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 		if c := builtin.MakeFileCandidate(t.Perm, path, filter); c != nil {
-			if t.Gitignore != nil && t.Gitignore.Ignored(c.Rel) {
+			if t.searchIgnored(c.Rel, searchPath) {
 				return nil
 			}
 			out = append(out, *c)
@@ -221,7 +236,16 @@ func (t *GrepTool) collectGlobPath(ctx context.Context, searchPath string) ([]bu
 	if err != nil {
 		return nil, err
 	}
-	return builtin.CollectGlobPattern(ctx, t.Perm, root, pattern, builtin.FileFilter{MaxFileBytes: maxFileBytes}, t.gitignoreIgnored)
+	return builtin.CollectGlobPattern(ctx, t.Perm, root, pattern, builtin.FileFilter{MaxFileBytes: maxFileBytes},
+		func(rel string) bool { return t.searchIgnored(rel, base) },
+		func(relFromRoot string) bool {
+			fullRel := filepath.ToSlash(relFromRoot)
+			if base != "" && base != "." {
+				fullRel = filepath.ToSlash(filepath.Join(base, relFromRoot))
+			}
+			return t.searchSkipDir(fullRel, base)
+		},
+	)
 }
 
 func (t *GrepTool) searchCandidates(ctx context.Context, candidates []builtin.FileCandidate, re *regexp.Regexp, mode outputMode, limit int) searchResult {

@@ -23,6 +23,7 @@ type Config struct {
 	Web                   WebConfig            `mapstructure:"web"`
 	LSP                   LSPConfig            `mapstructure:"lsp"`
 	RunMode               runmode.RunMode      `mapstructure:"run_mode"`
+	TUI                   TUIConfig            `mapstructure:"tui"`
 	LogVerbosity          int                  `mapstructure:"-"`
 	AllowLogSensitiveData bool                 `mapstructure:"-"`
 	JSONOutput            bool                 `mapstructure:"-"`
@@ -77,10 +78,16 @@ type AgentConfig struct {
 	MaxTurns int `mapstructure:"max_turns"`
 }
 
+// TUIConfig holds interactive terminal UI options.
+type TUIConfig struct {
+	CopyOnSelect bool `mapstructure:"copy_on_select"`
+}
+
 type ToolsConfig struct {
 	ParallelToolCalls bool               `mapstructure:"parallel_tool_calls"`
 	DeferMCP          bool               `mapstructure:"defer_mcp"`
 	DeferBuiltin      []string           `mapstructure:"defer_builtin"`
+	Search            SearchToolConfig   `mapstructure:"search"`
 	ReadFile          ReadFileToolConfig `mapstructure:"read_file"`
 	Grep              GrepToolConfig     `mapstructure:"grep"`
 	Glob              GlobToolConfig     `mapstructure:"glob"`
@@ -92,6 +99,11 @@ type ToolsConfig struct {
 type ReadFileToolConfig struct {
 	MaxLines int `mapstructure:"max_lines"`
 	MaxBytes int `mapstructure:"max_bytes"`
+}
+
+// SearchToolConfig controls Agent enumeration skip rules (not .gitignore).
+type SearchToolConfig struct {
+	SkipDirs []string `mapstructure:"skip_dirs"`
 }
 
 type GrepToolConfig struct {

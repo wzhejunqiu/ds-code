@@ -14,15 +14,16 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
 // DiagnosticsTool runs LSP diagnostics on workspace paths.
 type DiagnosticsTool struct {
-	Cfg       *config.Config
-	Perm      *permission.Engine
-	Gitignore *tool.GitignoreMatcher
-	LSP       *lsp.Manager
-	Strict    bool
+	Cfg        *config.Config
+	Perm       *permission.Engine
+	SearchSkip *searchskip.Matcher
+	LSP        *lsp.Manager
+	Strict     bool
 }
 
 func (t *DiagnosticsTool) Name() string { return tool.NameDiagnostics.String() }
@@ -164,6 +165,10 @@ func (t *DiagnosticsTool) collectFiles(ctx context.Context, paths []string, maxF
 		if ctx.Err() != nil {
 			return nil, nil, ctx.Err()
 		}
+		scopePath := filepath.ToSlash(strings.Trim(p, "/"))
+		if scopePath == ".git" {
+			continue
+		}
 		abs, err := t.Perm.CheckReadablePath(p)
 		if err != nil {
 			notes = append(notes, fmt.Sprintf(NotePathError, p, err))
@@ -188,12 +193,12 @@ func (t *DiagnosticsTool) collectFiles(ctx context.Context, paths []string, maxF
 				if d.Name() == ".git" {
 					return filepath.SkipDir
 				}
-				if permission.IsSensitiveAbs(path) {
+				if t.Perm.SkipSensitiveAbs(path) {
 					return filepath.SkipDir
 				}
 				return nil
 			}
-			if permission.IsSensitiveAbs(path) {
+			if t.Perm.SkipSensitiveAbs(path) {
 				return nil
 			}
 			relWalk, err := filepath.Rel(abs, path)
@@ -205,7 +210,7 @@ func (t *DiagnosticsTool) collectFiles(ctx context.Context, paths []string, maxF
 				rel = filepath.Join(p, relWalk)
 			}
 			rel = filepath.ToSlash(rel)
-			if t.Gitignore != nil && t.Gitignore.Ignored(rel) {
+			if t.SearchSkip != nil && t.SearchSkip.IgnoredInScope(rel, p) {
 				return nil
 			}
 			if lsp.ServerForExt(t.LSP.Registry(), lsp.NormalizeExt(rel)) == "" {

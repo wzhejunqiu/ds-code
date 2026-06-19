@@ -4,7 +4,7 @@
 
 在工作区内用正则搜索文件**行内容**，通过 `output_mode` 控制返回形态。实现为纯 Go 遍历，不依赖外部 `rg`。
 
-**面向大模型**：凡内容搜索任务必须调用本 `grep` 工具，**禁止**通过 `shell` 执行 `grep` 或 `rg`；本工具已针对权限、`.gitignore` 与二进制过滤优化。
+**面向大模型**：凡内容搜索任务必须调用本 `grep` 工具，**禁止**通过 `shell` 执行 `grep` 或 `rg`；本工具已针对权限、搜索跳过目录与二进制过滤优化。
 
 ## 注册与可见性
 
@@ -75,7 +75,7 @@
 | 精确路径（无 `*`/`?`/`[`） | `CheckReadablePath` → 单文件或 `WalkDir` 递归                                                        |
 | glob 路径                  | [`globmatch.SplitPath`](../../globmatch/globmatch.go) + [`MatchFiles`](../../globmatch/globmatch.go) |
 
-过滤：`.git`、敏感路径、`.gitignore`、大于 2MiB、[`textfile.IsSearchable`](../../textfile/textfile.go) 二进制跳过。文件路径相对项目根，由 [`builtin.MakeFileCandidate`](../filecandidate.go) 统一计算（与 `glob` 一致）。
+过滤：`.git`、`tools.search.skip_dirs`、敏感路径、大于 2MiB、[`textfile.IsSearchable`](../../textfile/textfile.go) 二进制跳过。文件路径相对项目根，由 [`builtin.MakeFileCandidate`](../filecandidate.go) 统一计算（与 `glob` 一致）。
 
 ### 搜索
 
@@ -97,7 +97,7 @@
 ## 设计思想
 
 - **可预测、零依赖**：不调用系统 `grep`/`rg`，行为在沙箱内完全可控。
-- **与探索工具一致**：尊重 `.gitignore`，跳过常见二进制，避免 `node_modules` 等污染结果。
+- **搜索跳过**：`.git` 与 `tools.search.skip_dirs` 在 walk 时跳过；显式 `path` 仍可进入（`.git` 除外）；**不**读取 `.gitignore`。
 - **mtime 优先**：最近改动的文件排在前面，便于 Agent 优先关注活跃代码。
 - **硬上限**：`content` / `files_with_matches` 受 `head_limit` 约束；`count` 仍受单文件大小等安全边界限制。
 

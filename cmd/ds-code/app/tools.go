@@ -16,6 +16,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/shelljobs/manager"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 	toolsetup "github.com/wzhejunqiu/ds-code/internal/tool/setup"
 	"go.uber.org/zap"
 )
@@ -26,7 +27,7 @@ type toolBundle struct {
 	deps   toolsetup.Deps
 }
 
-func (a *App) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.GitignoreMatcher, strict bool, llmClient llm.Client, runMode runmode.RunMode) (*toolBundle, error) {
+func (a *App) buildTools(ctx context.Context, perm *permission.Engine, searchSkip *searchskip.Matcher, strict bool, llmClient llm.Client, runMode runmode.RunMode) (*toolBundle, error) {
 	var lspMgr *lsp.Manager
 	if a.Cfg.LSP.Enabled {
 		if a.lspMgr == nil {
@@ -51,15 +52,15 @@ func (a *App) buildTools(ctx context.Context, perm *permission.Engine, gi *tool.
 		return nil, err
 	}
 	deps := toolsetup.Deps{
-		Cfg:       a.Cfg,
-		Perm:      perm,
-		Gitignore: gi,
-		Strict:    strict,
-		LLM:       llmClient,
-		LSP:       lspMgr,
-		MCP:       a.mcpMgr,
-		ShellJobs: shellMgr,
-		Subagent:  subStore,
+		Cfg:        a.Cfg,
+		Perm:       perm,
+		SearchSkip: searchSkip,
+		Strict:     strict,
+		LLM:        llmClient,
+		LSP:        lspMgr,
+		MCP:        a.mcpMgr,
+		ShellJobs:  shellMgr,
+		Subagent:   subStore,
 	}
 	reg := toolsetup.BuildRegistry(runMode, deps)
 	return &toolBundle{reg: reg, lspMgr: lspMgr, deps: deps}, nil
@@ -112,8 +113,8 @@ func (a *App) SetRunMode(ctx context.Context, env *slashcmd.Env, mode string) er
 	}); err != nil {
 		return err
 	}
-	gi, _ := tool.LoadGitignore(env.Cfg.ProjectRoot)
-	bundle, err := a.buildTools(ctx, env.Runner.Perm, gi, env.Cfg.LLM.StrictTools, env.Runner.LLM, rm)
+	searchSkip := searchskip.New(env.Cfg.Tools.Search.SkipDirs)
+	bundle, err := a.buildTools(ctx, env.Runner.Perm, searchSkip, env.Cfg.LLM.StrictTools, env.Runner.LLM, rm)
 	if err != nil {
 		return err
 	}

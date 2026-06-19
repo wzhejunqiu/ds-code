@@ -12,8 +12,8 @@ type FileLineStat struct {
 }
 
 // FileLineStats parses a patch and returns per-file line change stats.
-func FileLineStats(text, workspace string) ([]FileLineStat, error) {
-	changes, err := Parse(text, workspace)
+func FileLineStats(text string, validate PathValidator) ([]FileLineStat, error) {
+	changes, err := Parse(text, validate)
 	if err != nil {
 		return nil, err
 	}

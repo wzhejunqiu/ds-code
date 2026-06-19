@@ -39,6 +39,7 @@ func isSensitiveBasename(name string) bool {
 }
 
 // IsSensitiveAbs reports whether abs is on the sensitive denylist (S3).
+// Deprecated: use Engine.SkipSensitiveAbs or ResolveAccessPath instead.
 // Matching is per path segment to avoid false positives (e.g. secrets-management.md).
 func IsSensitiveAbs(abs string) bool {
 	lower := strings.ToLower(filepath.ToSlash(abs))

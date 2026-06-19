@@ -13,17 +13,17 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
-	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
-func newGrepTool(t *testing.T, dir string, headLimit int, gi *tool.GitignoreMatcher) *grep.GrepTool {
+func newGrepTool(t *testing.T, dir string, headLimit int, searchSkip *searchskip.Matcher) *grep.GrepTool {
 	t.Helper()
 	cfg := &config.Config{Tools: config.ToolsConfig{Grep: config.GrepToolConfig{HeadLimit: headLimit}}}
 	return &grep.GrepTool{
-		Cfg:       cfg,
-		Perm:      permission.NewEngine("readonly", dir, false),
-		Gitignore: gi,
+		Cfg:        cfg,
+		Perm:       permission.NewEngine("readonly", dir, false),
+		SearchSkip: searchSkip,
 	}
 }
 
@@ -53,7 +53,7 @@ func TestGrepTool_skipsSensitiveFiles(t *testing.T) {
 	}
 }
 
-func TestGrepTool_respectsGitignoreInSubdirectory(t *testing.T) {
+func TestGrepTool_findsGitignoredPaths(t *testing.T) {
 	dir := t.TempDir()
 	pkg := filepath.Join(dir, "pkg")
 	src := filepath.Join(pkg, "src")
@@ -73,19 +73,14 @@ func TestGrepTool_respectsGitignoreInSubdirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gi, err := tool.LoadGitignore(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, gi)
+	g := newGrepTool(t, dir, 50, searchskip.New(nil))
 	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": "pkg"})
 	out, err := g.Execute(context.Background(), args)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, "miss.txt") || strings.Contains(out, "needle miss") {
-		t.Fatalf("grep should respect .gitignore under subdirectory search root: %q", out)
+	if !strings.Contains(out, "miss.txt") {
+		t.Fatalf("v0.1.2 grep should not follow .gitignore: %q", out)
 	}
 	if !strings.Contains(out, "hit.txt") {
 		t.Fatalf("expected match in pkg/src/hit.txt: %q", out)
@@ -385,5 +380,44 @@ func TestGrepTool_invalidOutputMode(t *testing.T) {
 	_, err := g.Execute(context.Background(), args)
 	if err == nil {
 		t.Fatal("expected error for invalid output_mode")
+	}
+}
+
+func TestGrepTool_explicitSkipDirPath(t *testing.T) {
+	dir := t.TempDir()
+	nm := filepath.Join(dir, "node_modules", "pkg")
+	if err := os.MkdirAll(nm, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nm, "hit.txt"), []byte("needle hit\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "ok.txt"), []byte("needle ok\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	g := newGrepTool(t, dir, 50, searchskip.New([]string{"node_modules"}))
+	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": "node_modules"})
+	out, err := g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "hit.txt") {
+		t.Fatalf("explicit path=node_modules should search skip_dir tree: %q", out)
+	}
+
+	args, _ = json.Marshal(map[string]any{"pattern": "needle", "path": "."})
+	out, err = g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "node_modules") {
+		t.Fatalf("path=. should not enter skip_dirs: %q", out)
+	}
+}
+
+func TestGrepTool_descNoGitignore(t *testing.T) {
+	if strings.Contains(grep.DescGrep, "gitignore") {
+		t.Fatalf("DescGrep must not mention gitignore: %q", grep.DescGrep)
 	}
 }

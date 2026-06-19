@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -11,14 +12,15 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
 // GlobTool finds paths matching a glob under the workspace.
 type GlobTool struct {
-	Cfg       *config.Config
-	Perm      *permission.Engine
-	Gitignore *tool.GitignoreMatcher
-	Strict    bool
+	Cfg        *config.Config
+	Perm       *permission.Engine
+	SearchSkip *searchskip.Matcher
+	Strict     bool
 }
 
 func (t *GlobTool) Name() string { return tool.NameGlob.String() }
@@ -43,8 +45,26 @@ func (t *GlobTool) Schema() map[string]any {
 
 func (t *GlobTool) PermissionLevel() permission.Level { return permission.LevelLow }
 
-func (t *GlobTool) gitignoreIgnored(rel string) bool {
-	return t.Gitignore != nil && t.Gitignore.Ignored(rel)
+func (t *GlobTool) searchIgnored(rel, scopeRoot string) bool {
+	if t.SearchSkip == nil {
+		return false
+	}
+	return t.SearchSkip.IgnoredInScope(rel, scopeRoot)
+}
+
+func (t *GlobTool) searchSkipWalk(relFromRoot, base string) bool {
+	if t.SearchSkip == nil {
+		fullRel := filepath.ToSlash(relFromRoot)
+		if base != "" && base != "." {
+			fullRel = filepath.ToSlash(filepath.Join(base, relFromRoot))
+		}
+		return fullRel == ".git" || strings.HasPrefix(fullRel, ".git/")
+	}
+	fullRel := filepath.ToSlash(relFromRoot)
+	if base != "" && base != "." {
+		fullRel = filepath.ToSlash(filepath.Join(base, relFromRoot))
+	}
+	return t.SearchSkip.ShouldSkipWalkDir(fullRel, base)
 }
 
 func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
@@ -74,7 +94,11 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		limit = builtin.DefaultMaxResults
 	}
 
-	candidates, err := builtin.CollectGlobPattern(ctx, t.Perm, root, in.Pattern, builtin.FileFilter{}, t.gitignoreIgnored)
+	candidates, err := builtin.CollectGlobPattern(ctx, t.Perm, root, in.Pattern, builtin.FileFilter{}, func(rel string) bool {
+		return t.searchIgnored(rel, base)
+	}, func(relFromRoot string) bool {
+		return t.searchSkipWalk(relFromRoot, base)
+	})
 	if err != nil {
 		return "", err
 	}

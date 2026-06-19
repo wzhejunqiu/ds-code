@@ -42,13 +42,13 @@
 
 ### 匹配与收集
 
-[`builtin.CollectGlobPattern`](../filecandidate.go)：`MatchFiles`（无预截断）→ `ValidateGlobMatches` → [`MakeFileCandidate`](../filecandidate.go)（路径相对工作区根）→ `.gitignore` 过滤。
+[`builtin.CollectGlobPattern`](../filecandidate.go)：`MatchFiles`（无预截断）→ `ValidateGlobMatches` → [`MakeFileCandidate`](../filecandidate.go)（路径相对工作区根）→ `searchskip` 过滤。
 
 [`builtin.SortByModTimeDesc`](../sort.go) 排序后取前 `max_results` 条。
 
 ### 过滤
 
-跳过敏感路径、`.gitignore` 项、**目录**、[`textfile.IsSearchable`](../../textfile/textfile.go) 判定的二进制。
+跳过敏感路径、`searchskip` 目录、**目录**、[`textfile.IsSearchable`](../../textfile/textfile.go) 判定的二进制。
 
 ## 配置项
 

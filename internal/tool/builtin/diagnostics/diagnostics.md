@@ -49,7 +49,7 @@ path/to/file:行:列 [severity] message
 
 ### 流程
 
-1. `collectFiles`：展开目录（`WalkDir`），尊重 `.gitignore`、敏感路径、`.git`；仅保留注册表中有 server 的扩展名；最多 `lsp.max_files_per_call` 个文件。
+1. `collectFiles`：展开目录（`WalkDir`），尊重 `searchskip`（`.git` + `skip_dirs`）、敏感路径；仅保留注册表中有 server 的扩展名；最多 `lsp.max_files_per_call` 个文件。
 2. 按 LSP server ID 分组。
 3. `LSP.EnsureClient` 启动或复用子进程（gopls、clangd、typescript-language-server 等）。
 4. 每文件：`OpenFile` → 收集 `publishDiagnostics`，每文件最多 `max_issues_per_file` 条。

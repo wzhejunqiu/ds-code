@@ -99,12 +99,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, overlay.UpdatePromptRequest(&m.State, msg, m.listenPrompt)
 	case tuimsg.OverlayCloseMsg:
 		return m, overlay.UpdateClose(&m.State, m.syncChatView, m.refreshStatus)
+	case copyResultMsg:
+		return m.handleCopyResult(msg)
+	case copyToastClearMsg:
+		return m.handleCopyToastClear()
+	case tea.MouseMsg:
+		m.updatePlainLines()
+		return m.handleMouse(msg)
 	default:
 		return m.updateInput(msg)
 	}
 }
 
 func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+	if cmd, handled := m.handleManualCopyKey(msg); handled {
+		return cmd, true
+	}
 	if cmd, handled := subagentui.HandleNavKey(&m.State, msg, &m.subagentPicker, m.syncChatViewResetting); handled {
 		return cmd, true
 	}

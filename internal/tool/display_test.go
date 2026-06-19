@@ -100,7 +100,7 @@ func TestDisplay_MCPBareName(t *testing.T) {
 	if cmd != "" {
 		t.Fatalf("cmd = %q", cmd)
 	}
-	if line != "MCP code-review-graph · semantic_search_nodes" {
+	if line != "MCP code-review-graph · semantic_search_nodes {\"query\":\"x\"}" {
 		t.Fatalf("line = %q", line)
 	}
 	if !tool.UsesHumanDisplay("semantic_search_nodes", disp) {
@@ -110,7 +110,7 @@ func TestDisplay_MCPBareName(t *testing.T) {
 
 func TestDisplay_LegacyMCPPrefix(t *testing.T) {
 	line, _ := tool.DisplaySummary("mcp__fs__read_file", []byte(`{"x":1}`), "", tool.DisplayContext{})
-	if line != "MCP fs · read_file" {
+	if line != "MCP fs · read_file {\"x\":1}" {
 		t.Fatalf("line = %q", line)
 	}
 	if !tool.UsesHumanDisplay("mcp__fs__read_file", tool.DisplayContext{}) {

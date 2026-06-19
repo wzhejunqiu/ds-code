@@ -95,7 +95,7 @@ func TestBackgroundManager_enqueuePrioLater(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bm.Start(agent.WithActiveTurn(context.Background()), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil)
+	bm.Start(agent.WithActiveTurn(context.Background()), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil, nil)
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) && bm.RunningCount() > 0 {
@@ -155,7 +155,7 @@ func TestBackgroundManager_enqueuePrioNextWhenIdle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bm.Start(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil)
+	bm.Start(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil, nil)
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) && bm.RunningCount() > 0 {
@@ -211,7 +211,7 @@ func TestBackgroundManager_enqueuePrioNowAfterTurnEnds(t *testing.T) {
 		t.Fatal(err)
 	}
 	parentCtx := agent.WithActiveTurn(context.Background())
-	bm.Start(parentCtx, cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil)
+	bm.Start(parentCtx, cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil, nil)
 	agent.WithoutActiveTurn(parentCtx)
 
 	deadline := time.Now().Add(2 * time.Second)

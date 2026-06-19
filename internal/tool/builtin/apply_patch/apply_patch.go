@@ -54,7 +54,7 @@ func (t *ApplyPatchTool) Execute(ctx context.Context, args json.RawMessage) (str
 		return "", fmt.Errorf("%s", builtin.ErrPatchRequired)
 	}
 	maxLines := t.Cfg.Tools.ApplyPatch.MaxChangedLines
-	summary, err := patchapply.Apply(t.Perm.Workspace, in.Patch, t.Perm.ResolvePath, patchapply.Options{
+	summary, err := patchapply.Apply(t.Perm.Workspace, in.Patch, t.Perm.CheckWritablePath, patchapply.Options{
 		MaxChangedLines: maxLines,
 	})
 	if err != nil {

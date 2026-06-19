@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.2] - 2026-06-19
+
+### Added
+
+- MCP tool results spill to `~/.ds-code/projects/<id>/mcp-result/<session_id>/` with `read_file` hint when truncated
+- TUI in-app mouse text selection with copy-on-select (`tui.copy_on_select`, default true)
+- `tools.search.skip_dirs` for Agent enumeration walk pruning (`.git` always skipped)
+- `read_file` rejects non-text files via `textfile.IsTextFile`
+
+### Changed
+
+- Path jail: removed `..` substring pre-filter; `filepath.Clean` + `ensureUnder` only; fixes shell false positives (`git main..branch`, `go test ./...`)
+- Path policy unified on `permission.Engine` (`ResolveAccessPath`, `SkipSensitiveAbs`, `CheckWritablePath`)
+- User `@file` / `@dir/` references may bypass S3 denylist (explicit user intent; see SECURITY §S3-S)
+- MCP tool calls show JSON args preview in TUI and debug logs (`args_preview`)
+- Agent search tools no longer follow `.gitignore`; only `.git` + configured `skip_dirs`
+
 ## [0.1.1] - 2026-06-19
 
 ### Added
@@ -75,5 +92,6 @@ Windows is not supported in this release.
 - Session database schema is not migrated automatically; delete `sessions.db` and restart if schema mismatch errors occur
 - Non-TTY runs with default `ask` permission reject write operations (use `--permission-mode readonly` or `--dangerously-auto` in scripts)
 
+[0.1.2]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.2
 [0.1.1]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.1
 [0.1.0]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.0

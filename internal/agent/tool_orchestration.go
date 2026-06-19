@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 
-	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -109,8 +108,7 @@ func (r *Runner) runSerialBatch(ctx context.Context, sessionID string, calls []l
 
 func (r *Runner) executeSingleTool(ctx context.Context, sessionID string, tc llm.ToolCall) string {
 	body := r.executeTool(ctx, sessionID, tc)
-	// Truncate before persistence (aligns with old runToolCalls behavior).
-	return ctxpkg.TruncateToolResult(body, r.Cfg)
+	return r.finalizeToolResult(sessionID, tc, body)
 }
 
 func (r *Runner) persistToolResult(ctx context.Context, sessionID string, tc llm.ToolCall, body string) error {

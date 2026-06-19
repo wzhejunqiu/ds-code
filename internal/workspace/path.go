@@ -17,28 +17,20 @@ func ResolveRel(workspace, rel string) (string, error) {
 		return "", err
 	}
 
+	var abs string
 	if filepath.IsAbs(rel) {
-		abs := filepath.Clean(rel)
-		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-			abs = resolved
-		}
-		if err := ensureUnder(ws, abs); err != nil {
-			return "", err
-		}
-		return abs, nil
+		abs = filepath.Clean(rel)
+	} else {
+		abs = filepath.Join(ws, rel)
+		abs = filepath.Clean(abs)
 	}
 
-	if strings.Contains(rel, "..") {
-		return "", fmt.Errorf("workspace: path traversal: %s", rel)
-	}
-
-	abs := filepath.Join(ws, filepath.Clean(rel))
 	abs, err = resolvePath(ws, abs)
 	if err != nil {
 		return "", err
 	}
 	if err := ensureUnder(ws, abs); err != nil {
-		return "", fmt.Errorf("workspace: outside workspace: %s", rel)
+		return "", err
 	}
 	return abs, nil
 }
@@ -97,8 +89,11 @@ func resolvePath(ws, abs string) (string, error) {
 
 func ensureUnder(ws, abs string) error {
 	relTo, err := filepath.Rel(ws, abs)
-	if err != nil || strings.HasPrefix(relTo, "..") || relTo == ".." {
-		return fmt.Errorf("workspace: path outside workspace: %s", abs)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrOutsideWorkspace, abs)
+	}
+	if relTo == ".." || strings.HasPrefix(relTo, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("%w: %s", ErrOutsideWorkspace, abs)
 	}
 	return nil
 }

@@ -18,26 +18,27 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/write_file"
 	"github.com/wzhejunqiu/ds-code/internal/tool/register"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
 // Deps holds shared dependencies for tool registration.
 type Deps struct {
-	Cfg       *config.Config
-	Perm      *permission.Engine
-	Gitignore *tool.GitignoreMatcher
-	Strict    bool
-	LLM       llm.Client
-	LSP       *lsp.Manager
-	MCP       *mcpsvc.Manager
-	ShellJobs *manager.Manager
-	Subagent  subagentstore.Store
+	Cfg        *config.Config
+	Perm       *permission.Engine
+	SearchSkip *searchskip.Matcher
+	Strict     bool
+	LLM        llm.Client
+	LSP        *lsp.Manager
+	MCP        *mcpsvc.Manager
+	ShellJobs  *manager.Manager
+	Subagent   subagentstore.Store
 }
 
 // RegisterReadOnly registers plan-mode and subagent tools.
 func RegisterReadOnly(reg *tool.Registry, d Deps) {
-	register.ExploreTools(reg, d.Cfg, d.Perm, d.Gitignore, d.Strict)
+	register.ExploreTools(reg, d.Cfg, d.Perm, d.SearchSkip, d.Strict)
 	if d.LSP != nil && d.Cfg.LSP.Enabled {
-		reg.Register(&diagnostics.DiagnosticsTool{Cfg: d.Cfg, Perm: d.Perm, Gitignore: d.Gitignore, LSP: d.LSP, Strict: d.Strict})
+		reg.Register(&diagnostics.DiagnosticsTool{Cfg: d.Cfg, Perm: d.Perm, SearchSkip: d.SearchSkip, LSP: d.LSP, Strict: d.Strict})
 	}
 	if d.Cfg.Web.FetchEnabled {
 		reg.Register(&web_fetch.WebFetchTool{Cfg: d.Cfg, Strict: d.Strict})

@@ -85,3 +85,10 @@ func IsSearchable(path string) bool {
 	}
 	return true
 }
+
+// IsTextFile reports whether read_file should allow reading path.
+// v0.1.2 delegates to IsSearchable; change here when read_file needs a
+// different policy than grep/glob enumeration.
+func IsTextFile(path string) bool {
+	return IsSearchable(path)
+}

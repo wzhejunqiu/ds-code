@@ -26,6 +26,7 @@ func (m *Model) resetRenderCaches() {
 func (m *Model) syncChatView() {
 	m.chatSyncScheduled = false
 	view.SyncChat(&m.State, &m.chatVP, &m.toolVP, &m.input, m.syncCaches())
+	m.updatePlainLines()
 }
 
 func (m *Model) scheduleSyncChatView() tea.Cmd {

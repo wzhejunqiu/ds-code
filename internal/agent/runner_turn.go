@@ -28,6 +28,12 @@ func (r *Runner) RunTurnSeeded(ctx context.Context, sessionID string, cb *TurnCa
 func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *TurnCallbacks, opts runTurnOptions) (*TurnResult, error) {
 	ctx = WithActiveTurn(ctx)
 	defer WithoutActiveTurn(ctx)
+	if r.Perm != nil {
+		r.Perm.SpillSessionID = sessionID
+		if r.Cfg != nil && r.Cfg.ProjectRoot != "" {
+			r.Perm.ProjectRoot = r.Cfg.ProjectRoot
+		}
+	}
 	if cb != nil {
 		ctx = WithTurnCallbacks(ctx, cb)
 	}

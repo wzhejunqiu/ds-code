@@ -31,7 +31,7 @@ func TestAtExpander_file(t *testing.T) {
 	}
 }
 
-func TestAtExpander_dirSkipsSensitiveFiles(t *testing.T) {
+func TestAtExpander_dirIncludesSensitiveAtRoot(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "pkg")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
@@ -48,48 +48,19 @@ func TestAtExpander_dirSkipsSensitiveFiles(t *testing.T) {
 	perm := permission.NewEngine("auto", dir, true)
 	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
 
-	out, err := exp.Expand("see @pkg/")
+	out, err := exp.Expand("see @./")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, "SECRET=") {
-		t.Fatalf("directory @ ref leaked .env: %q", out)
+	if !strings.Contains(out, "SECRET=1") {
+		t.Fatalf("directory @ ref should include .env when user explicitly @ ./: %q", out)
 	}
 	if !strings.Contains(out, "package pkg") {
 		t.Fatalf("expected pkg/code.go content: %q", out)
 	}
 }
 
-func TestAtExpander_dirSkipsSensitiveDirectory(t *testing.T) {
-	dir := t.TempDir()
-	sshDir := filepath.Join(dir, ".ssh")
-	if err := os.MkdirAll(sshDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(sshDir, "config"), []byte("Host *\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
-	perm := permission.NewEngine("auto", dir, true)
-	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
-
-	out, err := exp.Expand("review @./")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(out, "Host *") {
-		t.Fatalf("directory @ ref walked into .ssh: %q", out)
-	}
-	if !strings.Contains(out, "package main") {
-		t.Fatalf("expected main.go: %q", out)
-	}
-}
-
-func TestAtExpander_sensitiveDenied(t *testing.T) {
+func TestAtExpander_sensitiveFileAllowed(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("SECRET=1\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -102,7 +73,30 @@ func TestAtExpander_sensitiveDenied(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "错误:") {
-		t.Fatalf("expected permission error in output: %q", out)
+	if !strings.Contains(out, "SECRET=1") {
+		t.Fatalf("expected @.env to expand sensitive content: %q", out)
+	}
+}
+
+func TestAtExpander_sshDirAllowed(t *testing.T) {
+	dir := t.TempDir()
+	sshDir := filepath.Join(dir, ".ssh")
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sshDir, "config"), []byte("Host *\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	out, err := exp.Expand("review @.ssh/config")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "Host *") {
+		t.Fatalf("expected @.ssh/config content: %q", out)
 	}
 }

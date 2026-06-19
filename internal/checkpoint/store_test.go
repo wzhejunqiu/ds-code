@@ -32,7 +32,7 @@ func TestStoreCreateAndRewind(t *testing.T) {
 	if err := os.WriteFile(target, []byte("after"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := checkpoint.ApplyRewind(root, rec); err != nil {
+	if err := checkpoint.ApplyRewind(root, rec, nil); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(target)

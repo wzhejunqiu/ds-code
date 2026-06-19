@@ -12,7 +12,7 @@ import (
 )
 
 // ApplyRewind restores workspace files from a checkpoint record.
-func ApplyRewind(workspace string, rec Record) error {
+func ApplyRewind(workspace string, rec Record, validate patch.PathValidator) error {
 	ws, err := filepath.EvalSymlinks(workspace)
 	if err != nil {
 		ws, err = filepath.Abs(workspace)
@@ -21,7 +21,7 @@ func ApplyRewind(workspace string, rec Record) error {
 		}
 	}
 	for _, f := range rec.Files {
-		if err := patch.ValidatePath(workspace, f.RelPath); err != nil {
+		if err := patch.ValidatePath(validate, f.RelPath); err != nil {
 			return err
 		}
 		abs := filepath.Join(ws, filepath.Clean(f.RelPath))
@@ -29,7 +29,7 @@ func ApplyRewind(workspace string, rec Record) error {
 			abs = resolved
 		}
 		rel, err := filepath.Rel(ws, abs)
-		if err != nil || strings.HasPrefix(rel, "..") {
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			return fmt.Errorf("checkpoint: path outside workspace: %s", f.RelPath)
 		}
 		if f.Existed {

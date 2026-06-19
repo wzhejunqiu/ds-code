@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -94,13 +95,13 @@ func (s *Server) CallTool(ctx context.Context, tool string, args json.RawMessage
 	start := time.Now()
 	if s.testCallTool != nil {
 		out, err := s.testCallTool(ctx, tool, args)
-		logMCPCall(s.Name, tool, len(args), len(out), false, time.Since(start), err)
+		logMCPCall(s.Name, tool, args, len(args), len(out), false, time.Since(start), err)
 		return out, err
 	}
 	var argMap map[string]any
 	if len(args) > 0 && string(args) != "null" {
 		if err := json.Unmarshal(args, &argMap); err != nil {
-			logMCPCall(s.Name, tool, len(args), 0, false, time.Since(start), err)
+			logMCPCall(s.Name, tool, args, len(args), 0, false, time.Since(start), err)
 			return "", fmt.Errorf("mcp: invalid arguments: %w", err)
 		}
 	}
@@ -110,16 +111,16 @@ func (s *Server) CallTool(ctx context.Context, tool string, args json.RawMessage
 
 	res, err := s.client.CallTool(ctx, req)
 	if err != nil {
-		logMCPCall(s.Name, tool, len(args), 0, false, time.Since(start), err)
+		logMCPCall(s.Name, tool, args, len(args), 0, false, time.Since(start), err)
 		return "", err
 	}
 	out := formatToolResult(res)
 	isError := res != nil && res.IsError
-	logMCPCall(s.Name, tool, len(args), len(out), isError, time.Since(start), nil)
+	logMCPCall(s.Name, tool, args, len(args), len(out), isError, time.Since(start), nil)
 	return out, nil
 }
 
-func logMCPCall(server, tool string, argsLen, resultChars int, isError bool, dur time.Duration, err error) {
+func logMCPCall(server, tool string, args json.RawMessage, argsLen, resultChars int, isError bool, dur time.Duration, err error) {
 	fields := []zap.Field{
 		zap.String("server", server),
 		zap.String("tool", tool),
@@ -128,10 +129,39 @@ func logMCPCall(server, tool string, argsLen, resultChars int, isError bool, dur
 		zap.Bool("is_error", isError),
 		zap.Int64("duration_ms", dur.Milliseconds()),
 	}
+	if preview := mcpArgsPreview(args); preview != "" {
+		fields = append(fields, zap.String("args_preview", preview))
+	}
+	if logging.AllowSensitiveData() && len(args) > 0 {
+		fields = append(fields, logging.FieldString("args", string(args)))
+	}
 	if err != nil {
 		fields = append(fields, zap.Error(err))
 	}
 	logging.L().Debug("mcp call tool", fields...)
+}
+
+func mcpArgsPreview(args json.RawMessage) string {
+	if len(args) == 0 || string(bytes.TrimSpace(args)) == "null" {
+		return ""
+	}
+	var compact any
+	if err := json.Unmarshal(args, &compact); err != nil {
+		s := strings.TrimSpace(string(args))
+		if len(s) > 200 {
+			return s[:200] + "..."
+		}
+		return s
+	}
+	b, err := json.Marshal(compact)
+	if err != nil {
+		return ""
+	}
+	s := string(b)
+	if len(s) > 200 {
+		return s[:200] + "..."
+	}
+	return s
 }
 
 func formatToolResult(res *mcpsdk.CallToolResult) string {

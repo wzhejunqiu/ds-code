@@ -75,4 +75,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("lsp.servers", map[string]any{})
 
 	v.SetDefault("run_mode", "agent")
+	v.SetDefault("tui.copy_on_select", true)
+	v.SetDefault("tools.search.skip_dirs", []string{})
 }

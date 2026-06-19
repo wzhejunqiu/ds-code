@@ -13,6 +13,7 @@ import (
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -45,6 +46,8 @@ type Service struct {
 	ParentContext *ctxpkg.Service
 	// Worktrees creates isolated git worktrees when isolation=worktree.
 	Worktrees *worktree.Manager
+	// MCPResults is shared with the parent Runner for spill file storage.
+	MCPResults *resultstore.Store
 }
 
 // NewService creates a spawn service wired to the parent session.
@@ -144,7 +147,7 @@ func (s *Service) Handle(ctx context.Context, inv agent.ToolInvocation, params P
 
 	// Async path: detach goroutine and return launch JSON immediately.
 	if decision.Background {
-		s.BackgroundManager.Start(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, parent, s.Hooks, s.cleanupWorktreeImmediate)
+		s.BackgroundManager.Start(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, parent, s.Hooks, s.cleanupWorktreeImmediate, s.MCPResults)
 		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s"}`, run.ID, decision.Description), nil
 	}
 
@@ -164,7 +167,7 @@ func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run sub
 	timeoutSec := s.Cfg.Tools.Agent.AutoBackgroundAfter
 	if timeoutSec <= 0 {
 		// No promote threshold: block until ExecuteRun completes.
-		summary, runErr := ExecuteRun(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0)
+		summary, runErr := ExecuteRun(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0, s.MCPResults)
 		return s.finishSync(ctx, run, decision, parent, summary, runErr)
 	}
 
@@ -179,7 +182,7 @@ func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run sub
 		}
 	}()
 	go func() {
-		summary, err := ExecuteRun(runCtx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0)
+		summary, err := ExecuteRun(runCtx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0, s.MCPResults)
 		done <- executeResult{summary: summary, err: err}
 	}()
 

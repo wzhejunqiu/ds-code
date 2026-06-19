@@ -10,17 +10,16 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
-	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"go.uber.org/zap"
 )
 
 var atRefPattern = regexp.MustCompile(`@([a-zA-Z0-9_./\-]+)`)
 
 // AtExpander resolves @file and @dir/ references into user message text.
+// User explicit @ refs bypass S3 and search skip rules (FR-6.9–6.10); only S2 applies.
 type AtExpander struct {
-	Cfg       *config.Config
-	Perm      *permission.Engine
-	Gitignore *tool.GitignoreMatcher
+	Cfg  *config.Config
+	Perm *permission.Engine
 }
 
 // Expand parses @refs, enforces budgets, and appends file contents to the message.
@@ -92,7 +91,7 @@ func (e *AtExpander) expandRef(ref string, perFileMax, remaining int) (string, i
 	isDir := strings.HasSuffix(ref, "/")
 	refPath := strings.TrimSuffix(ref, "/")
 
-	abs, err := e.Perm.CheckReadablePath(refPath)
+	abs, err := e.Perm.ResolvePath(refPath)
 	if err != nil {
 		return "", 0, err
 	}
@@ -153,12 +152,6 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 			return nil
 		}
 		if d.IsDir() {
-			if path != abs && d.Name() == ".git" {
-				return filepath.SkipDir
-			}
-			if permission.IsSensitiveAbs(path) {
-				return filepath.SkipDir
-			}
 			relToRoot, _ := filepath.Rel(abs, path)
 			depth := strings.Count(filepath.ToSlash(relToRoot), "/") + 1
 			if path != abs && depth > maxDepth {
@@ -172,12 +165,6 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 		}
 		dirRef := strings.TrimSuffix(strings.TrimSuffix(ref, "/"), "\\")
 		rel := filepath.ToSlash(filepath.Join(dirRef, relWalk))
-		if e.Gitignore != nil && e.Gitignore.Ignored(rel) {
-			return nil
-		}
-		if permission.IsSensitiveAbs(path) {
-			return nil
-		}
 		files = append(files, entry{rel: rel})
 		if len(files) >= maxFiles+1 {
 			return errStopAtRef
@@ -201,7 +188,7 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 			b.WriteString(AtRefRemainingSkipped)
 			break
 		}
-		full, err := e.Perm.CheckReadablePath(f.rel)
+		full, err := e.Perm.ResolvePath(f.rel)
 		if err != nil {
 			fmt.Fprintf(&b, "\n%s: "+AtRefErrorLine+"\n", f.rel, err)
 			continue

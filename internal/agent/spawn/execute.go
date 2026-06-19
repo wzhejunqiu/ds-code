@@ -14,6 +14,7 @@ import (
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
@@ -35,6 +36,7 @@ func ExecuteRun(
 	cb *agent.TurnCallbacks,
 	hooks *agent.HookManager,
 	maxTurns int,
+	mcpResults *resultstore.Store,
 ) (string, error) {
 	if run.Prompt == "" && run.SpawnKind != subagentstore.SpawnFork {
 		return "", fmt.Errorf("spawn: empty prompt")
@@ -54,12 +56,14 @@ func ExecuteRun(
 	switch {
 	case IsReadOnly(def) || permMode == AgentPermModeReadonly:
 		perm = permission.NewEngine("readonly", workspace, false)
+		perm.ProjectRoot = cfg.ProjectRoot
 	case permMode == AgentPermModeBubble, permMode == AgentPermModeInherit:
 		// bubble: permission ask uses the parent's Prompter (TUI TUIPrompter when configured).
 		if run.WorktreePath != "" {
 			// Rebind workspace while keeping parent Prompter for bubble-up asks.
 			perm = permission.NewEngine(parentPerm.Mode, workspace, parentPerm.Interactive)
 			perm.Prompter = parentPerm.Prompter
+			perm.ProjectRoot = cfg.ProjectRoot
 		} else {
 			perm = parentPerm
 		}
@@ -143,6 +147,7 @@ func ExecuteRun(
 		Out:         io.Discard,
 		Hooks:       hooks,
 		ForSubagent: true,
+		MCPResults:  mcpResults,
 	}
 
 	logging.L().Debug("spawn execute start",

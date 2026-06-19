@@ -34,9 +34,8 @@ type Chunk struct {
 	Removed int // lines starting with '-'
 }
 
-// Parse parses a Codex apply_patch document. When workspace is non-empty, each path is
-// validated to resolve inside the workspace.
-func Parse(text string, workspace string) ([]FileChange, error) {
+// Parse parses a Codex apply_patch document. When validate is non-nil, each path is checked.
+func Parse(text string, validate PathValidator) ([]FileChange, error) {
 	text = strings.TrimSpace(text)
 	if strings.HasPrefix(text, "<<") {
 		text = unwrapHeredoc(text)
@@ -68,7 +67,7 @@ func Parse(text string, workspace string) ([]FileChange, error) {
 		switch {
 		case strings.HasPrefix(line, addMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, addMarker))
-			if err := registerPath(seenPaths, workspace, path); err != nil {
+			if err := registerPath(seenPaths, validate, path); err != nil {
 				return nil, err
 			}
 			i++
@@ -93,14 +92,14 @@ func Parse(text string, workspace string) ([]FileChange, error) {
 			out = append(out, FileChange{Kind: ChangeAdd, Path: path, AddLines: content})
 		case strings.HasPrefix(line, deleteMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, deleteMarker))
-			if err := registerPath(seenPaths, workspace, path); err != nil {
+			if err := registerPath(seenPaths, validate, path); err != nil {
 				return nil, err
 			}
 			out = append(out, FileChange{Kind: ChangeDelete, Path: path})
 			i++
 		case strings.HasPrefix(line, updateMarker):
 			path := strings.TrimSpace(strings.TrimPrefix(line, updateMarker))
-			if err := registerPath(seenPaths, workspace, path); err != nil {
+			if err := registerPath(seenPaths, validate, path); err != nil {
 				return nil, err
 			}
 			i++
@@ -112,7 +111,7 @@ func Parse(text string, workspace string) ([]FileChange, error) {
 				}
 				if strings.HasPrefix(l, moveMarker) {
 					moveTo := strings.TrimSpace(strings.TrimPrefix(l, moveMarker))
-					if err := registerPath(seenPaths, workspace, moveTo); err != nil {
+					if err := registerPath(seenPaths, validate, moveTo); err != nil {
 						return nil, err
 					}
 					ch.MoveTo = moveTo
@@ -211,14 +210,14 @@ func unwrapHeredoc(s string) string {
 	return strings.TrimSpace(body)
 }
 
-func registerPath(seen map[string]struct{}, workspace, path string) error {
+func registerPath(seen map[string]struct{}, validate PathValidator, path string) error {
 	if path == "" {
 		return fmt.Errorf("empty path in patch")
 	}
 	if _, ok := seen[path]; ok {
 		return fmt.Errorf("duplicate path in patch: %s", path)
 	}
-	if err := ValidatePath(workspace, path); err != nil {
+	if err := ValidatePath(validate, path); err != nil {
 		return err
 	}
 	seen[path] = struct{}{}
@@ -226,8 +225,8 @@ func registerPath(seen map[string]struct{}, workspace, path string) error {
 }
 
 // Paths returns all relative paths referenced by the patch.
-func Paths(text string, workspace string) ([]string, error) {
-	changes, err := Parse(text, workspace)
+func Paths(text string, validate PathValidator) ([]string, error) {
+	changes, err := Parse(text, validate)
 	if err != nil {
 		return nil, err
 	}
@@ -247,8 +246,8 @@ func Paths(text string, workspace string) ([]string, error) {
 }
 
 // CountChangedLines estimates + and - lines for budget checks.
-func CountChangedLines(text string, workspace string) (int, error) {
-	changes, err := Parse(text, workspace)
+func CountChangedLines(text string, validate PathValidator) (int, error) {
+	changes, err := Parse(text, validate)
 	if err != nil {
 		return 0, err
 	}

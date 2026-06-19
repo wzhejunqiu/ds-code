@@ -56,6 +56,8 @@ tools:
     head_limit: 200
   glob:
     max_results: 100
+  search:
+    skip_dirs: [] # 遍历时额外跳过的目录名（不含 .git，已硬编码）
   apply_patch:
     max_changed_lines: 2000
   shell:
@@ -71,6 +73,9 @@ tools:
 
 permission:
   mode: ask # readonly | ask | auto
+
+tui:
+  copy_on_select: true # 鼠标拖拽选中文本后自动复制到剪贴板
 
 # session / sessions.db：无配置项，固定 ~/.ds-code/projects/<project_id>/sessions.db
 

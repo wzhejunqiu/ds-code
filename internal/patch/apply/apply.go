@@ -3,7 +3,6 @@ package apply
 import (
 	"fmt"
 	"github.com/wzhejunqiu/ds-code/internal/patch"
-	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,14 +19,18 @@ type fileBackup struct {
 }
 
 // Apply parses and applies a patch under workspace with backup/rollback on failure.
-// resolve must return absolute paths; each result is verified to lie under workspace.
+// resolve must return absolute paths verified by the caller (e.g. CheckWritablePath).
 func Apply(workspace string, patchText string, resolve func(rel string) (string, error), opts Options) (summary string, err error) {
-	changes, err := patch.Parse(patchText, workspace)
+	validate := func(rel string) error {
+		_, err := resolve(rel)
+		return err
+	}
+	changes, err := patch.Parse(patchText, validate)
 	if err != nil {
 		return "", err
 	}
 	if opts.MaxChangedLines > 0 {
-		n, err := patch.CountChangedLines(patchText, workspace)
+		n, err := patch.CountChangedLines(patchText, validate)
 		if err != nil {
 			return "", err
 		}
@@ -57,14 +60,7 @@ func Apply(workspace string, patchText string, resolve func(rel string) (string,
 	}()
 
 	resolveChecked := func(rel string) (string, error) {
-		abs, err := resolve(rel)
-		if err != nil {
-			return "", err
-		}
-		if err := wspkg.EnsureAbsUnder(workspace, abs); err != nil {
-			return "", err
-		}
-		return abs, nil
+		return resolve(rel)
 	}
 
 	var applied []string

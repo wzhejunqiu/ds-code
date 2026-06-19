@@ -31,6 +31,46 @@ func TestCheckPathCandidate_blocksAbsoluteOutsideWorkspace(t *testing.T) {
 	}
 }
 
+func TestCheckPathCandidate_allowsGitRevisionRange(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, false)
+	cases := []string{
+		"origin/main..v0.1.1",
+		"origin/main...v0.1.1",
+		"./...",
+	}
+	for _, tok := range cases {
+		if err := e.checkPathCandidate(tok); err != nil {
+			t.Fatalf("token %q should be allowed: %v", tok, err)
+		}
+	}
+}
+
+func TestCheckPathCandidate_blocksTraversal(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, false)
+	if err := e.checkPathCandidate("../outside"); err == nil {
+		t.Fatal("expected deny for traversal")
+	}
+}
+
+func TestEngine_shell_allowsGitDiffTripleDot(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, true)
+	cmd := "git diff origin/main...v0.1.1 --stat"
+	if err := e.Check("shell", map[string]any{"command": cmd}); err != nil {
+		t.Fatalf("permission should allow git revision range: %v", err)
+	}
+}
+
+func TestEngine_shell_allowsGoTestEllipsis(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine("auto", root, true)
+	if err := e.Check("shell", map[string]any{"command": "go test ./..."}); err != nil {
+		t.Fatalf("permission should allow go package ellipsis: %v", err)
+	}
+}
+
 func TestCheckShellDenylistPaths_embeddedLiteral(t *testing.T) {
 	root := t.TempDir()
 	e := NewEngine("auto", root, true)

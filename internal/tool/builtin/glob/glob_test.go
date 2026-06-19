@@ -13,6 +13,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/glob"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/list_dir"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
 func TestGlobTool_doubleStar(t *testing.T) {
@@ -261,5 +262,89 @@ func TestListDirTool_skipsSensitiveEntries(t *testing.T) {
 	}
 	if !strings.Contains(out, "readme.txt") {
 		t.Fatalf("expected readme.txt: %q", out)
+	}
+}
+
+func TestGlobTool_explicitSkipDirPath(t *testing.T) {
+	dir := t.TempDir()
+	nm := filepath.Join(dir, "node_modules", "pkg")
+	if err := os.MkdirAll(nm, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nm, "lib.go"), []byte("package lib\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}},
+	}
+	perm := permission.NewEngine("readonly", dir, false)
+	g := &glob.GlobTool{Cfg: cfg, Perm: perm, SearchSkip: searchskip.New([]string{"node_modules"}), Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"pattern": "**/*.go", "path": "node_modules"})
+	out, err := g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "node_modules/pkg/lib.go") {
+		t.Fatalf("explicit path=node_modules should match under skip_dir: %q", out)
+	}
+
+	args, _ = json.Marshal(map[string]any{"pattern": "**/*.go", "path": "."})
+	out, err = g.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "node_modules") {
+		t.Fatalf("path=. should skip node_modules walk: %q", out)
+	}
+}
+
+func TestListDir_explicitSkipDirPath(t *testing.T) {
+	dir := t.TempDir()
+	nm := filepath.Join(dir, "node_modules", "pkg")
+	if err := os.MkdirAll(nm, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nm, "index.js"), []byte("// x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{ProjectRoot: dir, Tools: config.ToolsConfig{Glob: config.GlobToolConfig{MaxResults: 50}}}
+	perm := permission.NewEngine("readonly", dir, false)
+	list := &list_dir.ListDirTool{Cfg: cfg, Perm: perm, SearchSkip: searchskip.New([]string{"node_modules"}), Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"path": "node_modules/pkg"})
+	out, err := list.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "index.js") {
+		t.Fatalf("explicit path=node_modules/pkg should list entries: %q", out)
+	}
+}
+
+func TestListDir_pathGitEmpty(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{ProjectRoot: dir}
+	perm := permission.NewEngine("readonly", dir, false)
+	list := &list_dir.ListDirTool{Cfg: cfg, Perm: perm, Strict: false}
+
+	args, _ := json.Marshal(map[string]any{"path": ".git"})
+	out, err := list.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != list_dir.ResultEmpty {
+		t.Fatalf("path=.git should return empty, got %q", out)
 	}
 }

@@ -8,6 +8,7 @@
 |------|------|
 | [v0.1.0/](v0.1.0/) | v0.1.0 基线：CONFIG、DESIGN、PLAN、SECURITY、LLM、TUI 测试等 |
 | [v0.1.1/](v0.1.1/) | v0.1.1 增量：MCP 裸名注册、TUI header 消息通知区 |
+| [v0.1.2/](v0.1.2/) | v0.1.2：路径权限、MCP spill、MCP 参数、搜索不读 gitignore（`.git`+`skip_dirs`） |
 
 ## 快速入口
 

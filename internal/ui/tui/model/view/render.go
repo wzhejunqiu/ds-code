@@ -21,10 +21,21 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
 
 const runningTurnHint = "Press Esc to cancel the current turn"
+
+// SelectionOverlay carries in-app text selection state for chat and tool panels.
+type SelectionOverlay struct {
+	ChatPlain  []string
+	ChatRange  selection.Range
+	ToolPlain  []string
+	ToolRange  selection.Range
+	ChatActive bool
+	ToolActive bool
+}
 
 // SyncCaches holds optional render caches for chat sync.
 type SyncCaches struct {
@@ -143,6 +154,27 @@ func buildChatBody(s *state.State, width int, caches *SyncCaches) (text string, 
 	text = chat.RenderCached(s.Chat, width, time.Now(), s.ToolDetailsVisible, toolDisplayContext(s), chatCache, mdCache)
 	lineCount = ContentLineCount(text)
 	return text, lineCount
+}
+
+// ChatPlainContent returns the full unstylized chat viewport text (header + body).
+func ChatPlainContent(s *state.State, width int, caches *SyncCaches) []string {
+	content, _ := buildViewportContent(s, width, caches)
+	return selection.LinesFromContent(selection.StripANSI(content))
+}
+
+func visibleHighlightedLines(all []string, yOffset, height int, r selection.Range) string {
+	if len(all) == 0 || height <= 0 {
+		return ""
+	}
+	highlighted := selection.LinesFromContent(selection.HighlightLines(all, r))
+	end := yOffset + height
+	if end > len(highlighted) {
+		end = len(highlighted)
+	}
+	if yOffset >= len(highlighted) {
+		return ""
+	}
+	return strings.Join(highlighted[yOffset:end], "\n")
 }
 
 func joinViewportContent(hdr, body string) string {
@@ -333,19 +365,31 @@ func FooterLeft(s *state.State) string {
 	return footerLeft
 }
 
-func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model) string {
+func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Model, sel *SelectionOverlay) string {
 	if s.Width == 0 {
 		return style.App.Render("Loading…\n")
 	}
 	var b strings.Builder
 
 	if chatVP.Height > 0 {
-		b.WriteString(chatVP.View())
+		chatView := chatVP.View()
+		if sel != nil && sel.ChatActive && len(sel.ChatPlain) > 0 {
+			if highlighted := visibleHighlightedLines(sel.ChatPlain, chatVP.YOffset, chatVP.Height, sel.ChatRange); highlighted != "" {
+				chatView = highlighted
+			}
+		}
+		b.WriteString(chatView)
 		b.WriteString("\n")
 	}
 
 	if s.ToolOpen && toolVP.Height > 0 {
-		b.WriteString(toolVP.View())
+		toolView := toolVP.View()
+		if sel != nil && sel.ToolActive && len(sel.ToolPlain) > 0 {
+			if highlighted := visibleHighlightedLines(sel.ToolPlain, toolVP.YOffset, toolVP.Height, sel.ToolRange); highlighted != "" {
+				toolView = highlighted
+			}
+		}
+		b.WriteString(toolView)
 		b.WriteString("\n")
 	}
 

@@ -41,7 +41,7 @@
 
 1. `Perm.CheckReadablePath` 解析目录。
 2. `os.ReadDir` 读取一层。
-3. 过滤：`.git`、`.gitignore` 忽略项、敏感绝对路径。
+3. 过滤：`.git`、`tools.search.skip_dirs`、敏感绝对路径。
 4. 条目数上限与 `tools.glob.max_results` 相同（默认 100）。
 
 ## 配置项

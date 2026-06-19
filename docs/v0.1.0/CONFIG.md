@@ -94,6 +94,7 @@ project_id = hex(SHA256([]byte(project_root)))
 | SQLite | `sessions.db` | 会话与 `messages` 历史 |
 | 审计日志 | `audit.jsonl` | 启用审计时追加 JSONL（tool 名 + 参数哈希） |
 | 检查点 | `checkpoints/` | Phase 7；patch / 文件哈希 |
+| MCP spill | `mcp-result/<session_id>/<stem>.txt` | MCP 成功调用全文（0600）；仅当前 session 经 `read_file` 绝对路径可读；不自动 GC |
 
 启动时：`project_root` → `project_id` → `MkdirAll` 项目目录 → 按上表打开/创建文件。
 
@@ -281,7 +282,7 @@ billing:
 | `context.compact_threshold_ratio` | float | **0.80** | 阈值 = `ratio × window`；compact 见 [PLAN · A/B/C](PLAN.md#会话-token计费累计-vs-compact-触发) |
 | `context.keep_recent_turns` | int | **6** | compact 后保留最近 N **用户轮**全文 |
 | `context.truncate_by` | string | **`chars`** | `chars` \| `tokenizer`；工具/`@` 截断 |
-| `context.tool_result_max_chars` | int | **100000** | 单次 tool 返回字符上限 |
+| `context.tool_result_max_chars` | int | **100000** | 单次 tool 返回字符上限；内建工具与 MCP **共用**；MCP 超长时 session 消息含 spill 路径 hint，完整正文在 `mcp-result/`（见 [§2.1](#21-项目运行时目录projectsproject_id)） |
 | `context.at_reference_max_chars` | int | **128000** | `@` 引用预加载总字符上限 |
 | `context.git_snapshot_max_chars` | int | **16000** | Git 快照（分支、默认分支、user、status、最近提交）注入 system 总上限 |
 | `context.at_dir_max_files` | int | **50** | `@dir/` 最多预读文件数 |
@@ -360,6 +361,7 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.read_file.max_bytes` | int | **2097152** (2MiB) | 文件总大小上限；超限拒绝整次读取 |
 | `tools.grep.head_limit` | int | **200** | `grep` 在 `content`（匹配行）与 `files_with_matches`（文件数）模式下的上限；`count` 模式忽略 |
 | `tools.glob.max_results` | int | **100** | `glob` / `list_dir` 结果条数上限 |
+| `tools.search.skip_dirs` | []string | **`[]`** | Agent 枚举（`grep`/`glob`/`list_dir`/`diagnostics` walk）额外跳过的目录名（相对 `perm.Workspace`）；`.git` 硬编码 SkipDir；**不**影响 `@dir/`；v0.1.2 起 Agent **不**读取 `.gitignore` |
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |
 | `tools.shell.timeout` | duration | **120s** | `shell` 同步执行超时 |
 | `tools.shell.max_background` | int | **5** | 后台 shell 任务数量上限 |
@@ -471,6 +473,14 @@ lsp:
       env:
         JAVA_HOME: /usr/lib/jvm/java-21
 ```
+
+### 5.13 `tui` — 交互终端
+
+| 键 | 类型 | 默认 | 说明 |
+|----|------|------|------|
+| `tui.copy_on_select` | bool | **true** | 聊天 viewport 鼠标拖拽选区后自动写入系统剪贴板；关闭时仍可选中，需终端原生复制 |
+
+仅交互 TUI 生效；非交互 `-p` 不适用。
 
 ---
 

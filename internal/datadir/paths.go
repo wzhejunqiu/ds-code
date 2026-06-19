@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -80,6 +81,47 @@ func DefaultCheckpointDir(projectRoot string) string {
 		return ""
 	}
 	return filepath.Join(dir, "checkpoints")
+}
+
+// DefaultMCPResultDir returns ~/.ds-code/projects/<id>/mcp-result/.
+func DefaultMCPResultDir(projectRoot string) string {
+	dir, err := ProjectDataDir(projectRoot)
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "mcp-result")
+}
+
+// MCPResultSessionDir returns ~/.ds-code/projects/<id>/mcp-result/<session_id>/.
+func MCPResultSessionDir(projectRoot, sessionID string) (string, error) {
+	base := DefaultMCPResultDir(projectRoot)
+	if base == "" {
+		return "", fmt.Errorf("datadir: mcp-result dir for %q", projectRoot)
+	}
+	if sessionID == "" {
+		return "", fmt.Errorf("datadir: empty session id")
+	}
+	return filepath.Join(base, sessionID), nil
+}
+
+// MCPResultFilePath returns the spill file path for one MCP tool call.
+func MCPResultFilePath(projectRoot, sessionID, callID string) (string, error) {
+	dir, err := MCPResultSessionDir(projectRoot, sessionID)
+	if err != nil {
+		return "", err
+	}
+	stem := spillCallFilenameForPath(callID)
+	return filepath.Join(dir, stem+".txt"), nil
+}
+
+func spillCallFilenameForPath(rawID string) string {
+	// Keep in sync with resultstore.spillCallFilename (duplicated to avoid import cycle).
+	id := strings.TrimSpace(rawID)
+	if id == "" {
+		return "pending" // placeholder; actual empty-id files use ULID at Save time
+	}
+	replacer := strings.NewReplacer("/", "_", "\\", "_", "..", "_", "\x00", "")
+	return replacer.Replace(id)
 }
 
 // DefaultLogsDir returns ~/.ds-code/projects/<project_id>/logs/.

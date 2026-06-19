@@ -136,7 +136,7 @@ type Runner struct {
 | LLM 终局（无工具） | `role=assistant` + 最终 content/reasoning/`TurnDurationMS` |
 | MaxTurns | `role=system` 事件 + 摘要 assistant（摘要 prompt 本身不持久化） |
 
-工具结果经 [`toolresult.FormatToolResult`](../toolresult/format.go) 包装为 `<tool_result name=... id=...>` XML，持久化前由 [`TruncateToolResult`](../toolresult/format.go) 按 `context.tool_result_max_chars` 截断。[`runToolCalls`](./runner_loop.go) 读回 session 时用 [`UnpackToolBody`](../toolresult/format.go) 解析 UI 展示。
+工具结果经 [`toolresult.FormatToolResult`](../toolresult/format.go) 包装为 `<tool_result name=... id=...>` XML，持久化前由 [`finalizeToolResult`](./mcp_spill.go) / [`TruncateToolResult`](../toolresult/format.go) 处理：内建工具仅截断；MCP 成功调用另将全文写入 `mcp-result/<session_id>/` 并在超长时附加可 `read_file` 的绝对路径 hint。[`runToolCalls`](./runner_loop.go) 读回 session 时用 [`UnpackToolBody`](../toolresult/format.go) 解析 UI 展示。
 
 ## Runner 入口
 

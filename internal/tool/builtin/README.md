@@ -127,10 +127,10 @@ Runner 在 [`tool_orchestration.go`](../../agent/tool_orchestration.go) 中将**
 | 约定 | 说明 |
 |------|------|
 | `Strict` | 来自 `cfg.LLM.StrictTools`；为 true 时 JSON Schema 禁止 `additionalProperties` |
-| 路径 | 读工具用 `Perm.CheckReadablePath`；写工具用 `Perm.ResolvePath` |
+| 路径 | 读工具用 `Perm.CheckReadablePath`；写工具用 `Perm.CheckWritablePath` / `ResolveAccessPath` |
 | 取消 | `Execute` 开头检查 `ctx.Err()`，长遍历中周期性检查 |
-| 敏感路径 | `permission.IsSensitiveAbs` 跳过 `.env`、密钥等 |
-| `.gitignore` | `grep` / `glob` / `list_dir` / `diagnostics` 使用 `tool.GitignoreMatcher` |
+| 敏感路径 | `permission.SkipSensitiveAbs` 跳过 `.env`、密钥等（`@` 引用例外，见 SECURITY §S3-S） |
+| 搜索跳过 | `grep` / `glob` / `list_dir` / `diagnostics` 使用 `searchskip.Matcher`（`.git` + `tools.search.skip_dirs`）；**不**读取 `.gitignore` |
 | 结果截断 | 部分工具调用 `context.TruncateToolResult`；全局见 `context.tool_result_max_chars` |
 | LLM 文案 | 共享常量见 [`text.go`](text.go)；各工具专有字符串见子包 `text.go` |
 

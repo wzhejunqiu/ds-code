@@ -1,17 +1,16 @@
 package patch
 
-import (
-	"fmt"
+import "fmt"
 
-	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
-)
+// PathValidator checks that a relative patch path is allowed.
+type PathValidator func(rel string) error
 
-// ValidatePath resolves rel under workspace and ensures the result stays inside workspace.
-func ValidatePath(workspace, rel string) error {
-	if workspace == "" {
+// ValidatePath invokes validate on rel when non-nil.
+func ValidatePath(validate PathValidator, rel string) error {
+	if validate == nil {
 		return nil
 	}
-	if err := wspkg.ValidateRel(workspace, rel); err != nil {
+	if err := validate(rel); err != nil {
 		if rel != "" {
 			return fmt.Errorf("patch: path outside workspace: %s", rel)
 		}

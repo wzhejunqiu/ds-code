@@ -60,18 +60,14 @@ func (e *Engine) checkPathCandidate(rel string) error {
 	if isSensitiveBasename(base) {
 		return fmt.Errorf("%w: shell must not access sensitive path", ErrDenied)
 	}
-	abs, err := e.ResolvePath(rel)
+	abs, err := e.ResolveAccessPath(rel, PathRead)
 	if err != nil {
-		// Block absolute paths and traversal outside workspace; ignore unresolvable
-		// relative tokens (e.g. shell redirection "2>/dev/null").
-		if filepath.IsAbs(rel) || strings.Contains(rel, "..") {
+		if filepath.IsAbs(rel) || isOutsideWorkspaceErr(err) {
 			return fmt.Errorf("%w: shell path not allowed: %s", ErrDenied, rel)
 		}
 		return nil
 	}
-	if IsSensitiveAbs(abs) {
-		return fmt.Errorf("%w: shell must not access sensitive path", ErrDenied)
-	}
+	_ = abs
 	return nil
 }
 

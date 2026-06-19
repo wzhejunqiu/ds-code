@@ -31,7 +31,7 @@ func ValidateGlobMatches(perm *permission.Engine, matches []string, pattern stri
 		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
 			abs = resolved
 		}
-		if err := perm.EnsureAbsUnderWorkspace(abs, pattern); err != nil {
+		if err := perm.CheckAbsPath(abs, permission.PathBoundary); err != nil {
 			return permission.GlobOutsideWorkspaceError(abs, pattern)
 		}
 	}
@@ -41,7 +41,7 @@ func ValidateGlobMatches(perm *permission.Engine, matches []string, pattern stri
 // MakeFileCandidate returns a candidate when absPath passes filters.
 // Rel is always relative to perm.Workspace (project root).
 func MakeFileCandidate(perm *permission.Engine, absPath string, filter FileFilter) *FileCandidate {
-	if permission.IsSensitiveAbs(absPath) {
+	if perm.SkipSensitiveAbs(absPath) {
 		return nil
 	}
 	info, err := os.Stat(absPath)
@@ -66,7 +66,7 @@ func MakeFileCandidate(perm *permission.Engine, absPath string, filter FileFilte
 		abs = resolved
 	}
 	rel, err := filepath.Rel(ws, abs)
-	if err != nil || strings.HasPrefix(rel, "..") {
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return nil
 	}
 	return &FileCandidate{
@@ -83,8 +83,10 @@ func CollectGlobPattern(
 	root, pattern string,
 	filter FileFilter,
 	ignored func(rel string) bool,
+	skipDir func(rel string) bool,
 ) ([]FileCandidate, error) {
-	absPaths, err := globmatch.MatchFiles(root, pattern, 0)
+	skipSensitive := func(abs string) bool { return perm.SkipSensitiveAbs(abs) }
+	absPaths, err := globmatch.MatchFiles(root, pattern, 0, skipDir, skipSensitive)
 	if err != nil {
 		return nil, err
 	}

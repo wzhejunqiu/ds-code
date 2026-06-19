@@ -9,6 +9,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -41,7 +42,7 @@ func NewBackgroundManager(nq *NotificationQueue) *BackgroundManager {
 }
 
 // Start launches an agent run in a background goroutine.
-func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config, llmClient llm.Client, run subagentstore.Run, def AgentTypeDefinition, perm *permission.Engine, parentReg *tool.Registry, subStore subagentstore.Store, parentCallbacks *agent.TurnCallbacks, hooks *agent.HookManager, failCleanup func(context.Context, subagentstore.Run)) {
+func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config, llmClient llm.Client, run subagentstore.Run, def AgentTypeDefinition, perm *permission.Engine, parentReg *tool.Registry, subStore subagentstore.Store, parentCallbacks *agent.TurnCallbacks, hooks *agent.HookManager, failCleanup func(context.Context, subagentstore.Run), mcpResults *resultstore.Store) {
 	ctx, cancel := DetachSpawnContext(parentCtx)
 	task := &BackgroundTask{
 		RunID:     run.ID,
@@ -62,7 +63,7 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 
 		startTime := time.Now()
 		cb := agent.SubagentToolCallbacks(parentCallbacks, run.ID)
-		summary, runErr := ExecuteRun(ctx, cfg, llmClient, run, def, perm, parentReg, subStore, cb, hooks, 0)
+		summary, runErr := ExecuteRun(ctx, cfg, llmClient, run, def, perm, parentReg, subStore, cb, hooks, 0, mcpResults)
 
 		status := subagentstore.StatusCompleted
 		errMsg := ""

@@ -14,11 +14,12 @@ import (
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
-	"github.com/wzhejunqiu/ds-code/internal/tool"
 	agenttool "github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 	"go.uber.org/zap"
 )
 
@@ -34,19 +35,20 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	}
 	interactive := permission.IsInteractiveTTY()
 	perm := permission.NewEngine(a.Cfg.Permission.Mode, a.Cfg.ProjectRoot, interactive)
+	perm.ProjectRoot = a.Cfg.ProjectRoot
 	if interactive && a.Cfg.Permission.Mode == "ask" {
 		perm.Prompter = permission.StdinPrompter(os.Stderr)
 	}
 
 	strict := a.Cfg.LLM.StrictTools
-	gi, _ := tool.LoadGitignore(a.Cfg.ProjectRoot)
+	searchSkip := searchskip.New(a.Cfg.Tools.Search.SkipDirs)
 
 	if err := a.ensureMCP(context.Background(), perm, strict); err != nil {
 		return nil, nil, nil, err
 	}
 
 	llmClient := deepseek.NewClient(a.Cfg)
-	bundle, err := a.buildTools(context.Background(), perm, gi, strict, llmClient, a.Cfg.RunMode)
+	bundle, err := a.buildTools(context.Background(), perm, searchSkip, strict, llmClient, a.Cfg.RunMode)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -79,9 +81,8 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		AgentsMD: agentsMD,
 		Rules:    rules,
 		AtExpander: &ctxpkg.AtExpander{
-			Cfg:       a.Cfg,
-			Perm:      perm,
-			Gitignore: gi,
+			Cfg:  a.Cfg,
+			Perm: perm,
 		},
 	}
 
@@ -100,6 +101,7 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		return nil, nil, nil, err
 	}
 
+	mcpStore := &resultstore.Store{ProjectRoot: a.Cfg.ProjectRoot}
 	runner := &agent.Runner{
 		LLM:         llmClient,
 		Tools:       bundle.reg,
@@ -111,12 +113,14 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 		Out:         out,
 		Audit:       auditLog,
 		Checkpoints: cpStore,
+		MCPResults:  mcpStore,
 		Hooks:       agent.LoadHooks(a.Cfg.ProjectRoot),
 	}
 	// Wire async agent notification draining from the spawn service.
 	if at, ok := bundle.reg.Get("agent"); ok {
 		if agt, ok := at.(*agenttool.AgentTool); ok {
 			svc := agt.SpawnService()
+			svc.MCPResults = mcpStore
 			svc.Hooks = runner.Hooks
 			svc.ParentContext = ctxSvc
 			runner.DrainNotifications = func(ctx context.Context) string {

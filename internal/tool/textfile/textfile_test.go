@@ -60,3 +60,23 @@ func TestIsSearchable_blockedExt(t *testing.T) {
 		t.Fatal(".pdf extension should be blocked without reading")
 	}
 }
+
+func TestIsTextFile_matchesIsSearchable(t *testing.T) {
+	dir := t.TempDir()
+	textPath := filepath.Join(dir, "hello.go")
+	if err := os.WriteFile(textPath, []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pngPath := filepath.Join(dir, "fake.png")
+	pngData := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	pngData = append(pngData, make([]byte, 32)...)
+	if err := os.WriteFile(pngPath, pngData, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{textPath, pngPath} {
+		if textfile.IsTextFile(path) != textfile.IsSearchable(path) {
+			t.Fatalf("IsTextFile(%q) != IsSearchable for same path", path)
+		}
+	}
+}

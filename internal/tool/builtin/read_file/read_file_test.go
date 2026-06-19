@@ -148,6 +148,35 @@ func TestReadFile_offsetBeyondFile(t *testing.T) {
 	}
 }
 
+func TestReadFile_rejectsNonText(t *testing.T) {
+	root := t.TempDir()
+	// Minimal PNG header bytes.
+	png := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	if err := os.WriteFile(filepath.Join(root, "img.png"), png, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tool := readFileTool(t, root, 500, 1<<20)
+	_, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "img.png"}))
+	if err == nil || !strings.Contains(err.Error(), "非文本") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestReadFile_allowsEmptyFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "empty.txt"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tool := readFileTool(t, root, 500, 1<<20)
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "empty.txt"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != "" && !strings.Contains(out, "超出文件长度 0") {
+		t.Fatalf("out = %q", out)
+	}
+}
+
 func readFileTool(t *testing.T, root string, maxLines, maxBytes int) *read_file.ReadFileTool {
 	t.Helper()
 	cfg := &config.Config{

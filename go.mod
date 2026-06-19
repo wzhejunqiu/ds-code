@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/mark3labs/mcp-go v0.54.0
 	github.com/muesli/termenv v0.16.0
-	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
+	github.com/oklog/ulid/v2 v2.1.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	go.uber.org/zap v1.28.0

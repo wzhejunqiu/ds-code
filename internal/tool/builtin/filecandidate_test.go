@@ -102,7 +102,7 @@ func TestCollectGlobPattern_preservesMatchOrderNotModTime(t *testing.T) {
 	_ = os.Chtimes(zLast, newTime, newTime)
 
 	perm := permission.NewEngine("readonly", dir, false)
-	out, err := builtin.CollectGlobPattern(context.Background(), perm, dir, "*.go", builtin.FileFilter{}, nil)
+	out, err := builtin.CollectGlobPattern(context.Background(), perm, dir, "*.go", builtin.FileFilter{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

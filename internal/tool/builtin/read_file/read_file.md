@@ -6,17 +6,17 @@
 
 ## 注册与可见性
 
-| 模式 | 注册 |
-|------|------|
+| 模式                    | 注册                    |
+| ----------------------- | ----------------------- |
 | plan / agent / subagent | `register.ExploreTools` |
 
 ## 参数 Schema
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | string | 是 | 相对项目根的路径，或落在工作区内的绝对路径 |
-| `offset` | integer | 否 | 起始行号（1-based），默认从第 1 行 |
-| `limit` | integer | 否 | 最多读取行数；省略时读取整个文件（最多 max_lines 行） |
+| 字段     | 类型    | 必填 | 说明                                                  |
+| -------- | ------- | ---- | ----------------------------------------------------- |
+| `path`   | string  | 是   | 相对项目根的路径，或落在工作区内的绝对路径            |
+| `offset` | integer | 否   | 起始行号（1-based），默认从第 1 行                    |
+| `limit`  | integer | 否   | 最多读取行数；省略时读取整个文件（最多 max_lines 行） |
 
 ## 用法示例
 
@@ -43,15 +43,16 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 1. **权限**：`Perm.CheckReadablePath` 解析路径并拒绝敏感文件。
 2. **体积预检**：`os.Stat` 检查文件字节数 ≤ `tools.read_file.max_bytes`（默认 2MiB），超限直接报错，不读入内存。
-3. **行范围**：`resolveReadOffsetLimit` 计算 `[readStart, readEnd]`；`limit` 会被钳制到 `max_lines`。
-4. **扫描**：`bufio.Scanner`，单行 buffer 上限 1MiB；跳过 `readStart` 之前的行，读到 `readEnd` 后继续扫描以统计 `moreAfter`。
+3. **文本判定**：`textfile.IsTextFile` 在打开文件前拒绝二进制/媒体文件（PNG 等）；空文件与 MCP spill `.txt` 允许。
+4. **行范围**：`resolveReadOffsetLimit` 计算 `[readStart, readEnd]`；`limit` 会被钳制到 `max_lines`。
+5. **扫描**：`bufio.Scanner`，单行 buffer 上限 1MiB；跳过 `readStart` 之前的行，读到 `readEnd` 后继续扫描以统计 `moreAfter`。
 
 ## 配置项
 
-| 键 | 默认 | 说明 |
-|----|------|------|
-| `tools.read_file.max_lines` | 2000 | 单次最多返回行数（默认读取整个文件时的上限） |
-| `tools.read_file.max_bytes` | 2097152 | 文件大小上限（字节） |
+| 键                          | 默认    | 说明                                         |
+| --------------------------- | ------- | -------------------------------------------- |
+| `tools.read_file.max_lines` | 2000    | 单次最多返回行数（默认读取整个文件时的上限） |
+| `tools.read_file.max_bytes` | 2097152 | 文件大小上限（字节）                         |
 
 ## 权限与安全
 
@@ -63,6 +64,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 - **默认全读**：仅传 `path` 时读取整个文件（最多 max_lines 行）；超大文件用 `offset`/`limit` 分段。
 - **行号前缀**：输出带 `N|` 前缀，便于与 `apply_patch` 的 `@@` 上下文及 TUI 引用对齐。
 - **先 Stat 后读**：超大文件在打开前拒绝，保护内存与 token 预算。
+- **仅文本**：二进制与媒体文件在 Stat 后、打开前由 `IsTextFile` 拒绝。
 
 ## 相关代码
 

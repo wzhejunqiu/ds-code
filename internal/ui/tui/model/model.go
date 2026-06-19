@@ -16,6 +16,7 @@ import (
 	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/tcase"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
 
@@ -33,7 +34,19 @@ type Model struct {
 	mdSegmentCache    markdown.SegmentCache
 	headerCache       view.HeaderCache
 	chatSyncScheduled bool
+
+	plainLines     []string
+	toolPlainLines []string
+	selRange       selection.Range
+	selDragging    bool
+	selTarget      int
 }
+
+const (
+	selTargetNone = iota
+	selTargetChat
+	selTargetTool
+)
 
 // New builds a Model from runtime dependencies.
 func New(d *deps.Deps) *Model {
@@ -84,6 +97,7 @@ func (m *Model) listenPrompt() tea.Cmd {
 
 func (m *Model) syncToolView() {
 	view.SyncTool(&m.State, &m.chatVP, &m.toolVP, &m.input, m.syncCaches())
+	m.updateToolPlainLines()
 }
 
 func (m *Model) syncAllViews() {
@@ -101,5 +115,23 @@ func (m *Model) syncAllViews() {
 }
 
 func (m *Model) View() string {
-	return view.Render(&m.State, &m.chatVP, &m.toolVP, &m.input)
+	innerW := m.Width - 2
+	if innerW < 10 {
+		innerW = 10
+	}
+	var sel *view.SelectionOverlay
+	if m.selRange.Active() {
+		sel = &view.SelectionOverlay{
+			ChatPlain:  m.plainLines,
+			ChatRange:  m.selRange,
+			ToolPlain:  m.toolPlainLines,
+			ToolRange:  m.selRange,
+			ChatActive: m.selTarget == selTargetChat,
+			ToolActive: m.selTarget == selTargetTool,
+		}
+	}
+	if len(m.plainLines) == 0 && m.Width > 0 {
+		m.plainLines = view.ChatPlainContent(&m.State, innerW, m.syncCaches())
+	}
+	return view.Render(&m.State, &m.chatVP, &m.toolVP, &m.input, sel)
 }

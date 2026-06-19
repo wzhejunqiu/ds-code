@@ -13,7 +13,7 @@ func TestFileLineStats_multiFile(t *testing.T) {
 +line2
 *** Delete File: old.go
 *** End Patch`
-	stats, err := patch.FileLineStats(text, "")
+	stats, err := patch.FileLineStats(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

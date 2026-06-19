@@ -19,7 +19,7 @@ func TestParse_addAndUpdate(t *testing.T) {
 -print("hi")
 +print("bye")
 *** End Patch`
-	changes, err := patch.Parse(text, "")
+	changes, err := patch.Parse(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestParse_heredoc(t *testing.T) {
 +line
 *** End Patch
 EOF`
-	changes, err := patch.Parse(text, "")
+	changes, err := patch.Parse(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestParse_delete(t *testing.T) {
 	text := `*** Begin Patch
 *** Delete File: old.go
 *** End Patch`
-	changes, err := patch.Parse(text, "")
+	changes, err := patch.Parse(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestParse_move(t *testing.T) {
 -old
 +new
 *** End Patch`
-	changes, err := patch.Parse(text, "")
+	changes, err := patch.Parse(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestParse_move(t *testing.T) {
 }
 
 func TestParse_emptyPatch(t *testing.T) {
-	_, err := patch.Parse("", "")
+	_, err := patch.Parse("", nil)
 	if err == nil {
 		t.Fatal("expected error for empty patch")
 	}
@@ -124,7 +124,7 @@ func TestParse_invalidChangeLine(t *testing.T) {
 @@
 ?bad
 *** End Patch`
-	_, err := patch.Parse(text, "")
+	_, err := patch.Parse(text, nil)
 	if err == nil {
 		t.Fatal("expected error for invalid change line")
 	}
@@ -135,7 +135,7 @@ func TestParse_addLineWithoutPlus(t *testing.T) {
 *** Add File: x.txt
 not prefixed
 *** End Patch`
-	_, err := patch.Parse(text, "")
+	_, err := patch.Parse(text, nil)
 	if err == nil {
 		t.Fatal("expected error for line without '+'")
 	}
@@ -146,7 +146,7 @@ func TestParse_updateUnexpectedLine(t *testing.T) {
 *** Update File: f.go
 garbage
 *** End Patch`
-	_, err := patch.Parse(text, "")
+	_, err := patch.Parse(text, nil)
 	if err == nil {
 		t.Fatal("expected error for unexpected update line")
 	}
@@ -161,7 +161,7 @@ func TestParse_duplicatePath(t *testing.T) {
 -x
 +y
 *** End Patch`
-	_, err := patch.Parse(text, "")
+	_, err := patch.Parse(text, nil)
 	if err == nil {
 		t.Fatal("expected duplicate path error")
 	}
@@ -174,7 +174,7 @@ func TestParse_heredocCustomDelimiter(t *testing.T) {
 +line
 *** End Patch
 PATCH`
-	changes, err := patch.Parse(text, "")
+	changes, err := patch.Parse(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestCountChangedLines_contextNotDoubleCounted(t *testing.T) {
 -old
 +new
 *** End Patch`
-	n, err := patch.CountChangedLines(text, "")
+	n, err := patch.CountChangedLines(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

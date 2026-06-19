@@ -27,10 +27,13 @@ var ErrRejected = errors.New("permission: user rejected")
 type Engine struct {
 	Mode        string
 	Workspace   string
-	Interactive bool
-	Prompter    Prompter
-	writeTool   func(string) bool
-	mcpTool     func(string) bool
+	ProjectRoot string // cfg.ProjectRoot for spill paths (may differ from Workspace in worktrees)
+	// SpillSessionID is set per RunTurn for MCP spill read_file access.
+	SpillSessionID string
+	Interactive    bool
+	Prompter       Prompter
+	writeTool      func(string) bool
+	mcpTool        func(string) bool
 }
 
 // SetWriteToolDetector registers extra write tools (e.g. MCP write tools).
@@ -89,7 +92,7 @@ func (e *Engine) check(tool string, args map[string]any) error {
 	if tool == "apply_patch" {
 		patchText, _ := args["patch"].(string)
 		if patchText != "" {
-			paths, err := patch.Paths(patchText, e.Workspace)
+			paths, err := patch.Paths(patchText, e.patchValidator())
 			if err != nil {
 				return fmt.Errorf("%w: invalid patch: %v", ErrDenied, err)
 			}
@@ -198,7 +201,7 @@ func (e *Engine) summarizeArgs(tool string, args map[string]any) string {
 		}
 	case "apply_patch":
 		if p, _ := args["patch"].(string); p != "" {
-			paths, err := patch.Paths(p, e.Workspace)
+			paths, err := patch.Paths(p, e.patchValidator())
 			if err == nil {
 				return "files: " + strings.Join(paths, ", ")
 			}
@@ -261,23 +264,33 @@ func (e *Engine) isWriteTool(tool string) bool {
 	}
 }
 
+// PatchValidator returns a path validator for patch parse (S2 boundary).
+func (e *Engine) PatchValidator() patch.PathValidator {
+	return e.patchValidator()
+}
+
+func (e *Engine) patchValidator() patch.PathValidator {
+	if e.Workspace == "" {
+		return nil
+	}
+	return func(rel string) error {
+		_, err := e.ResolveAccessPath(rel, PathBoundary)
+		return err
+	}
+}
+
 func (e *Engine) checkPath(rel string) error {
 	_, err := e.CheckReadablePath(rel)
 	return err
 }
 
 // CheckReadablePath resolves rel under the workspace and denies sensitive paths (S3).
+// MCP spill files for the current session are allowed (see resolveMCPSpillRead).
 func (e *Engine) CheckReadablePath(rel string) (string, error) {
-	abs, err := e.ResolvePath(rel)
-	if err != nil {
-		logReadablePathDenied(rel, "", "resolve", err)
-		return "", err
+	if abs, ok := e.resolveMCPSpillRead(rel); ok {
+		return abs, nil
 	}
-	if IsSensitiveAbs(abs) {
-		logReadablePathDenied(rel, abs, "sensitive", nil)
-		return "", fmt.Errorf("%w: sensitive path %s", ErrDenied, rel)
-	}
-	return abs, nil
+	return e.ResolveAccessPath(rel, PathRead)
 }
 
 // ResolvePath resolves a path under workspace and blocks escape (S2: symlinks evaluated).
@@ -286,26 +299,9 @@ func (e *Engine) CheckReadablePath(rel string) (string, error) {
 func (e *Engine) ResolvePath(rel string) (string, error) {
 	abs, err := wspkg.ResolveRel(e.Workspace, rel)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrDenied, err)
+		return "", fmt.Errorf("%w: %w", ErrDenied, err)
 	}
 	return abs, nil
-}
-
-func logReadablePathDenied(rel, resolved, reason string, err error) {
-	fields := []zap.Field{
-		zap.Bool("allowed", false),
-		zap.String("deny_reason", reason),
-	}
-	if logging.AllowSensitiveData() {
-		fields = append(fields, logging.FieldString("path", rel))
-		if resolved != "" {
-			fields = append(fields, logging.FieldString("resolved", resolved))
-		}
-		if err != nil {
-			fields = append(fields, zap.Error(err))
-		}
-	}
-	logging.L().Debug("readable path denied", fields...)
 }
 
 func (e *Engine) checkSensitiveShell(cmd string) error {

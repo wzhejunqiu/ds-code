@@ -18,7 +18,7 @@ func (r *Runner) recordCheckpoint(ctx context.Context, sessionID, toolName strin
 	if !isCheckpointTool(toolName) {
 		return nil
 	}
-	paths, err := checkpoint.PathsFromTool(toolName, r.Perm.Workspace, args)
+	paths, err := checkpoint.PathsFromTool(toolName, r.Perm.PatchValidator(), args)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (r *Runner) RewindCheckpoint(ctx context.Context, sessionID string, id int)
 	if err != nil {
 		return err
 	}
-	if err := checkpoint.ApplyRewind(r.Perm.Workspace, rec); err != nil {
+	if err := checkpoint.ApplyRewind(r.Perm.Workspace, rec, r.Perm.PatchValidator()); err != nil {
 		return err
 	}
 	return r.Sessions.AppendMessage(ctx, session.Message{

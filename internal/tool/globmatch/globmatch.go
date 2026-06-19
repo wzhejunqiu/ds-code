@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 // HasMeta reports whether path contains glob metacharacters.
@@ -31,10 +29,11 @@ func SplitPath(path string) (base, pattern string) {
 }
 
 // MatchFiles returns absolute paths under root matching pattern.
-// limit <= 0 means no limit on the number of paths returned.
-func MatchFiles(root, pattern string, limit int) ([]string, error) {
+// skipDir is called with slash-separated rel paths from root for directories during ** walks.
+// skipSensitive filters absolute paths (files and dirs).
+func MatchFiles(root, pattern string, limit int, skipDir func(rel string) bool, skipSensitive func(abs string) bool) ([]string, error) {
 	if strings.Contains(pattern, "**") {
-		return matchDoubleStar(root, pattern, limit)
+		return matchDoubleStar(root, pattern, limit, skipDir, skipSensitive)
 	}
 	matches, err := filepath.Glob(filepath.Join(root, pattern))
 	if err != nil {
@@ -46,7 +45,7 @@ func MatchFiles(root, pattern string, limit int) ([]string, error) {
 	return matches, nil
 }
 
-func matchDoubleStar(root, pattern string, limit int) ([]string, error) {
+func matchDoubleStar(root, pattern string, limit int, skipDir func(rel string) bool, skipSensitive func(abs string) bool) ([]string, error) {
 	suffix := strings.TrimPrefix(pattern, "**/")
 	if suffix == pattern {
 		suffix = strings.TrimPrefix(pattern, "**")
@@ -56,16 +55,21 @@ func matchDoubleStar(root, pattern string, limit int) ([]string, error) {
 		if err != nil {
 			return nil
 		}
-		if d.IsDir() {
-			if d.Name() == ".git" {
-				return filepath.SkipDir
-			}
-			if permission.IsSensitiveAbs(path) {
+		rel, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+		if skipSensitive != nil && skipSensitive(path) {
+			if d.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if permission.IsSensitiveAbs(path) {
+		if d.IsDir() {
+			if skipDir != nil && skipDir(rel) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		base := filepath.Base(path)

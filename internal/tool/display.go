@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -128,10 +129,10 @@ func DisplaySummary(name string, rawArgs []byte, workspace string, disp DisplayC
 		}
 	default:
 		if server, ok := disp.MCPServerForTool(name); ok {
-			return FormatMCPBareDisplay(server, name), ""
+			return FormatMCPCallDisplay(server, name, rawArgs), ""
 		}
 		if isLegacyMCPToolName(name) {
-			return FormatMCPDisplay(name), ""
+			return FormatMCPCallDisplayFromLegacy(name, rawArgs), ""
 		}
 	}
 	if len(rawArgs) > 0 {
@@ -142,7 +143,7 @@ func DisplaySummary(name string, rawArgs []byte, workspace string, disp DisplayC
 
 // ApplyPatchFileDisplays returns one display row per file in a patch.
 func ApplyPatchFileDisplays(patchText, workspace string) []ApplyPatchFileDisplay {
-	stats, err := patch.FileLineStats(patchText, workspace)
+	stats, err := patch.FileLineStats(patchText, nil)
 	if err != nil || len(stats) == 0 {
 		return nil
 	}
@@ -248,6 +249,29 @@ func FormatWebFetchDisplay(url string) string {
 
 func isLegacyMCPToolName(name string) bool {
 	return strings.HasPrefix(name, "mcp__")
+}
+
+// FormatMCPCallDisplay formats MCP server, tool name, and compact arguments for the TUI.
+func FormatMCPCallDisplay(server, toolName string, rawArgs []byte) string {
+	title := FormatMCPBareDisplay(server, toolName)
+	return appendMCPArgsTitle(title, rawArgs)
+}
+
+// FormatMCPCallDisplayFromLegacy formats legacy mcp__ tool names with JSON args.
+func FormatMCPCallDisplayFromLegacy(toolName string, rawArgs []byte) string {
+	title := FormatMCPDisplay(toolName)
+	return appendMCPArgsTitle(title, rawArgs)
+}
+
+func appendMCPArgsTitle(title string, rawArgs []byte) string {
+	if len(rawArgs) == 0 || bytes.Equal(bytes.TrimSpace(rawArgs), []byte("null")) {
+		return title
+	}
+	compact := formatArgsJSON(rawArgs)
+	if compact == "" || compact == "{}" {
+		return title
+	}
+	return title + " " + compact
 }
 
 // FormatMCPBareDisplay formats a registered MCP bare tool for the TUI.

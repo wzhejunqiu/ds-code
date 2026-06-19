@@ -12,14 +12,15 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
 // ListDirTool lists directory entries under the workspace.
 type ListDirTool struct {
-	Cfg       *config.Config
-	Perm      *permission.Engine
-	Gitignore *tool.GitignoreMatcher
-	Strict    bool
+	Cfg        *config.Config
+	Perm       *permission.Engine
+	SearchSkip *searchskip.Matcher
+	Strict     bool
 }
 
 func (t *ListDirTool) Name() string { return tool.NameListDir.String() }
@@ -54,6 +55,10 @@ func (t *ListDirTool) Execute(ctx context.Context, args json.RawMessage) (string
 	if in.Path == "" {
 		in.Path = "."
 	}
+	scopePath := filepath.ToSlash(strings.Trim(in.Path, "/"))
+	if scopePath == ".git" {
+		return ResultEmpty, nil
+	}
 	root, err := t.Perm.CheckReadablePath(in.Path)
 	if err != nil {
 		return "", err
@@ -76,11 +81,11 @@ func (t *ListDirTool) Execute(ctx context.Context, args json.RawMessage) (string
 			continue
 		}
 		rel := filepath.Join(in.Path, name)
-		if t.Gitignore != nil && t.Gitignore.Ignored(rel) {
+		if t.SearchSkip != nil && t.SearchSkip.IgnoredInScope(rel, in.Path) {
 			continue
 		}
 		abs := filepath.Join(root, name)
-		if permission.IsSensitiveAbs(abs) {
+		if t.Perm.SkipSensitiveAbs(abs) {
 			continue
 		}
 		if e.IsDir() {

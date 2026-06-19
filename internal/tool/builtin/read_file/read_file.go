@@ -9,9 +9,12 @@ import (
 	"strings"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/textfile"
+	"go.uber.org/zap"
 )
 
 // ReadFileTool reads file contents with optional line range.
@@ -85,6 +88,14 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	}
 	if st.Size() > int64(maxBytes) {
 		return "", fmt.Errorf(ErrFileTooLarge, st.Size(), maxBytes)
+	}
+
+	if !textfile.IsTextFile(abs) {
+		logging.L().Info("read_file skipped non-text file",
+			zap.String("path", in.Path),
+			zap.String("abs", abs),
+		)
+		return "", fmt.Errorf(ErrNotTextFile, in.Path)
 	}
 
 	start, end, rangeTruncated, err := resolveReadOffsetLimit(in.Offset, in.Limit, maxLines)
