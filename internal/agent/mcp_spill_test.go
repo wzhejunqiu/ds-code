@@ -179,6 +179,75 @@ func TestFinalizeToolResult_mcpSuccessBodyStartsWithError(t *testing.T) {
 	_ = got
 }
 
+func extractHintPath(hint string) (string, bool) {
+	const prefix = "保存至 "
+	i := strings.Index(hint, prefix)
+	if i < 0 {
+		return "", false
+	}
+	rest := hint[i+len(prefix):]
+	j := strings.Index(rest, "；")
+	if j < 0 {
+		return "", false
+	}
+	return rest[:j], true
+}
+
+func TestFinalizeToolResult_mcpHintPathReadable(t *testing.T) {
+	root := t.TempDir()
+	r, _ := mcpRunner(t, root, 100_000)
+	r.Perm.ProjectRoot = root
+	inner := strings.Repeat("m", 150_000)
+	tc := llm.ToolCall{ID: "call_abc", Name: "mcp_tool"}
+
+	got := r.finalizeToolResult("sess-1", tc, formattedBody(inner))
+	path, ok := extractHintPath(got)
+	if !ok {
+		t.Fatalf("hint path not found in %q", got[len(got)-200:])
+	}
+	abs, err := r.Perm.CheckReadablePath(path)
+	if err != nil {
+		t.Fatalf("hint path not readable: %v", err)
+	}
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), strings.Repeat("m", 100)) {
+		t.Fatal("spill file should contain full MCP body")
+	}
+}
+
+func TestFinalizeToolResult_mcpSpillBudgetZeroHintOnly(t *testing.T) {
+	root := t.TempDir()
+	testutil.IsolatedHome(t)
+	store := &resultstore.Store{ProjectRoot: root}
+	body := formattedBody(strings.Repeat("z", 10_000))
+	path, err := store.Save("sess-1", "call_1", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	displayPath := toolresultpkg.ShortenSpillPathForHint(path, 100_000)
+	hint := toolresultpkg.MCPSavedResultHint(displayPath)
+	max := len(hint)
+
+	r, _ := mcpRunner(t, root, max)
+	r.Perm.ProjectRoot = root
+	tc := llm.ToolCall{ID: "call_1", Name: "mcp_tool"}
+
+	got := r.finalizeToolResult("sess-1", tc, body)
+	if len(got) != max {
+		t.Fatalf("len %d want hint-only %d", len(got), max)
+	}
+	readPath, ok := extractHintPath(got)
+	if !ok {
+		t.Fatalf("expected hint-only body: %q", got)
+	}
+	if _, err := r.Perm.CheckReadablePath(readPath); err != nil {
+		t.Fatalf("hint path should be readable with budget=0: %v", err)
+	}
+}
+
 func TestFinalizeToolResult_spillSaveFailed(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)

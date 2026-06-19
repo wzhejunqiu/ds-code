@@ -28,7 +28,7 @@ type Engine struct {
 	Mode        string
 	Workspace   string
 	ProjectRoot string // cfg.ProjectRoot for spill paths (may differ from Workspace in worktrees)
-	// SpillSessionID is set per RunTurn for MCP spill read_file access.
+	// SpillSessionID is set per RunTurn for logging/trace; not used to bind spill read_file access.
 	SpillSessionID string
 	Interactive    bool
 	Prompter       Prompter

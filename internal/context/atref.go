@@ -206,3 +206,14 @@ func formatDirListing(ref string, paths []string, truncated bool, maxFiles int) 
 }
 
 var errStopAtRef = fmt.Errorf("stop walk")
+
+const atRefExpansionSep = "\n\n--- @"
+
+// StripAtRefExpansionBlocks removes ds-code @ expansion appendices from persisted
+// user messages for TUI display. LLM/API history in the DB is unchanged.
+func StripAtRefExpansionBlocks(s string) string {
+	if i := strings.Index(s, atRefExpansionSep); i >= 0 {
+		return strings.TrimSpace(s[:i])
+	}
+	return strings.TrimSpace(s)
+}

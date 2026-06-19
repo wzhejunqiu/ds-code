@@ -62,32 +62,53 @@ func (m *Model) handleWheelScrollTick() tea.Cmd {
 		absStep = -absStep
 	}
 
+	var scrollCmd tea.Cmd
 	if step > 0 {
-		vp.LineDown(absStep)
+		lines := vp.LineDown(absStep)
+		scrollCmd = m.viewportScrollCmdFromLines(vp, lines, true)
 	} else {
-		vp.LineUp(absStep)
+		lines := vp.LineUp(absStep)
+		scrollCmd = m.viewportScrollCmdFromLines(vp, lines, false)
 	}
 	m.scroll.ApplyDrain(target, absStep)
 
 	if m.scroll.HasPending() {
-		return wheelScrollTickAfter()
+		return tea.Batch(wheelScrollTickAfter(), scrollCmd)
+	}
+	var cmds []tea.Cmd
+	if scrollCmd != nil {
+		cmds = append(cmds, scrollCmd)
 	}
 	if m.scrollDeferSync {
 		m.scrollDeferSync = false
-		return m.scheduleSyncChatView()
+		cmds = append(cmds, m.scheduleSyncChatView())
 	}
-	return nil
+	if len(cmds) == 0 {
+		return nil
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m *Model) jumpViewport(vp *viewport.Model, delta int) tea.Cmd {
-	y := vp.YOffset + m.scroll.ChatPending + delta
+	pending := m.scroll.ChatPending
+	if vp == &m.toolVP {
+		pending = m.scroll.ToolPending
+	}
+	y := vp.YOffset + pending + delta
 	m.scroll.ClearAll()
 	vp.SetYOffset(y)
+	var cmds []tea.Cmd
+	if sync := m.viewportSyncCmdFor(vp); sync != nil {
+		cmds = append(cmds, sync)
+	}
 	if m.scrollDeferSync {
 		m.scrollDeferSync = false
-		return m.scheduleSyncChatView()
+		cmds = append(cmds, m.scheduleSyncChatView())
 	}
-	return nil
+	if len(cmds) == 0 {
+		return nil
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m *Model) viewportPageDelta(msg tea.KeyMsg, vp *viewport.Model) (int, bool) {

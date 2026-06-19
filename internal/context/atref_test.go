@@ -245,3 +245,95 @@ func TestAtExpander_dirListingOnly(t *testing.T) {
 		t.Fatalf("expected footer hint to use read_file: %q", out)
 	}
 }
+
+func TestStripAtRefExpansionBlocks_dirListing(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "docs")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "a.md"), []byte("# A\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	original := "请严格检查 @docs/ 的要求"
+	out, err := exp.Expand(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := context.StripAtRefExpansionBlocks(out); got != original {
+		t.Fatalf("got %q, want %q", got, original)
+	}
+}
+
+func TestStripAtRefExpansionBlocks_file(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
+	if err := os.WriteFile(path, []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	original := "explain @foo.go"
+	out, err := exp.Expand(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := context.StripAtRefExpansionBlocks(out); got != original {
+		t.Fatalf("got %q, want %q", got, original)
+	}
+}
+
+func TestStripAtRefExpansionBlocks_multipleRefs(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.go"), []byte("b\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	original := "compare @a.go and @b.go"
+	out, err := exp.Expand(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := context.StripAtRefExpansionBlocks(out); got != original {
+		t.Fatalf("got %q, want %q", got, original)
+	}
+}
+
+func TestStripAtRefExpansionBlocks_atRefOnly(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "docs")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "a.md"), []byte("# A\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	original := "@docs/"
+	out, err := exp.Expand(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := context.StripAtRefExpansionBlocks(out); got != original {
+		t.Fatalf("got %q, want %q", got, original)
+	}
+}

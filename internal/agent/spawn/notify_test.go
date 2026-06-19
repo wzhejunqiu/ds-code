@@ -177,3 +177,16 @@ func TestContentForDisplay_plainUser(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestContentForDisplay_stripsAtRefExpansion(t *testing.T) {
+	n := Notification{
+		AgentID:   "a1",
+		ToolUseID: "tc1",
+		Status:    ResultCompleted,
+		Summary:   `Agent "x" completed`,
+	}
+	expanded := n.Format() + "\n请检查 @docs/v0.1.2\n\n--- @docs/v0.1.2/（目录） ---\ndocs/v0.1.2/ACCEPTANCE.md\n\n如需文件内容，请使用 read_file 或 glob 按需读取。"
+	if got := ContentForDisplay(expanded); got != "请检查 @docs/v0.1.2" {
+		t.Fatalf("got %q, want %q", got, "请检查 @docs/v0.1.2")
+	}
+}

@@ -174,3 +174,19 @@ func TestBlocksFromMessages_stripsTaskNotificationPrefix(t *testing.T) {
 		t.Fatalf("content = %q", blocks[0].Content)
 	}
 }
+
+func TestBlocksFromMessages_stripsAtRefExpansion(t *testing.T) {
+	original := "请严格检查 @docs/v0.1.2 的要求"
+	expanded := original + "\n\n--- @docs/v0.1.2/（目录） ---\ndocs/v0.1.2/ACCEPTANCE.md\ndocs/v0.1.2/DESIGN.md\n\n如需文件内容，请使用 read_file 或 glob 按需读取。"
+	msgs := []session.Message{
+		{Role: role.User, Content: expanded},
+		{Role: role.Assistant, Content: "reply"},
+	}
+	blocks := BlocksFromMessages(msgs, false, "", tool.DisplayContext{})
+	if len(blocks) != 2 {
+		t.Fatalf("got %d blocks, want 2", len(blocks))
+	}
+	if blocks[0].Role != chat.RoleUser || blocks[0].Content != original {
+		t.Fatalf("user block = %+v, want content %q", blocks[0], original)
+	}
+}

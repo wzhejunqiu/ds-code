@@ -94,7 +94,7 @@ project_id = hex(SHA256([]byte(project_root)))
 | SQLite | `sessions.db` | 会话与 `messages` 历史 |
 | 审计日志 | `audit.jsonl` | 启用审计时追加 JSONL（tool 名 + 参数哈希） |
 | 检查点 | `checkpoints/` | Phase 7；patch / 文件哈希 |
-| MCP spill | `mcp-result/<session_id>/<stem>.txt` | MCP 成功调用全文（0600）；仅当前 session 经 `read_file` 绝对路径可读；不自动 GC |
+| MCP spill | `mcp-result/<session_id>/<stem>.txt` | MCP 成功调用全文（0600）；同 project 数据目录 regular file 经 `read_file` 绝对路径可读（含任意 session spill）；不自动 GC |
 
 启动时：`project_root` → `project_id` → `MkdirAll` 项目目录 → 按上表打开/创建文件。
 

@@ -46,7 +46,7 @@ func (m *Model) handleNoticeScrollTick() tea.Cmd {
 	}
 	m.headerCache.Invalidate()
 	m.syncChatView()
-	return m.scheduleNoticeScroll()
+	return m.withHPSync(m.scheduleNoticeScroll())
 }
 
 func (m *Model) nextThinkingTickCmd() tea.Cmd {

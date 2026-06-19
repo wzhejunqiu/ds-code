@@ -1,6 +1,8 @@
 package permission
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
@@ -96,6 +98,20 @@ func TestEngine_shell_gitDiffGoTest(t *testing.T) {
 		if err := e.Check("shell", map[string]any{"command": cmd}); err != nil {
 			t.Fatalf("command %q should be allowed: %v", cmd, err)
 		}
+	}
+}
+
+func TestEngine_shell_dotDotInside(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "pkg"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "pkg", "readme.txt"), []byte("ok"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine("auto", root, true)
+	if err := e.Check("shell", map[string]any{"command": "cat pkg/../pkg/readme.txt"}); err != nil {
+		t.Fatalf("legal .. segment should be allowed: %v", err)
 	}
 }
 

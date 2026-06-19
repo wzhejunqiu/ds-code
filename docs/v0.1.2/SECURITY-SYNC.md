@@ -1,8 +1,8 @@
 # v0.1.2 安全与配置同步草稿
 
 > 版本：v0.1.2  
-> 状态：设计中  
-> 用途：实现合入 / 发布前，将下文合入 [SECURITY.md](../v0.1.0/SECURITY.md) 与 [CONFIG.md](../v0.1.0/CONFIG.md)  
+> 状态：已实现  
+> 用途：已合入 [SECURITY.md](../v0.1.0/SECURITY.md) 与 [CONFIG.md](../v0.1.0/CONFIG.md)（保留作 v0.1.2 变更记录）  
 > 更新日期：2026-06-19
 
 ## 1. SECURITY.md 变更
@@ -21,7 +21,7 @@
 
 | 威胁 | 缓解 |
 |------|------|
-| 敏感文件泄露（`.env`、密钥） | 路径段级 denylist（`IsSensitiveAbs`）；Agent 枚举、`read_file`、`shell`、LSP 统一过滤；**例外**：用户提示词显式 `@file` / `@dir/` 仅 S2（§S3-S）；MCP spill 全文 0600 存 project 数据目录，仅当前 session 经 `read_file` 可读；compact 输入对 `@` 展开块不做专用脱敏（见 §1.1c、§1.3） |
+| 敏感文件泄露（`.env`、密钥） | 路径段级 denylist（`IsSensitiveAbs`）；Agent 枚举、`read_file`、`shell`、LSP 统一过滤；**例外**：用户提示词显式 `@file` / `@dir/` 仅 S2（§S3-S）；MCP spill 全文 0600 存 project 数据目录，同 project 数据目录 regular file 经 `read_file` 可读；compact 输入对 `@` 展开块不做专用脱敏（见 §1.1c、§1.3） |
 
 ### 1.1c 威胁模型表 — 新增 S3-S 行
 

@@ -20,7 +20,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		cmd := overlay.OnWindowSize(&m.State, msg.Width, msg.Height, m.syncAllViews)
-		return m, tea.Batch(cmd, m.scheduleNoticeScroll())
+		return m, m.withHPSync(tea.Batch(cmd, m.scheduleNoticeScroll()))
 	case tea.KeyMsg:
 		if cmd, handled := m.updateKey(msg); handled {
 			return m, cmd
@@ -50,35 +50,44 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tuimsg.SlashOutputMsg:
 		m.refreshStatus()
-		return m, session.UpdateSlashOutput(&m.State, msg, m.syncChatView)
+		session.UpdateSlashOutput(&m.State, msg, m.syncChatView)
+		return m, m.syncChatViewportHP()
 	case tuimsg.ResumeFilterTickMsg:
 		return m, session.UpdateResumeFilterTick(&m.State, msg)
 	case tuimsg.ResumeListMsg:
 		return m, session.UpdateResumeList(&m.State, msg, &m.resumePicker)
 	case tuimsg.SessionResumedMsg:
-		return m, session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatViewResetting, m.syncToolView, m.refreshStatus)
+		session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatViewResetting, m.syncToolView, m.refreshStatus)
+		return m, m.syncChatViewportHP()
 	case tuimsg.HistoryLoadedMsg:
-		return m, session.UpdateHistoryLoaded(&m.State, msg, m.syncChatViewResetting, m.refreshStatus)
+		session.UpdateHistoryLoaded(&m.State, msg, m.syncChatViewResetting, m.refreshStatus)
+		return m, m.syncChatViewportHP()
 	case tuimsg.ToolStartMsg:
-		return m, turn.UpdateToolStart(&m.State, msg, m.syncChatView, m.syncToolView)
+		turn.UpdateToolStart(&m.State, msg, m.syncChatView, m.syncToolView)
+		return m, m.syncChatViewportHP()
 	case tuimsg.AssistantSegmentEndMsg:
 		turn.UpdateAssistantSegmentEnd(&m.State)
 		return m, m.scheduleSyncChatView()
 	case tuimsg.ToolEndMsg:
-		return m, turn.UpdateToolEnd(&m.State, msg, m.syncChatView, m.syncToolView)
+		turn.UpdateToolEnd(&m.State, msg, m.syncChatView, m.syncToolView)
+		return m, m.syncChatViewportHP()
 	case tuimsg.SubagentStartMsg:
-		return m, subagentui.UpdateStart(&m.State, msg, m.syncChatView)
+		subagentui.UpdateStart(&m.State, msg, m.syncChatView)
+		return m, m.syncChatViewportHP()
 	case tuimsg.SubagentEndMsg:
 		cmd := subagentui.UpdateEnd(&m.State, msg, m.syncChatView)
 		m.refreshStatus()
 		m.syncChatView()
-		return m, cmd
+		return m, m.withHPSync(cmd)
 	case tuimsg.SubagentToolStartMsg:
-		return m, subagentui.UpdateToolStart(&m.State, msg, m.syncChatView)
+		subagentui.UpdateToolStart(&m.State, msg, m.syncChatView)
+		return m, m.syncChatViewportHP()
 	case tuimsg.SubagentToolEndMsg:
-		return m, subagentui.UpdateToolEnd(&m.State, msg, m.syncChatView)
+		subagentui.UpdateToolEnd(&m.State, msg, m.syncChatView)
+		return m, m.syncChatViewportHP()
 	case tuimsg.TurnStartedMsg:
-		return m, turn.UpdateTurnStarted(&m.State, msg, m.syncChatView)
+		turn.UpdateTurnStarted(&m.State, msg, m.syncChatView)
+		return m, m.syncChatViewportHP()
 	case tuimsg.ContextOverlayMsg:
 		return m, overlay.UpdateContext(&m.State, msg)
 	case tuimsg.HelpOverlayMsg:
@@ -87,20 +96,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tcase.UpdatePicker(&m.State, msg, &m.tcasePicker)
 	case tuimsg.TurnDoneMsg:
 		m.mdSegmentCache.Reset()
-		return m, turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt)
+		turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt)
+		return m, m.syncChatViewportHP()
 	case tuimsg.UsageUpdateMsg:
 		m.refreshStatus()
 		return m, m.scheduleSyncChatView()
 	case chatSyncFlushMsg:
 		m.chatSyncScheduled = false
 		m.syncChatView()
-		return m, nil
+		return m, m.syncChatViewportHP()
 	case tuimsg.ExitConfirmTimeoutMsg:
 		return m, overlay.UpdateExitConfirmTimeout(&m.State)
 	case tuimsg.PromptRequestMsg:
 		return m, overlay.UpdatePromptRequest(&m.State, msg, m.listenPrompt)
 	case tuimsg.OverlayCloseMsg:
-		return m, overlay.UpdateClose(&m.State, m.syncChatView, m.refreshStatus)
+		overlay.UpdateClose(&m.State, m.syncChatView, m.refreshStatus)
+		return m, m.syncChatViewportHP()
 	case copyResultMsg:
 		return m.handleCopyResult(msg)
 	case copyToastClearMsg:
@@ -118,9 +129,9 @@ func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, handled := subagentui.HandleNavKey(&m.State, msg, &m.subagentPicker, m.syncChatViewResetting); handled {
-		return cmd, true
+		return m.withHPSync(cmd), true
 	}
-	return overlay.HandleKey(&m.State, msg, overlay.KeyDeps{
+	cmd, handled := overlay.HandleKey(&m.State, msg, overlay.KeyDeps{
 		HandleResumeEnter: func() (tea.Cmd, bool) {
 			if m.ResumePending {
 				return nil, true
@@ -165,6 +176,10 @@ func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		SyncChat:    m.syncChatView,
 		ExitTimeout: exitConfirmTimeoutTick,
 	})
+	if handled {
+		return m.withHPSync(cmd), true
+	}
+	return nil, false
 }
 
 func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {

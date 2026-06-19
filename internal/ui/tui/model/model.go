@@ -120,6 +120,7 @@ func (m *Model) syncAllViews() {
 }
 
 func (m *Model) View() string {
+	m.applyViewportHP()
 	innerW := m.Width - 2
 	if innerW < 10 {
 		innerW = 10

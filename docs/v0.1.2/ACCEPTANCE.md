@@ -1,7 +1,7 @@
 # v0.1.2 验收标准
 
 > 版本：v0.1.2  
-> 状态：设计中  
+> 状态：已实现  
 > 更新日期：2026-06-20  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md) · 设计：[DESIGN.md](DESIGN.md)
 
@@ -10,7 +10,7 @@
 - [ ] 版本号标记为 v0.1.2（release/tag 由发布流程完成）
 - [ ] `make test` 通过
 - [ ] `make lint` / `make vet` 无新增失败
-- [ ] [SECURITY-SYNC.md](SECURITY-SYNC.md) 草稿已合入 [SECURITY.md](../v0.1.0/SECURITY.md) 与 [CONFIG.md](../v0.1.0/CONFIG.md)（**发布阻塞**；含 `tui.copy_on_select`、`tools.search.skip_dirs`、`@` 预算交叉引用 §2.5、威胁模型 §S3-S / §1.1d 行）
+- [x] [SECURITY-SYNC.md](SECURITY-SYNC.md) 草稿已合入 [SECURITY.md](../v0.1.0/SECURITY.md) 与 [CONFIG.md](../v0.1.0/CONFIG.md)（**发布阻塞**；含 `tui.copy_on_select`、`tools.search.skip_dirs`、`@` 预算交叉引用 §2.5、威胁模型 §S3-S / §1.1d 行）
 - [ ] [CHANGELOG.md](../../CHANGELOG.md) v0.1.2 条目
 - [ ] [../v0.1.0/DESIGN.md](../v0.1.0/DESIGN.md) 权限节已补充 Engine 路径 API 一览（DESIGN §8）
 - [ ] `internal/agent/README.md`、`internal/tool/builtin/README.md` 路径/MCP 相关描述已同步
@@ -139,10 +139,10 @@
 | `read_file` path=spill 绝对路径 | 成功，内容为完整 MCP 持久化正文 |
 | `read_file` 同 session 下另一 spill 绝对路径 | 成功 |
 | `read_file` spill **相对路径** | **拒绝** |
-| `read_file` project 数据目录内非 `.txt` 文件（如 `sessions.db`） | **拒绝** |
-| `read_file` **其他 session** 的 spill（同 project） | **拒绝**（FR-4.12） |
+| `read_file` project 数据目录内 regular file（如 `sessions.db`、`agents/*.output`） | **成功** |
+| `read_file` **其他 session** 的 spill（同 project） | **成功**（FR-4.15） |
 | `read_file` 其他 project 的 `mcp-result/…` | 拒绝 |
-| worktree 子代理 spill | 落在主 `cfg.ProjectRoot` 的 `project_id` 下；**子代理**在自身回合内 `read_file` **成功**；**父** session `read_file` **拒绝**（与 AC-4.7 一致） |
+| worktree 子代理 spill | 落在主 `cfg.ProjectRoot` 的 `project_id` 下；**子代理**在自身回合内 `read_file` **成功**；**父** session `read_file` **成功**（同 project 数据目录，FR-4.15） |
 
 ### AC-4.5 spill 写入失败（FR-4.13）
 
@@ -220,7 +220,7 @@
 | compact 后 API 上下文 | **无**旧 spill hint |
 | `grep`/`glob`/`list_dir` 枚举 `mcp-result/` | **不可**（工作区外 + 无 spill 例外） |
 | 磁盘 | spill 文件**仍在** |
-| 用户已知绝对路径 `read_file` | **仍成功**（同 session） |
+| 用户已知绝对路径 `read_file` | **仍成功**（同 project 任意 session） |
 | 人工定位 `session_id` | 可查 `sessions.db` `sessions` 表或 TUI `/sessions`；目录 `mcp-result/<session_id>/` 列出 spill 文件 |
 
 ### AC-4.15 子代理 `agents/` 摘要 spill（FR-4.7）
@@ -647,7 +647,7 @@ bin/ds-code --permission-mode auto
 # 9. read_file spill 绝对路径 → 返回完整 MCP 正文（非 session 截断版）
 # 9b. read_file spill 相对路径 → 拒绝
 # 10. 同 session 另一 spill → read_file 仍可读
-# 11. 其他 session spill → read_file 拒绝
+# 11. 其他 session spill → read_file 成功（同 project，FR-4.15）
 # 12. shell cat spill 绝对路径 → permission 拒绝；read_file 同路径成功
 # 12b. tool_call_id 含 `/` → spill 为消毒 stem（如 call_foo.txt）
 

@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 )
 
 func TestWheelScroll_drainsMultipleLinesPerTick(t *testing.T) {
@@ -67,12 +68,49 @@ func TestScroll_jumpBy_clearsPending(t *testing.T) {
 	m.scroll.ChatPending = 12
 	m.scroll.BeginDrain()
 
-	m.jumpViewport(&m.chatVP, m.chatVP.Height/2)
+	cmd := m.jumpViewport(&m.chatVP, m.chatVP.Height/2)
 
 	if m.scroll.HasPending() {
 		t.Fatal("page jump should clear pending")
 	}
 	if m.chatVP.YOffset <= 0 {
 		t.Fatalf("yOffset = %d, want page down from 0", m.chatVP.YOffset)
+	}
+	if cmd == nil {
+		t.Fatal("expected viewport sync command after page jump with HP enabled")
+	}
+}
+
+func TestWheelScroll_drainReturnsHPCmd(t *testing.T) {
+	m := New(testDeps(true))
+	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+	m.chatVP.Height = 10
+	m.applyViewportHP()
+	if !m.chatVP.HighPerformanceRendering {
+		t.Fatal("HP should be enabled without selection")
+	}
+
+	m.queueWheelScroll(scroll.TargetChat, 5)
+	cmd := m.handleWheelScrollTick()
+	if cmd == nil {
+		t.Fatal("expected scroll drain command with HP path")
+	}
+}
+
+func TestViewportHP_disabledDuringSelection(t *testing.T) {
+	m := New(testDeps(true))
+	m.applyViewportHP()
+	if !m.chatVP.HighPerformanceRendering {
+		t.Fatal("HP should start enabled")
+	}
+
+	m.selDragging = true
+	m.selRange = selection.Range{
+		Start: selection.Point{Line: 0, Col: 0},
+		End:   selection.Point{Line: 0, Col: 1},
+	}
+	m.applyViewportHP()
+	if m.chatVP.HighPerformanceRendering {
+		t.Fatal("HP should be disabled while selection is active")
 	}
 }

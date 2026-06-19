@@ -1,7 +1,7 @@
 # ds-code v0.1.2 版本文档
 
 > 版本：v0.1.2  
-> 状态：设计中  
+> 状态：已实现  
 > 基线版本：v0.1.1  
 > 更新日期：2026-06-20
 
@@ -10,7 +10,7 @@
 v0.1.2 聚焦八项增量：
 
 1. **路径访问权限收敛**（需求 1）：统一经 `permission.Engine` 判定；`.` / `..` 先规范化解析再鉴权。
-2. **MCP 结果落盘 + 上下文截断**（需求 2）：MCP 回注 LLM 仍受 `tool_result_max_chars` 限制；完整结果写入 `~/.ds-code/projects/<project_id>/mcp-result/<session_id>/<stem>.txt`（`<stem>` = `spillCallFilename(tool_call_id)`，可能与 LLM 原始 id 不同）；超长时 tool 消息提示 spill **绝对路径**；**模型可用 `read_file` 读取当前会话** spill 文件以获取完整 MCP 输出（**不可**跨 session 读取；须绝对路径，不支持 `~`）。
+2. **MCP 结果落盘 + 上下文截断**（需求 2）：MCP 回注 LLM 仍受 `tool_result_max_chars` 限制；完整结果写入 `~/.ds-code/projects/<project_id>/mcp-result/<session_id>/<stem>.txt`（`<stem>` = `spillCallFilename(tool_call_id)`，可能与 LLM 原始 id 不同）；超长时 tool 消息提示 spill **绝对路径**；**模型可用 `read_file` 读取同 project 任意 session 的 spill 绝对路径**以获取完整 MCP 输出（须绝对路径，不支持 `~`）。
 3. **MCP 调用参数可见**（需求 3）：交互 TUI 与 debug 日志（`-vv`）输出 MCP 调用 JSON 参数；非交互 `-p` 模式无 TUI，仅日志可观测。
 4. **搜索路径不再遵循 `.gitignore`**（需求 4）：Agent 枚举工具**不读** `.gitignore`、**不设**框架默认 skip；**始终**跳过 `.git`（含显式 `path=.git`，与 `skip_dirs` 不同）；用户可通过 `tools.search.skip_dirs` 追加目录；其余噪声由**模型**收窄 `path`/`pattern`。用户显式 **`@file` / `@dir/`** 不受 gitignore / S3 / `skip_dirs` 约束（FR-6.9–6.10）；Agent 工具与 shell 仍受 S3。
 5. **TUI 应用内选中与剪贴板**（需求 5）：交互 TUI 在备用屏幕模式下支持鼠标拖拽选区，松手写入系统剪贴板（纯文本、无 ANSI）；对齐 Claude Code fullscreen 复制体验（FR-7）。
@@ -41,7 +41,7 @@ v0.1.1 及更早版本中，路径安全依赖多层重复逻辑：
 9. **v0.1.1 `read_file` 可读二进制**：`grep`/`glob` 经 `textfile.IsSearchable` 跳过二进制，但 `read_file` 无同等校验，模型误读 `.png`/`.wasm` 等会浪费 token 或得到乱码行。
 10. **v0.1.1 TUI 滚轮不流畅**：鼠标选区接入后滚轮事件被拦截；若一次跳多行或缺少分帧 drain，长 transcript 滚动卡顿、不连贯（对标 Claude Code 多页平滑滚动体验缺失）。
 
-本版本 **S2 工作区边界不变**；**S3 在 Agent 工具 / shell / `read_file` 路径上不变**，但新增两处显式例外：（1）用户提示词中的 **`@file` / `@dir/`** 仅校验 S2，可读取 `.env` 等敏感路径（FR-6.10）；（2）**MCP spill** 经 `read_file` 只读放行，且仅限**当前 session**（FR-4.12）。需求 1 修正路径实现；需求 2/3 改善 MCP 可观测性与结果完整性；需求 4 调整 Agent 枚举可见性策略；需求 5 补齐 TUI 复制体验；需求 6 对齐 `read_file` 与 Agent 枚举的文本判定；需求 7 补齐 TUI 多页平滑滚动。
+本版本 **S2 工作区边界不变**；**S3 在 Agent 工具 / shell / `read_file` 路径上不变**，但新增两处显式例外：（1）用户提示词中的 **`@file` / `@dir/`** 仅校验 S2，可读取 `.env` 等敏感路径（FR-6.10）；（2）**MCP spill** 与同 project 数据目录 regular file（含任意 session spill、`agents/*.output`）经 `read_file` 只读放行（FR-4.12、FR-4.15）。需求 1 修正路径实现；需求 2/3 改善 MCP 可观测性与结果完整性；需求 4 调整 Agent 枚举可见性策略；需求 5 补齐 TUI 复制体验；需求 6 对齐 `read_file` 与 Agent 枚举的文本判定；需求 7 补齐 TUI 多页平滑滚动。
 
 ## 变更摘要
 

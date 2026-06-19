@@ -118,6 +118,7 @@ func (m *Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Button == tea.MouseButtonLeft {
 			m.selDragging = true
 			m.selRange = selection.Range{Start: pt, End: pt}
+			m.applyViewportHP()
 		}
 	case tea.MouseActionMotion:
 		if m.selDragging && msg.Button == tea.MouseButtonLeft {

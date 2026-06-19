@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/wzhejunqiu/ds-code/internal/agent"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
@@ -131,7 +132,7 @@ func ContentForDisplay(userContent string) string {
 	}
 	s = strings.TrimLeft(s, " \t\r\n")
 	s = stripLeadingSpillHint(s)
-	return strings.TrimSpace(s)
+	return ctxpkg.StripAtRefExpansionBlocks(s)
 }
 
 func stripLeadingSpillHint(s string) string {
