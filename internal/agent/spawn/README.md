@@ -276,9 +276,9 @@ Spill 阈值：`len > 1 MiB` 或 utf8 runes > `summary_max_chars`（默认 16000
 | 模式 | 父工具 / 通知内容 |
 |------|------------------|
 | Inline | `[description]\n{summary}` 或通知 `<result>` |
-| Spill | `{"status":"completed","output_file":".../agents/{session}/{tool_call_id}.output"}` |
+| Spill | `{"status":"completed","output_file":"..."}` + `SavedResultHint`（[`SavedResultHint`](../../toolresult/project_data_hint.go)） |
 
-Spill 文件含 `status:`、`error:`（如有）、完整 summary 正文。
+Spill 文件含 `status:`、`error:`（如有）、summary 正文。异步通知 spill 时在 `</task-notification>` 后追加同格式 hint。
 
 ## 通知（[`notify.go`](./notify.go)）
 

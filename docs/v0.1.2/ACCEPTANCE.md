@@ -157,12 +157,12 @@
 |------|------|
 | CRG 返回 `Results truncated: showing 500 of 875` | spill 与 session 均含该 JSON；875 条完整列表不在 spill 内 |
 
-### AC-4.7 子代理 spill 隔离（FR-4.15）
+### AC-4.7 子代理 spill 可读（FR-4.15）
 
 | 步骤 | 预期 |
 |------|------|
 | 子代理 `task` 内 MCP 产生 spill | 文件在 `mcp-result/<子代理 session_id>/` |
-| 父 Agent `read_file` 该 spill 绝对路径 | **拒绝** |
+| 父 Agent `read_file` 该 spill 绝对路径 | **成功**（同 project 数据目录） |
 | 子代理同回合 `read_file` 该 spill | 成功 |
 
 ### AC-4.8 shell 不可读 spill（FR-4.17）
@@ -170,7 +170,7 @@
 | 步骤 | 预期 |
 |------|------|
 | `shell command="cat <spill 绝对路径>"` | permission 拒绝 |
-| 同路径 `read_file` | 成功（本 session） |
+| 同路径 `read_file` | 成功（project 数据目录） |
 
 ### AC-4.9 MCP 失败不写 spill（FR-4.16）
 
@@ -223,14 +223,14 @@
 | 用户已知绝对路径 `read_file` | **仍成功**（同 session） |
 | 人工定位 `session_id` | 可查 `sessions.db` `sessions` 表或 TUI `/sessions`；目录 `mcp-result/<session_id>/` 列出 spill 文件 |
 
-### AC-4.15 `agents/` 摘要 spill 不扩展（FR-4.7）
+### AC-4.15 子代理 `agents/` 摘要 spill（FR-4.7）
 
-**前置**：子代理 `task` 摘要超长，产生 `…/agents/<parentSession>/<toolCallID>.output`；父 Agent `task` 返回含 `output_file` 绝对路径。
+**前置**：子代理 `task` 摘要超长，产生 `…/agents/<session>/<toolCallID>.output`；父 Agent `task` 返回含 `output_file` 绝对路径 + `SavedResultHint`。
 
 | 步骤 | 预期 |
 |------|------|
-| 父 Agent `read_file path=<output_file>` | **拒绝**（不在 `mcp-result/` 放行范围） |
-| 同路径 `read_file` 读本 session `mcp-result/` spill | **成功**（对照） |
+| 父 Agent `read_file path=<output_file>` | **成功** |
+| 父 Agent `read_file` 子 session `mcp-result/` spill | **成功**（同 project 数据目录） |
 | `shell cat <output_file>` | permission 拒绝 |
 
 ### AC-4.16 spill 与权限模式（NFR-22）
@@ -508,12 +508,14 @@
 - [ ] `TestFinalizeToolResult_mcpSpillHintBudget`（新：正文+hint ≤ max）
 - [ ] `TestFinalizeToolResult_spillSaveFailed`（新：无 hint + Warn）
 - [ ] `TestCheckReadablePath_mcpSpillFile`（新：本 session spill 可读）
-- [ ] `TestCheckReadablePath_mcpSpillOtherSession`（新：同 project 其他 session 拒绝）
-- [ ] `TestCheckReadablePath_mcpSpillOtherProject`（新：其他 project_id 拒绝）
+- [ ] `TestCheckReadablePath_mcpSpillOtherSession`（新：同 project 其他 session **可读**）
+- [ ] `TestCheckReadablePath_otherProjectDenied`（新：其他 project_id 拒绝）
+- [ ] `TestCheckReadablePath_agentsOutputAllowed`（新：FR-4.7，`agents/*.output` 可读）
+- [ ] `TestCheckReadablePath_sessionsDB`（新：project 数据目录 `.db` 可读）
 - [ ] `TestFinalizeToolResult_mcpErrorNoSpill`（新：FR-4.16）
 - [ ] `TestFinalizeToolResult_mcpSuccessBodyStartsWithError`（新：`isToolErrorBody` 不误判成功响应）
 - [ ] `TestEngine_shell_deniesSpillAbsPath`（新：FR-4.17）
-- [ ] `TestCheckReadablePath_subagentSpillDeniedFromParent`（新：FR-4.15）
+- [ ] `TestCheckReadablePath_mcpSpillOtherSessionReadable`（新：FR-4.15 父可读子 spill）
 - [ ] `TestSpawnExecute_worktreeSetsProjectRoot`（新：NFR-14，inherit worktree）
 - [ ] `TestSpawnExecute_readonlyWorktreeSetsProjectRoot`（新：readonly worktree `ProjectRoot`）
 - [ ] `TestSpawnExecute_childInheritsMCPResults`（新：FR-4.8）
@@ -523,9 +525,9 @@
 - [ ] `TestMCPResultStore_overwriteSameCallID`（新：FR-4.19）
 - [ ] `TestSpillCallFilename_sanitizesSlashes`（新：FR-4.4，`call/foo` → `call_foo.txt`）
 - [ ] `TestCheckReadablePath_mcpSpillRelativePathDenied`（新：相对路径拒绝）
-- [ ] `TestCheckReadablePath_mcpSpillNonTxtDenied`（新：`.txt` 后缀）
+- [ ] `TestCheckReadablePath_projectDataDirDenied`（新：目录路径拒绝）
 - [ ] `TestCheckReadablePath_mcpSpillBudgetZeroHintOnly`（新：FR-4.14 budget=0）
-- [ ] `TestCheckReadablePath_agentsOutputDenied`（新：FR-4.7，`agents/*.output` 仍拒）
+- [ ] `TestCheckReadablePath_agentsOutputAllowed`（新：FR-4.7）
 - [ ] `TestCheckReadablePath_mcpSpillReadonlyMode`（新：NFR-22，readonly 无 ask）
 - [ ] `TestCompactAPIContext_spillHintNotInSummary`（新：AC-4.14）
 - [ ] `TestRunEphemeral_noMCPSpill`（新：NFR-20 / FR-3.11）
@@ -617,14 +619,14 @@ bin/ds-code --permission-mode auto
 # 25. @.env → 应展开；read_file .env 仍拒
 
 # 子代理 spill（FR-4.15）：
-# 26. task 子代理 MCP spill → 父 read_file 拒绝；子代理回合内可读
+# 26. task 子代理 MCP spill → 父 read_file 成功；子代理回合内可读
 
 # compact + spill（AC-4.14）：
 # 26b. compact 后旧 spill hint 不在上下文；grep/list_dir 无法发现 mcp-result/
 # 26c. session_id 可查 sessions.db 或 TUI /sessions
 
 # agents/ 摘要 spill（AC-4.15）：
-# 26d. 子代理超长 summary → task 返回 output_file；read_file 该路径仍拒绝
+# 26d. 子代理超长 summary → task 返回 output_file + SavedResultHint；read_file 该路径成功
 
 # 搜索 skip_dirs 显式 path（AC-6.2）：
 # 26e. skip_dirs 含 node_modules → glob path=node_modules 仍允许
@@ -657,7 +659,7 @@ bin/ds-code --permission-mode auto
 - [ ] `glob **/*` + `skip_dirs` Walk 阶段 SkipDir（FR-6.14）；`globmatch` 无 `IsSensitiveAbs`（FR-1.8）
 - [ ] compact 后旧轮 spill hint **不**保留在 API 上下文；模型**无法** `list_dir`/`grep` 发现 `mcp-result/`（磁盘仍在；见 README 已知限制、AC-4.14）
 - [ ] `RunEphemeral`（`/btw`）不写 spill（FR-3.11、NFR-20）
-- [ ] `agents/*.output` 子代理摘要 spill：`read_file` **不**扩展放行（FR-4.7）；与 `mcp-result/` 并存
+- [ ] `agents/*.output` 子代理摘要 spill：`read_file` **放行**（FR-4.7；`resolveProjectDataRead`）
 - [ ] `audit.jsonl` 不记录 MCP `args_preview`（S10 不变）
 - [ ] 每次成功 MCP 均写 spill（含未超长，FR-4.18）；同非空 `tool_call_id` 覆盖（FR-4.19）
 - [ ] TUI transcript 刷回 scrollback / classic 无备用屏幕渲染器**未**实现（FR-3.7–3.8）

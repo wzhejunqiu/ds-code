@@ -285,9 +285,9 @@ func (e *Engine) checkPath(rel string) error {
 }
 
 // CheckReadablePath resolves rel under the workspace and denies sensitive paths (S3).
-// MCP spill files for the current session are allowed (see resolveMCPSpillRead).
+// Regular files under the current project data directory are allowed (see resolveProjectDataRead).
 func (e *Engine) CheckReadablePath(rel string) (string, error) {
-	if abs, ok := e.resolveMCPSpillRead(rel); ok {
+	if abs, ok := e.resolveProjectDataRead(rel); ok {
 		return abs, nil
 	}
 	return e.ResolveAccessPath(rel, PathRead)

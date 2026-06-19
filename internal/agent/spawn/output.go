@@ -10,6 +10,7 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/toolresult"
 	"go.uber.org/zap"
 )
 
@@ -74,9 +75,9 @@ func formatSpillPointer(status ResultStatus, outputPath string) string {
 		"output_file": outputPath,
 	})
 	if err != nil {
-		return fmt.Sprintf(`{"status":%q,"output_file":%q}`, status, outputPath)
+		return fmt.Sprintf(`{"status":%q,"output_file":%q}`, status, outputPath) + toolresult.SavedResultHint(outputPath)
 	}
-	return string(b)
+	return string(b) + toolresult.SavedResultHint(outputPath)
 }
 
 // formatSyncToolReturn builds the sync agent tool return string.

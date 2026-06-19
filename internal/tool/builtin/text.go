@@ -4,7 +4,7 @@ package builtin
 
 // Schema field descriptions (shared).
 const (
-	SchemaPathFileRelOrAbs = "文件路径（相对项目根目录，或在项目根下的绝对路径）"
+	SchemaPathFileRelOrAbs = "文件路径（相对或绝对）"
 	SchemaPathRelRoot      = "相对项目根目录的路径"
 	SchemaPathRelDefault   = "相对项目根目录的目录或文件（默认 .）"
 	SchemaPathDirDefault   = "目录路径（默认 .）"

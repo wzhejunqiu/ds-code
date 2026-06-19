@@ -3,7 +3,6 @@ package permission_test
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/datadir"
@@ -12,11 +11,10 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/testutil"
 )
 
-func spillEngine(t *testing.T, projectRoot, sessionID string) *permission.Engine {
+func projectEngine(t *testing.T, projectRoot string) *permission.Engine {
 	t.Helper()
 	e := permission.NewEngine("auto", projectRoot, false)
 	e.ProjectRoot = projectRoot
-	e.SpillSessionID = sessionID
 	return e
 }
 
@@ -34,7 +32,7 @@ func TestCheckReadablePath_mcpSpillFile(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)
 	path := writeSpill(t, root, "sess-a", "call_abc", "full mcp body")
-	e := spillEngine(t, root, "sess-a")
+	e := projectEngine(t, root)
 
 	got, err := e.CheckReadablePath(path)
 	if err != nil {
@@ -49,10 +47,14 @@ func TestCheckReadablePath_mcpSpillOtherSession(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)
 	path := writeSpill(t, root, "sess-child", "call_abc", "child spill")
-	e := spillEngine(t, root, "sess-parent")
+	e := projectEngine(t, root)
 
-	if _, err := e.CheckReadablePath(path); err == nil {
-		t.Fatal("parent session should not read child spill")
+	got, err := e.CheckReadablePath(path)
+	if err != nil {
+		t.Fatalf("same project other session spill should be readable: %v", err)
+	}
+	if got != path {
+		t.Fatalf("got %q want %q", got, path)
 	}
 }
 
@@ -60,17 +62,17 @@ func TestCheckReadablePath_mcpSpillRelativePathDenied(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)
 	writeSpill(t, root, "sess-a", "call_abc", "body")
-	e := spillEngine(t, root, "sess-a")
+	e := projectEngine(t, root)
 
 	if _, err := e.CheckReadablePath("mcp-result/sess-a/call_abc.txt"); err == nil {
 		t.Fatal("relative spill path should be denied")
 	}
 }
 
-func TestCheckReadablePath_mcpSpillNonTxtDenied(t *testing.T) {
+func TestCheckReadablePath_sessionsDB(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)
-	e := spillEngine(t, root, "sess-a")
+	e := projectEngine(t, root)
 
 	dataDir, err := datadir.ProjectDataDir(root)
 	if err != nil {
@@ -84,15 +86,19 @@ func TestCheckReadablePath_mcpSpillNonTxtDenied(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := e.CheckReadablePath(dbPath); err == nil {
-		t.Fatal("sessions.db should not be readable via spill exception")
+	got, err := e.CheckReadablePath(dbPath)
+	if err != nil {
+		t.Fatalf("sessions.db should be readable: %v", err)
+	}
+	if got != dbPath {
+		t.Fatalf("got %q want %q", got, dbPath)
 	}
 }
 
-func TestCheckReadablePath_agentsOutputDenied(t *testing.T) {
+func TestCheckReadablePath_agentsOutputAllowed(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)
-	e := spillEngine(t, root, "sess-a")
+	e := projectEngine(t, root)
 
 	dataDir, err := datadir.ProjectDataDir(root)
 	if err != nil {
@@ -106,38 +112,70 @@ func TestCheckReadablePath_agentsOutputDenied(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := e.CheckReadablePath(outPath); err == nil {
-		t.Fatal("agents/*.output should not be readable via mcp-result exception")
+	got, err := e.CheckReadablePath(outPath)
+	if err != nil {
+		t.Fatalf("agents/*.output should be readable: %v", err)
+	}
+	if got != outPath {
+		t.Fatalf("got %q want %q", got, outPath)
 	}
 }
 
-func TestCheckReadablePath_mcpSpillReadonlyMode(t *testing.T) {
+func TestCheckReadablePath_projectDataReadonlyMode(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)
 	path := writeSpill(t, root, "sess-a", "call_abc", "readonly ok")
 	e := permission.NewEngine("readonly", root, false)
 	e.ProjectRoot = root
-	e.SpillSessionID = "sess-a"
 
 	got, err := e.CheckReadablePath(path)
 	if err != nil {
-		t.Fatalf("readonly should read spill without ask: %v", err)
+		t.Fatalf("readonly should read project data without ask: %v", err)
 	}
 	if got != path {
 		t.Fatalf("got %q", got)
 	}
 }
 
-func TestCheckReadablePath_subagentSpillDeniedFromParent(t *testing.T) {
+func TestCheckReadablePath_otherProjectDenied(t *testing.T) {
+	rootA := t.TempDir()
+	rootB := t.TempDir()
+	testutil.IsolatedHome(t)
+	path := writeSpill(t, rootA, "sess-a", "call_abc", "project a only")
+
+	e := projectEngine(t, rootB)
+	if _, err := e.CheckReadablePath(path); err == nil {
+		t.Fatal("other project data dir should be denied")
+	}
+}
+
+func TestCheckReadablePath_projectDataDirDenied(t *testing.T) {
 	root := t.TempDir()
 	testutil.IsolatedHome(t)
-	childPath := writeSpill(t, root, "child-session", "call_1", "child only")
+	e := projectEngine(t, root)
 
-	parent := spillEngine(t, root, "parent-session")
-	if _, err := parent.CheckReadablePath(childPath); err == nil {
-		t.Fatal("parent SpillSessionID must not read child spill")
+	dataDir, err := datadir.ProjectDataDir(root)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(childPath, "child-session") {
-		t.Fatalf("unexpected spill path %q", childPath)
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.CheckReadablePath(dataDir); err == nil {
+		t.Fatal("directory path should be denied")
+	}
+}
+
+func TestIsProjectDataPath(t *testing.T) {
+	root := t.TempDir()
+	testutil.IsolatedHome(t)
+	e := projectEngine(t, root)
+	path := writeSpill(t, root, "sess", "call", "body")
+
+	if !e.IsProjectDataPath(path) {
+		t.Fatal("spill path should be project data path")
+	}
+	if e.IsProjectDataPath(filepath.Join(root, "workspace.txt")) {
+		t.Fatal("workspace file should not be project data path")
 	}
 }

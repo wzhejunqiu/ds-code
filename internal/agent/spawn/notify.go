@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/toolresult"
 )
 
 // ResultStatus is the outward-facing completion label for tool returns and notifications.
@@ -95,7 +96,11 @@ func (n Notification) Format() string {
 		b.WriteString("  </worktree>\n")
 	}
 	b.WriteString("</task-notification>")
-	return b.String()
+	out := b.String()
+	if n.OutputFile != "" {
+		out += toolresult.SavedResultHint(n.OutputFile)
+	}
+	return out
 }
 
 // FormatXML is an alias for Format (legacy name).

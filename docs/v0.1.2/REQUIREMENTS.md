@@ -175,15 +175,15 @@
 | FR-4.4 | spill 文件名 stem 由 `spillCallFilename(rawID)` 生成：非空 id 做文件名安全化（替换 `/`、`\`、`..`、NUL 等）；**空 id 每次 `Save` 独立生成 ULID**（`github.com/oklog/ulid/v2`），避免多 call 抢占同一文件 | P0 |
 | FR-4.5 | 仅当 `len(full) > tool_result_max_chars` 时，截断 suffix 追加 spill **绝对路径** 与 `read_file` 提示；未超长时 session 与文件内容一致，**不**追加多余提示 | P0 |
 | FR-4.6 | 内建工具仍仅 `TruncateToolResult`，**不**写 `mcp-result/` | P0 |
-| FR-4.7 | **不**扩展 `read_file` 至既有子代理摘要 spill（`agents/<parentSessionID>/<toolCallID>.output`）；v0.1.2 仅对 `mcp-result/<当前 session>/` 做 `resolveMCPSpillRead` 放行；`task` 返回的 `output_file` 指针行为**不变**（见 DESIGN §12.8b） | P1 |
+| FR-4.7 | 子代理摘要 spill（`agents/<session>/<toolCallID>.output`）与 MCP spill 一并经 `resolveProjectDataRead` 放行；`task` spill 时返回 `output_file` + `SavedResultHint`（见 DESIGN §12.8b） | P1 |
 | FR-4.8 | 子代理 Runner（`ForSubagent`）与主 Runner 共用同一 spill 规则、`resultstore.Store` 实例与路径布局；`spawn/execute.go` 构造 `childRunner` 时须设置 `MCPResults: parentRunner.MCPResults`（或等价注入） | P0 |
 | FR-4.9 | **不**引入 `mcp_tool_result_max_chars`；MCP 与内建共用 `context.tool_result_max_chars` | P0 |
 | FR-4.10 | MCP server 端自截断内容仍原样进入 spill 文件；ds-code 不修改外部 MCP | P1 |
 | FR-4.11 | spill 的 `project_id` 始终取自 `cfg.ProjectRoot`（**非** worktree 的 `perm.Workspace`）；子代理使用各自 `session_id` 子目录 | P0 |
-| FR-4.12 | `read_file` 经扩展的 `CheckReadablePath` **允许只读**本 project 下 `mcp-result/<当前 Runner session_id>/` 内 **`.txt` regular file**（**须绝对路径**，`resolveMCPSpillRead` 不展开 `~`）；**拒绝**相对路径、其他 session、其他 project、`sessions.db`、`checkpoints/`、`agents/` 等 | P0 |
+| FR-4.12 | `read_file` 经 `CheckReadablePath` → `resolveProjectDataRead` **允许只读**本 project 下 `~/.ds-code/projects/<project_id>/` 内 **regular file**（**须绝对路径**，不展开 `~`）；**拒绝**相对路径、其他 project、目录路径；工作区内路径仍走 S2+S3 | P0 |
 | FR-4.13 | spill 写入失败（磁盘满、权限等）：回退 `TruncateToolResult`、**不**追加 hint；`logging.L().Warn("mcp result spill failed", …)` | P0 |
-| FR-4.14 | 超长时：先以 spill **完整绝对路径**（`Save` 返回值）计算 `hint = MCPSavedResultHint(displayPath)`；`displayPath` 经 `shortenSpillPathForHint` **仅**缩短 hint 模板总长，且须保证 `read_file path=displayPath` 可成功（**不**用 `~`、**不**尾部截断到不可解析路径；见 DESIGN §12.5）；正文截断至 `tool_result_max_chars - len(hint)` 再拼接；**合计** ≤ `tool_result_max_chars` | P0 |
-| FR-4.15 | **子代理 spill 隔离**：子代理 spill 写入 `mcp-result/<子代理 session_id>/`；父 Runner 的 `SpillSessionID` 为主 session，**不得** `read_file` 子代理 spill；子代理在自身 `RunTurn` 内可读自己的 spill | P0 |
+| FR-4.14 | 超长时：先以 spill **完整绝对路径**（`Save` 返回值）计算 `hint = SavedResultHint(displayPath)`；`displayPath` 经 `shortenSpillPathForHint` **仅**缩短 hint 模板总长，且须保证 `read_file path=displayPath` 可成功（**不**用 `~`、**不**尾部截断到不可解析路径；见 DESIGN §12.5）；正文截断至 `tool_result_max_chars - len(hint)` 再拼接；**合计** ≤ `tool_result_max_chars` | P0 |
+| FR-4.15 | **子代理 spill 可读**：子代理 MCP spill 写入 `mcp-result/<子代理 session_id>/`；父 Agent 经 `resolveProjectDataRead` **可** `read_file` 同 project 任意 session 的 spill；子代理在自身 `RunTurn` 内同样可读 | P0 |
 | FR-4.16 | MCP 调用失败（`isToolErrorBody`）或 context 取消 mid-flight：**不写** spill；session 走普通截断或错误正文 | P0 |
 | FR-4.17 | spill 完整正文**仅**经 `read_file` 读取；`shell` 访问 spill 绝对路径（工作区外）仍拒绝 | P1 |
 | FR-4.18 | 每次**成功** MCP 调用均写 spill（含未超长），便于调试与路径一致；不采用「仅超长落盘」 | P1 |

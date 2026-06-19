@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
@@ -194,7 +195,6 @@ func TestReadFile_allowsMCPSpill(t *testing.T) {
 
 	perm := permission.NewEngine("auto", root, false)
 	perm.ProjectRoot = root
-	perm.SpillSessionID = "sess-read"
 	cfg := &config.Config{
 		ProjectRoot: root,
 		Tools:       config.ToolsConfig{ReadFile: config.ReadFileToolConfig{MaxLines: 500, MaxBytes: 1 << 20}},
@@ -207,6 +207,71 @@ func TestReadFile_allowsMCPSpill(t *testing.T) {
 	}
 	if !strings.Contains(out, "mcp-full-") {
 		t.Fatalf("expected spill content: %q", out)
+	}
+}
+
+func TestReadFile_allowsAgentsOutput(t *testing.T) {
+	root := t.TempDir()
+	testutil.IsolatedHome(t)
+	perm := permission.NewEngine("auto", root, false)
+	perm.ProjectRoot = root
+
+	dataDir, err := datadir.ProjectDataDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outPath := filepath.Join(dataDir, "agents", "sess", "tc.output")
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	body := "status: completed\n\nagent summary line"
+	if err := os.WriteFile(outPath, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: root,
+		Tools:       config.ToolsConfig{ReadFile: config.ReadFileToolConfig{MaxLines: 500, MaxBytes: 1 << 20}},
+	}
+	tool := &read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false}
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": outPath}))
+	if err != nil {
+		t.Fatalf("read agents output: %v", err)
+	}
+	if !strings.Contains(out, "agent summary line") {
+		t.Fatalf("expected spill content: %q", out)
+	}
+}
+
+func TestReadFile_allowsProjectDataDB(t *testing.T) {
+	root := t.TempDir()
+	testutil.IsolatedHome(t)
+	perm := permission.NewEngine("auto", root, false)
+	perm.ProjectRoot = root
+
+	dataDir, err := datadir.ProjectDataDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(dataDir, "sessions.db")
+	if err := os.WriteFile(dbPath, []byte("sqlite-header"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		ProjectRoot: root,
+		Tools:       config.ToolsConfig{ReadFile: config.ReadFileToolConfig{MaxLines: 500, MaxBytes: 1 << 20}},
+	}
+	tool := &read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false}
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": dbPath}))
+	if err != nil {
+		t.Fatalf("read sessions.db: %v", err)
+	}
+	if !strings.Contains(out, "sqlite-header") {
+		t.Fatalf("expected db content: %q", out)
 	}
 }
 

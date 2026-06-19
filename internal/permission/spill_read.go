@@ -8,9 +8,10 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/datadir"
 )
 
-// resolveMCPSpillRead allows read_file on spill files for the current session only.
-func (e *Engine) resolveMCPSpillRead(rel string) (string, bool) {
-	if e.ProjectRoot == "" || e.SpillSessionID == "" {
+// resolveProjectDataRead allows read_file on regular files under the current
+// project's data directory (~/.ds-code/projects/<project_id>/).
+func (e *Engine) resolveProjectDataRead(rel string) (string, bool) {
+	if e.ProjectRoot == "" {
 		return "", false
 	}
 	if !filepath.IsAbs(rel) {
@@ -21,7 +22,7 @@ func (e *Engine) resolveMCPSpillRead(rel string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	prefix := filepath.Join(dataDir, "mcp-result", e.SpillSessionID) + string(filepath.Separator)
+	prefix := dataDir + string(filepath.Separator)
 	if !strings.HasPrefix(abs+string(filepath.Separator), prefix) {
 		return "", false
 	}
@@ -29,8 +30,12 @@ func (e *Engine) resolveMCPSpillRead(rel string) (string, bool) {
 	if err != nil || !info.Mode().IsRegular() {
 		return "", false
 	}
-	if !strings.HasSuffix(abs, ".txt") {
-		return "", false
-	}
 	return abs, true
+}
+
+// IsProjectDataPath reports whether abs is a regular file under the current
+// project's data directory. abs must already be cleaned absolute path.
+func (e *Engine) IsProjectDataPath(abs string) bool {
+	got, ok := e.resolveProjectDataRead(abs)
+	return ok && got == filepath.Clean(abs)
 }

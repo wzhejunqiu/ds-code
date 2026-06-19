@@ -715,13 +715,13 @@ func isToolErrorBody(formatted string) bool {
 
 **误判风险**：若 MCP **成功**响应正文以 `error:` 开头（如错误码说明、diff 上下文），会跳过 spill。实现时以 `UnpackToolBody` 的 `isErr` **优先**；`error:` 前缀仅作 MCP SDK `IsError` 的补充启发式；须单测覆盖边界样例。
 
-`MCPSavedResultHint`（[`internal/toolresult/text.go`](../../internal/toolresult/text.go)）：
+`SavedResultHint`（[`internal/toolresult/project_data_hint.go`](../../internal/toolresult/project_data_hint.go)）：
 
 ```
-\n... [MCP 完整结果已保存至 %s；请用 read_file 读取该绝对路径（shell 无法访问）]
+\n... [完整结果已保存至 %s；请用 read_file 读取该绝对路径（shell 无法访问）]
 ```
 
-`MCPSavedResultHint(path string) string` 包装上述模板；`path` 为 `shortenSpillPathForHint` 输出的**可 `read_file` 绝对路径**。
+`SavedResultHint(path string) string`；`MCPSavedResultHint` 与 agent spill 均委托同一实现；`path` 为 `shortenSpillPathForHint` 输出的**可 `read_file` 绝对路径**。
 
 `Runner` 新增字段 `MCPResults *resultstore.Store`（[`cmd/ds-code/app`](../../cmd/ds-code/app) 组装时注入，`ProjectRoot: cfg.ProjectRoot`）。子代理 Runner（`ForSubagent: true`）通过 `spawn/execute.go` 继承**同一** `*resultstore.Store` 指针（FR-4.8）。
 
@@ -740,64 +740,43 @@ func isToolErrorBody(formatted string) bool {
 
 | 条件 | 说明 |
 |------|------|
-| 当前 project | `abs` 位于 `datadir.ProjectDataDir(e.ProjectRoot)` 下 |
-| 子路径 | 相对 `ProjectDataDir` 为 `mcp-result/<session_id>/<stem>.txt` |
-| session 绑定 | `session_id` **必须等于** `e.SpillSessionID`（`RunTurn` / `RunTurnSeeded` 入口设置，NFR-13） |
-| 路径形式 | **须绝对路径**；`resolveMCPSpillRead` 用 `filepath.Clean`，**不**展开 `~`；相对路径拒绝 |
-| 文件类型 | regular file，后缀 **`.txt`**（`strings.HasSuffix(abs, ".txt")`） |
-| 拒绝 | 其他 session 的 spill、其他 project、`sessions.db`、`checkpoints/`、`shell-jobs/`、`agents/`、非 `.txt` 文件等 |
+| 当前 project | `abs` 位于 `datadir.ProjectDataDir(e.ProjectRoot)/` 下 |
+| 路径形式 | **须绝对路径**；`resolveProjectDataRead` 用 `filepath.Clean`，**不**展开 `~`；相对路径拒绝 |
+| 文件类型 | **regular file**（任意后缀；含 `mcp-result/`、`agents/`、`sessions.db` 等） |
+| 拒绝 | 目录路径、其他 project 数据目录、`~/.ds-code/config/` 等 |
+| session | **不**绑定 `SpillSessionID`；同 project 任意 session 的 spill 均可读 |
 
-spill 路径**不在** `project_root` 工作区内，故须此例外；**不**向 LLM 开放整个 home 目录。`readonly` / `ask` / `auto` 下读 spill **均直接放行**（只读区外例外，NFR-22），不触发 ask 弹窗。
+spill 路径**不在** `project_root` 工作区内，故须此例外；**不**向 LLM 开放整个 home 目录。`readonly` / `ask` / `auto` 下读 project 数据目录 **均直接放行**（只读区外例外，NFR-22）。
 
 **典型工作流**：
 
-1. MCP 工具返回超大 JSON → session tool 消息被截断，suffix 含 spill **可 `read_file` 的绝对路径**
+1. MCP / 子代理工具返回超大结果 → session tool 消息含 spill **绝对路径** + `SavedResultHint`
 2. 模型调用 `read_file`，`path` 为 hint 中的路径（完整绝对路径，非 `~`）
 3. `read_file` 返回 spill 文件全文 → 模型继续分析
 
-**`shell` 不可读 spill**（FR-4.17）：spill 绝对路径位于 `project_root` 外；`checkPathCandidate` 对区外绝对路径返回 `shell path not allowed`。模型须使用 `read_file`，勿尝试 `cat` spill 路径。
+**`shell` 不可读 spill**（FR-4.17）：project 数据目录绝对路径位于 `project_root` 外；`checkPathCandidate` 对区外绝对路径返回 `shell path not allowed`。
 
 ```go
 func (e *Engine) CheckReadablePath(rel string) (string, error) {
-    if abs, ok := e.resolveMCPSpillRead(rel); ok {
+    if abs, ok := e.resolveProjectDataRead(rel); ok {
         return abs, nil
     }
     return e.ResolveAccessPath(rel, PathRead)
 }
 
-// resolveMCPSpillRead allows read_file on spill files for the current session only.
-func (e *Engine) resolveMCPSpillRead(rel string) (string, bool) {
-    if e.ProjectRoot == "" || e.SpillSessionID == "" {
-        return "", false
-    }
-    abs := filepath.Clean(rel)
-    dataDir, err := datadir.ProjectDataDir(e.ProjectRoot)
-    if err != nil {
-        return "", false
-    }
-    prefix := filepath.Join(dataDir, "mcp-result", e.SpillSessionID) + string(filepath.Separator)
-    if !strings.HasPrefix(abs+string(filepath.Separator), prefix) {
-        return "", false
-    }
-    info, err := os.Stat(abs)
-    if err != nil || !info.Mode().IsRegular() {
-        return "", false
-    }
-    if !strings.HasSuffix(abs, ".txt") {
-        return "", false
-    }
-    return abs, true
-}
+// resolveProjectDataRead allows read_file on regular files under the current project data dir.
+func (e *Engine) resolveProjectDataRead(rel string) (string, bool) { /* see spill_read.go */ }
 ```
 
 **不可读场景**（须单测覆盖）：
 
 | 输入 | 预期 |
 |------|------|
-| spill 绝对路径 | 成功 |
-| 相对路径（即使指向 spill） | 拒绝 |
+| project 数据目录内 spill / agents / sessions.db 绝对路径 | 成功 |
+| 相对路径 | 拒绝 |
+| 其他 project 数据目录绝对路径 | 拒绝 |
+| project 数据目录路径（目录本身） | 拒绝 |
 | `@` 引用 spill 绝对路径 | S2 区外，`ResolvePath` 拒绝（须用 `read_file`） |
-| `sessions.db` 等同 project 数据目录内非 spill 路径 | 拒绝 |
 
 Runner 在 `RunTurn` / `RunTurnSeeded` 入口设置 `r.Perm.SpillSessionID = sessionID`（子代理 `sess.ID` 来自 `subagentstore`）。`RunEphemeral`（`/btw`）无 tools，**不**设置 spill 链路（FR-3.11）。
 
@@ -815,8 +794,8 @@ server 返回的 JSON 若已含 `Results truncated: showing 500 of 875`，该字
 |----|------|
 | spill 目录 | `mcp-result/<子代理 session_id>/`（`subagentstore.CreateSession` 的 UUID） |
 | `SpillSessionID` | 子 Runner `RunTurn` 期间设为子 session id |
-| 父 Agent `read_file` | **拒绝**子代理 spill（`SpillSessionID` 为主 session，FR-4.15） |
-| 父 Agent 可见性 | 仅 `task` 工具返回的 trim summary，**不含**子代理 tool 消息与 spill hint |
+| 父 Agent `read_file` | **可**读同 project 任意 session 的 spill（`resolveProjectDataRead`） |
+| 父 Agent 可见性 | `task` 返回 trim summary 或 `output_file` + `SavedResultHint`；**不含**子代理 tool 消息流 |
 | 子代理自读 | 子代理回合内可用 `read_file` 读自己的 spill |
 | 父 Agent 对子 MCP 数据 | **无**间接路径：父不知子 `session_id`（不在 `task` 返回中）；子须在 FinalContent 复述 MCP 分析结论 |
 
@@ -832,11 +811,11 @@ ds-code **在 v0.1.2 之前**已有子代理摘要 spill（[`spawn/output.go`](.
 |------|------------------------------|-------------------|
 | 触发 | 每次**成功** MCP 工具调用 | 子代理 `summary` 超 `tools.agent.summary_max_chars` 或 1 MiB |
 | session 键 | **Runner** `session_id`（子代理为子 session） | **父** `ParentSessionID` + `ParentToolCallID` |
-| 父 Agent 返回值 | MCP tool 消息 hint（超长时） | `task` 返回 `{"output_file":"…/agents/…/xxx.output"}` |
-| `read_file` v0.1.2 | **放行**（本 session `mcp-result/<id>/*.txt`） | **不扩展**；仍视为工作区外路径拒绝（FR-4.7） |
-| `shell cat` | 拒绝 | 拒绝 |
+| `read_file` | **放行**（`resolveProjectDataRead`：本 project 数据目录 regular file） |
+| `shell cat` | 拒绝 |
+| 父 Agent 返回值 | MCP：`SavedResultHint`（超长时）；agents：`output_file` JSON + `SavedResultHint` |
 
-v0.1.2 **有意**仅统一 MCP spill 的 `read_file` 恢复路径；`agents/*.output` 指针语义与 v0.1.1 一致，后续可另开需求将 `agents/<当前 session>/` 纳入同一 `resolveProjectDataRead` 策略。
+MCP spill 与 `agents/*.output` 物理目录不同，**permission 统一**经 `resolveProjectDataRead` 放行。
 
 **worktree 子代理**：`perm.Workspace = worktreePath`；`Store.ProjectRoot` 与 `perm.ProjectRoot` 均为 `cfg.ProjectRoot`；spill 落在主项目 `project_id` 下（与 AC-4.4 一致）。
 

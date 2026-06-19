@@ -57,14 +57,16 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 ## 权限与安全
 
 - **PermissionLevel**：`Low`
-- 只读；路径不得逃出工作区（含符号链接解析，见 `permission.Engine`）
+- 只读；工作区内路径经 `CheckReadablePath` → `ResolveAccessPath`（S2+S3）
+- **实现层例外**：`~/.ds-code/projects/<当前 project_id>/` 下 regular file 经 `resolveProjectDataRead` 放行（MCP / 子代理 spill、`sessions.db` 等）；project 数据目录路径跳过 `IsTextFile` 扩展名 blocklist
+- LLM 可见 Description **不**枚举可读范围；spill 路径引导见 tool result 中的 `SavedResultHint`
 
 ## 设计思想
 
 - **默认全读**：仅传 `path` 时读取整个文件（最多 max_lines 行）；超大文件用 `offset`/`limit` 分段。
 - **行号前缀**：输出带 `N|` 前缀，便于与 `apply_patch` 的 `@@` 上下文及 TUI 引用对齐。
 - **先 Stat 后读**：超大文件在打开前拒绝，保护内存与 token 预算。
-- **仅文本**：二进制与媒体文件在 Stat 后、打开前由 `IsTextFile` 拒绝。
+- **仅文本**：工作区内二进制与媒体文件由 `IsTextFile` 拒绝；project 数据目录 regular file 不受扩展名 blocklist 限制
 
 ## 相关代码
 

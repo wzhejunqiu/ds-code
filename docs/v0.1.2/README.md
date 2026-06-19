@@ -128,11 +128,11 @@ v0.1.1 及更早版本中，路径安全依赖多层重复逻辑：
 
 | 限制 | 说明 |
 |------|------|
-| **两套 spill 目录并存** | v0.1.2 新增 `mcp-result/<session>/<stem>.txt`（MCP 工具结果）；既有子代理摘要 spill 仍在 `agents/<parentSessionID>/<toolCallID>.output`（`spawn/output.go`）。**仅**前者经 `resolveMCPSpillRead` 放行；`task` 返回的 `output_file` 指针**不在** v0.1.2 扩展范围内（FR-4.7；见 DESIGN §12.8b）。 |
-| **spill 仅 `read_file`** | spill 位于 `~/.ds-code/projects/…`（工作区外）。`shell cat <spill 绝对路径>` 在 permission 层拒绝；hint 引导模型用 `read_file`。`readonly`/`ask`/`auto` 下读 spill **均直接放行**（NFR-22）。 |
-| **子代理 MCP 不向父传递** | `task` 子代理有独立 `session_id`；MCP spill 写入 `mcp-result/<子代理 session>/`。父 Agent **看不到**子 tool 消息与 spill hint，**不能** `read_file` 子 spill（FR-4.15）；仅见 `trimSummary(FinalContent)`（≤ `tools.agent.summary_max_chars`）。子代理须在 FinalContent 中复述结论，父 Agent **不应**依赖子 MCP 原始数据。子代理 `session_id` **不**出现在 `task` 返回值，人工恢复子 spill 须查 `subagentstore` / `sessions.db`（见下）。 |
-| **compact 丢失 spill hint** | 触发 compact 后，旧轮 tool 消息（含 spill 路径 hint）被摘要替换；磁盘 spill 仍在，但 API 上下文可能不再含路径。模型须在 compact 前读取 spill，或依赖近 N 轮未 compact 消息（见 DESIGN §12.11）。**compact 后**模型无法 `list_dir`/`grep` 发现 `mcp-result/`。人工恢复：主会话 `session_id` 见 TUI `/sessions` 或 `~/.ds-code/projects/<id>/sessions.db` 的 `sessions` 表；目录 `~/.ds-code/projects/<id>/mcp-result/<session_id>/` 下列出 `<stem>.txt`。 |
-| **hint 路径须可 `read_file`** | hint 中嵌入的路径必须是 `read_file` 可解析的**完整绝对路径**（`resolveMCPSpillRead` 用 `filepath.Clean`，**不**展开 `~`）；为控制 hint 长度仅可缩短正文，**禁止**尾部截断到不可读路径（见 DESIGN §12.5、FR-4.14）。 |
+| **两套 spill 目录并存** | `mcp-result/<session>/<stem>.txt`（MCP 工具结果）与 `agents/<session>/<toolCallID>.output`（子代理摘要 spill）物理目录不同；`read_file` 经 `resolveProjectDataRead` **统一放行**本 project 数据目录 `~/.ds-code/projects/<project_id>/` 下 regular file（见 DESIGN §12.8b）。 |
+| **spill 仅 `read_file`** | spill 位于 `~/.ds-code/projects/…`（工作区外）。`shell cat <spill 绝对路径>` 在 permission 层拒绝；MCP / 子代理 tool result 附 `SavedResultHint` 引导模型 `read_file`。`readonly`/`ask`/`auto` 下读 project 数据目录 **均直接放行**（NFR-22）。 |
+| **子代理 MCP 不向父传递** | 子代理有独立 `session_id`；MCP spill 写入 `mcp-result/<子代理 session>/`。父 Agent **看不到**子 tool 消息与 MCP spill hint，但 **可** `read_file` 子 session spill（同 project 数据目录）。父 Agent 仍应依赖子代理 FinalContent / `output_file` 摘要，而非假设可见子 tool 流。 |
+| **compact 丢失 spill hint** | 触发 compact 后，旧轮 tool 消息（含 spill 路径 hint）被摘要替换；磁盘 spill 仍在，但 API 上下文可能不再含路径。模型须在 compact 前读取 spill，或依赖近 N 轮未 compact 消息（见 DESIGN §12.11）。**compact 后**模型无法 `list_dir`/`grep` 发现 project 数据目录。人工恢复：主会话 `session_id` 见 TUI `/sessions` 或 `~/.ds-code/projects/<id>/sessions.db`；spill 在 `mcp-result/<session_id>/` 或 `agents/<session_id>/`。 |
+| **hint 路径须可 `read_file`** | hint 中嵌入的路径必须是 `read_file` 可解析的**完整绝对路径**（`resolveProjectDataRead` 用 `filepath.Clean`，**不**展开 `~`）；为控制 hint 长度仅可缩短正文，**禁止**尾部截断到不可读路径（见 DESIGN §12.5、FR-4.14）。 |
 | **每次成功 MCP 均落盘** | 未超长结果也写 spill（简化实现、便于调试）；高频 MCP 增加磁盘 IO（NFR-11；粗估：10 次/轮 × 500k 字符 ≈ 5MB/轮，视 MCP 响应而定）。同非空 `tool_call_id` 重试/recovery **覆盖**同名 `<stem>.txt`（FR-4.19）。 |
 | **spill 文件名 ≠ LLM id** | `messages.tool_call_id` 存 LLM 原始 id；磁盘文件名为 `spillCallFilename(id)`（如 `call/foo` → `call_foo.txt`）。hint 须指向**实际 spill 绝对路径**。 |
 | **`.git` 不可 Agent 枚举** | 即使 `grep path=.git` / `list_dir path=.git` 也不进入 `.git`（FR-6.14）；用户 `@.git/` 仍可展开（FR-6.9）。 |

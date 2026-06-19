@@ -55,7 +55,7 @@
 
 | ID | 落点 | 说明 |
 |----|------|------|
-| S11 | `TruncateToolResult`、`finalizeToolResult`、`@` 预算 | 超大 tool/@ 结果截断；MCP 成功调用全文写入 `~/.ds-code/projects/<id>/mcp-result/<session_id>/<stem>.txt`（0600；`<stem>` = `spillCallFilename(id)`，空 id 时为 ULID），session 回注仍受 `tool_result_max_chars`；超长时 hint 含**完整可解析绝对路径**引导 `read_file`（见 DESIGN §12.5）；**仅当前 Runner session** 经 `CheckReadablePath` 可读 spill（须 `.txt` 绝对路径；`readonly`/`ask`/`auto` 均直接放行，NFR-22）；**不**扩展至 `agents/*.output`（FR-4.7）；`shell` 不可读 spill 绝对路径；spill 可能含 MCP 返回的敏感字段，回注 LLM 后进入上下文；compact 后旧 hint **不**保留（磁盘仍在，模型无法枚举目录，见 README 已知限制） |
+| S11 | `TruncateToolResult`、`finalizeToolResult`、`@` 预算 | 超大 tool/@ 结果截断；MCP 成功调用全文写入 `~/.ds-code/projects/<id>/mcp-result/<session_id>/<stem>.txt`（0600）；session 回注仍受 `tool_result_max_chars`；超长时 hint 含**完整可解析绝对路径** + `SavedResultHint`；`read_file` 经 `resolveProjectDataRead` 可读本 project 数据目录 regular file（含 `mcp-result/`、`agents/` 等；`readonly`/`ask`/`auto` 均直接放行，NFR-22）；`shell` 不可读 project 数据目录绝对路径；compact 后旧 hint **不**保留（见 README 已知限制） |
 
 ### 1.4b 审计清单 — `read_file` 文本判定（FR-8）
 
@@ -67,7 +67,7 @@
 
 在「Shell 执行模型」末追加：
 
-- spill 文件路径位于 project 数据目录（工作区外），须用 `read_file` 读取；`shell cat` 该路径仍受 S2 区外拒绝。`mcp-result/` spill 为只读区外例外，`readonly`/`ask`/`auto` 均直接放行（NFR-22）。**不**扩展至既有 `agents/*.output` 子代理摘要 spill（FR-4.7）。
+- spill 文件路径位于 project 数据目录（工作区外），须用 `read_file` 读取；`shell cat` 该路径仍受 S2 区外拒绝。本 project 数据目录（`resolveProjectDataRead`）为只读区外例外，`readonly`/`ask`/`auto` 均直接放行（NFR-22）。
 - TUI 应用内复制（v0.1.2）写入剪贴板的内容为 viewport **已渲染** plain text，可能含 MCP 参数摘要、spill hint 绝对路径；与 debug 日志 `--allow-log-sensitive-data` 策略独立（见 FR-5.9、NFR-18、威胁模型 TUI 剪贴板行 §1.1d）。
 - `read_file` 拒绝非文本文件（图片、二进制等）；`@file`/`@dir/` 不经 `IsTextFile`（FR-8、§1.4b）。
 
@@ -163,7 +163,7 @@ tui:
 
 - **路径**：`..` 子串拦截改为规范化 + `ensureUnder`；修复 shell 误拦 `git main..branch`、`go test ./...`
 - **权限**：路径策略收敛至 `permission.Engine`；`@file`/`@dir/` 可越过 S3（用户显式点名，SECURITY §S3-S）
-- **MCP**：结果落盘 `mcp-result/`；session 仍截断；hint 含可 `read_file` 的绝对路径；读本 session spill
+- **MCP / 子代理 spill**：结果落盘 project 数据目录；session 仍截断；hint 含可 `read_file` 的绝对路径；同 project 任意 session spill 可读
 - **MCP**：TUI / debug 展示调用 JSON 参数
 - **搜索**：Agent 枚举不再遵循 `.gitignore`；可选 `tools.search.skip_dirs`（相对 `perm.Workspace`）；`glob **/*` Walk 注入 skip（FR-6.14）；`diagnostics` 始终过滤 `.git`
 - **TUI**：应用内鼠标选区 + 剪贴板（`tui.copy_on_select`）；plain text 剥离 ANSI

@@ -444,7 +444,7 @@ Worktree 子 agent 通过 `tool.RebindRegistryPerm` 将 workspace 切到 worktre
 
 ### 结果交付（[`output.go`](./spawn/output.go)）
 
-子代理摘要超过 `tools.agent.summary_max_chars`（默认 16000 字符）或 1 MiB 时 **spill** 到 `{project_data}/agents/{session}/{tool_call_id}.output`，父工具返回 `{"status":"completed","output_file":"..."}` 指针；否则 inline 返回 `[description]\n{summary}`。
+子代理摘要超过 `tools.agent.summary_max_chars`（默认 16000 字符）或 1 MiB 时 **spill** 到 `{project_data}/agents/{session}/{tool_call_id}.output`，父工具返回 `{"status":"completed","output_file":"..."}` + `SavedResultHint`；否则 inline 返回 `[description]\n{summary}`。
 
 ### 后台 Agent 与通知
 

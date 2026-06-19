@@ -29,7 +29,9 @@ func (t *ReadFileTool) Name() string { return tool.NameReadFile.String() }
 func (t *ReadFileTool) IsReadOnly() bool        { return true }
 func (t *ReadFileTool) IsConcurrencySafe() bool { return true }
 
-func (t *ReadFileTool) Description() string { return DescReadFile }
+func (t *ReadFileTool) Description() string {
+	return fmt.Sprintf(DescReadFile, tool.NameShell.String())
+}
 
 func (t *ReadFileTool) Schema() map[string]any {
 	maxLines := t.configuredMaxLines()
@@ -90,7 +92,7 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", fmt.Errorf(ErrFileTooLarge, st.Size(), maxBytes)
 	}
 
-	if !textfile.IsTextFile(abs) {
+	if !t.Perm.IsProjectDataPath(abs) && !textfile.IsTextFile(abs) {
 		logging.L().Info("read_file skipped non-text file",
 			zap.String("path", in.Path),
 			zap.String("abs", abs),

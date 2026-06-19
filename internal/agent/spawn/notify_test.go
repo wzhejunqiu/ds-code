@@ -91,7 +91,7 @@ func TestNotificationFormat_inlineXML(t *testing.T) {
 	}
 }
 
-func TestNotificationFormat_spillXML(t *testing.T) {
+func TestNotificationFormat_spillIncludesHint(t *testing.T) {
 	n := Notification{
 		AgentID:    "a1",
 		ToolUseID:  "tc1",
@@ -102,6 +102,9 @@ func TestNotificationFormat_spillXML(t *testing.T) {
 	out := n.Format()
 	if !strings.Contains(out, "<output-file>/tmp/out.output</output-file>") {
 		t.Fatalf("expected output-file, got %q", out)
+	}
+	if !strings.Contains(out, "read_file") || !strings.Contains(out, "/tmp/out.output") {
+		t.Fatalf("expected SavedResultHint after notification: %q", out)
 	}
 	if strings.Contains(out, "<result>") {
 		t.Fatal("spill should not have result")

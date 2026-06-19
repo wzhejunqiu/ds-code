@@ -68,6 +68,9 @@ func TestDeliverResult_spill(t *testing.T) {
 	if d.Inline || d.OutputPath == "" {
 		t.Fatalf("expected spill, got %+v", d)
 	}
+	if !strings.Contains(d.Body, "read_file") || !strings.Contains(d.Body, d.OutputPath) {
+		t.Fatalf("spill body should include SavedResultHint: %q", d.Body)
+	}
 	data, err := os.ReadFile(d.OutputPath)
 	if err != nil {
 		t.Fatal(err)
