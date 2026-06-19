@@ -65,6 +65,7 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 		Version:          version.Version,
 		PromptCh:         promptCh,
 		BackgroundAgents: backgroundAgents,
+		StartupNotices:   buildStartupNotices(a),
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line, activeAgentType string) (bool, error) {
 			env := &slashcmd.Env{
 				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,

@@ -5,23 +5,24 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
 // LoadSubagentRegistry rebuilds in-memory subagent UI state from persisted runs.
-func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSessionID string, reasoningOpen bool, workspace string) (subagent.Registry, error) {
-	var reg subagent.Registry
+func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSessionID string, reasoningOpen bool, workspace string, toolsReg *tool.Registry) (subagent.Registry, error) {
+	var out subagent.Registry
 	if sub == nil || parentSessionID == "" {
-		return reg, nil
+		return out, nil
 	}
 	runs, err := sub.ListRuns(ctx, parentSessionID)
 	if err != nil {
-		return reg, err
+		return out, err
 	}
 	for _, run := range runs {
 		msgs, err := sub.ListMessages(ctx, run.ID)
 		if err != nil {
-			return reg, err
+			return out, err
 		}
 		sessMsgs := make([]session.Message, len(msgs))
 		for i, m := range msgs {
@@ -42,7 +43,7 @@ func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSe
 				CreatedAt:            m.CreatedAt,
 			}
 		}
-		chat := BlocksFromMessages(sessMsgs, reasoningOpen, workspace)
+		chat := BlocksFromMessages(sessMsgs, reasoningOpen, workspace, tool.FromRegistry(toolsReg))
 		rec := &subagent.Record{
 			ID:               run.ID,
 			Label:            run.Label,
@@ -63,7 +64,7 @@ func LoadSubagentRegistry(ctx context.Context, sub subagentstore.Store, parentSe
 		default:
 			rec.Status = subagent.StatusDone
 		}
-		reg.Add(rec)
+		out.Add(rec)
 	}
-	return reg, nil
+	return out, nil
 }

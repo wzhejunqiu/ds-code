@@ -1,7 +1,8 @@
 package subagent
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
@@ -37,7 +38,8 @@ func UpdateToolStart(s *state.State, m msg.SubagentToolStartMsg, sync SyncFn) te
 	if !turn.EventsAllowed(s) {
 		return nil
 	}
-	s.Subagents.ToolStart(m.SubagentID, m.Name, m.Args, m.Command)
+	disp := tool.FromRegistry(s.Deps.Runner.Tools)
+	s.Subagents.ToolStart(m.SubagentID, m.Name, m.Args, m.Command, disp)
 	if s.SubagentNav == state.SubagentNavDetail && s.ViewingSubagentID == m.SubagentID {
 		s.SyncDisplayedChat()
 		sync()
@@ -49,7 +51,8 @@ func UpdateToolEnd(s *state.State, m msg.SubagentToolEndMsg, sync SyncFn) tea.Cm
 	if !turn.EventsAllowed(s) {
 		return nil
 	}
-	s.Subagents.ToolEnd(m.SubagentID, m.Name, m.Args, m.Command, m.Result, m.IsError)
+	disp := tool.FromRegistry(s.Deps.Runner.Tools)
+	s.Subagents.ToolEnd(m.SubagentID, m.Name, m.Args, m.Command, m.Result, m.IsError, disp)
 	if s.SubagentNav == state.SubagentNavDetail && s.ViewingSubagentID == m.SubagentID {
 		s.SyncDisplayedChat()
 		sync()

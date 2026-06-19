@@ -2,7 +2,7 @@
 
 ds-code 运行时配置的加载与校验。
 
-**面向用户的完整参考**（YAML 键、CLI、环境变量）：[`docs/CONFIG.md`](../../docs/CONFIG.md)  
+**面向用户的完整参考**（YAML 键、CLI、环境变量）：[`docs/v0.1.0/CONFIG.md`](../../docs/v0.1.0/CONFIG.md)  
 **示例 YAML**：[`configs/example.yaml`](../../configs/example.yaml)
 
 ## 加载流水线（`load.go`）

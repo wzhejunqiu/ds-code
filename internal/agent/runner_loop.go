@@ -209,7 +209,7 @@ func (r *Runner) runToolCalls(
 						cb.OnToolStart(tc.Name, d.Args, d.Command)
 					}
 				} else {
-					argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
+					argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace, tool.FromRegistry(r.Tools))
 					cb.OnToolStart(tc.Name, argsLine, command)
 				}
 			}
@@ -234,7 +234,7 @@ func (r *Runner) runToolCalls(
 			displayResult, isError := findToolResult(msgs, tc.ID)
 			endRows := tool.ToolEndRows(tc.Name, rawArgs, r.Perm.Workspace)
 			if len(endRows) == 0 {
-				argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace)
+				argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace, tool.FromRegistry(r.Tools))
 				if tc.Name == "read_file" && !isError {
 					if start, end, ok := tool.ReadFileLineRange(displayResult); ok {
 						argsLine = tool.AppendReadFileLineRange(argsLine, start, end)

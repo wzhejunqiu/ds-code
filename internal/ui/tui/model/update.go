@@ -19,7 +19,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	debugBeforeUpdate()
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		return m, overlay.OnWindowSize(&m.State, msg.Width, msg.Height, m.syncAllViews)
+		cmd := overlay.OnWindowSize(&m.State, msg.Width, msg.Height, m.syncAllViews)
+		return m, tea.Batch(cmd, m.scheduleNoticeScroll())
 	case tea.KeyMsg:
 		if cmd, handled := m.updateKey(msg); handled {
 			return m, cmd
@@ -37,6 +38,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.PlanningEndMsg:
 		turn.UpdatePlanningEnd(&m.State, func() {})
 		return m, m.scheduleSyncChatView()
+	case tuimsg.NoticeScrollTickMsg:
+		return m, m.handleNoticeScrollTick()
 	case tuimsg.ThinkingTickMsg:
 		if turn.NeedsThinkingTick(&m.State) || turn.NeedsPlanningTick(&m.State) {
 			cmd := turn.UpdateThinkingTick(&m.State, func() {}, m.nextThinkingTickCmd)

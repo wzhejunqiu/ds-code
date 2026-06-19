@@ -30,11 +30,17 @@ type Engine struct {
 	Interactive bool
 	Prompter    Prompter
 	writeTool   func(string) bool
+	mcpTool     func(string) bool
 }
 
-// SetWriteToolDetector registers extra write tools (e.g. MCP mcp__* tools).
+// SetWriteToolDetector registers extra write tools (e.g. MCP write tools).
 func (e *Engine) SetWriteToolDetector(fn func(string) bool) {
 	e.writeTool = fn
+}
+
+// SetMCPToolDetector registers MCP bare tool names for ask-mode arg summaries.
+func (e *Engine) SetMCPToolDetector(fn func(string) bool) {
+	e.mcpTool = fn
 }
 
 // NewEngine creates a permission engine.
@@ -199,7 +205,7 @@ func (e *Engine) summarizeArgs(tool string, args map[string]any) string {
 			return "patch (unparsed)"
 		}
 	default:
-		if strings.HasPrefix(tool, "mcp__") {
+		if e.isMCPToolName(tool) || strings.HasPrefix(tool, "mcp__") {
 			b, err := json.Marshal(args)
 			if err == nil {
 				s := string(b)
@@ -211,6 +217,13 @@ func (e *Engine) summarizeArgs(tool string, args map[string]any) string {
 		}
 	}
 	return ""
+}
+
+func (e *Engine) isMCPToolName(tool string) bool {
+	if e.mcpTool != nil && e.mcpTool(tool) {
+		return true
+	}
+	return false
 }
 
 // IsShellReadOnlyOp reports shell tool args that only list/poll background jobs.

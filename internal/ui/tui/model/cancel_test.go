@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
@@ -37,7 +38,7 @@ func TestCancelTurn_escShowsInterruptMarker(t *testing.T) {
 	if !turn.CurrentTurnInterrupted(&m.State) {
 		t.Fatal("expected interrupt marker in current turn")
 	}
-	out := chat.Render(m.Chat, 60, time.Now(), false)
+	out := chat.Render(m.Chat, 60, time.Now(), false, tool.DisplayContext{})
 	if !strings.Contains(out, chat.InterruptLabel()) {
 		t.Fatalf("expected interrupt in chat:\n%s", out)
 	}

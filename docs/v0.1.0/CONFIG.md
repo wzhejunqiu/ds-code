@@ -61,7 +61,7 @@
 
 目录权限：`~/.ds-code/`、`config/`、`projects/` 建议 **0700**；`sessions.db` 等文件 **0600**。
 
-完整示例 YAML 见 [`configs/example.yaml`](../configs/example.yaml)。
+完整示例 YAML 见 [`configs/example.yaml`](../../configs/example.yaml)。
 
 ### 2.1 项目运行时目录（`projects/<project_id>/`）
 
@@ -353,9 +353,9 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 
 | 键 | 类型 | 默认 | 说明 |
 |----|------|------|------|
-| `tools.parallel_tool_calls` | bool | **true** | 预留：是否允许同一 assistant 多条 `tool_calls` 并行。当前 Runner **未读取**此键；相邻只读且 concurrency-safe 的工具（如 `read_file`、`grep`）已由 [`tool_orchestration`](../internal/agent/tool_orchestration.go) 自动并发，写工具串行 |
+| `tools.parallel_tool_calls` | bool | **true** | 预留：是否允许同一 assistant 多条 `tool_calls` 并行。当前 Runner **未读取**此键；相邻只读且 concurrency-safe 的工具（如 `read_file`、`grep`）已由 [`tool_orchestration`](../../internal/agent/tool_orchestration.go) 自动并发，写工具串行 |
 | `tools.defer_builtin` | []string | **`[]`** | 内建写工具名列表；命中项以 stub schema 注册，完整参数经 `tool_search` 查询（见 [§5.11.1](#5111-延迟加载defer与-tool_search)） |
-| `tools.defer_mcp` | bool | **true** | `true` 时全部 `mcp__*` 工具以 stub schema 注册；完整参数同样经 `tool_search` |
+| `tools.defer_mcp` | bool | **true** | `true` 时全部 MCP 裸名工具以 stub schema 注册；完整参数同样经 `tool_search` |
 | `tools.read_file.max_lines` | int | **2000** | 未指定 `limit` 时读取整个文件的上限；显式 `limit` 亦受此限 |
 | `tools.read_file.max_bytes` | int | **2097152** (2MiB) | 文件总大小上限；超限拒绝整次读取 |
 | `tools.grep.head_limit` | int | **200** | `grep` 在 `content`（匹配行）与 `files_with_matches`（文件数）模式下的上限；`count` 模式忽略 |
@@ -373,7 +373,7 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.agent.worktree_sparse_paths` | []string | **`["/*"]`** | worktree sparse checkout 路径模式 |
 | `tools.agent.worktree_symlink_dirs` | []string | **`["node_modules", ".venv", "vendor"]`** | 从父工作区 symlink 到 worktree 的目录名 |
 
-Per-tool 设计说明见 [`internal/tool/builtin/README.md`](../internal/tool/builtin/README.md)。
+Per-tool 设计说明见 [`internal/tool/builtin/README.md`](../../internal/tool/builtin/README.md)。
 
 #### 5.11.1 延迟加载（defer）与 `tool_search`
 
@@ -381,9 +381,9 @@ Per-tool 设计说明见 [`internal/tool/builtin/README.md`](../internal/tool/bu
 
 | 组件 | 说明 |
 |------|------|
-| `tools.defer_builtin` | 列出需 defer 的内建工具名，如 `shell`、`apply_patch`、`write_file`；由 [`setup.RegisterWrite`](../internal/tool/setup/setup.go) 经 `WrapDeferred` 注册 |
-| `tools.defer_mcp` | 为 `true` 时，MCP Manager 注册的全部 `mcp__{server}__{tool}` 使用 stub schema |
-| **`tool_search`** | agent 模式下始终注册的内建工具；参数 `tool_name` 返回该工具的完整 schema 与描述（见 [`tool_search.md`](../internal/tool/builtin/tool_search/tool_search.md)） |
+| `tools.defer_builtin` | 列出需 defer 的内建工具名，如 `shell`、`apply_patch`、`write_file`；由 [`setup.RegisterWrite`](../../internal/tool/setup/setup.go) 经 `WrapDeferred` 注册 |
+| `tools.defer_mcp` | 为 `true` 时，MCP Manager 注册的全部 MCP 裸名工具使用 stub schema |
+| **`tool_search`** | agent 模式下始终注册的内建工具；参数 `tool_name` 返回该工具的完整 schema 与描述（见 [`tool_search.md`](../../internal/tool/builtin/tool_search/tool_search.md)） |
 
 典型工作流：
 
@@ -395,7 +395,7 @@ Per-tool 设计说明见 [`internal/tool/builtin/README.md`](../internal/tool/bu
 
 - **Plan 模式**不注册写工具、`tool_search` 与 MCP defer 写类工具，通常无需 defer。
 - `tool_search` 本身不可 defer。
-- stub 与完整 schema 的实现见 [`internal/tool/deferred_wrapper.go`](../internal/tool/deferred_wrapper.go) 与 [`internal/mcp/tool.go`](../internal/mcp/tool.go)。
+- stub 与完整 schema 的实现见 [`internal/tool/deferred_wrapper.go`](../../internal/tool/deferred_wrapper.go) 与 [`internal/mcp/tool.go`](../../internal/mcp/tool.go)。
 
 配置示例：
 

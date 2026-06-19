@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chattool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 )
@@ -37,12 +38,12 @@ func (c *RenderCache) Reset() {
 }
 
 // RenderCached formats chat blocks, reusing cached lines when fingerprints match.
-func RenderCached(blocks []Block, width int, now time.Time, showToolDetails bool, cache *RenderCache, mdCache *markdown.SegmentCache) string {
+func RenderCached(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, cache *RenderCache, mdCache *markdown.SegmentCache) string {
 	if width < 20 {
 		width = 20
 	}
 	if cache == nil {
-		return renderAllBlocks(blocks, width, now, showToolDetails, mdCache)
+		return renderAllBlocks(blocks, width, now, showToolDetails, disp, mdCache)
 	}
 	if cache.width != width || cache.showToolDetails != showToolDetails {
 		cache.Reset()
@@ -69,17 +70,17 @@ func RenderCached(blocks []Block, width int, now time.Time, showToolDetails bool
 				cache.mdBlockIdx = i
 			}
 		}
-		blockLines := renderBlock(&blocks[i], width, now, showToolDetails, mdCache)
+		blockLines := renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)
 		cache.entries[i] = cacheEntry{key: key, lines: blockLines}
 		lines = append(lines, blockLines...)
 	}
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
 
-func renderAllBlocks(blocks []Block, width int, now time.Time, showToolDetails bool, mdCache *markdown.SegmentCache) string {
+func renderAllBlocks(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, mdCache *markdown.SegmentCache) string {
 	var lines []string
 	for i := range blocks {
-		lines = append(lines, renderBlock(&blocks[i], width, now, showToolDetails, mdCache)...)
+		lines = append(lines, renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)...)
 	}
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
@@ -159,7 +160,7 @@ func boolInt(v bool) int {
 	return 0
 }
 
-func renderBlock(b *Block, width int, now time.Time, showToolDetails bool, mdCache *markdown.SegmentCache) []string {
+func renderBlock(b *Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, mdCache *markdown.SegmentCache) []string {
 	var lines []string
 	switch b.Role {
 	case RoleUser:
@@ -189,7 +190,7 @@ func renderBlock(b *Block, width int, now time.Time, showToolDetails bool, mdCac
 			Name: b.ToolName, Args: b.ToolArgs, Command: b.ToolCommand,
 			Result: b.ToolResult, Running: b.ToolRunning, Error: b.ToolError,
 			Expanded: b.ToolExpanded,
-		}, width, showToolDetails)...)
+		}, width, showToolDetails, disp)...)
 		lines = append(lines, "")
 	case RolePlanning:
 		indent := lipgloss.Width(planningBullet)

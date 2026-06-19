@@ -15,6 +15,7 @@ import (
 func OnWindowSize(s *state.State, width, height int, syncAll func()) tea.Cmd {
 	s.Width = width
 	s.Height = height
+	s.NoticeScrollOffset = 0
 	syncAll()
 	return nil
 }

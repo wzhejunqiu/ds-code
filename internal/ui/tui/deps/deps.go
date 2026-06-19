@@ -11,6 +11,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
 )
 
 // SlashFunc handles a slash command line; writes output to out.
@@ -30,4 +31,5 @@ type Deps struct {
 	PromptCh         chan permission.PromptRequest
 	Events           chan<- tea.Msg
 	BackgroundAgents func() int
+	StartupNotices   []header.Notice
 }

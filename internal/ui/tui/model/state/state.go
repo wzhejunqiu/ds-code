@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
@@ -60,9 +61,10 @@ type State struct {
 	ReasoningAll       bool
 	ToolDetailsVisible bool
 
-	StatusRight      string
-	ErrLine          string
-	SensitiveLogWarn string
+	StatusRight        string
+	ErrLine            string
+	StartupNotices     []header.Notice
+	NoticeScrollOffset int
 
 	HeaderSession session.Session
 	HeaderCostCNY float64

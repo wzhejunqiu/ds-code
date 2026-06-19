@@ -64,7 +64,7 @@ internal/shelljobs/    后台 shell 任务管理
 - **compact 三层触发**：A) CountBreakdown 超阈值 / B) 累计 prompt_tokens 超比例 / C) API 返回 context-too-long → compact 后重试
 - **双层消息模型**：历史记录层（SQLite 全量）+ API 上下文层（内存构建，compact 替换为摘要 + 近 N 轮）
 - **权限 S3 denylist 始终生效**：无论 readonly/ask/auto 模式，均拒绝敏感路径的读/写/shell
-- **MCP 工具名**：`mcp__{server}__{tool}`，写操作与内置工具共享权限检查
+- **MCP 工具名**：MCP server 原始裸名（如 `semantic_search_nodes`）；写操作与内置工具共享权限检查
 - **不实现 edit_file**：编辑统一用 Codex 式 `apply_patch`
 - **TUI 取消**：Esc 取消当前轮次（context.Context 贯穿）；Ctrl+C/Ctrl+D 空闲时双击退出
 

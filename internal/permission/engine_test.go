@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/permission"
@@ -298,6 +299,27 @@ func TestEngine_askInteractive_prompterSummarizesMCPArgs(t *testing.T) {
 	}
 	if gotSummary == "" {
 		t.Fatal("expected non-empty MCP summary for prompter")
+	}
+}
+
+func TestPermission_FormatArgsSummary_MCPBareName(t *testing.T) {
+	var gotSummary string
+	e := permission.NewEngine("ask", t.TempDir(), true)
+	e.SetWriteToolDetector(func(name string) bool {
+		return name == "write_nodes"
+	})
+	e.SetMCPToolDetector(func(name string) bool {
+		return name == "write_nodes"
+	})
+	e.Prompter = func(tool, summary string) (bool, error) {
+		gotSummary = summary
+		return true, nil
+	}
+	if err := e.Check("write_nodes", map[string]any{"query": "x", "limit": 3}); err != nil {
+		t.Fatal(err)
+	}
+	if gotSummary == "" || !strings.Contains(gotSummary, "query") {
+		t.Fatalf("summary = %q", gotSummary)
 	}
 }
 

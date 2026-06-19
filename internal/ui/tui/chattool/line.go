@@ -7,8 +7,8 @@ import (
 )
 
 // Line renders a compact one-line tool summary for the side panel.
-func Line(name, args, command, preview string, running, isError bool) string {
-	label := sidebarLabel(name, args, command)
+func Line(name, args, command, preview string, running, isError bool, disp tool.DisplayContext) string {
+	label := sidebarLabel(name, args, command, disp)
 	var s string
 	switch {
 	case running:
@@ -18,7 +18,7 @@ func Line(name, args, command, preview string, running, isError bool) string {
 	default:
 		s = fmt.Sprintf("✓ %s", label)
 	}
-	if !tool.UsesHumanDisplay(name) && !tool.IsShellDisplay(name) && !tool.IsApplyPatchDisplay(name) {
+	if !tool.UsesHumanDisplay(name, disp) && !tool.IsShellDisplay(name) && !tool.IsApplyPatchDisplay(name) {
 		if command != "" {
 			s += "  " + truncate(command, 60)
 		} else if args != "" {
@@ -34,8 +34,8 @@ func Line(name, args, command, preview string, running, isError bool) string {
 	return styleTool.Render(s)
 }
 
-func sidebarLabel(name, args, command string) string {
-	if human := tool.HumanToolTitle(name, args, command); human != "" {
+func sidebarLabel(name, args, command string, disp tool.DisplayContext) string {
+	if human := tool.HumanToolTitle(name, args, command, disp); human != "" {
 		return human
 	}
 	if tool.IsShellDisplay(name) && args != "" {

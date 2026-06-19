@@ -15,7 +15,7 @@ import (
 )
 
 // BlocksFromMessages builds TUI chat blocks from persisted session messages.
-func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace string) []chat.Block {
+func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace string, disp tool.DisplayContext) []chat.Block {
 	var blocks []chat.Block
 	for i := 0; i < len(msgs); i++ {
 		msg := msgs[i]
@@ -48,7 +48,7 @@ func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace st
 					}
 					rows := tool.ApplyPatchStarts(tc.Name, []byte(tc.Arguments), workspace)
 					if len(rows) == 0 {
-						argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments), workspace)
+						argsLine, command := tool.DisplaySummary(tc.Name, []byte(tc.Arguments), workspace, disp)
 						if tc.Name == "read_file" && !isError {
 							if start, end, ok := tool.ReadFileLineRange(result); ok {
 								argsLine = tool.AppendReadFileLineRange(argsLine, start, end)
@@ -126,10 +126,10 @@ func findToolMessage(msgs []session.Message, start int, callID string) *session.
 }
 
 // LoadSessionChat loads all messages for a session and converts them for the TUI.
-func LoadSessionChat(store session.Store, sessionID string, reasoningOpen bool, workspace string) ([]chat.Block, error) {
+func LoadSessionChat(store session.Store, sessionID string, reasoningOpen bool, workspace string, reg *tool.Registry) ([]chat.Block, error) {
 	msgs, err := store.ListMessages(context.Background(), sessionID)
 	if err != nil {
 		return nil, err
 	}
-	return BlocksFromMessages(msgs, reasoningOpen, workspace), nil
+	return BlocksFromMessages(msgs, reasoningOpen, workspace, tool.FromRegistry(reg)), nil
 }

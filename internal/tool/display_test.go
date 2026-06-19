@@ -1,15 +1,18 @@
 package tool_test
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
 
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
 func TestDisplaySummary_shell(t *testing.T) {
 	args := `{"description":"Run tests","command":"cd /tmp && go test ./..."}`
-	line, cmd := tool.DisplaySummary("shell", []byte(args), "")
+	line, cmd := tool.DisplaySummary("shell", []byte(args), "", tool.DisplayContext{})
 	if line != "Run tests" {
 		t.Fatalf("argsLine = %q", line)
 	}
@@ -23,7 +26,7 @@ func TestDisplaySummary_shell(t *testing.T) {
 
 func TestDisplaySummary_readFile(t *testing.T) {
 	args := `{"path":"foo.go","offset":10,"limit":11}`
-	line, cmd := tool.DisplaySummary("read_file", []byte(args), "")
+	line, cmd := tool.DisplaySummary("read_file", []byte(args), "", tool.DisplayContext{})
 	if cmd != "" {
 		t.Fatalf("unexpected command: %q", cmd)
 	}
@@ -34,15 +37,15 @@ func TestDisplaySummary_readFile(t *testing.T) {
 
 func TestDisplaySummary_grepGlobList(t *testing.T) {
 	ws := "/Users/me/ds-code"
-	line, _ := tool.DisplaySummary("grep", []byte(`{"pattern":"package","path":"."}`), ws)
+	line, _ := tool.DisplaySummary("grep", []byte(`{"pattern":"package","path":"."}`), ws, tool.DisplayContext{})
 	if line != "Grepped package in ds-code" {
 		t.Fatalf("grep = %q", line)
 	}
-	line, _ = tool.DisplaySummary("glob", []byte(`{"pattern":"**/*.go","path":"internal/tuitest"}`), ws)
+	line, _ = tool.DisplaySummary("glob", []byte(`{"pattern":"**/*.go","path":"internal/tuitest"}`), ws, tool.DisplayContext{})
 	if line != "Searched files **/*.go in tuitest" {
 		t.Fatalf("glob = %q", line)
 	}
-	line, _ = tool.DisplaySummary("list_dir", []byte(`{"path":""}`), ws)
+	line, _ = tool.DisplaySummary("list_dir", []byte(`{"path":""}`), ws, tool.DisplayContext{})
 	if line != "List ds-code" {
 		t.Fatalf("list_dir = %q", line)
 	}
@@ -88,6 +91,44 @@ func TestFormatMCPDisplay(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestDisplay_MCPBareName(t *testing.T) {
+	reg := tool.NewRegistry()
+	reg.RegisterMCPTool(&stubMCPTool{name: "semantic_search_nodes"}, "code-review-graph")
+	disp := tool.FromRegistry(reg)
+	line, cmd := tool.DisplaySummary("semantic_search_nodes", []byte(`{"query":"x"}`), "", disp)
+	if cmd != "" {
+		t.Fatalf("cmd = %q", cmd)
+	}
+	if line != "MCP code-review-graph · semantic_search_nodes" {
+		t.Fatalf("line = %q", line)
+	}
+	if !tool.UsesHumanDisplay("semantic_search_nodes", disp) {
+		t.Fatal("bare MCP should use human display")
+	}
+}
+
+func TestDisplay_LegacyMCPPrefix(t *testing.T) {
+	line, _ := tool.DisplaySummary("mcp__fs__read_file", []byte(`{"x":1}`), "", tool.DisplayContext{})
+	if line != "MCP fs · read_file" {
+		t.Fatalf("line = %q", line)
+	}
+	if !tool.UsesHumanDisplay("mcp__fs__read_file", tool.DisplayContext{}) {
+		t.Fatal("legacy MCP prefix should use human display")
+	}
+}
+
+type stubMCPTool struct{ name string }
+
+func (s *stubMCPTool) Name() string        { return s.name }
+func (s *stubMCPTool) Description() string { return "mcp" }
+func (s *stubMCPTool) Schema() map[string]any {
+	return tool.ObjectSchema(nil, nil, false)
+}
+func (s *stubMCPTool) Execute(context.Context, json.RawMessage) (string, error) {
+	return "", nil
+}
+func (s *stubMCPTool) PermissionLevel() permission.Level { return permission.LevelLow }
 
 func TestReadFileLineRange(t *testing.T) {
 	result := "9|nine\n10|ten\n20|twenty"

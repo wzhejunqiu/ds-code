@@ -1,7 +1,7 @@
 # ds-code 配置示例（全量键）
 # 用户级：复制到 ~/.ds-code/config/config.yaml（路径固定，不可改）
 # 项目级：复制到 <git-root>/.ds-code/config.yaml
-# 权威说明：docs/CONFIG.md
+# 权威说明：docs/v0.1.0/CONFIG.md
 #
 # billing 段仅允许写在用户级 ~/.ds-code/config/config.yaml（勿写入项目级 config.yaml）：
 
@@ -87,7 +87,7 @@ audit:
 
 mcp:
   servers: []
-  # MCP tools are exposed as mcp__{name}__{tool} and use the same permission engine as builtins.
+  # MCP tools use bare names from the MCP server (same as AGENTS.md / Cursor).
   # - name: fs
   #   command: npx
   #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/absolute/path/to/workspace"]

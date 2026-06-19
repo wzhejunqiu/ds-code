@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 func TestRenderCacheHitOnStableBlock(t *testing.T) {
@@ -14,8 +16,8 @@ func TestRenderCacheHitOnStableBlock(t *testing.T) {
 	now := time.Now()
 	var cache RenderCache
 
-	first := RenderCached(blocks, 60, now, false, &cache, nil)
-	second := RenderCached(blocks, 60, now, false, &cache, nil)
+	first := RenderCached(blocks, 60, now, false, tool.DisplayContext{}, &cache, nil)
+	second := RenderCached(blocks, 60, now, false, tool.DisplayContext{}, &cache, nil)
 	if first != second {
 		t.Fatalf("expected cache hit to produce identical output")
 	}
@@ -32,9 +34,9 @@ func TestRenderCacheInvalidatesOnContentChange(t *testing.T) {
 	now := time.Now()
 	var cache RenderCache
 
-	first := RenderCached(blocks, 60, now, false, &cache, nil)
+	first := RenderCached(blocks, 60, now, false, tool.DisplayContext{}, &cache, nil)
 	blocks[0].Content = "ab"
-	second := RenderCached(blocks, 60, now, false, &cache, nil)
+	second := RenderCached(blocks, 60, now, false, tool.DisplayContext{}, &cache, nil)
 	if first == second {
 		t.Fatal("expected cache miss after content change")
 	}
@@ -51,10 +53,10 @@ func TestRenderCacheLiveBlockUsesTimeBucket(t *testing.T) {
 	blocks[0].Reasoning = "thinking"
 
 	var cache RenderCache
-	out0 := RenderCached(blocks, 60, t0, false, &cache, nil)
+	out0 := RenderCached(blocks, 60, t0, false, tool.DisplayContext{}, &cache, nil)
 	key0 := cache.entries[0].key
 
-	out1 := RenderCached(blocks, 60, t0.Add(50*time.Millisecond), false, &cache, nil)
+	out1 := RenderCached(blocks, 60, t0.Add(50*time.Millisecond), false, tool.DisplayContext{}, &cache, nil)
 	if cache.entries[0].key != key0 {
 		t.Fatal("expected same 100ms bucket within 50ms")
 	}
@@ -62,7 +64,7 @@ func TestRenderCacheLiveBlockUsesTimeBucket(t *testing.T) {
 		t.Fatal("expected same render within time bucket")
 	}
 
-	RenderCached(blocks, 60, t0.Add(150*time.Millisecond), false, &cache, nil)
+	RenderCached(blocks, 60, t0.Add(150*time.Millisecond), false, tool.DisplayContext{}, &cache, nil)
 	if cache.entries[0].key == key0 {
 		t.Fatal("expected new bucket after 150ms")
 	}
@@ -73,8 +75,8 @@ func TestRenderCacheResetOnWidthChange(t *testing.T) {
 	now := time.Now()
 	var cache RenderCache
 
-	RenderCached(blocks, 60, now, false, &cache, nil)
-	RenderCached(blocks, 80, now, false, &cache, nil)
+	RenderCached(blocks, 60, now, false, tool.DisplayContext{}, &cache, nil)
+	RenderCached(blocks, 80, now, false, tool.DisplayContext{}, &cache, nil)
 	if cache.width != 80 {
 		t.Fatalf("width = %d, want 80", cache.width)
 	}
@@ -88,10 +90,10 @@ func TestRenderCacheResizeClearsStaleSlots(t *testing.T) {
 	for i := range blocks10 {
 		blocks10[i] = Block{Role: RoleUser, Content: strings.Repeat("a", i+1)}
 	}
-	RenderCached(blocks10, 60, now, false, &cache, nil)
+	RenderCached(blocks10, 60, now, false, tool.DisplayContext{}, &cache, nil)
 
 	blocks5 := blocks10[:5]
-	RenderCached(blocks5, 60, now, false, &cache, nil)
+	RenderCached(blocks5, 60, now, false, tool.DisplayContext{}, &cache, nil)
 
 	blocks8 := make([]Block, 8)
 	copy(blocks8, blocks5)
@@ -99,7 +101,7 @@ func TestRenderCacheResizeClearsStaleSlots(t *testing.T) {
 	blocks8[6] = Block{Role: RoleUser, Content: "unique-slot-6"}
 	blocks8[7] = Block{Role: RoleUser, Content: "unique-slot-7"}
 
-	out := RenderCached(blocks8, 60, now, false, &cache, nil)
+	out := RenderCached(blocks8, 60, now, false, tool.DisplayContext{}, &cache, nil)
 	for _, want := range []string{"unique-slot-5", "unique-slot-6", "unique-slot-7"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in output after resize:\n%s", want, out)

@@ -122,6 +122,19 @@ func (a *App) SetRunMode(ctx context.Context, env *slashcmd.Env, mode string) er
 	return nil
 }
 
+func (a *App) logMCPSkipped() {
+	if a.mcpMgr == nil {
+		return
+	}
+	for _, s := range a.mcpMgr.SkippedTools() {
+		logging.L().Warn("mcp tool skipped",
+			zap.String("server", s.Server),
+			zap.String("tool", s.Tool),
+			zap.String("reason", string(s.Reason)),
+		)
+	}
+}
+
 func (a *App) attachMCP(ctx context.Context, strict bool) error {
 	if len(a.Cfg.MCP.Servers) == 0 {
 		return nil

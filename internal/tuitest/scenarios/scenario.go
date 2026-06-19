@@ -1,7 +1,7 @@
 //go:build tuitest
 
 // Package scenarios defines built-in /tcase mock LLM scripts.
-// Human-readable script catalog: docs/TUI_TCASE_SCRIPTS.md
+// Human-readable script catalog: docs/v0.1.0/TUI_TCASE_SCRIPTS.md
 package scenarios
 
 import (

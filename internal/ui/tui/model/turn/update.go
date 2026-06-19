@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chattool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
@@ -76,8 +77,9 @@ func UpdateToolStart(s *state.State, m msg.ToolStartMsg, syncChat, syncTool Sync
 		return nil
 	}
 	withMainChat(s, func() {
+		disp := tool.FromRegistry(s.Deps.Runner.Tools)
 		AppendToolBlock(s, m.Name, m.Args, m.Command, "", true, false)
-		s.ToolLines = append(s.ToolLines, chattool.Line(m.Name, m.Args, m.Command, "", true, false))
+		s.ToolLines = append(s.ToolLines, chattool.Line(m.Name, m.Args, m.Command, "", true, false, disp))
 	})
 	syncChat()
 	syncTool()
@@ -98,6 +100,7 @@ func UpdateToolEnd(s *state.State, m msg.ToolEndMsg, syncChat, syncTool SyncFn) 
 	}
 	withMainChat(s, func() {
 		FinishToolBlock(s, m.Name, m.Args, m.Command, m.Result, m.IsError)
+		disp := tool.FromRegistry(s.Deps.Runner.Tools)
 		s.ToolLines = s.ToolLines[:0]
 		for i := range s.Chat {
 			b := &s.Chat[i]
@@ -106,7 +109,7 @@ func UpdateToolEnd(s *state.State, m msg.ToolEndMsg, syncChat, syncTool SyncFn) 
 				if preview == "" && b.ToolRunning {
 					preview = "…"
 				}
-				s.ToolLines = append(s.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError))
+				s.ToolLines = append(s.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError, disp))
 			}
 		}
 	})

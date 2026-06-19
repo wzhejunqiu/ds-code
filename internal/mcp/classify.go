@@ -44,12 +44,3 @@ func isWriteMCPToolName(name string) bool {
 	}
 	return false
 }
-
-// IsWriteTool reports whether a normalized registry tool name requires write permission.
-func IsWriteTool(normalized string) bool {
-	_, tool, ok := ParseToolName(normalized)
-	if !ok {
-		return false
-	}
-	return isWriteMCPToolName(tool)
-}

@@ -6,4 +6,4 @@ Please report security issues **privately** to the maintainers. Do not open publ
 
 ## Full documentation
 
-See [docs/SECURITY.md](docs/SECURITY.md) for the threat model, audit checklist (S1–S14), and operational security notes.
+See [docs/v0.1.0/SECURITY.md](docs/v0.1.0/SECURITY.md) for the threat model, audit checklist (S1–S14), and operational security notes.

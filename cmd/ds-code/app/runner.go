@@ -50,6 +50,15 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	perm.SetMCPToolDetector(bundle.reg.IsMCPTool)
+	if a.mcpMgr != nil {
+		logging.L().Info("mcp register complete",
+			zap.Int("registered_count", a.mcpMgr.RegisteredToolCount()),
+			zap.Int("discovered_count", a.mcpMgr.ToolCount()),
+			zap.Int("skipped_count", len(a.mcpMgr.SkippedTools())),
+		)
+	}
+	a.logMCPSkipped()
 
 	agentsMD, err := ctxpkg.LoadAgentsMD(a.Cfg.ProjectRoot)
 	if err != nil {

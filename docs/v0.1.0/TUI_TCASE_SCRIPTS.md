@@ -1,6 +1,6 @@
 # `/tcase` 场景剧本
 
-本文档是 **`/tcase` 内置场景剧本的权威说明**。实现代码在 [`internal/tuitest/scenarios/all.go`](../internal/tuitest/scenarios/all.go)；改剧本时请**同步更新本文档**。
+本文档是 **`/tcase` 内置场景剧本的权威说明**。实现代码在 [`internal/tuitest/scenarios/all.go`](../../internal/tuitest/scenarios/all.go)；改剧本时请**同步更新本文档**。
 
 Harness 总览见 [TUI_INTEGRATION_TEST.md](./TUI_INTEGRATION_TEST.md)。
 
@@ -24,7 +24,7 @@ Harness 总览见 [TUI_INTEGRATION_TEST.md](./TUI_INTEGRATION_TEST.md)。
 
 | 字段 | 含义 |
 |------|------|
-| `Chunks` | SSE 流式 delta（`Content` / `Reasoning`）；见 [`mockserver/sse.go`](../internal/tuitest/mockserver/sse.go) |
+| `Chunks` | SSE 流式 delta（`Content` / `Reasoning`）；见 [`mockserver/sse.go`](../../internal/tuitest/mockserver/sse.go) |
 | `ToolCalls` | 非流式 tool_calls 回合（整段 SSE 一次下发） |
 | `FinishReason` | 最后一帧 SSE 的 `finish_reason`（默认：有 tool 则为 `tool_calls`，否则 `stop`） |
 | `HTTPStatus` / `ErrBody` | 非 200，模拟 API 错误 |
@@ -41,11 +41,11 @@ Harness 总览见 [TUI_INTEGRATION_TEST.md](./TUI_INTEGRATION_TEST.md)。
 
 ### 特殊逻辑：`error-context`
 
-剧本在 `all.go` 里只有 1 个正常 Turn，但 [`mockserver/registry.go`](../internal/tuitest/mockserver/registry.go) 在 `SetActive("error-context")` 时会设 `contextFail`：**第一次** LLM 请求先返回 HTTP 400 + `context length exceeded`，不消耗 `Turns[0]`；Agent compact 后**第二次**请求才播放 `Turns[0]`。
+剧本在 `all.go` 里只有 1 个正常 Turn，但 [`mockserver/registry.go`](../../internal/tuitest/mockserver/registry.go) 在 `SetActive("error-context")` 时会设 `contextFail`：**第一次** LLM 请求先返回 HTTP 400 + `context length exceeded`，不消耗 `Turns[0]`；Agent compact 后**第二次**请求才播放 `Turns[0]`。
 
 ### Harness 工程文件
 
-工具类场景在临时 `ProjectRoot` 下预置（见 [`project.go`](../internal/tuitest/project.go)）：
+工具类场景在临时 `ProjectRoot` 下预置（见 [`project.go`](../../internal/tuitest/project.go)）：
 
 - `sample.go` — 单行 `Hello`
 - `sample_multiline.go` — 多行 `Hello`（供 `tool-patch-multi`）

@@ -82,11 +82,11 @@ make install-hooks
 
 ## 架构文档
 
-- [DESIGN.md](docs/DESIGN.md) — 模块与流程
-- [PLAN.md](docs/PLAN.md) — 建设路线图与能力矩阵
-- [CONFIG.md](docs/CONFIG.md) — 配置与 CLI
-- [llm-deepseek.md](docs/llm-deepseek.md) — DeepSeek 客户端
-- [TUI_INTEGRATION_TEST.md](docs/TUI_INTEGRATION_TEST.md) — TUI 测试 harness
+- [DESIGN.md](docs/v0.1.0/DESIGN.md) — 模块与流程
+- [PLAN.md](docs/v0.1.0/PLAN.md) — 建设路线图与能力矩阵
+- [CONFIG.md](docs/v0.1.0/CONFIG.md) — 配置与 CLI
+- [llm-deepseek.md](docs/v0.1.0/llm-deepseek.md) — DeepSeek 客户端
+- [TUI_INTEGRATION_TEST.md](docs/v0.1.0/TUI_INTEGRATION_TEST.md) — TUI 测试 harness
 
 ## 许可证
 

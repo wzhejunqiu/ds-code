@@ -20,20 +20,26 @@ func main() {
 }
 
 func run() error {
-	closeLog, err := logging.Setup(logging.Options{Verbosity: 0})
-	if err != nil {
-		return err
-	}
-	defer closeLog()
-
+	// 必须先隔离 HOME（testutil.NewIsolatedHome），再调用 logging.Setup 等会写 ~/.ds-code 的代码。
 	stack, err := tuitest.NewHarness()
 	if err != nil {
 		return err
 	}
 	defer stack.Close()
 
+	closeLog, err := logging.Setup(logging.Options{
+		ProjectRoot: stack.Cfg.ProjectRoot,
+		Verbosity:   0,
+	})
+	if err != nil {
+		return err
+	}
+	defer closeLog()
+
+	logging.L().Info("ds-code-tui-test: header notification auto-scroll demo enabled")
+
 	input.TCaseRunner = tuitest.NewTCaseSubmit(stack.Registry)
 
 	cmd := &cobra.Command{}
-	return stack.App.RunTUIHarness(cmd, "", stack.Registry)
+	return stack.App.RunTUIHarness(cmd, "", stack.Registry, harnessStartupNotices())
 }

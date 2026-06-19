@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chattool"
 )
@@ -155,16 +156,16 @@ func (r *Registry) End(id, summary string, runErr error) {
 	}
 }
 
-func (r *Registry) ToolStart(id, name, args, command string) {
+func (r *Registry) ToolStart(id, name, args, command string, disp tool.DisplayContext) {
 	rec := r.Get(id)
 	if rec == nil {
 		return
 	}
 	appendToolBlock(rec, name, args, command, "", true, false)
-	rec.ToolLines = append(rec.ToolLines, chattool.Line(name, args, command, "", true, false))
+	rec.ToolLines = append(rec.ToolLines, chattool.Line(name, args, command, "", true, false, disp))
 }
 
-func (r *Registry) ToolEnd(id, name, args, command, result string, isError bool) {
+func (r *Registry) ToolEnd(id, name, args, command, result string, isError bool, disp tool.DisplayContext) {
 	rec := r.Get(id)
 	if rec == nil {
 		return
@@ -178,7 +179,7 @@ func (r *Registry) ToolEnd(id, name, args, command, result string, isError bool)
 			if preview == "" && b.ToolRunning {
 				preview = "…"
 			}
-			rec.ToolLines = append(rec.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError))
+			rec.ToolLines = append(rec.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError, disp))
 		}
 	}
 }

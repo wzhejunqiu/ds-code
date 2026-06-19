@@ -12,28 +12,26 @@ import (
 
 // adapterTool implements tool.Tool for one MCP tool.
 type adapterTool struct {
-	server     *Server
-	mcpTool    string
-	normalized string
-	desc       string
-	schema     map[string]any
-	level      permission.Level
-	deferLoad  bool
+	server    *Server
+	mcpTool   string
+	desc      string
+	schema    map[string]any
+	level     permission.Level
+	deferLoad bool
 }
 
 func newAdapterTool(srv *Server, t mcpsdk.Tool, strict bool, deferLoad bool) *adapterTool {
 	return &adapterTool{
-		server:     srv,
-		mcpTool:    t.Name,
-		normalized: ToolName(srv.Name, t.Name),
-		desc:       t.Description,
-		schema:     inputSchema(t, strict),
-		level:      ClassifyPermission(t),
-		deferLoad:  deferLoad,
+		server:    srv,
+		mcpTool:   t.Name,
+		desc:      t.Description,
+		schema:    inputSchema(t, strict),
+		level:     ClassifyPermission(t),
+		deferLoad: deferLoad,
 	}
 }
 
-func (a *adapterTool) Name() string { return a.normalized }
+func (a *adapterTool) Name() string { return a.mcpTool }
 
 func (a *adapterTool) Description() string {
 	if a.desc == "" {

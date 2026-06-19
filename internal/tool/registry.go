@@ -24,17 +24,39 @@ type Tool interface {
 
 // Registry holds registered tools.
 type Registry struct {
-	tools map[string]Tool
+	tools   map[string]Tool
+	mcpMeta map[string]string // bareName → serverName
 }
 
 // NewRegistry creates an empty registry.
 func NewRegistry() *Registry {
-	return &Registry{tools: make(map[string]Tool)}
+	return &Registry{
+		tools:   make(map[string]Tool),
+		mcpMeta: make(map[string]string),
+	}
 }
 
 // Register adds a tool.
 func (r *Registry) Register(t Tool) {
 	r.tools[t.Name()] = t
+}
+
+// RegisterMCPTool adds an MCP tool and records its server for display.
+func (r *Registry) RegisterMCPTool(t Tool, server string) {
+	r.tools[t.Name()] = t
+	r.mcpMeta[t.Name()] = server
+}
+
+// MCPServerForTool returns the MCP server name for a registered bare tool name.
+func (r *Registry) MCPServerForTool(name string) (string, bool) {
+	s, ok := r.mcpMeta[name]
+	return s, ok
+}
+
+// IsMCPTool reports whether name is a registered MCP tool (bare name).
+func (r *Registry) IsMCPTool(name string) bool {
+	_, ok := r.mcpMeta[name]
+	return ok
 }
 
 // Get returns a tool by name.
@@ -127,7 +149,11 @@ func (r *Registry) Subset(names []string) *Registry {
 	}
 	for _, t := range r.tools {
 		if nameSet[t.Name()] {
-			s.Register(t)
+			if server, ok := r.mcpMeta[t.Name()]; ok {
+				s.RegisterMCPTool(t, server)
+			} else {
+				s.Register(t)
+			}
 		}
 	}
 	return s

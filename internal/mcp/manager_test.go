@@ -72,6 +72,10 @@ func TestNewManager_duplicateServerName(t *testing.T) {
 	}
 }
 
+func TestManager_DiscoverTools_duplicateServerNameStillFails(t *testing.T) {
+	TestNewManager_duplicateServerName(t)
+}
+
 func TestNewManager_missingCommand(t *testing.T) {
 	_, err := NewManager(context.Background(), []config.MCPServerConfig{
 		{Name: "fs"},
@@ -81,10 +85,10 @@ func TestNewManager_missingCommand(t *testing.T) {
 	}
 }
 
-func TestManager_DiscoverTools_registersTools(t *testing.T) {
+func TestManager_DiscoverTools_bareNames(t *testing.T) {
 	srv := stubServer("fs", []mcpsdk.Tool{
-		{Name: "read_file", Description: "read"},
-		{Name: "write_file", Description: "write"},
+		{Name: "semantic_search_nodes", Description: "search"},
+		{Name: "ping", Description: "ping"},
 	})
 	m := newTestManager(srv)
 	if err := m.DiscoverTools(context.Background(), false); err != nil {
@@ -93,20 +97,78 @@ func TestManager_DiscoverTools_registersTools(t *testing.T) {
 	if m.ToolCount() != 2 {
 		t.Fatalf("tool count = %d", m.ToolCount())
 	}
-	if got := m.ServerNames(); len(got) != 1 || got[0] != "fs" {
-		t.Fatalf("server names = %v", got)
+	if _, ok := m.byName["semantic_search_nodes"]; !ok {
+		t.Fatal("expected bare name in byName")
+	}
+	reg := tool.NewRegistry()
+	m.Register(reg)
+	if _, ok := reg.Get("semantic_search_nodes"); !ok {
+		t.Fatal("expected bare name registered")
+	}
+	if _, ok := reg.Get(ToolName("fs", "semantic_search_nodes")); ok {
+		t.Fatal("legacy normalized name must not be registered")
 	}
 }
 
-func TestManager_DiscoverTools_duplicateToolName(t *testing.T) {
+func TestManager_DiscoverTools_inServerDuplicateSkipped(t *testing.T) {
 	srv := stubServer("fs", []mcpsdk.Tool{
-		{Name: "read_file"},
-		{Name: "read_file"},
+		{Name: "read_dup"},
+		{Name: "read_dup"},
 	})
 	m := newTestManager(srv)
-	err := m.DiscoverTools(context.Background(), false)
-	if err == nil {
-		t.Fatal("expected duplicate tool name error")
+	if err := m.DiscoverTools(context.Background(), false); err != nil {
+		t.Fatal(err)
+	}
+	if m.ToolCount() != 1 {
+		t.Fatalf("tool count = %d, want 1", m.ToolCount())
+	}
+	skipped := m.SkippedTools()
+	if len(skipped) != 1 || skipped[0].Reason != SkipInServerDuplicate {
+		t.Fatalf("skipped = %+v", skipped)
+	}
+}
+
+func TestManager_DiscoverTools_crossServerDuplicateBothSkipped(t *testing.T) {
+	a := stubServer("a", []mcpsdk.Tool{{Name: "search"}})
+	b := stubServer("b", []mcpsdk.Tool{{Name: "search"}})
+	m := newTestManager(a, b)
+	if err := m.DiscoverTools(context.Background(), false); err != nil {
+		t.Fatal(err)
+	}
+	if m.ToolCount() != 0 {
+		t.Fatalf("tool count = %d", m.ToolCount())
+	}
+	skipped := m.SkippedTools()
+	if len(skipped) != 2 {
+		t.Fatalf("skipped count = %d", len(skipped))
+	}
+	for _, s := range skipped {
+		if s.Reason != SkipCrossServerDuplicate || s.Tool != "search" {
+			t.Fatalf("unexpected skip %+v", s)
+		}
+	}
+	reg := tool.NewRegistry()
+	m.Register(reg)
+	if reg.IsMCPTool("search") {
+		t.Fatal("cross-server duplicate must not register")
+	}
+}
+
+func TestManager_DiscoverTools_builtinConflictSkipped(t *testing.T) {
+	srv := stubServer("fs", []mcpsdk.Tool{{Name: "grep", Description: "mcp grep"}})
+	m := newTestManager(srv)
+	if err := m.DiscoverTools(context.Background(), false); err != nil {
+		t.Fatal(err)
+	}
+	reg := tool.NewRegistry()
+	reg.Register(&stubBuiltinTool{name: "grep"})
+	m.Register(reg)
+	if m.RegisteredToolCount() != 0 {
+		t.Fatalf("registered = %d", m.RegisteredToolCount())
+	}
+	skipped := m.SkippedTools()
+	if len(skipped) != 1 || skipped[0].Reason != SkipBuiltinConflict {
+		t.Fatalf("skipped = %+v", skipped)
 	}
 }
 
@@ -132,8 +194,12 @@ func TestManager_Register(t *testing.T) {
 	}
 	reg := tool.NewRegistry()
 	m.Register(reg)
-	if _, ok := reg.Get(ToolName("fs", "ping")); !ok {
-		t.Fatal("expected MCP tool registered")
+	if _, ok := reg.Get("ping"); !ok {
+		t.Fatal("expected MCP tool registered by bare name")
+	}
+	server, ok := reg.MCPServerForTool("ping")
+	if !ok || server != "fs" {
+		t.Fatalf("server = %q ok=%v", server, ok)
 	}
 }
 
@@ -149,20 +215,59 @@ func TestManager_IsWriteTool_fromAdapterLevel(t *testing.T) {
 	if err := m.DiscoverTools(context.Background(), false); err != nil {
 		t.Fatal(err)
 	}
-	name := ToolName("fs", "delete_item")
-	if !m.IsWriteTool(name) {
+	reg := tool.NewRegistry()
+	m.Register(reg)
+	if !m.IsWriteTool("delete_item") {
 		t.Fatal("destructive MCP tool should require write permission")
-	}
-	readName := ToolName("fs", "read_file")
-	if m.IsWriteTool(readName) {
-		t.Fatal("unknown tool should fall back to name heuristics")
 	}
 }
 
-func TestManager_IsWriteTool_fallbackHeuristic(t *testing.T) {
+func TestManager_IsWriteTool_builtinConflictNotWrite(t *testing.T) {
+	destructive := true
+	srv := stubServer("fs", []mcpsdk.Tool{{
+		Name: "grep",
+		Annotations: mcpsdk.ToolAnnotation{
+			DestructiveHint: &destructive,
+		},
+	}})
+	m := newTestManager(srv)
+	if err := m.DiscoverTools(context.Background(), false); err != nil {
+		t.Fatal(err)
+	}
+	reg := tool.NewRegistry()
+	reg.Register(&stubBuiltinTool{name: "grep"})
+	m.Register(reg)
+	if m.IsWriteTool("grep") {
+		t.Fatal("builtin-conflicted MCP grep must not classify builtin grep as write")
+	}
+	if m.RegisteredToolCount() != 0 {
+		t.Fatalf("registered = %d", m.RegisteredToolCount())
+	}
+}
+
+func TestManager_IsWriteTool_builtinNotMisclassified(t *testing.T) {
+	srv := stubServer("fs", []mcpsdk.Tool{{Name: "read_file"}})
+	m := newTestManager(srv)
+	if err := m.DiscoverTools(context.Background(), false); err != nil {
+		t.Fatal(err)
+	}
+	reg := tool.NewRegistry()
+	m.Register(reg)
+	if m.IsWriteTool("grep") {
+		t.Fatal("builtin grep must not be classified via MCP manager")
+	}
+	if m.IsWriteTool("read_file") {
+		t.Fatal("read_file MCP adapter should not be write")
+	}
+	if m.IsWriteTool(ToolName("fs", "write_file")) {
+		t.Fatal("legacy normalized name must not trigger write without adapter")
+	}
+}
+
+func TestManager_IsWriteTool_fallbackHeuristicRemoved(t *testing.T) {
 	m := newTestManager()
-	if !m.IsWriteTool(ToolName("fs", "write_file")) {
-		t.Fatal("write_file heuristic should match without discovery")
+	if m.IsWriteTool("write_file") {
+		t.Fatal("undiscovered write_file must not match global heuristic")
 	}
 }
 
@@ -202,6 +307,9 @@ func TestAdapterTool_descriptionFallback(t *testing.T) {
 	if !strings.Contains(ad.Description(), "server fs") {
 		t.Fatalf("desc = %q", ad.Description())
 	}
+	if ad.Name() != "ping" {
+		t.Fatalf("name = %q", ad.Name())
+	}
 }
 
 func TestAdapterTool_execute(t *testing.T) {
@@ -226,3 +334,17 @@ func TestAdapterTool_execute(t *testing.T) {
 		t.Fatalf("level = %v", ad.PermissionLevel())
 	}
 }
+
+type stubBuiltinTool struct {
+	name string
+}
+
+func (s *stubBuiltinTool) Name() string        { return s.name }
+func (s *stubBuiltinTool) Description() string { return "builtin" }
+func (s *stubBuiltinTool) Schema() map[string]any {
+	return tool.ObjectSchema(nil, nil, false)
+}
+func (s *stubBuiltinTool) Execute(context.Context, json.RawMessage) (string, error) {
+	return "", nil
+}
+func (s *stubBuiltinTool) PermissionLevel() permission.Level { return permission.LevelLow }

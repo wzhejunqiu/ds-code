@@ -69,14 +69,3 @@ func TestIsWriteMCPToolName(t *testing.T) {
 		t.Fatal("read_item should not be a write MCP tool")
 	}
 }
-
-func TestIsWriteTool_normalized(t *testing.T) {
-	name := mcp.ToolName("fs", "write_file")
-	if !mcp.IsWriteTool(name) {
-		t.Fatal("write_file should be write")
-	}
-	readName := mcp.ToolName("fs", "read_file")
-	if mcp.IsWriteTool(readName) {
-		t.Fatal("read_file should not be write")
-	}
-}

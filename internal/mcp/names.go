@@ -22,7 +22,8 @@ func ValidateServerName(name string) error {
 	return nil
 }
 
-// ToolName returns the normalized registry name: mcp__{server}__{tool}.
+// ToolName returns the legacy normalized name mcp__{server}__{tool}.
+// v0.1.1+ registers MCP tools by bare name; this helper is for tests and legacy session display only.
 func ToolName(server, tool string) string {
 	return prefix + server + "__" + tool
 }
@@ -45,7 +46,7 @@ func ParseToolName(name string) (server, tool string, ok bool) {
 	return server, tool, true
 }
 
-// IsMCPTool reports whether name is a normalized MCP tool.
+// IsMCPTool reports whether name uses the legacy mcp__{server}__{tool} prefix (non-registry API).
 func IsMCPTool(name string) bool {
 	_, _, ok := ParseToolName(name)
 	return ok

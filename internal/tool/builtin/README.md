@@ -72,7 +72,7 @@ BuildRegistry(runMode, deps)
   └─ RegisterAgentExtras → 仅 agent
        ├─ tool_search（Registry 引用，供 defer 查 schema）
        ├─ agent（需 llm.Client；委托 spawn.Service）
-       └─ MCP 工具（mcp__*，由 MCP Manager 注册）
+       └─ MCP 工具（裸名，由 MCP Manager 注册）
 ```
 
 - **Plan 模式**：只读探索 + 可选 `web_fetch` / `diagnostics`；禁止写盘与 shell。
@@ -150,8 +150,8 @@ Runner 在 [`tool_orchestration.go`](../../agent/tool_orchestration.go) 中将**
 
 ## 相关文档
 
-- 配置键：[docs/CONFIG.md](../../../docs/CONFIG.md) — `tools.*`、`web.*`、`lsp.*`
-- 系统设计：[docs/DESIGN.md](../../../docs/DESIGN.md) §9
-- 产品规划：[docs/PLAN.md](../../../docs/PLAN.md)
+- 配置键：[docs/v0.1.0/CONFIG.md](../../../docs/v0.1.0/CONFIG.md) — `tools.*`、`web.*`、`lsp.*`
+- 系统设计：[docs/v0.1.0/DESIGN.md](../../../docs/v0.1.0/DESIGN.md) §9
+- 产品规划：[docs/v0.1.0/PLAN.md](../../../docs/v0.1.0/PLAN.md)
 - TUI 展示：[`display.go`](../display.go)、[`ui/tui/chattool/`](../../ui/tui/chattool/)
 - 子代理：[`agent/spawn/README.md`](../../agent/spawn/README.md)

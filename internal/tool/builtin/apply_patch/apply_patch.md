@@ -52,7 +52,7 @@
 }
 ```
 
-集成测试剧本：`docs/TUI_TCASE_SCRIPTS.md` — `tool-patch-single`、`tool-patch-multi`。
+集成测试剧本：`docs/v0.1.0/TUI_TCASE_SCRIPTS.md` — `tool-patch-single`、`tool-patch-multi`。
 
 ## 返回格式
 
@@ -80,7 +80,7 @@
 ## 权限与安全
 
 - **PermissionLevel**：`High`
-- 写操作；Runner 可在执行前创建 checkpoint（见 `docs/SECURITY.md`）
+- 写操作；Runner 可在执行前创建 checkpoint（见 `docs/v0.1.0/SECURITY.md`）
 - 不实现独立 `edit_file` 工具，编辑语义统一于此
 
 ## 设计思想

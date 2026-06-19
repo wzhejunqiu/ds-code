@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
@@ -52,7 +53,7 @@ func TestApplyTurnMetrics_prefersLastAssistantWithContent(t *testing.T) {
 		t.Fatalf("empty trailing block should not get turnDuration: %v", m.Chat[3].TurnDuration)
 	}
 
-	out := chat.Render(m.Chat, 60, time.Now(), false)
+	out := chat.Render(m.Chat, 60, time.Now(), false, tool.DisplayContext{})
 	if !strings.Contains(out, "task took 5.2s") {
 		t.Fatalf("expected turn duration in output:\n%s", out)
 	}

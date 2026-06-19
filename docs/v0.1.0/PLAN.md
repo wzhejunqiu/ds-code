@@ -185,7 +185,7 @@ DeepSeek V4（`deepseek-v4-pro` / `deepseek-v4-flash`）：**上下文 1,048,576
 - **strict schema**：Phase 2 启用（[规范](https://api-docs.deepseek.com/zh-cn/guides/tool_calls)）。
 - **工具默认与上限**：见 [CONFIG.md §5.11](CONFIG.md#511-tools--内置工具约束)（行数、head_limit、patch 行数、子代理并发等）。
 
-**MCP（Phase 5）**：工具名归一化（`mcp__{server}__{tool}`）；**所有 MCP 写/执行类操作经同一 `permission.Engine`**，与内置工具相同策略。
+**MCP（Phase 5）**：工具以 MCP server **裸名**注册（v0.1.1+，见 [v0.1.1/DESIGN.md](../v0.1.1/DESIGN.md)）；**所有 MCP 写/执行类操作经同一 `permission.Engine`**，与内置工具相同策略。
 
 ### 配置
 

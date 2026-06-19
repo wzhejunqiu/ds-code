@@ -25,7 +25,7 @@
 ```
 
 ```json
-{"path": "docs/CONFIG.md", "offset": 100, "limit": 50}
+{"path": "docs/v0.1.0/CONFIG.md", "offset": 100, "limit": 50}
 ```
 
 ## 返回格式

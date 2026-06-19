@@ -1,4 +1,4 @@
-// Package config loads and validates ds-code settings (see README.md and docs/CONFIG.md).
+// Package config loads and validates ds-code settings (see README.md and docs/v0.1.0/CONFIG.md).
 package config
 
 import (

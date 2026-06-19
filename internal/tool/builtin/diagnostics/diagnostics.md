@@ -63,7 +63,7 @@ diagnostics.Execute
   → 用户 PATH 中的语言服务器
 ```
 
-详见 `docs/DESIGN.md` §9.5。
+详见 `docs/v0.1.0/DESIGN.md` §9.5。
 
 ## 配置项
 

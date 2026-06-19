@@ -18,18 +18,18 @@ const (
 )
 
 // Render returns styled lines for a tool block in the main chat transcript.
-func Render(b Block, width int, showDetails bool) []string {
+func Render(b Block, width int, showDetails bool, disp tool.DisplayContext) []string {
 	expanded := showDetails || b.Expanded
-	return renderBlock(b, width, expanded)
+	return renderBlock(b, width, expanded, disp)
 }
 
-func renderBlock(b Block, width int, expanded bool) []string {
+func renderBlock(b Block, width int, expanded bool, disp tool.DisplayContext) []string {
 	indent := lipgloss.Width(bullet)
 	var body []string
 
 	if b.Running {
-		body = append(body, renderRunningTitle(b.Name, b.Command, b.Args))
-		if !tool.UsesHumanDisplay(b.Name) && !tool.IsShellDisplay(b.Name) && !tool.IsApplyPatchDisplay(b.Name) {
+		body = append(body, renderRunningTitle(b.Name, b.Command, b.Args, disp))
+		if !tool.UsesHumanDisplay(b.Name, disp) && !tool.IsShellDisplay(b.Name) && !tool.IsApplyPatchDisplay(b.Name) {
 			switch {
 			case b.Command != "":
 				body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+truncate(b.Command, titleArgsMax)))
@@ -38,16 +38,16 @@ func renderBlock(b Block, width int, expanded bool) []string {
 			default:
 				body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"running…"))
 			}
-		} else if toolRunningTitle(b.Name, b.Args, b.Command) == "" && !tool.IsShellDisplay(b.Name) && !tool.IsApplyPatchDisplay(b.Name) {
+		} else if toolRunningTitle(b.Name, b.Args, b.Command, disp) == "" && !tool.IsShellDisplay(b.Name) && !tool.IsApplyPatchDisplay(b.Name) {
 			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"running…"))
 		}
 		return body
 	}
 
-	body = append(body, renderTitleLine(b.Name, b.Command, b.Args, b.Error))
+	body = append(body, renderTitleLine(b.Name, b.Command, b.Args, b.Error, disp))
 
 	if expanded {
-		if b.Args != "" && !skipExpandedArgs(b.Name) {
+		if b.Args != "" && !skipExpandedArgs(b.Name, disp) {
 			body = append(body, styleToolMeta.Render(strings.Repeat(" ", indent)+"args: "+b.Args))
 		}
 		if b.Command != "" && tool.IsShellDisplay(b.Name) {
@@ -66,18 +66,18 @@ func renderBlock(b Block, width int, expanded bool) []string {
 	return body
 }
 
-func skipExpandedArgs(name string) bool {
-	return tool.UsesHumanDisplay(name) || tool.IsShellDisplay(name) || tool.IsApplyPatchDisplay(name)
+func skipExpandedArgs(name string, disp tool.DisplayContext) bool {
+	return tool.UsesHumanDisplay(name, disp) || tool.IsShellDisplay(name) || tool.IsApplyPatchDisplay(name)
 }
 
-func renderTitleLine(name, command, args string, isError bool) string {
+func renderTitleLine(name, command, args string, isError bool, disp tool.DisplayContext) string {
 	if tool.IsShellDisplay(name) {
 		return renderShellTitle(args, command, isError)
 	}
 	if tool.IsApplyPatchDisplay(name) {
 		return renderApplyPatchTitle(args, command, isError)
 	}
-	if human := tool.HumanToolTitle(name, args, command); human != "" {
+	if human := tool.HumanToolTitle(name, args, command, disp); human != "" {
 		parts := []string{styleToolName.Render(bullet + human)}
 		if isError {
 			parts = append(parts, styleToolError.Render(" (error)"))
@@ -121,13 +121,13 @@ func renderApplyPatchTitle(filename, statsEnc string, isError bool) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
 
-func renderRunningTitle(name, command, args string) string {
-	line := renderTitleLine(name, command, args, false)
+func renderRunningTitle(name, command, args string, disp tool.DisplayContext) string {
+	line := renderTitleLine(name, command, args, false, disp)
 	return lipgloss.JoinHorizontal(lipgloss.Top, line, styleToolMeta.Render(" …"))
 }
 
-func toolRunningTitle(name, args, command string) string {
-	if human := tool.HumanToolTitle(name, args, command); human != "" {
+func toolRunningTitle(name, args, command string, disp tool.DisplayContext) string {
+	if human := tool.HumanToolTitle(name, args, command, disp); human != "" {
 		return human
 	}
 	if tool.IsShellDisplay(name) {

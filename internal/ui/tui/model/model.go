@@ -5,10 +5,10 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/session"
@@ -48,15 +48,13 @@ func New(d *deps.Deps) *Model {
 
 	m := &Model{
 		State: state.State{
-			Deps:      d,
-			SessionID: d.SessionID,
+			Deps:           d,
+			SessionID:      d.SessionID,
+			StartupNotices: append([]header.Notice(nil), d.StartupNotices...),
 		},
 		chatVP: viewport.New(40, 10),
 		toolVP: viewport.New(40, 4),
 		input:  ti,
-	}
-	if d.Cfg != nil && d.Cfg.AllowLogSensitiveData {
-		m.SensitiveLogWarn = logging.SensitiveDataWarningMsg
 	}
 	view.RefreshStatus(&m.State)
 	return m
@@ -66,6 +64,7 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.listenPrompt(),
 		session.LoadInitialHistory(&m.State),
+		m.scheduleNoticeScroll(),
 	)
 }
 

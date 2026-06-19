@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/history"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
@@ -171,11 +172,15 @@ func LoadInitialHistory(s *state.State) tea.Cmd {
 	sid := s.SessionID
 	reasoningOpen := s.ReasoningAll
 	return func() tea.Msg {
-		chat, err := history.LoadSessionChat(d.Store, sid, reasoningOpen, d.Cfg.ProjectRoot)
+		var tools *tool.Registry
+		if d.Runner != nil {
+			tools = d.Runner.Tools
+		}
+		chat, err := history.LoadSessionChat(d.Store, sid, reasoningOpen, d.Cfg.ProjectRoot, tools)
 		if err != nil {
 			return msg.HistoryLoadedMsg{Err: err}
 		}
-		reg, err := history.LoadSubagentRegistry(context.Background(), d.Subagent, sid, reasoningOpen, d.Cfg.ProjectRoot)
+		reg, err := history.LoadSubagentRegistry(context.Background(), d.Subagent, sid, reasoningOpen, d.Cfg.ProjectRoot, tools)
 		return msg.HistoryLoadedMsg{Chat: chat, Subagents: reg, Err: err}
 	}
 }
@@ -188,11 +193,15 @@ func ResumeSession(s *state.State, id string) tea.Cmd {
 		if _, err := d.Store.Get(ctx, id); err != nil {
 			return msg.SessionResumedMsg{Err: err}
 		}
-		chat, err := history.LoadSessionChat(d.Store, id, reasoningOpen, d.Cfg.ProjectRoot)
+		var tools *tool.Registry
+		if d.Runner != nil {
+			tools = d.Runner.Tools
+		}
+		chat, err := history.LoadSessionChat(d.Store, id, reasoningOpen, d.Cfg.ProjectRoot, tools)
 		if err != nil {
 			return msg.SessionResumedMsg{Err: err}
 		}
-		reg, err := history.LoadSubagentRegistry(ctx, d.Subagent, id, reasoningOpen, d.Cfg.ProjectRoot)
+		reg, err := history.LoadSubagentRegistry(ctx, d.Subagent, id, reasoningOpen, d.Cfg.ProjectRoot, tools)
 		if err != nil {
 			return msg.SessionResumedMsg{Err: err}
 		}

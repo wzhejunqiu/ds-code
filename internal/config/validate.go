@@ -23,11 +23,11 @@ var allowedEffort = []string{"high", "max"}
 var allowedPermission = []string{"readonly", "ask", "auto"}
 var allowedTruncateBy = []string{"chars", "tokenizer"}
 
-// rejectForbiddenKeys blocks secrets and fixed paths from YAML (see docs/CONFIG.md).
+// rejectForbiddenKeys blocks secrets and fixed paths from YAML (see docs/v0.1.0/CONFIG.md).
 func rejectForbiddenKeys(v *viper.Viper) error {
 	for _, key := range forbiddenYAMLKeys {
 		if v.IsSet(key) {
-			return fmt.Errorf("config: forbidden key %q in YAML (see docs/CONFIG.md)", key)
+			return fmt.Errorf("config: forbidden key %q in YAML (see docs/v0.1.0/CONFIG.md)", key)
 		}
 	}
 	return nil

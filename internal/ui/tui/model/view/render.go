@@ -13,6 +13,7 @@ import (
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/session/usageagg"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
@@ -39,15 +40,17 @@ type HeaderCache struct {
 }
 
 type headerCacheKey struct {
-	width       int
-	hasSession  bool
-	costCNY     float64
-	subagentNav state.SubagentNav
-	model       string
-	thinking    string
-	projectRoot string
-	version     string
-	breadcrumb  string
+	width        int
+	hasSession   bool
+	costCNY      float64
+	subagentNav  state.SubagentNav
+	model        string
+	thinking     string
+	projectRoot  string
+	version      string
+	breadcrumb   string
+	notices      string
+	scrollOffset int
 }
 
 // Invalidate clears the cached header.
@@ -57,6 +60,13 @@ func (c *HeaderCache) Invalidate() {
 	}
 	c.text = ""
 	c.key = headerCacheKey{}
+}
+
+func toolDisplayContext(s *state.State) tool.DisplayContext {
+	if s.Deps == nil || s.Deps.Runner == nil {
+		return tool.DisplayContext{}
+	}
+	return tool.FromRegistry(s.Deps.Runner.Tools)
 }
 
 func ContentLineCount(s string) int {
@@ -75,7 +85,7 @@ func buildHeader(s *state.State, width int) string {
 	if s.HasSession {
 		sess = &s.HeaderSession
 	}
-	hdr := header.Render(width, s.Deps.Version, s.Deps.Cfg, sess, s.HeaderCostCNY)
+	hdr := header.Render(width, s.Deps.Version, s.Deps.Cfg, sess, s.HeaderCostCNY, s.StartupNotices, s.NoticeScrollOffset)
 	if s.SubagentNav == state.SubagentNavDetail {
 		if crumb := subagentui.DetailBreadcrumb(s); crumb != "" {
 			hdr += "\n" + style.FooterHint.Render(crumb+"  (← back to list)")
@@ -102,6 +112,8 @@ func headerKey(s *state.State, width int) headerCacheKey {
 	if s.SubagentNav == state.SubagentNavDetail {
 		key.breadcrumb = subagentui.DetailBreadcrumb(s)
 	}
+	key.notices = header.NoticesFingerprint(s.StartupNotices)
+	key.scrollOffset = s.NoticeScrollOffset
 	return key
 }
 
@@ -128,7 +140,7 @@ func buildChatBody(s *state.State, width int, caches *SyncCaches) (text string, 
 		chatCache = caches.Chat
 		mdCache = caches.MD
 	}
-	text = chat.RenderCached(s.Chat, width, time.Now(), s.ToolDetailsVisible, chatCache, mdCache)
+	text = chat.RenderCached(s.Chat, width, time.Now(), s.ToolDetailsVisible, toolDisplayContext(s), chatCache, mdCache)
 	lineCount = ContentLineCount(text)
 	return text, lineCount
 }
@@ -219,9 +231,6 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	}
 
 	chromeH := gapAfterChat + inputFrameH + gapAfterInput + footerH
-	if s.SensitiveLogWarn != "" {
-		chromeH += ContentLineCount(s.SensitiveLogWarn) + 1
-	}
 	if s.ErrLine != "" {
 		chromeH += 2
 	}
@@ -352,11 +361,6 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 
 	footerLeft := FooterLeft(s)
 	b.WriteString(layout.Footer(s.Width, footerLeft, s.StatusRight))
-
-	if s.SensitiveLogWarn != "" {
-		b.WriteString("\n")
-		b.WriteString(lipgloss.NewStyle().Foreground(theme.Error).Render(s.SensitiveLogWarn))
-	}
 
 	if s.ErrLine != "" {
 		b.WriteString("\n")

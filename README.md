@@ -98,12 +98,12 @@ ds-code resume <会话ID>
 
 可选。用户级：`~/.ds-code/config/config.yaml`；项目级：`<git-root>/.ds-code/config.yaml`。示例见 [`configs/example.yaml`](configs/example.yaml)。
 
-详细选项见 [CONFIG.md](docs/CONFIG.md)。
+详细选项见 [CONFIG.md](docs/v0.1.0/CONFIG.md)。
 
 ## 更多文档
 
-- [CONFIG.md](docs/CONFIG.md) — 配置说明
-- [SECURITY.md](docs/SECURITY.md) — 安全说明
+- [CONFIG.md](docs/v0.1.0/CONFIG.md) — 配置说明
+- [SECURITY.md](docs/v0.1.0/SECURITY.md) — 安全说明
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 从源码构建与参与开发
 
 ## 许可证

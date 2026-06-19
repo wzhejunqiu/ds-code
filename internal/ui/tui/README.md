@@ -173,4 +173,4 @@ TUI 工具块标题由 `internal/tool.DisplaySummary` 生成人类可读单行�
 
 本地检查：`make vet`（`go vet -copylocks ./...`）。
 
-配置路径与 YAML 键见 `internal/config/README.md` 与 `docs/CONFIG.md`。
+配置路径与 YAML 键见 `internal/config/README.md` 与 `docs/v0.1.0/CONFIG.md`。

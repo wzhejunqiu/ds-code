@@ -12,12 +12,13 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
 	"github.com/wzhejunqiu/ds-code/internal/version"
 	"go.uber.org/zap"
 )
 
 // RunTUIHarness starts the TUI with harness slash wiring (tuitest builds only).
-func (a *App) RunTUIHarness(cmd *cobra.Command, sessionID string, reg *mockserver.Registry) error {
+func (a *App) RunTUIHarness(cmd *cobra.Command, sessionID string, reg *mockserver.Registry, startupNotices []header.Notice) error {
 	logging.L().Info("starting TUI harness", zap.Bool("resume_session", sessionID != ""))
 	if _, err := a.openStore(); err != nil {
 		return err
@@ -50,14 +51,15 @@ func (a *App) RunTUIHarness(cmd *cobra.Command, sessionID string, reg *mockserve
 
 	subStore := a.subStore
 	deps := tui.Deps{
-		Cfg:       a.Cfg,
-		Runner:    runner,
-		Store:     store,
-		Subagent:  subStore,
-		Context:   ctxSvc,
-		SessionID: sessionID,
-		Version:   version.Version,
-		PromptCh:  promptCh,
+		Cfg:            a.Cfg,
+		Runner:         runner,
+		Store:          store,
+		Subagent:       subStore,
+		Context:        ctxSvc,
+		SessionID:      sessionID,
+		Version:        version.Version,
+		PromptCh:       promptCh,
+		StartupNotices: append([]header.Notice(nil), startupNotices...),
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line, activeAgentType string) (bool, error) {
 			env := &slashcmd.Env{
 				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,

@@ -27,28 +27,39 @@ type Stack struct {
 	Mock     *mockserver.Server
 	Registry *mockserver.Registry
 	Project  string
+	homeDir  string // isolated HOME; removed on Close (see testutil.NewIsolatedHome)
 	cleanup  []func()
 }
 
 // NewHarness creates a stack for the interactive ds-code-tui-test binary.
+// All ~/.ds-code data is rooted under testutil.NewIsolatedHome and removed on Close.
 func NewHarness() (*Stack, error) {
-	return newStackCore(true)
+	homeDir, err := testutil.NewIsolatedHome()
+	if err != nil {
+		return nil, err
+	}
+	s, err := newStackCore()
+	if err != nil {
+		_ = os.RemoveAll(homeDir)
+		return nil, err
+	}
+	s.homeDir = homeDir
+	return s, nil
 }
 
 // NewStack creates an isolated harness stack for tests.
 func NewStack(t testing.TB) (*Stack, error) {
 	t.Helper()
 	testutil.IsolatedHome(t)
-	s, err := newStackCore(false)
+	s, err := newStackCore()
 	if err != nil {
 		return nil, err
 	}
 	t.Cleanup(s.Close)
-	t.Cleanup(func() { _ = os.RemoveAll(s.Project) })
 	return s, nil
 }
 
-func newStackCore(keepProjectOnClose bool) (*Stack, error) {
+func newStackCore() (*Stack, error) {
 	dir, err := os.MkdirTemp("", "ds-code-tui-test-*")
 	if err != nil {
 		return nil, err
@@ -92,16 +103,29 @@ func newStackCore(keepProjectOnClose bool) (*Stack, error) {
 		func() { mock.Close() },
 		func() { application.Close() },
 	}
-	if !keepProjectOnClose {
-		s.cleanup = append(s.cleanup, func() { _ = os.RemoveAll(dir) })
-	}
 	return s, nil
 }
 
-// Close releases resources.
+// Close releases resources and removes harness temp directories.
 func (s *Stack) Close() {
 	for i := len(s.cleanup) - 1; i >= 0; i-- {
 		s.cleanup[i]()
+	}
+	s.removeHarnessDirs()
+}
+
+func (s *Stack) removeHarnessDirs() {
+	if s.Project != "" {
+		_ = os.RemoveAll(s.Project)
+		s.Project = ""
+	}
+	if s.homeDir != "" {
+		_ = os.RemoveAll(s.homeDir)
+		s.homeDir = ""
+		return
+	}
+	if s.Cfg != nil && s.Cfg.ProjectDataDir != "" {
+		_ = os.RemoveAll(s.Cfg.ProjectDataDir)
 	}
 }
 

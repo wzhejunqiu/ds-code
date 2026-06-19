@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 )
 
@@ -17,7 +18,7 @@ func TestRenderUserHighlightNoLabels(t *testing.T) {
 	blocks[0].Content = "你好"
 	blocks[1].Content = "你好！"
 
-	out := Render(blocks, 40, time.Now(), false)
+	out := Render(blocks, 40, time.Now(), false, tool.DisplayContext{})
 	if strings.Contains(out, "You") || strings.Contains(out, "Assistant") {
 		t.Fatalf("unexpected role labels in output:\n%s", out)
 	}
@@ -39,7 +40,7 @@ func TestRenderReasoningExpandedWhileThinking(t *testing.T) {
 	}}
 	blocks[0].Reasoning = "think step"
 
-	out := Render(blocks, 60, time.Now(), false)
+	out := Render(blocks, 60, time.Now(), false, tool.DisplayContext{})
 	if !strings.Contains(out, "think step") {
 		t.Fatalf("expected reasoning body while thinking:\n%s", out)
 	}
@@ -60,7 +61,7 @@ func TestRenderReasoningCollapsedAfterThinking(t *testing.T) {
 	blocks[0].Reasoning = "think step"
 	blocks[0].Content = "answer"
 
-	out := Render(blocks, 60, time.Now(), false)
+	out := Render(blocks, 60, time.Now(), false, tool.DisplayContext{})
 	if strings.Contains(out, "think step") {
 		t.Fatalf("expected reasoning body hidden after thinking:\n%s", out)
 	}
@@ -74,7 +75,7 @@ func TestRenderTurnDuration(t *testing.T) {
 	blocks[0].Content = "done"
 	blocks[0].TurnDuration = 5*time.Second + 200*time.Millisecond
 
-	out := Render(blocks, 40, time.Now(), false)
+	out := Render(blocks, 40, time.Now(), false, tool.DisplayContext{})
 	if !strings.Contains(out, "task took 5.2s") {
 		t.Fatalf("expected turn duration line:\n%s", out)
 	}
@@ -113,7 +114,7 @@ func TestRenderUserFullWidthBackground(t *testing.T) {
 	blocks := []Block{{Role: RoleUser}}
 	blocks[0].Content = "hi"
 
-	out := Render(blocks, 30, time.Now(), false)
+	out := Render(blocks, 30, time.Now(), false, tool.DisplayContext{})
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
 	if len(lines) != 1 {
 		t.Fatalf("got %d lines, want 1:\n%s", len(lines), out)

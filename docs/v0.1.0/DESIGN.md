@@ -577,7 +577,7 @@ type Tool interface {
 }
 ```
 
-MCP 工具名：`mcp__{server}__{tool}`。
+MCP 工具以 **裸名**（MCP server 原始 `tool.name`）注册，与 AGENTS.md / Cursor 一致。
 
 ### 9.2 内置工具清单
 
@@ -847,7 +847,7 @@ panel.Render(snap, bd)
 实现要点：
 
 - `internal/config.Load()`：`SetDefault` → 用户级 `~/.ds-code/config/config.yaml` → 项目级 `.ds-code/config.yaml` → `cobra` flags。
-- 示例键全集：[`configs/example.yaml`](../configs/example.yaml)（非运行时加载）。
+- 示例键全集：[`configs/example.yaml`](../../configs/example.yaml)（非运行时加载）。
 - API Key 仅环境变量：`DS_CODE_DEEPSEEK_API_KEY` → `DEEPSEEK_API_KEY`；见 [CONFIG.md §3.1](CONFIG.md#31-deepseek-api-keyllmapi_key)。
 
 ---
@@ -864,7 +864,7 @@ func (m *Manager) Call(ctx context.Context, name string, args json.RawMessage) (
 ```
 
 - 崩溃隔离：单 server panic 不影响主进程。
-- 工具名归一化后注册进 `tool.Registry`。
+- 工具以 MCP server 提供的**裸名**（原始 `tool.name`）注册进 `tool.Registry`；与内建工具或同名校验冲突时跳过并提示（见 [v0.1.1 DESIGN](../v0.1.1/DESIGN.md)）。
 
 ---
 

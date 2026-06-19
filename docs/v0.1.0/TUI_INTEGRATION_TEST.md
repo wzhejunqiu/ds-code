@@ -15,6 +15,7 @@
 - 发布构建 **`make build`** 不带 `tuitest`，`bin/ds-code` 不含 `/tcase`、mockserver 等。
 - Harness 代码均在 `//go:build tuitest` 文件或 `cmd/ds-code-tui-test/` 下。
 - 生产包仅增加一行 `trySubmitTUITestSlash` 调用；release 下为空实现。
+- **Harness 退出时会删除**临时项目工作区与 `projects/<project_id>/`（启动时通过 `testutil.NewIsolatedHome` 隔离 `HOME`，与单元测试 `testutil.IsolatedHome(t)` 相同机制；`logging.Setup` 必须在隔离之后调用）。
 
 检查发布二进制：
 
@@ -38,6 +39,10 @@ make build-tui-test
 /tcase list         # 同上
 /tcase run stream-basic   # 直接运行（仍可手动输入）
 ```
+
+### Header 消息通知区（自动滚动）
+
+`ds-code-tui-test` 启动时会注入 [`cmd/ds-code-tui-test/notices.go`](../../cmd/ds-code-tui-test/notices.go) 中的演示通知（敏感日志警告、MCP 跳过摘要、多条 Harness 说明）。内容换行后超过 8 行可见窗口时，header 右侧 **每约 4 秒自动滚动**，无需快捷键。详见 [`cmd/ds-code-tui-test/README.md`](../../cmd/ds-code-tui-test/README.md)。
 
 场景列表：**↑↓** 移动、**Enter** 运行选中项、**Esc** 关闭。
 
@@ -95,7 +100,7 @@ ds-code-tui-test
 
 ## 新增场景
 
-1. 在 [`internal/tuitest/scenarios/`](../internal/tuitest/scenarios/) 增加 `*Scenario` 并注册到 `All()`。
+1. 在 [`internal/tuitest/scenarios/`](../../internal/tuitest/scenarios/) 增加 `*Scenario` 并注册到 `All()`。
 2. 在 **[TUI_TCASE_SCRIPTS.md](./TUI_TCASE_SCRIPTS.md)** 补充该场景的剧本说明（Turn、chunk、特殊 registry 行为）。
 3. `/tcase` 或 `/tcase list` 打开交互式 Picker；**Enter** 或 `/tcase run <name>` 会 `registry.SetActive(name)` 并提交场景的 `Prompt`。
 4. 本地：`make test-tui` 或 `make build-tui-test` 手动验证。
@@ -104,10 +109,10 @@ ds-code-tui-test
 
 | 路径 | 作用 |
 |------|------|
-| `cmd/ds-code-tui-test/` | 交互入口（仅 `tuitest` 构建） |
+| `cmd/ds-code-tui-test/` | 交互入口（仅 `tuitest` 构建）；`notices.go` 提供 header 通知自动滚动演示 |
 | `internal/tuitest/mockserver/` | Mock LLM HTTP + SSE |
 | `internal/tuitest/scenarios/` | 场景脚本（实现） |
-| `docs/TUI_TCASE_SCRIPTS.md` | `/tcase` 场景剧本（文档） |
+| `TUI_TCASE_SCRIPTS.md` | `/tcase` 场景剧本（文档） |
 | `internal/tuitest/stack.go` | 统一组装 app + runner |
 | `cmd/ds-code/app/tui_tuitest.go` | `RunTUIHarness` |
 | `internal/ui/tui/model/input/submit_hook_*.go` | `/tcase` 挂钩 |

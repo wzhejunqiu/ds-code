@@ -13,6 +13,36 @@ import (
 
 const titleArgsMax = 80
 
+// DisplayContext supplies MCP metadata for TUI tool display.
+type DisplayContext struct {
+	MCPLookup func(name string) (server string, ok bool)
+}
+
+// FromRegistry builds a DisplayContext from a tool registry.
+func FromRegistry(reg *Registry) DisplayContext {
+	if reg == nil {
+		return DisplayContext{}
+	}
+	return DisplayContext{MCPLookup: reg.MCPServerForTool}
+}
+
+// IsMCPTool reports whether name is a registered MCP bare tool.
+func (d DisplayContext) IsMCPTool(name string) bool {
+	if d.MCPLookup == nil {
+		return false
+	}
+	_, ok := d.MCPLookup(name)
+	return ok
+}
+
+// MCPServerForTool returns the MCP server for a registered bare tool name.
+func (d DisplayContext) MCPServerForTool(name string) (string, bool) {
+	if d.MCPLookup == nil {
+		return "", false
+	}
+	return d.MCPLookup(name)
+}
+
 // ApplyPatchFileDisplay is one per-file apply_patch TUI row.
 type ApplyPatchFileDisplay struct {
 	Filename string
@@ -53,7 +83,7 @@ func ToolEndRows(name string, rawArgs []byte, workspace string) []ToolDisplayRow
 }
 
 // DisplaySummary formats tool arguments for the TUI (args line and optional command).
-func DisplaySummary(name string, rawArgs []byte, workspace string) (argsLine, command string) {
+func DisplaySummary(name string, rawArgs []byte, workspace string, disp DisplayContext) (argsLine, command string) {
 	args := ArgsMap(rawArgs)
 	switch name {
 	case "shell":
@@ -97,7 +127,10 @@ func DisplaySummary(name string, rawArgs []byte, workspace string) (argsLine, co
 			return FormatWebFetchDisplay(u), ""
 		}
 	default:
-		if isMCPToolName(name) {
+		if server, ok := disp.MCPServerForTool(name); ok {
+			return FormatMCPBareDisplay(server, name), ""
+		}
+		if isLegacyMCPToolName(name) {
 			return FormatMCPDisplay(name), ""
 		}
 	}
@@ -213,11 +246,19 @@ func FormatWebFetchDisplay(url string) string {
 	return "Fetch " + truncateOneLine(url, 120)
 }
 
-func isMCPToolName(name string) bool {
+func isLegacyMCPToolName(name string) bool {
 	return strings.HasPrefix(name, "mcp__")
 }
 
-// FormatMCPDisplay formats an MCP tool name for the TUI.
+// FormatMCPBareDisplay formats a registered MCP bare tool for the TUI.
+func FormatMCPBareDisplay(server, toolName string) string {
+	if server != "" && toolName != "" {
+		return "MCP " + server + " · " + toolName
+	}
+	return "MCP " + truncateOneLine(toolName, 80)
+}
+
+// FormatMCPDisplay formats a legacy mcp__ tool name for the TUI.
 func FormatMCPDisplay(toolName string) string {
 	server, toolPart, ok := parseMCPToolName(toolName)
 	if ok && server != "" && toolPart != "" {
@@ -395,12 +436,15 @@ func countNonEmptyLines(s string) int {
 }
 
 // UsesHumanDisplay reports tools that use a single-line human title in args.
-func UsesHumanDisplay(name string) bool {
+func UsesHumanDisplay(name string, disp DisplayContext) bool {
 	switch name {
 	case "read_file", "write_file", "grep", "glob", "list_dir", "agent", "task", "web_fetch":
 		return true
 	default:
-		return isMCPToolName(name)
+		if disp.IsMCPTool(name) {
+			return true
+		}
+		return isLegacyMCPToolName(name)
 	}
 }
 
@@ -411,11 +455,11 @@ func IsApplyPatchDisplay(name string) bool {
 
 // HumanToolTitle returns a single-line TUI label when the tool uses a non-function style.
 // Empty means use specialized or default rendering.
-func HumanToolTitle(name, args, command string) string {
+func HumanToolTitle(name, args, command string, disp DisplayContext) string {
 	if IsShellDisplay(name) || IsApplyPatchDisplay(name) {
 		return ""
 	}
-	if UsesHumanDisplay(name) && args != "" {
+	if UsesHumanDisplay(name, disp) && args != "" {
 		return args
 	}
 	return ""

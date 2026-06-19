@@ -28,3 +28,17 @@ func (n Name) String() string {
 func (n Name) Matches(name string) bool {
 	return n.String() == name
 }
+
+// ReservedNames lists all built-in tool name constants (including names not registered when disabled).
+// For documentation and tests only; MCP Discover must not use this to pre-skip tools.
+func ReservedNames() map[string]struct{} {
+	names := []Name{
+		NameReadFile, NameWriteFile, NameApplyPatch, NameShell, NameGlob, NameGrep,
+		NameListDir, NameDiagnostics, NameWebFetch, NameWebSearch, NameAgent, NameToolSearch,
+	}
+	out := make(map[string]struct{}, len(names))
+	for _, n := range names {
+		out[n.String()] = struct{}{}
+	}
+	return out
+}

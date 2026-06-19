@@ -6,7 +6,7 @@ const (
 	SchemaAgentDescription = "简短描述（3-5 个词）"
 	SchemaAgentPrompt      = "子代理的任务说明"
 	SchemaAgentType        = "子代理类型。省略时若 fork 启用则走 Fork 路径，否则默认 general-purpose"
-	SchemaAgentModel       = "可选模型覆盖（sonnet / opus / haiku）"
+	SchemaAgentModel       = "可选模型覆盖"
 	SchemaAgentBackground  = "设为 true 时在后台异步运行"
 	SchemaAgentIsolation   = "隔离模式：worktree（仅 general-purpose）"
 

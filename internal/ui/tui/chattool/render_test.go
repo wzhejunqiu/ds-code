@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 func renderOut(b Block, width int, showDetails bool) string {
-	return strings.Join(Render(b, width, showDetails), "\n")
+	return strings.Join(Render(b, width, showDetails, tool.DisplayContext{}), "\n")
 }
 
 func TestRenderBlockCollapsed_wrapsAtWidth(t *testing.T) {

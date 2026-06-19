@@ -12,3 +12,4 @@ coverage.html
 /ds-code
 .vscode/
 __debug_bin*
+.ds-code/
