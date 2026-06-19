@@ -283,10 +283,10 @@ billing:
 | `context.keep_recent_turns` | int | **6** | compact 后保留最近 N **用户轮**全文 |
 | `context.truncate_by` | string | **`chars`** | `chars` \| `tokenizer`；工具/`@` 截断 |
 | `context.tool_result_max_chars` | int | **100000** | 单次 tool 返回字符上限；内建工具与 MCP **共用**；MCP 超长时 session 消息含 spill 路径 hint，完整正文在 `mcp-result/`（见 [§2.1](#21-项目运行时目录projectsproject_id)） |
-| `context.at_reference_max_chars` | int | **128000** | `@` 引用预加载总字符上限 |
+| `context.at_reference_max_chars` | int | **128000** | `@` 引用展开总字符上限（`@file` 全文 + `@dir/` 列表合计） |
 | `context.git_snapshot_max_chars` | int | **16000** | Git 快照（分支、默认分支、user、status、最近提交）注入 system 总上限 |
-| `context.at_dir_max_files` | int | **50** | `@dir/` 最多预读文件数 |
-| `context.at_dir_max_depth` | int | **4** | `@dir/` 最大目录深度 |
+| `context.at_dir_max_files` | int | **50** | `@dir/` 目录列表最多条目数 |
+| `context.at_dir_max_depth` | int | **4** | `@dir/` 最大遍历深度 |
 
 compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**C** API 过长（见 [llm-deepseek.md](llm-deepseek.md)）；计费展示 `prompt+completion` **不单独**触发 compact。
 

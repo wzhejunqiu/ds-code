@@ -24,7 +24,7 @@
 | S1 | `internal/config` | API Key 仅环境变量；日志不打印 key |
 | S2 | `workspace.ResolveRel` + `permission.ResolvePath` | 相对/绝对路径先规范化与 symlink 求值，再 `ensureUnder`；合法 `foo/../bar` 允许；`../outside` 拒绝 |
 | S3 | `permission.SkipSensitiveAbs` / `CheckReadablePath` | 按路径段匹配：`.env`、`.envrc`、`.env.*`、`.aws`、`.ssh`、`.docker`、`.kube`、`.gnupg`、`credentials/`、`secrets/`、密钥文件名等（启发式，非完备） |
-| S3-S | `context/atref.go` | 用户提示词中显式 `@file` / `@dir/` 仅校验 S2（`ResolvePath`），**可**读取 `.env` 等 S3 路径并注入 user message；Agent 枚举、`read_file`、`shell` 仍受 S3；compact 时 `sanitizeCompactInput`（S12）**不**对 `@` 展开块做专用剥离 |
+| S3-S | `context/atref.go` | 用户提示词中显式 `@file` / `@dir/` 仅校验 S2（`ResolvePath`）。**`@file`** 可读取 `.env` 等 S3 路径并注入全文；**`@dir/`** 仅列路径（不含 S3 文件正文）。用户原文中的 `@path` 保留在 prompt 中。Agent 枚举、`read_file`、`shell` 仍受 S3；compact 时 `sanitizeCompactInput`（S12）**不**对 `@` 展开块做专用剥离 |
 | S4 | `permission.checkSensitiveShell` | denylist 路径扫描 + 高危 shell 模式；`auto` 下 shell 可读普通文件但不可访问敏感路径；`context` 取消杀子进程 |
 | S5 | `context` tool 格式化 + system merge | 用户不能覆盖 system |
 | S6 | `internal/mcp` + `Perm.Check` | MCP 写操作统一权限 |

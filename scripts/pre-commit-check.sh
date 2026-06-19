@@ -30,9 +30,19 @@ if [ -n "$unformatted" ]; then
 fi
 
 pkgs=()
-while IFS= read -r p; do
-  [ -n "$p" ] && pkgs+=("$p")
-done < <(go list -find "${staged[@]}" | sort -u)
+seen_dirs=""
+for f in "${staged[@]}"; do
+  d="$(dirname "$f")"
+  case "$seen_dirs" in *"|${d}|"*) continue ;; esac
+  seen_dirs="${seen_dirs}|${d}|"
+  while IFS= read -r p; do
+    [ -n "$p" ] && pkgs+=("$p")
+  done < <(go list "./${d}/..." 2>/dev/null || go list "./${d}" 2>/dev/null || true)
+done
+# dedupe packages
+if [ ${#pkgs[@]} -gt 0 ]; then
+  pkgs=($(printf '%s\n' "${pkgs[@]}" | sort -u))
+fi
 
 if [ ${#pkgs[@]} -eq 0 ]; then
   exit 0

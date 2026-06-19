@@ -70,7 +70,7 @@ ds-code --plan -p "梳理 internal/agent 的结构并给出重构建议"
 
 ## 常用用法
 
-**引用文件**：在输入中用 `@path/to/file.go` 或 `@src/` 预加载文件/目录。
+**引用文件/目录**：`@path/to/file.go` 预加载单文件全文；`@src/` 注入目录文件列表（不含正文，Agent 按需 `read_file`/`glob`）。用户原文中的 `@path` 会保留在 prompt 中。
 
 **恢复会话**：
 

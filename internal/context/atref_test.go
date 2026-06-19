@@ -26,8 +26,34 @@ func TestAtExpander_file(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !strings.Contains(out, "@foo.go") {
+		t.Fatalf("output should preserve @ ref in user text: %q", out)
+	}
 	if !strings.Contains(out, "package main") {
 		t.Fatalf("output missing file content: %q", out)
+	}
+}
+
+func TestAtExpander_preservesAtInSentence(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
+	if err := os.WriteFile(path, []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	out, err := exp.Expand("按照 @foo.go 的要求")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "按照 @foo.go 的要求") {
+		t.Fatalf("output should preserve @ ref in sentence: %q", out)
+	}
+	if !strings.Contains(out, "--- @foo.go") {
+		t.Fatalf("output missing expanded block: %q", out)
 	}
 }
 
@@ -52,11 +78,14 @@ func TestAtExpander_dirIncludesSensitiveAtRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "SECRET=1") {
-		t.Fatalf("directory @ ref should include .env when user explicitly @ ./: %q", out)
+	if !strings.Contains(out, ".env") {
+		t.Fatalf("directory @ ref should list .env path: %q", out)
 	}
-	if !strings.Contains(out, "package pkg") {
-		t.Fatalf("expected pkg/code.go content: %q", out)
+	if !strings.Contains(out, "pkg/code.go") {
+		t.Fatalf("expected pkg/code.go in listing: %q", out)
+	}
+	if strings.Contains(out, "SECRET=1") {
+		t.Fatalf("directory @ ref should not include file contents: %q", out)
 	}
 }
 
@@ -122,8 +151,11 @@ func TestAtExpander_dirIgnoresSkipDirs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "package lib") {
-		t.Fatalf("@dir should ignore skip_dirs: %q", out)
+	if !strings.Contains(out, "lib.go") {
+		t.Fatalf("@dir should list files under skip_dirs: %q", out)
+	}
+	if strings.Contains(out, "package lib") {
+		t.Fatalf("@dir should not include file contents: %q", out)
 	}
 }
 
@@ -148,8 +180,11 @@ func TestAtExpander_dirIgnoresGitignore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "package ignored") {
-		t.Fatalf("@dir should ignore gitignore: %q", out)
+	if !strings.Contains(out, "code.go") {
+		t.Fatalf("@dir should list gitignored files: %q", out)
+	}
+	if strings.Contains(out, "package ignored") {
+		t.Fatalf("@dir should not include file contents: %q", out)
 	}
 }
 
@@ -171,7 +206,42 @@ func TestAtExpander_dirAllowsNodeModules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "module.exports") {
-		t.Fatalf("expected node_modules content: %q", out)
+	if !strings.Contains(out, "index.js") {
+		t.Fatalf("expected index.js in listing: %q", out)
+	}
+	if strings.Contains(out, "module.exports") {
+		t.Fatalf("directory @ ref should not include file contents: %q", out)
+	}
+}
+
+func TestAtExpander_dirListingOnly(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "docs")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "a.md"), []byte("# A\nsecret-a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "b.md"), []byte("# B\nsecret-b\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{Context: config.ContextConfig{AtReferenceMaxChars: 10000}}
+	perm := permission.NewEngine("auto", dir, true)
+	exp := &context.AtExpander{Cfg: cfg, Perm: perm}
+
+	out, err := exp.Expand("review @docs/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "a.md") || !strings.Contains(out, "b.md") {
+		t.Fatalf("expected both files listed: %q", out)
+	}
+	if strings.Contains(out, "secret-a") || strings.Contains(out, "secret-b") {
+		t.Fatalf("directory listing must not include file bodies: %q", out)
+	}
+	if !strings.Contains(out, "read_file") {
+		t.Fatalf("expected footer hint to use read_file: %q", out)
 	}
 }

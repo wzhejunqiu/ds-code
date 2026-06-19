@@ -31,6 +31,7 @@ const (
 	AtRefRemainingSkipped = "\n... [其余文件已跳过：预算用尽]"
 	AtRefTooManyFiles     = "文件过多（%d+）。仅列出前 %d 个；更多请用 grep/glob。\n\n"
 	AtRefDirHeader        = "--- @%s/（目录） ---\n"
+	AtRefDirListingFooter = "\n如需文件内容，请使用 read_file 或 glob 按需读取。"
 	AtRefFileHeader       = "--- @%s (%s) ---\n"
 	AtRefSkippedBlock     = "--- @%s ---\n%s"
 )

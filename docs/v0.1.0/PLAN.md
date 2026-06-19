@@ -247,10 +247,10 @@ DeepSeek V4（`deepseek-v4-pro` / `deepseek-v4-flash`）：**上下文 1,048,576
 
 | 项 | 规则 |
 |----|------|
-| 单文件 | 读取全文或按 `read_file` 行限制截断后并入 user 消息 |
-| `@dir/` | 尊重 `.gitignore`；**最多 50 个文件**、**深度 ≤ 4**、单文件 ≤ `at_reference_max_chars/10`；超出则列表 + 提示用 `grep`/`glob` |
+| 单文件 `@file` | 读取全文（单文件 ≤ `at_reference_max_chars/10`）后追加到 user 消息；用户原文中的 `@path` **保留** |
+| `@dir/` | **仅注入目录文件列表**（不含正文）；最多 **50** 个条目、深度 ≤ **4**；超出提示用 `grep`/`glob`；Agent 按需 `read_file` |
 | 总预算 | 单次用户消息所有 `@` 合计 ≤ `at_reference_max_chars` |
-| 路径 | 须在 [工作区](#工作区与路径解析) 内；敏感文件走 S3 denylist |
+| 路径 | 须在 [工作区](#工作区与路径解析) 内；用户显式 `@` 仅 S2（v0.1.2 起可越过 Agent 枚举的 S3） |
 
 ### 权限沙箱与工作区
 

@@ -42,8 +42,8 @@ context:
   tool_result_max_chars: 100000
   at_reference_max_chars: 128000
   git_snapshot_max_chars: 16000
-  at_dir_max_files: 50
-  at_dir_max_depth: 4
+  at_dir_max_files: 50   # @dir/ 目录列表最多条目数
+  at_dir_max_depth: 4    # @dir/ 最大遍历深度
 
 agent:
   max_turns: 25

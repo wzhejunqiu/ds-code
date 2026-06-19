@@ -140,8 +140,8 @@ v0.1.1 及更早版本中，路径安全依赖多层重复逻辑：
 | **`@` + compact 外发摘要** | 旧轮 user message 中 `@.env` 等展开块**可能**进入 compact 摘要 LLM 输入；S12 行级 redact **不**对 `@` 块专用剥离（SECURITY §S3-S）。用户点名敏感路径须知情。 |
 | **TUI 复制含可见敏感内容** | 复制内容为 viewport **已渲染** plain text；含 MCP 参数摘要、spill hint 绝对路径、shell 命令行等（与 FR-5.9 一致）；不复制未显示字段（NFR-18）。 |
 | **`@` 引用语法** | 仅匹配 `@([a-zA-Z0-9_./\-]+)`；含空格、Unicode 等路径须用 Agent 工具或引号外显式说明。 |
-| **`@.git/` / 超大目录** | 用户可 `@.git/` 或 `@node_modules/`；仅靠 `at_dir_max_*` 预算约束，可能一次展开很重。 |
-| **`@dir/` 二进制** | `@dir/` 不应用 `IsSearchable` / grep 大小上限（FR-6.11）；可能将二进制或大文件灌入 user message，仅靠预算截断。 |
+| **`@.git/` / 超大目录** | 用户可 `@.git/` 或 `@node_modules/`；`@dir/` 仅列路径（不含正文），受 `at_dir_max_*` 条目上限约束。 |
+| **`@dir/` 语义** | `@dir/` 注入目录文件列表，**不**预读文件正文；需全文时用 `@file` 或 Agent `read_file`。用户原文中的 `@path` 保留在 prompt 中。 |
 | **MCP 失败 / 取消** | 失败（`isToolErrorBody`）与 context 取消 mid-flight **不写** spill（FR-4.16）。`isToolErrorBody` 对正文以 `error:` 开头的**成功** MCP 响应可能误判（见 DESIGN §12.5、§10）。 |
 | **审计日志** | `audit.jsonl` 仍仅存 args 哈希；MCP `args_preview` 不进 audit（行为不变）。 |
 | **TUI 复制范围** | 仅聊天 viewport 与工具面板；输入框、浮层内复制策略见 FR-7.8；不实现 transcript 刷回 scrollback。流式输出进行中选区可能错位（FR-7.9）。 |

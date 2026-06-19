@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
@@ -39,9 +40,6 @@ func (e *AtExpander) Expand(userText string) (string, error) {
 		}
 	}
 
-	cleaned := atRefPattern.ReplaceAllString(userText, "")
-	cleaned = strings.TrimSpace(cleaned)
-
 	maxTotal := e.Cfg.Context.AtReferenceMaxChars
 	if maxTotal <= 0 {
 		maxTotal = 128000
@@ -68,8 +66,8 @@ func (e *AtExpander) Expand(userText string) (string, error) {
 	}
 
 	var b strings.Builder
-	if cleaned != "" {
-		b.WriteString(cleaned)
+	if trimmed := strings.TrimSpace(userText); trimmed != "" {
+		b.WriteString(trimmed)
 	}
 	for _, block := range blocks {
 		if b.Len() > 0 {
@@ -103,7 +101,7 @@ func (e *AtExpander) expandRef(ref string, perFileMax, remaining int) (string, i
 		isDir = true
 	}
 	if isDir {
-		return e.expandDir(ref, abs, perFileMax, remaining)
+		return e.expandDir(ref, abs, remaining)
 	}
 	return e.expandFile(ref, abs, perFileMax, remaining)
 }
@@ -133,7 +131,7 @@ func (e *AtExpander) expandFile(ref, abs string, perFileMax, remaining int) (str
 	return sb.String(), len(content), nil
 }
 
-func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (string, int, error) {
+func (e *AtExpander) expandDir(ref, abs string, remaining int) (string, int, error) {
 	maxFiles := e.Cfg.Context.AtDirMaxFiles
 	if maxFiles <= 0 {
 		maxFiles = 50
@@ -175,34 +173,36 @@ func (e *AtExpander) expandDir(ref, abs string, perFileMax, remaining int) (stri
 		return "", 0, err
 	}
 
-	var b strings.Builder
-	fmt.Fprintf(&b, AtRefDirHeader, strings.TrimSuffix(ref, "/"))
-	if len(files) > maxFiles {
-		fmt.Fprintf(&b, AtRefTooManyFiles, maxFiles+1, maxFiles)
+	truncated := len(files) > maxFiles
+	if truncated {
 		files = files[:maxFiles]
 	}
 
-	used := 0
-	for _, f := range files {
-		if remaining-used <= 0 {
-			b.WriteString(AtRefRemainingSkipped)
-			break
-		}
-		full, err := e.Perm.ResolvePath(f.rel)
-		if err != nil {
-			fmt.Fprintf(&b, "\n%s: "+AtRefErrorLine+"\n", f.rel, err)
-			continue
-		}
-		block, n, err := e.expandFile(f.rel, full, perFileMax, remaining-used)
-		if err != nil {
-			fmt.Fprintf(&b, "\n%s: "+AtRefErrorLine+"\n", f.rel, err)
-			continue
-		}
-		b.WriteString("\n")
-		b.WriteString(block)
-		used += n
+	paths := make([]string, len(files))
+	for i, f := range files {
+		paths[i] = f.rel
 	}
-	return b.String(), used, nil
+	sort.Strings(paths)
+
+	block := formatDirListing(ref, paths, truncated, maxFiles)
+	if len(block) > remaining {
+		block = block[:remaining]
+	}
+	return block, len(block), nil
+}
+
+func formatDirListing(ref string, paths []string, truncated bool, maxFiles int) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, AtRefDirHeader, strings.TrimSuffix(ref, "/"))
+	if truncated {
+		fmt.Fprintf(&b, AtRefTooManyFiles, maxFiles+1, maxFiles)
+	}
+	for _, p := range paths {
+		b.WriteString(p)
+		b.WriteByte('\n')
+	}
+	b.WriteString(AtRefDirListingFooter)
+	return b.String()
 }
 
 var errStopAtRef = fmt.Errorf("stop walk")

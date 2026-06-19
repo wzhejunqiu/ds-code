@@ -49,7 +49,7 @@
 
 | ID | 落点 | 说明 |
 |----|------|------|
-| S3-S | `context/atref.go` | 用户提示词中显式 `@file` / `@dir/` 仅校验 S2（`ResolvePath`），**可**读取 `.env` 等 S3 路径并注入 user message；**不**应用 `textfile.IsSearchable` / grep 大小上限（仅靠 `at_dir_max_*` 预算）；Agent 枚举、`read_file`、`shell` 仍受 S3；用户显式点名视为知情承担风险。**compact**：`sanitizeCompactInput`（S12）对送入摘要 LLM 的 transcript 做行级启发式 redact，**不**对 `@` 展开块做专用剥离——旧轮 user message 中的 `@.env` 等内容可能进入 compact 摘要输入；用户承担点名风险 |
+| S3-S | `context/atref.go` | 用户提示词中显式 `@file` / `@dir/` 仅校验 S2（`ResolvePath`）。**`@file`** 可读取 `.env` 等 S3 路径并注入全文；**`@dir/`** 仅列路径（不含 S3 文件正文），Agent 需 `read_file` 按需读取。用户原文中的 `@path` 保留在 prompt 中。Agent 枚举、`read_file`、`shell` 仍受 S3；用户显式点名视为知情承担风险。**compact**：`sanitizeCompactInput`（S12）对送入摘要 LLM 的 transcript 做行级启发式 redact，**不**对 `@` 展开块做专用剥离——旧轮 `@.env` 等**可能**进入 compact 摘要输入；用户承担点名风险 |
 
 ### 1.4 审计清单 — 更新 S11
 
@@ -138,10 +138,10 @@ v0.1.2 `@` S3 例外（§S3-S）仍受既有预算约束；实现时于 CONFIG �
 | 配置项 | 说明 |
 |--------|------|
 | `context.at_reference_max_chars` | `@` 展开总字符上限（默认 128000） |
-| `context.at_dir_max_files` | `@dir/` 最大文件数 |
+| `context.at_dir_max_files` | `@dir/` 目录列表最多条目数 |
 | `context.at_dir_max_depth` | `@dir/` 最大遍历深度 |
 
-`@file` / `@dir/` **不**应用 Agent 枚举的 S3 / `IsSearchable` / grep 大小上限（FR-6.11）；仅靠上述预算截断。
+`@file` 注入全文；`@dir/` **仅列路径**（不含正文）。二者合计受 `at_reference_max_chars` 预算约束。
 
 ### 2.6 `configs/example.yaml` 注释建议
 
