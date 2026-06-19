@@ -88,7 +88,7 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 
 	maxTurns := a.Cfg.Agent.MaxTurns
 	if maxTurns <= 0 {
-		maxTurns = 25
+		maxTurns = 500
 	}
 
 	var auditLog *audit.Logger

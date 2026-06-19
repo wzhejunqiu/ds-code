@@ -25,7 +25,7 @@ func resolveSubagentMaxTurns(cfg *config.Config) int {
 	if cfg.LLM.Subagent.MaxTurns > 0 {
 		return cfg.LLM.Subagent.MaxTurns
 	}
-	return 8
+	return 500
 }
 
 func resolveAlias(alias string, cfg *config.Config) string {

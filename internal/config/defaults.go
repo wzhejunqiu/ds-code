@@ -14,7 +14,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("llm.subagent.model", "deepseek-v4-flash")
 	v.SetDefault("llm.subagent.thinking.type", "disabled")
 	v.SetDefault("llm.subagent.reasoning_effort", "high")
-	v.SetDefault("llm.subagent.max_turns", 8)
+	v.SetDefault("llm.subagent.max_turns", 500)
 
 	v.SetDefault("context.window_tokens", 1_048_576)
 	v.SetDefault("context.max_output_tokens", 393_216)
@@ -29,7 +29,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("context.at_dir_max_files", 50)
 	v.SetDefault("context.at_dir_max_depth", 4)
 
-	v.SetDefault("agent.max_turns", 25)
+	v.SetDefault("agent.max_turns", 500)
 
 	v.SetDefault("tools.parallel_tool_calls", true)
 	v.SetDefault("tools.defer_mcp", true)
