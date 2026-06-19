@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -131,5 +132,45 @@ func TestBlocksFromMessages_durations(t *testing.T) {
 	}
 	if blocks[0].TurnDuration != 5*time.Second {
 		t.Fatalf("turnDuration = %v", blocks[0].TurnDuration)
+	}
+}
+
+func TestBlocksFromMessages_skipsTaskNotification(t *testing.T) {
+	n := spawn.Notification{
+		AgentID:   "sa-1",
+		ToolUseID: "tc1",
+		Status:    spawn.ResultCompleted,
+		Summary:   `Agent "audit" completed`,
+		Result:    "done",
+	}
+	msgs := []session.Message{
+		{Role: role.User, Content: n.Format()},
+		{Role: role.Assistant, Content: "reply"},
+	}
+	blocks := BlocksFromMessages(msgs, false, "", tool.DisplayContext{})
+	if len(blocks) != 1 {
+		t.Fatalf("got %d blocks, want assistant only", len(blocks))
+	}
+	if blocks[0].Role != chat.RoleAssistant || blocks[0].Content != "reply" {
+		t.Fatalf("block = %+v", blocks[0])
+	}
+}
+
+func TestBlocksFromMessages_stripsTaskNotificationPrefix(t *testing.T) {
+	n := spawn.Notification{
+		AgentID:   "sa-1",
+		ToolUseID: "tc1",
+		Status:    spawn.ResultCompleted,
+		Summary:   `Agent "audit" completed`,
+	}
+	msgs := []session.Message{
+		{Role: role.User, Content: n.Format() + "\nreal question"},
+	}
+	blocks := BlocksFromMessages(msgs, false, "", tool.DisplayContext{})
+	if len(blocks) != 1 {
+		t.Fatalf("got %d blocks", len(blocks))
+	}
+	if blocks[0].Content != "real question" {
+		t.Fatalf("content = %q", blocks[0].Content)
 	}
 }

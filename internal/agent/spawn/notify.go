@@ -108,6 +108,43 @@ func (n Notification) FormatXML() string {
 	return n.Format()
 }
 
+const (
+	taskNotificationOpen  = "<task-notification>"
+	taskNotificationClose = "</task-notification>"
+	spillHintPrefix       = "... [完整结果已保存至"
+)
+
+// ContentForDisplay strips leading task-notification XML blocks (and spill hints)
+// from persisted user messages for TUI rendering. LLM history in the DB is unchanged.
+func ContentForDisplay(userContent string) string {
+	s := userContent
+	for {
+		s = strings.TrimLeft(s, " \t\r\n")
+		if !strings.HasPrefix(s, taskNotificationOpen) {
+			break
+		}
+		idx := strings.Index(s, taskNotificationClose)
+		if idx < 0 {
+			break
+		}
+		s = s[idx+len(taskNotificationClose):]
+	}
+	s = strings.TrimLeft(s, " \t\r\n")
+	s = stripLeadingSpillHint(s)
+	return strings.TrimSpace(s)
+}
+
+func stripLeadingSpillHint(s string) string {
+	s = strings.TrimLeft(s, " \t\r\n")
+	if strings.HasPrefix(s, spillHintPrefix) {
+		if i := strings.IndexByte(s, '\n'); i >= 0 {
+			return s[i+1:]
+		}
+		return ""
+	}
+	return s
+}
+
 // NotificationQueue holds pending agent completion notices with dedup.
 type NotificationQueue struct {
 	mu       sync.Mutex

@@ -67,6 +67,48 @@ func TestSelection_copyOnSelectDisabled(t *testing.T) {
 	}
 }
 
+func TestSelection_mouseWheelScrollsChat(t *testing.T) {
+	m := New(testDeps(true))
+	m.Width = 80
+	m.chatVP.Width = 80
+	m.chatVP.Height = 10
+	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+
+	before := m.chatVP.YOffset
+	_, cmd := m.handleMouse(tea.MouseMsg{
+		Action: tea.MouseActionPress,
+		Button: tea.MouseButtonWheelDown,
+		X:      5,
+		Y:      2,
+	})
+	if cmd == nil {
+		t.Fatal("expected wheel scroll tick command")
+	}
+	for i := 0; i < 8 && m.chatVP.YOffset <= before; i++ {
+		m.handleWheelScrollTick()
+	}
+	if m.chatVP.YOffset <= before {
+		t.Fatalf("wheel down: yOffset = %d, want > %d", m.chatVP.YOffset, before)
+	}
+
+	before = m.chatVP.YOffset
+	_, cmd = m.handleMouse(tea.MouseMsg{
+		Action: tea.MouseActionPress,
+		Button: tea.MouseButtonWheelUp,
+		X:      5,
+		Y:      2,
+	})
+	if cmd == nil && !m.scroll.ScrollActive() {
+		t.Fatal("expected wheel scroll tick command")
+	}
+	for i := 0; i < 8 && m.chatVP.YOffset >= before; i++ {
+		m.handleWheelScrollTick()
+	}
+	if m.chatVP.YOffset >= before {
+		t.Fatalf("wheel up: yOffset = %d, want < %d", m.chatVP.YOffset, before)
+	}
+}
+
 func TestSelection_viewportHitTest(t *testing.T) {
 	m := New(testDeps(true))
 	m.Width = 80

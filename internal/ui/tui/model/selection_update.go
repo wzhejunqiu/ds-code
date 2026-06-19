@@ -8,6 +8,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/clipboard"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 )
 
@@ -79,7 +80,31 @@ func (m *Model) mapMousePoint(msg tea.MouseMsg) (selection.Point, bool) {
 	return selection.Point{}, false
 }
 
+func (m *Model) handleMouseWheel(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if m.Overlay != state.OverlayNone || m.Prompt != nil {
+		return m, nil
+	}
+	delta := m.scroll.ComputeWheelStep(msg, time.Now())
+	if delta == 0 {
+		return m, nil
+	}
+	chatH := m.chatVP.Height
+	if msg.Y < chatH {
+		return m, m.queueWheelScroll(scroll.TargetChat, delta)
+	}
+	if m.ToolOpen && m.toolVP.Height > 0 {
+		toolTop := chatH + 1
+		if msg.Y >= toolTop && msg.Y < toolTop+m.toolVP.Height {
+			return m, m.queueWheelScroll(scroll.TargetTool, delta)
+		}
+	}
+	return m, nil
+}
+
 func (m *Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if tea.MouseEvent(msg).IsWheel() {
+		return m.handleMouseWheel(msg)
+	}
 	if m.Overlay != state.OverlayNone || m.Prompt != nil {
 		return m, nil
 	}

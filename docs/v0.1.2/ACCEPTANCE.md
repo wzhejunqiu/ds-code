@@ -2,7 +2,7 @@
 
 > 版本：v0.1.2  
 > 状态：设计中  
-> 更新日期：2026-06-19  
+> 更新日期：2026-06-20  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md) · 设计：[DESIGN.md](DESIGN.md)
 
 ## 1. 总体验收
@@ -457,9 +457,61 @@
 | 选中含 MCP 工具行的 viewport 文本并复制 | 剪贴板含**已渲染** JSON 参数摘要（≤400 字符） |
 | 复制内容 | **不含**未显示的 debug-only 字段 |
 
-## 8. `read_file` 仅读文本（FR-8）
+| 复制内容 | **不含**未显示的 debug-only 字段 |
 
-### AC-8.1 非文本拒绝
+## 8. TUI 平滑滚动（FR-9）
+
+**前置**：交互 TUI 中聊天区内容超过一屏（多轮 Agent 对话）；终端支持鼠标滚轮（`tea.WithMouseCellMotion` 已启用）。
+
+### AC-8.1 滚轮平滑多页
+
+| 步骤 | 预期 |
+|------|------|
+| 在聊天 viewport 内快速向下滚轮 | 可见**连续中间帧**；非一次跳半屏以上 |
+| 慢速滚轮 | 手感连贯；无明显抖动 |
+| 连续快速滚轮（burst） | pending 累加后分多帧释放；最终到位；不 panic |
+
+### AC-8.2 翻页瞬时跳转
+
+| 步骤 | 预期 |
+|------|------|
+| 按 `PgDn` / `PgUp` | **瞬时**半页跳转；无 drain 动画拖尾 |
+| 滚轮 drain 进行中按 `PgUp` | pending **立即清空**；按翻页规则瞬时跳位 |
+| `↑` / `↓` 单行滚动 | 瞬时 1 行；不走 pending drain |
+
+### AC-8.3 工具面板与浮层
+
+| 步骤 | 预期 |
+|------|------|
+| `Ctrl+T` 打开工具面板，在面板内滚轮 | `toolVP` 平滑滚动 |
+| 打开 `/help` 浮层时滚轮 | **忽略**（与 FR-7.8 一致） |
+| Agent 回合进行中滚轮上翻 | 可浏览历史（FR-9.10 / FR-7.9） |
+
+### AC-8.4 选区与 HP 渲染（FR-9.5–9.6）
+
+| 步骤 | 预期 |
+|------|------|
+| 无选区时滚轮 | HP 路径生效；帧率优于全量重绘 |
+| 拖拽建立选区 | 选区高亮正常；可边滚边选 |
+| 选区活跃时滚轮 | 允许滚动；高亮不丢失（HP 临时关闭可接受） |
+
+### AC-8.5 终端 profile（FR-9.3，P1）
+
+| 环境 | 预期 |
+|------|------|
+| iTerm2 / Ghostty / Terminal.app | proportional drain（大 burst 多帧追平） |
+| VS Code / Cursor 集成终端 | adaptive drain（小 pending 一帧释放） |
+
+### AC-8.6 环境变量（FR-9.8，P1）
+
+| 步骤 | 预期 |
+|------|------|
+| `DS_CODE_SCROLL_SPEED=0.5` | 滚轮累积步长约为默认一半 |
+| `DS_CODE_SCROLL_SPEED=2` | 滚轮累积步长约为默认两倍 |
+
+## 9. `read_file` 仅读文本（FR-8）
+
+### AC-9.1 非文本拒绝
 
 **前置**：工作区内存在 `assets/logo.png`（有效 PNG 头）与 `main.go`。
 
@@ -470,7 +522,7 @@
 | debug 日志（`-v` 及以上） | PNG 拒绝时含 `read_file skipped non-text file` 及 `path`、`abs` |
 | 错误响应 | **不**含 PNG 二进制或 base64 片段 |
 
-### AC-8.2 边界与回归
+### AC-9.2 边界与回归
 
 | 步骤 | 预期 |
 |------|------|
@@ -481,14 +533,14 @@
 | S3 路径 `.env` | 权限拒绝（**先于**文本判定） |
 | 超大非文本文件 | 若 `Stat` 未超限但 `IsTextFile` 为 false → 拒绝（**不**读入全文） |
 
-### AC-8.3 工具描述（FR-8.8）
+### AC-9.3 工具描述（FR-8.8）
 
 | 检查 | 预期 |
 |------|------|
 | `read_file.md` | 说明非文本文件将被拒绝；与 grep/glob 文本策略一致 |
 | `DescReadFile` | 提及无法读取二进制/媒体文件（或等价表述） |
 
-## 9. 测试清单
+## 10. 测试清单
 
 - [ ] `TestValidateRel_allowsDotDotInside`（新）
 - [ ] `TestValidateRel_rejectsTraversal`（仍用 `../outside`）
@@ -570,8 +622,10 @@
 - [ ] `TestReadFile_allowsEmptyFile`（新：FR-8.5）
 - [ ] `TestReadFile_allowsMCPSpill`（新：FR-8.6，与 spill 集成）
 - [ ] `TestReadFile_nonTextLogsInfo`（新：FR-8.3，log capture）
+- [ ] `TestDrain_proportional_*` / `TestDrain_adaptive_*`（新：FR-9.3，`internal/ui/tui/scroll`）
+- [ ] `TestWheelScroll_*` / `TestScroll_jumpBy_clearsPending`（新：FR-9.1–9.2）
 
-## 10. 手动验证
+## 11. 手动验证
 
 ```bash
 # 在项目根启动 ds-code
@@ -642,13 +696,20 @@ bin/ds-code --permission-mode auto
 # 31. 打开 /help 浮层时聊天区不可选（FR-7.8）
 # 32. 复制 MCP 工具行 → 剪贴板含可见 JSON 参数摘要
 
+# TUI 平滑滚动（需求 7）：
+# 33. 长 transcript 快速滚轮 → 连续中间帧，非一跳多屏
+# 34. PgUp/PgDn → 瞬时半页，无 drain 拖尾
+# 35. 滚轮中按 PgUp → pending 清空并跳页
+# 36. Ctrl+T 工具面板内滚轮 → 面板平滑滚动
+# 37. /help 浮层打开时滚轮 → 忽略
+
 # read_file 文本限制（需求 6）：
-# 33. read_file path=*.png → 错误「无法读取非文本文件」；日志含 skipped non-text
-# 34. read_file path=*.go → 成功
-# 35. read_file spill .txt → 仍成功
+# 38. read_file path=*.png → 错误「无法读取非文本文件」；日志含 skipped non-text
+# 39. read_file path=*.go → 成功
+# 40. read_file spill .txt → 仍成功
 ```
 
-## 11. 非目标确认
+## 12. 非目标确认
 
 - [ ] `LoadSkill` 仍拒绝 skill 名含 `..`（未改行为）
 - [ ] worktree slug 含 `..` 仍拒绝（未改行为）
@@ -668,3 +729,5 @@ bin/ds-code --permission-mode auto
 - [ ] 非交互 `-p` 不引入 TUI 选区逻辑（FR-7.13）
 - [ ] TUI 双击/键盘扩展选区（FR-7.10–7.11，P2）**未**实现时可勾选为延期
 - [ ] TUI 浮层内独立选区（FR-7.8 完整版）**未**实现时可勾选为延期（首期仅禁用聊天选区）
+- [ ] TUI React 式虚拟列表**未**实现（FR-9.12；`RenderCache` 已覆盖 block 缓存）
+- [ ] `DS_CODE_SCROLL_SPEED` / 终端 profile 检测（FR-9.8、AC-8.5–8.6）**未**实现时可勾选为延期（P1）

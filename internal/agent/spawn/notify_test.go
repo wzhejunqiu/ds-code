@@ -132,3 +132,48 @@ func TestNotificationPriority_activeTurn(t *testing.T) {
 		t.Fatalf("idle: got %v, want PrioNow", got)
 	}
 }
+
+func TestContentForDisplay_inlineNotification(t *testing.T) {
+	n := Notification{
+		AgentID:   "a1",
+		ToolUseID: "tc1",
+		Status:    ResultCompleted,
+		Summary:   `Agent "x" completed`,
+		Result:    "short result",
+	}
+	if got := ContentForDisplay(n.Format()); got != "" {
+		t.Fatalf("got %q, want empty", got)
+	}
+}
+
+func TestContentForDisplay_spillHintOnly(t *testing.T) {
+	n := Notification{
+		AgentID:    "a1",
+		ToolUseID:  "tc1",
+		OutputFile: "/tmp/out.output",
+		Status:     ResultCompleted,
+		Summary:    `Agent "x" completed`,
+	}
+	if got := ContentForDisplay(n.Format()); got != "" {
+		t.Fatalf("got %q, want empty", got)
+	}
+}
+
+func TestContentForDisplay_prefixBeforeUserText(t *testing.T) {
+	n := Notification{
+		AgentID:   "a1",
+		ToolUseID: "tc1",
+		Status:    ResultCompleted,
+		Summary:   `Agent "x" completed`,
+	}
+	combined := n.Format() + "\nreal question"
+	if got := ContentForDisplay(combined); got != "real question" {
+		t.Fatalf("got %q, want real question", got)
+	}
+}
+
+func TestContentForDisplay_plainUser(t *testing.T) {
+	if got := ContentForDisplay("hello"); got != "hello" {
+		t.Fatalf("got %q", got)
+	}
+}

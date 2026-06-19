@@ -3,11 +3,11 @@
 > 版本：v0.1.2  
 > 状态：设计中  
 > 基线版本：v0.1.1  
-> 更新日期：2026-06-19
+> 更新日期：2026-06-20
 
 ## 概述
 
-v0.1.2 聚焦六项增量：
+v0.1.2 聚焦八项增量：
 
 1. **路径访问权限收敛**（需求 1）：统一经 `permission.Engine` 判定；`.` / `..` 先规范化解析再鉴权。
 2. **MCP 结果落盘 + 上下文截断**（需求 2）：MCP 回注 LLM 仍受 `tool_result_max_chars` 限制；完整结果写入 `~/.ds-code/projects/<project_id>/mcp-result/<session_id>/<stem>.txt`（`<stem>` = `spillCallFilename(tool_call_id)`，可能与 LLM 原始 id 不同）；超长时 tool 消息提示 spill **绝对路径**；**模型可用 `read_file` 读取当前会话** spill 文件以获取完整 MCP 输出（**不可**跨 session 读取；须绝对路径，不支持 `~`）。
@@ -15,6 +15,7 @@ v0.1.2 聚焦六项增量：
 4. **搜索路径不再遵循 `.gitignore`**（需求 4）：Agent 枚举工具**不读** `.gitignore`、**不设**框架默认 skip；**始终**跳过 `.git`（含显式 `path=.git`，与 `skip_dirs` 不同）；用户可通过 `tools.search.skip_dirs` 追加目录；其余噪声由**模型**收窄 `path`/`pattern`。用户显式 **`@file` / `@dir/`** 不受 gitignore / S3 / `skip_dirs` 约束（FR-6.9–6.10）；Agent 工具与 shell 仍受 S3。
 5. **TUI 应用内选中与剪贴板**（需求 5）：交互 TUI 在备用屏幕模式下支持鼠标拖拽选区，松手写入系统剪贴板（纯文本、无 ANSI）；对齐 Claude Code fullscreen 复制体验（FR-7）。
 6. **`read_file` 仅读文本**（需求 6）：非文本文件经 `textfile.IsTextFile` 判定后拒绝（v0.1.2 内部委托 `IsSearchable`），向模型返回明确错误并写 Info 日志（FR-8）；MCP spill `.txt` 与常规源码不受影响。
+7. **TUI 平滑滚动**（需求 7）：滚轮 `scrollBy` 累加 pending、分帧 proportional/adaptive drain、翻页 `scrollTo` 瞬时跳转；启用 viewport `HighPerformanceRendering` 减少跨页全屏重绘（FR-9）。
 
 ## 文档索引
 
@@ -38,8 +39,9 @@ v0.1.1 及更早版本中，路径安全依赖多层重复逻辑：
 7. **v0.1.1 搜索过度依赖 `.gitignore`**：`grep` / `glob` / `list_dir` / `diagnostics` 经 `GitignoreMatcher` 过滤，Agent 无法感知被 `.gitignore` 或「隐藏目录」规则挡住的源码；**`@dir/` 亦被误伤**。v0.1.2 去掉 gitignore 与内置目录 skip，改由模型根据任务自行选择搜索范围。
 8. **v0.1.1 TUI 输出不可复制**：TUI 使用 Bubble Tea 备用屏幕 + 鼠标捕获，终端原生拖拽复制失效；Claude Code fullscreen 已通过应用内选区 + 剪贴板解决，ds-code 尚无等价能力。
 9. **v0.1.1 `read_file` 可读二进制**：`grep`/`glob` 经 `textfile.IsSearchable` 跳过二进制，但 `read_file` 无同等校验，模型误读 `.png`/`.wasm` 等会浪费 token 或得到乱码行。
+10. **v0.1.1 TUI 滚轮不流畅**：鼠标选区接入后滚轮事件被拦截；若一次跳多行或缺少分帧 drain，长 transcript 滚动卡顿、不连贯（对标 Claude Code 多页平滑滚动体验缺失）。
 
-本版本 **S2 工作区边界不变**；**S3 在 Agent 工具 / shell / `read_file` 路径上不变**，但新增两处显式例外：（1）用户提示词中的 **`@file` / `@dir/`** 仅校验 S2，可读取 `.env` 等敏感路径（FR-6.10）；（2）**MCP spill** 经 `read_file` 只读放行，且仅限**当前 session**（FR-4.12）。需求 1 修正路径实现；需求 2/3 改善 MCP 可观测性与结果完整性；需求 4 调整 Agent 枚举可见性策略；需求 5 补齐 TUI 复制体验；需求 6 对齐 `read_file` 与 Agent 枚举的文本判定。
+本版本 **S2 工作区边界不变**；**S3 在 Agent 工具 / shell / `read_file` 路径上不变**，但新增两处显式例外：（1）用户提示词中的 **`@file` / `@dir/`** 仅校验 S2，可读取 `.env` 等敏感路径（FR-6.10）；（2）**MCP spill** 经 `read_file` 只读放行，且仅限**当前 session**（FR-4.12）。需求 1 修正路径实现；需求 2/3 改善 MCP 可观测性与结果完整性；需求 4 调整 Agent 枚举可见性策略；需求 5 补齐 TUI 复制体验；需求 6 对齐 `read_file` 与 Agent 枚举的文本判定；需求 7 补齐 TUI 多页平滑滚动。
 
 ## 变更摘要
 
@@ -122,6 +124,17 @@ v0.1.1 及更早版本中，路径安全依赖多层重复逻辑：
 | `@file` / `@dir/` | — | **不变**（不经 `read_file` 工具，FR-6.11） |
 | 空文件 | 可读 | **仍可读**（`IsTextFile` 对 0 字节返回 true） |
 
+### 需求 7：TUI 平滑滚动
+
+| 领域 | v0.1.1 | v0.1.2（初版） | v0.1.2（目标） |
+|------|--------|----------------|----------------|
+| 滚轮滚动 | viewport 默认 3 行/ notch 或不可用 | 选区接入后滚轮失效或一跳多屏 | **`scrollBy` pending + 分帧 drain** |
+| 翻页键 | viewport 瞬时跳页 | 同左 | **`scrollTo` 清空 pending 后瞬时跳** |
+| 渲染 | 每帧全屏 lipgloss 重绘 | 同左 | **HP 模式 + `SyncScrollArea` 边缘更新** |
+| 终端适配 | — | — | 原生 proportional / 集成终端 adaptive |
+| 速度调节 | — | — | 可选 `DS_CODE_SCROLL_SPEED` |
+| 虚拟列表 | — | — | **不引入**（`RenderCache` 已按 block 缓存） |
+
 ## 已知限制
 
 以下为本版本**有意接受**或**暂不处理**的行为，实现与验收须与之一致：
@@ -146,6 +159,8 @@ v0.1.1 及更早版本中，路径安全依赖多层重复逻辑：
 | **审计日志** | `audit.jsonl` 仍仅存 args 哈希；MCP `args_preview` 不进 audit（行为不变）。 |
 | **TUI 复制范围** | 仅聊天 viewport 与工具面板；输入框、浮层内复制策略见 FR-7.8；不实现 transcript 刷回 scrollback。流式输出进行中选区可能错位（FR-7.9）。 |
 | **远程剪贴板** | SSH/tmux 下依赖 OSC 52 或 tmux paste buffer；部分终端默认禁用 OSC 52，复制可能失败并提示（FR-7.6–7.7）。 |
+| **TUI 滚轮与选区** | 文本选区活跃时 HP 滚动临时关闭，回退全量渲染（FR-9.6）；快速滚轮 + 拖拽选区并存时以选区高亮为准。 |
+| **集成终端手感** | VS Code / Cursor 内置终端与 iTerm2/Ghostty 使用不同 drain 曲线（FR-9.3）；极端 burst 可能 snap 截断 pending（>30 行）。 |
 
 ## 依赖与前置
 

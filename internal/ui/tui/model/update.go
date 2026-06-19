@@ -40,6 +40,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.scheduleSyncChatView()
 	case tuimsg.NoticeScrollTickMsg:
 		return m, m.handleNoticeScrollTick()
+	case tuimsg.WheelScrollTickMsg:
+		return m, m.handleWheelScrollTick()
 	case tuimsg.ThinkingTickMsg:
 		if turn.NeedsThinkingTick(&m.State) || turn.NeedsPlanningTick(&m.State) {
 			cmd := turn.UpdateThinkingTick(&m.State, func() {}, m.nextThinkingTickCmd)
@@ -166,6 +168,12 @@ func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 }
 
 func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if key, ok := msg.(tea.KeyMsg); ok {
+		if cmd, handled := m.handleViewportScrollKey(key); handled {
+			return m, cmd
+		}
+	}
+
 	if m.Running {
 		var cmd tea.Cmd
 		m.chatVP, cmd = m.chatVP.Update(msg)

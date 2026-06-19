@@ -30,6 +30,10 @@ func (m *Model) syncChatView() {
 }
 
 func (m *Model) scheduleSyncChatView() tea.Cmd {
+	if m.scroll.ScrollActive() || m.scroll.HasPending() {
+		m.scrollDeferSync = true
+		return nil
+	}
 	if m.chatSyncScheduled {
 		return nil
 	}

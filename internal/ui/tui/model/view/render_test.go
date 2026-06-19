@@ -84,7 +84,4 @@ func TestLayoutUsesFullContentLineCount(t *testing.T) {
 	if chatVP.Height >= 100 {
 		t.Fatalf("chat height = %d, expected capped below content lines", chatVP.Height)
 	}
-	if chatVP.MouseWheelDelta < 3 {
-		t.Fatalf("wheel delta = %d, want >= 3", chatVP.MouseWheelDelta)
-	}
 }

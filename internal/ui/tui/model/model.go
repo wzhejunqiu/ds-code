@@ -16,6 +16,7 @@ import (
 	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/tcase"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
@@ -40,6 +41,9 @@ type Model struct {
 	selRange       selection.Range
 	selDragging    bool
 	selTarget      int
+
+	scroll          scroll.Controller
+	scrollDeferSync bool
 }
 
 const (
@@ -68,6 +72,7 @@ func New(d *deps.Deps) *Model {
 		chatVP: viewport.New(40, 10),
 		toolVP: viewport.New(40, 4),
 		input:  ti,
+		scroll: scroll.NewController(),
 	}
 	view.RefreshStatus(&m.State)
 	return m

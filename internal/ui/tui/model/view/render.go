@@ -289,11 +289,6 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	if chatVP != nil {
 		chatVP.Width = innerW
 		chatVP.Height = chatH
-		delta := chatH / 3
-		if delta < 3 {
-			delta = 3
-		}
-		chatVP.MouseWheelDelta = delta
 	}
 	if toolVP != nil {
 		toolVP.Width = innerW

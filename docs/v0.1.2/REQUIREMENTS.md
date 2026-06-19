@@ -2,7 +2,7 @@
 
 > 版本：v0.1.2  
 > 状态：设计中  
-> 更新日期：2026-06-19
+> 更新日期：2026-06-20
 
 ## 1. 目标
 
@@ -13,6 +13,7 @@
 5. **搜索路径最大化可见**：Agent 枚举不再遵循 `.gitignore` 与框架内置 skip；**始终**跳过 `.git`（含显式 `path=.git`）；用户可配置 `tools.search.skip_dirs`；其余由**模型**决定 `path`/`pattern`。用户显式 **`@file` / `@dir/`** 见 FR-6.9–6.10。
 6. **TUI 应用内选中与剪贴板**：交互 TUI 在备用屏幕模式下支持鼠标拖拽选中文本并写入系统剪贴板（对标 Claude Code fullscreen 复制体验）；见 FR-7。
 7. **`read_file` 仅读文本**：非文本文件拒绝读取，向模型返回明确错误并记录 Info 日志；见 FR-8。
+8. **TUI 平滑滚动**：交互 TUI 聊天区与工具面板支持流畅的多页滚轮滚动（对标 Claude Code 三层滚动架构：输入累加、分帧 drain、渲染减负）；见 FR-9。
 
 ## 2. 用户故事
 
@@ -119,6 +120,14 @@
 **以便** 模型不会把乱码灌进上下文，且我能从日志看到拒绝原因。
 
 **验收**：`read_file path="logo.png"` 返回 tool 错误（含「无法读取非文本文件」）；debug 日志含 `read_file skipped non-text file`；`read_file path="main.go"` 与 MCP spill `.txt` 仍成功。
+
+### US-14：TUI 长会话滚轮流畅
+
+**作为** 在 Cursor / iTerm2 / Ghostty 等终端中使用 ds-code 的开发者，  
+**我希望** 在长 transcript 中用鼠标滚轮或触控板平滑上翻/下翻多页历史，  
+**以便** 浏览 Agent 回复与工具输出时不卡顿、不一跳数屏，且翻页键（PgUp/PgDn）仍能瞬时跳转。
+
+**验收**：聊天区内容超过一屏时，快速滚轮产生连续中间帧（非一次跳多页）；PgUp/PgDn 半页瞬时到位、无 drain 动画；滚轮进行中按 PgUp 清空 pending 并跳页；工具面板（`Ctrl+T`）滚轮行为一致。
 
 ## 3. 功能需求
 
@@ -259,6 +268,25 @@
 | FR-8.7 | **`@file` / `@dir/`** 用户引用**不在范围**（不经 `read_file.Execute`；仍不应用 `IsSearchable`，见 FR-6.11） | P0 |
 | FR-8.8 | 更新 `read_file.md` 工具描述：说明非文本文件将被拒绝，建议使用 `glob`/`grep` 发现路径后再读源码 | P1 |
 
+### FR-9 TUI 平滑滚动
+
+> **背景**：v0.1.2 引入 TUI 鼠标选区后，滚轮事件被 `handleMouse` 拦截；若直接跳转 viewport 或使用过大的 `MouseWheelDelta`（如 `chatH/3`），长 transcript 滚动手感卡顿、一次跳多行。本需求参考 Claude Code 终端多页滚动三层架构：**输入累加**（`scrollBy`）、**分帧 drain**（pending 队列按比例释放）、**渲染减负**（Bubble Tea `HighPerformanceRendering` + `SyncScrollArea`）；翻页键走 **`scrollTo` 瞬时跳转**，与滚轮语义分离。
+
+| ID | 描述 | 优先级 |
+|----|------|--------|
+| FR-9.1 | 滚轮 / 触控板事件调用 **`scrollBy`**：累加 `pendingScrollDelta`，**不**立即修改 `YOffset` | P0 |
+| FR-9.2 | 翻页键（PgUp/PgDn、HalfPage、↑/↓ 等经 viewport KeyMap）及未来 `Ctrl+U`/`Ctrl+D` 扩展走 **`scrollTo` / `jumpBy`**：瞬时写入 `YOffset` 并**清空** pending | P0 |
+| FR-9.3 | **分帧 drain**：pending 非零时以高频 tick（约 4ms，~250fps 等效）每帧释放有限行数；原生终端用 **proportional**（每帧至少 4 行，否则取 pending 的 3/4，单帧 cap `viewportH-1`）；集成终端（VS Code / Cursor）用 **adaptive**（pending ≤5 一帧释放；更大时 2–3 行/帧；pending >30 snap 截断） | P0 |
+| FR-9.4 | 聊天 **viewport**（`chatVP`）与工具面板 **viewport**（`toolVP`）均支持滚轮平滑滚动；按鼠标 Y 坐标路由到对应 viewport | P0 |
+| FR-9.5 | 启用 `viewport.HighPerformanceRendering`；drain 帧通过 `tea.SyncScrollArea` / `ScrollUp` / `ScrollDown` 减少全屏重绘（Bubble Tea 对 DECSTBM 硬件滚动的等效路径） | P0 |
+| FR-9.6 | **文本选区活跃时**（`selDragging` 或 `selRange.Active()`）临时关闭 HP 渲染，回退全量 `View()` 以正确显示 selection highlight；选择结束后恢复 HP 并全量 sync 一次 | P1 |
+| FR-9.7 | drain 期间**不**触发 `syncChatView` / `buildViewportContent`（仅 YOffset 变化）；滚动活跃时暂停 chat sync flush，结束后补一次 flush | P1 |
+| FR-9.8 | 滚轮输入支持终端 profile 区分与 burst 累加；可选环境变量 `DS_CODE_SCROLL_SPEED`（默认 `1.0`）调节基准倍率 | P1 |
+| FR-9.9 | 浮层（`/help`、`/context`、权限 prompt 等）打开时忽略滚轮（与 FR-7.8 一致） | P0 |
+| FR-9.10 | Agent 回合进行中（`running==true`）滚轮上翻历史仍可用（与 FR-7.9 一致） | P0 |
+| FR-9.11 | 非交互 `-p` 模式**不在范围** | P0 |
+| FR-9.12 | **不**实现 React 式虚拟列表（`chat.RenderCache` 已按 block 缓存；全量拼接仅在内容变更时执行） | P0 |
+
 ## 4. 非功能需求
 
 | ID | 描述 |
@@ -285,6 +313,9 @@
 | NFR-20 | `RunEphemeral`（`/btw`）不触发 MCP spill 写入 |
 | NFR-21 | `read_file` 文本判定在 `Stat` 之后执行；`IsTextFile` 当前委托 `IsSearchable`（sniff 前 3072 字节），与 grep 同级 |
 | NFR-22 | `read_file` 读本 session `mcp-result/` spill 视为**只读区外例外**；`readonly` / `ask` / `auto` 均**直接放行**，不触发 ask 弹窗（工作区内 S3 路径规则不变） |
+| NFR-23 | 滚轮 drain 帧不显著增加 TUI 帧延迟；drain 期间避免全量 lipgloss 重绘聊天正文（依赖 FR-9.5 HP 路径） |
+| NFR-24 | pending 队列有上限（默认 48 行量级），防止极端 burst 无限累积 |
+| NFR-25 | 翻页瞬时跳转与滚轮 drain **互斥**：`scrollTo` 必须清空 pending，避免动画与 snap 冲突 |
 
 ## 5. 范围边界
 
@@ -306,6 +337,7 @@
 - `internal/config/types.go`、`configs/example.yaml`（`tools.search.skip_dirs`、`tui.copy_on_select`）
 - `cmd/ds-code/app/tools.go`、`internal/tool/setup/setup.go`、`internal/tool/register/explore.go`（`Gitignore` → `searchskip.Matcher`；Plan/子代理同步）
 - `internal/ui/tui/run.go`、`internal/ui/tui/model/*`（鼠标选区状态、与 viewport 坐标映射）
+- `internal/ui/tui/scroll/`（`scrollBy`/`scrollTo`、pending drain、终端 profile、wheel step）
 - `internal/ui/clipboard/` 或等价包（平台剪贴板 + OSC 52 降级）
 - `internal/tool/textfile/textfile.go`（`IsTextFile`，FR-8.4）
 - `internal/tool/builtin/read_file/{read_file.go,read_file.md,text.go}`（FR-8 调用 `IsTextFile` + 日志）

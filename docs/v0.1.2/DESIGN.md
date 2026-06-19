@@ -2,7 +2,7 @@
 
 > 版本：v0.1.2  
 > 状态：设计中  
-> 更新日期：2026-06-19  
+> 更新日期：2026-06-20  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md)
 
 ## 1. 设计目标
@@ -509,6 +509,7 @@ func (e *Engine) checkPathCandidate(rel string) error {
 8. **Phase H**：`searchskip`（`.git` + 用户 `skip_dirs`）替代 `GitignoreMatcher`；`globmatch.MatchFiles` 注入 `skipDir`（需求 4，FR-1.8、FR-6.14）。
 9. **Phase I**：TUI 选区 + 剪贴板（需求 5）；`tui.copy_on_select` 配置；P2 项（双击/键盘扩展，FR-7.10–7.11）可分期。
 10. **Phase J**：`read_file` 文本判定（需求 6，FR-8）；`textfile.IsTextFile` + Info 日志。
+11. **Phase K**：TUI 平滑滚动（需求 7，FR-9）；`internal/ui/tui/scroll` + HP 渲染路径；与 Phase I 选区冲突处理（FR-9.6）。
 
 ## 10. 风险与缓解
 
@@ -535,6 +536,8 @@ func (e *Engine) checkPathCandidate(rel string) error {
 | `mcp-result` 与 `agents/` 双 spill 语义分裂 | v0.1.2 **仅**扩展 `read_file` 至 `mcp-result/`；`agents/*.output` 指针行为不变（FR-4.7）；后续可统一 project 数据目录只读 spill |
 | 子代理 MCP 大结果父 Agent 无感 | 设计约束：父仅见 `task` trim summary；子须在 FinalContent 复述；文档化于 README 已知限制 |
 | TUI 剪贴板写入敏感可见内容 | 与 shell 命令展示一致；威胁模型补充 TUI 剪贴板行（SECURITY-SYNC §1.1d） |
+| 滚轮 drain 期间流式 sync 与视觉错位 | FR-9.7：drain 不 `syncChatView`；滚动活跃暂停 33ms flush；结束后补 flush |
+| HP 渲染与选区高亮冲突 | FR-9.6：选区活跃时关闭 HP，全量 `View()` + `visibleHighlightedLines` |
 
 ## 11. 不在此设计内
 
@@ -1385,3 +1388,125 @@ if !textfile.IsTextFile(abs) {
 |------|------|
 | `internal/tool/builtin/read_file/read_file.md` | 增「非文本拒绝」节；错误语义 |
 | `DescReadFile`（`text.go`） | 可选一句「无法读取二进制/媒体文件」 |
+
+## 17. TUI 平滑滚动（需求 7）
+
+> 需求：[REQUIREMENTS.md FR-9](REQUIREMENTS.md#fr-9-tui-平滑滚动) · 验收：[ACCEPTANCE.md §8](ACCEPTANCE.md#8-tui-平滑滚动fr-9)
+
+### 17.1 问题与目标
+
+v0.1.2 Phase I 引入鼠标选区后，所有 `tea.MouseMsg` 由 `handleMouse` 处理。若滚轮直接调用 `viewport.Update` 或使用过大 `MouseWheelDelta`（历史实现 `chatH/3`），长 transcript 会出现**一跳多屏、无中间帧**的卡顿感。
+
+**目标**：参考 Claude Code 终端多页滚动三层架构，在 Bubble Tea 栈内实现等价行为：
+
+1. **输入层**：滚轮 `scrollBy` 累加 pending；翻页 `scrollTo` 瞬时跳转并清空 pending。
+2. **Drain 层**：pending 队列分帧按比例/adaptive 释放，高频 tick（~4ms）形成连续动画。
+3. **渲染层**：`viewport.HighPerformanceRendering` + `tea.SyncScrollArea` 减少跨页全屏重绘。
+
+**不在此设计内**：React 虚拟列表（`chat.RenderCache` 已按 block 缓存，内容拼接仅在 `syncChatView` 时执行）；DECSTBM 终端指令直发（由 Bubble Tea HP 路径封装）；`Ctrl+o` transcript 刷回 scrollback（FR-3.7）。
+
+### 17.2 模块划分
+
+```text
+internal/ui/tui/scroll/
+  controller.go   # ScrollBy / ScrollTo / JumpBy；chat/tool pending
+  drain.go        # drainProportional / drainAdaptive（纯函数）
+  wheel.go        # computeWheelStep；burst 窗口；DS_CODE_SCROLL_SPEED
+  profile.go      # ProfileNative / ProfileIntegrated（TERM_PROGRAM、VSCODE_INJECTED）
+  activity.go     # markScrollActive；与 sync.go chatSync flush 联动
+
+internal/ui/tui/model/
+  selection_update.go  # handleMouseWheel → ScrollBy
+  update.go            # WheelScrollTickMsg；翻页键 → JumpBy + 清 pending
+  model.go             # scroll.Controller 状态；chatVP/toolVP HP 开关
+  sync.go              # 滚动活跃时跳过 scheduleSyncChatView flush
+```
+
+### 17.3 数据流
+
+```mermaid
+flowchart LR
+  Wheel["滚轮 / 触控板"] --> ScrollBy["scrollBy → pending"]
+  PgUp["PgUp / PgDn"] --> ScrollTo["scrollTo 瞬时跳"]
+  ScrollBy --> Drain["每帧 drain 限量"]
+  Drain --> HP["LineUp/Down + ViewUp/Down cmd"]
+  HP --> Render["SyncScrollArea 边缘更新"]
+  Drain --> NextTick["WheelScrollTick ~4ms"]
+  SelActive["选区活跃"] --> FullRender["关闭 HP → 全量 View"]
+```
+
+### 17.4 两种滚动语义
+
+| API | 行为 | 用于 |
+|-----|------|------|
+| `ScrollBy(target, dy)` | `pending += dy`，不改 `YOffset` | 滚轮、触控板 |
+| `ScrollTo(vp, y)` | 写 `YOffset`，`pending = 0`，`Active = false` | 翻页、跳转 |
+| `JumpBy(vp, target, delta)` | `ScrollTo(current + pending + delta)` | PgUp/PgDn、HalfPage |
+
+翻页键在 `updateInput` 中于 `chatVP.Update` **之前**拦截：调用 `JumpBy` 并 `return`，避免 viewport 内置滚轮逻辑与 pending 冲突。
+
+### 17.5 Drain 算法
+
+**常量**（对齐 Claude Code `render-node-to-output` 量级）：
+
+| 常量 | 值 | 说明 |
+|------|-----|------|
+| `SCROLL_MIN_PER_FRAME` | 4 | 原生终端每帧最少释放行数 |
+| `SCROLL_INSTANT_THRESHOLD` | 5 | 集成终端：pending ≤5 一帧释放 |
+| `SCROLL_STEP_MED` / `HIGH` | 2 / 3 | 集成终端中大 pending 步长 |
+| `SCROLL_MAX_PENDING` | 30 | 超出 snap 截断 |
+| `wheelPendingMax` | 48 | 输入累加上限 |
+| `wheelScrollTickEvery` | 4ms | drain 帧间隔 |
+
+**`drainProportional(pending, viewportH)`**（原生）：
+
+```go
+step := max(SCROLL_MIN_PER_FRAME, abs(pending)*3/4)
+step = min(step, viewportH-1, abs(pending))
+```
+
+**`drainAdaptive(pending, viewportH)`**（集成终端）：
+
+- `abs(pending) ≤ 5` → 一次释放全部
+- `abs(pending) > 30` → snap 至 30 后按 2–3 行/帧
+- 否则 → 2 或 3 行/帧
+
+### 17.6 渲染优化（HighPerformanceRendering）
+
+[`bubbles/viewport`](https://github.com/charmbracelet/bubbles) 在 `HighPerformanceRendering=true` 时：
+
+- `View()` 返回占位换行，实际内容由 `tea.SyncScrollArea` / `ScrollUp` / `ScrollDown` cmd 推送。
+- `handleWheelScrollTick` 在 `LineUp`/`LineDown` 后返回 `viewport.ViewUp`/`ViewDown` cmd。
+
+**选区冲突**（FR-9.6）：`selDragging || selRange.Active()` 时设 `chatVP.HighPerformanceRendering = false`，走现有 [`visibleHighlightedLines`](../../internal/ui/tui/model/view/render.go) 全量路径；选区清除后恢复 HP 并触发一次全量 sync。
+
+**禁止**：drain 帧调用 `syncChatView` / `buildViewportContent`（仅 `YOffset` 变化）。
+
+### 17.7 滚轮输入曲线
+
+`computeWheelStep(msg, profile, speed)`：
+
+| Profile | 策略 |
+|---------|------|
+| Native | 离散滚轮 3 行/notch；触控板 40ms burst 窗口内 ramp |
+| Integrated | 指数衰减 + `wheelFrac` 小数余量；同 batch 至少 1 行/event |
+
+环境变量 `DS_CODE_SCROLL_SPEED`（默认 `1.0`）缩放基准步长。
+
+### 17.8 与 FR-7 的交互
+
+| 场景 | 行为 |
+|------|------|
+| 浮层打开（FR-7.8） | 忽略滚轮与选区 |
+| `running==true`（FR-7.9） | 滚轮可上翻历史；Esc 仍取消回合 |
+| 选区 + 滚轮 | 滚轮仍可滚动；选区锚点不自动扩展；HP 关闭时全量渲染 |
+| 工具面板（FR-7.2） | `toolVP` 独立 pending/drain |
+
+### 17.9 实现顺序建议
+
+1. `internal/ui/tui/scroll` 包 + `drain_test.go`（纯函数单测）
+2. `handleMouseWheel` → `ScrollBy`；`handleWheelScrollTick` → drain + `LineUp`/`LineDown`
+3. 翻页键拦截 → `JumpBy` + 清 pending
+4. 启用 `HighPerformanceRendering` + `ViewUp`/`ViewDown` cmd
+5. 选区活跃 HP 回退 + `sync.go` 滚动节流
+6. `DS_CODE_SCROLL_SPEED` + 终端 profile 检测（P1）

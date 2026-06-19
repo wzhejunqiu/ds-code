@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/role"
@@ -21,7 +22,11 @@ func BlocksFromMessages(msgs []session.Message, reasoningOpen bool, workspace st
 		msg := msgs[i]
 		switch msg.Role {
 		case role.User:
-			blocks = append(blocks, chat.Block{Role: chat.RoleUser, Content: msg.Content})
+			content := spawn.ContentForDisplay(msg.Content)
+			if content == "" {
+				continue
+			}
+			blocks = append(blocks, chat.Block{Role: chat.RoleUser, Content: content})
 		case role.Assistant:
 			calls := parseToolCalls(msg.ToolCallsJSON)
 			if msg.Content != "" || msg.ReasoningContent != "" {

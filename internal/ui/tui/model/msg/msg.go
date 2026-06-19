@@ -49,6 +49,7 @@ type TurnDoneMsg struct {
 type UsageUpdateMsg struct{}
 type ThinkingTickMsg struct{}
 type NoticeScrollTickMsg struct{}
+type WheelScrollTickMsg struct{}
 type PromptRequestMsg struct{ Req permission.PromptRequest }
 type OverlayCloseMsg struct{}
 type ContextOverlayMsg struct{ Text string }
