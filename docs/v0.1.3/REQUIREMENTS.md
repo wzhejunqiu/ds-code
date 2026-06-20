@@ -3,13 +3,13 @@
 > 版本：v0.1.3  
 > 状态：规划中  
 > 更新日期：2026-06-20  
-> 审核：2026-06-20（三轮）
+> 审核：2026-06-20（五轮）
 
 ## 1. 目标
 
 1. **Bubble Tea v2 一次性迁移**：将 TUI 栈迁至 `charm.land/bubbletea/v2` 及配套的 `bubbles`/`lipgloss`/`glamour` v2（见 FR-1）；**不**经过 v1.3.x 中间版本。
 2. **迁移后行为等价**：v0.1.2 已交付的交互 TUI 能力须通过自动化与手动回归；允许内部实现替换（如 Cursed Renderer 取代 HP），**不得**引入可见功能回退（见 FR-2）。
-3. **历史延期项补全**：v0.1.0–v0.1.2 标记延期的条目（见 FR-3）。
+3. **历史延期项补全 + 长 transcript 性能**：v0.1.0–v0.1.2 延期条目（见 FR-3）；**实现** v0.1.2 曾拒绝的聊天区虚拟列表（FR-3.7 / 原 FR-9.12）。
 4. **技术债清理**：移除导出 `permission.IsSensitiveAbs`（见 FR-4）。
 
 **非目标**：保留 v1 兼容层或双栈编译；权限/MCP/Agent 核心逻辑变更；新 LLM Provider；Windows 正式 release 矩阵扩展。
@@ -40,6 +40,14 @@
 
 **验收**：FR-1.9；SSH 终端 smoke（ACCEPTANCE §4）。
 
+### US-7：极长 transcript 仍流畅
+
+**作为** 长时间使用 ds-code 的开发者，  
+**我希望** 聊天区在数百轮对话后滚轮与流式更新仍流畅，  
+**以便** 不必因全量重绘卡顿而中断 Agent 交互。
+
+**验收**：FR-3.7；AC-5.5；NFR-2 扩展。
+
 ### US-4–US-6
 
 与 v0.1.2 规划相同：浮层选区（US-3/FR-3.2）、子代理 `@`（US-4/FR-3.1）、选区增强（US-5/FR-3.3）、`IsSensitiveAbs` 删除（US-6/FR-4）。
@@ -68,21 +76,29 @@
 | FR-1.10f | `tea.WindowSize()` → `tea.RequestWindowSize`；Init 中请求尺寸 | P0 |
 | FR-1.10g | `bubbles/viewport`、`textinput` 等改 import `charm.land/bubbles/v2/...` | P0 |
 | FR-1.10h | **键位全量迁移**：`tea.KeyType`/`key.Type`/`key.Matches` → `KeyPressMsg.String()` 或 bubbles v2 `key.Matches`；所有 `func(tea.KeyMsg)` 回调签名与单测构造器同步改（overlay、picker、subagent、input、wheel_scroll） | P0 |
-| FR-1.10i | `glamour/ansi`、`glamour/styles` 等子包改 `charm.land/glamour/v2/...`；`markdown/styles.go` 样式 API 对齐 v2 | P0 |
+| FR-1.10i | `glamour/ansi`、`glamour/styles` 等子包改 `charm.land/glamour/v2/...`；`markdown/styles.go` 样式 API 对齐 v2；`mdProfile` 缓存键与 `lipgloss.ColorProfile()` v2 返回值比较方式对齐（可能非 `termenv.Profile` 直接 `==`） | P0 |
 | FR-1.10j | `input/mouse_escape.go`：SGR 泄漏恢复适配 v2（`KeyPressMsg.Text` 字符流 → `MouseWheelMsg`/`MouseClickMsg`；`passthrough` 改 `KeyPressMsg`；**不再**构造 v1 struct `MouseMsg`/`KeyRunes`）；迁后 iTerm2 快速滚轮无输入框乱码 | P0 |
-| FR-1.10k | `safe_model.go`：`View() tea.View` 包装层；`fallbackView()` 亦返回 `tea.View` 并设 `AltScreen`/`MouseMode`；panic fallback 行为不退化 | P0 |
+| FR-1.10k | `safe_model.go`：`View() tea.View` 包装层；从 `inner.View()` **透传** `AltScreen`/`MouseMode`/`Cursor`/`Content`；`fallbackView()` 亦返回 `tea.View` 并设 `AltScreen`/`MouseMode`；panic fallback 行为不退化 | P0 |
 | FR-1.10l | `scroll/wheel.go`：`ComputeWheelStep`/`wheelDirection` 改接 `MouseWheelMsg`（不再用 `MouseButtonWheelUp/Down`） | P0 |
-| FR-1.10m | 删除 `viewport_hp.go` 及 `withHPSync`/`applyViewportHP`/`syncChatViewportHP` 调用链（`update.go` **16** 处 + `ticks.go` 1 处）；`selDragging` 时改由全量 `SetContent` 保证选区高亮；`selection_update` 拖拽开始**不得**再调 `applyViewportHP`（DESIGN §3.4） | P0 |
+| FR-1.10m | 删除 `viewport_hp.go` 及 `withHPSync`/`applyViewportHP`/`syncChatViewportHP`/`viewportSyncCmd*` 调用链（`update.go` **16** 处 + `ticks.go` 1 处）；**含** `toolVP.HighPerformanceRendering` 与 `viewportSyncCmd` batch tool Sync；`handleNoticeScrollTick` 不再 `withHPSync`；`selDragging` 时改由可见窗口 refresh 保证选区高亮；`selection_update` 拖拽开始**不得**再调 `applyViewportHP`（DESIGN §3.4） | P0 |
 | FR-1.10n | `Model.Init()` 与 `safeModel.Init()` 返回 `tea.RequestWindowSize`（v2 无 `tea.WindowSize()` Cmd；语义见 DESIGN §3.1） | P0 |
-| FR-1.10o | **`tea.PasteMsg`**：粘贴不再经 `KeyMsg.Paste`/`Runes`；`update.go`/`updateInput` 显式处理 `PasteMsg`（及可选 `PasteStartMsg`/`PasteEndMsg`），再转发 bubbles `textinput` | P0 |
+| FR-1.10o | **`tea.PasteMsg`**：粘贴不再经 `KeyMsg.Paste`/`Runes`；`update.go`/`updateInput` 显式处理 `PasteMsg`（及可选 `PasteStartMsg`/`PasteEndMsg`），再转发 bubbles `textinput`；**默认**保持 bracketed paste 启用（`View.DisableBracketedPasteMode=false`），大段粘贴回归 | P0 |
 | FR-1.10p | **鼠标常量与坐标**：`MouseButtonLeft`→`MouseLeft`；`MouseEvent(msg).IsWheel()`→类型断言或 `MouseWheelMsg`；坐标 `msg.X/Y`→`msg.Mouse().X/Y`（`mapMousePoint`、`handleMouseWheel` 分区滚轮） | P0 |
 | FR-1.10q | **`View()` 去副作用**：`model.go` 中 `applyViewportHP()`、惰性 `plainLines` 重建移出 `View()`，改在 `Update`/sync 路径预计算；`View()` 只组装 `tea.View` | P0 |
 | FR-1.10r | **build tag 分裂文件**同步迁 v2：`input_release.go`、`input_debug.go`、`submit_hook_release.go`、`submit_hook_tuitest.go`、`picker_release.go`、`picker_tuitest.go` | P1 |
 | FR-1.10s | **`viewportHPEnabled()` 逻辑拆分**：除 HP 外还控制浮层/权限 prompt 禁滚轮与禁选区；删 HP 后须保留为 `chatInteractionEnabled()`（或等价），**不得**与 HP 字段同删 | P0 |
-| FR-1.10t | **`wheel_scroll.go` 去 HP 耦合**：`handleWheelScrollTick`/`jumpViewport` 不再调 `viewportScrollCmdFromLines`/`viewportSyncCmdFor`（现位于 `viewport_hp.go`）；drain 仅 `LineUp`/`LineDown` + `scheduleSyncChatView` | P0 |
-| FR-1.10u | **`mouse_escape` 全链路**：`RecoverLeakedMouseKeys`/`AccumulateLeakedMouseKeys`/`extractLeakedSGREvents` 输出 v2 `MouseWheelMsg` 等（非 v1 struct）；passthrough 用 `KeyPressMsg.Text`（**非** `Runes`）；`update.go` 循环分派改接 v2 类型 | P0 |
+| FR-1.10t | **`wheel_scroll.go` 去 HP 耦合**：`handleWheelScrollTick`/`jumpViewport` 不再调 `viewportScrollCmdFromLines`/`viewportSyncCmdFor`；drain 仅用 `LineUp`/`LineDown` + `SetYOffset`（或 model 层 YOffset）+ `scheduleSyncChatView`；`jumpViewport` 的 pending 合并逻辑保留 | P0 |
+| FR-1.10u | **`mouse_escape` 全链路**：`RecoverLeakedMouseKeys`/`AccumulateLeakedMouseKeys`/`extractLeakedSGREvents` 输出 v2 `MouseWheelMsg` 等（非 v1 struct）；passthrough 用 `KeyPressMsg.Text`（**非** `Runes`）；`update.go` 中 `len(passthrough.Runes)`/`passthrough.Runes` 须改为 `Text`（~L44–55）；循环分派改接 v2 类型 | P0 |
 | FR-1.10v | **`asyncCopy` 与 `tea.SetClipboard`**：评估将 `selection_update.asyncCopy` 从 goroutine+`clipboard.Write` 改为 `Update` 返回 `tea.SetClipboard`（失败仍走 `internal/ui/clipboard` + `copyResultMsg` toast） | P1 |
 | FR-1.10w | **bubbles textinput v2 光标**：评估 v2 是否要求 `tea.View.Cursor` 而非 lipgloss 内嵌光标；`view/render.go` 输入区与 `Model.View()` 组装须对齐 | P1 |
+| FR-1.10x | **异步事件通道**：`run.go` 中 `Deps.Events` + goroutine `p.Send(msg)`（agent stream、permission prompt、`turnDone` 等）迁后仍可用；`internal/tuitest` harness **不经** `Program`，直连 `model.Update`——须同步 v2 消息构造（DESIGN §3.10） | P0 |
+| FR-1.10y | **`MouseMotionMsg` 拖拽**：`selection_update` 中 v1 `MouseActionMotion` + `MouseButtonLeft` 改为 v2 `MouseMotionMsg`（`msg.Button == tea.MouseLeft`）；坐标 `msg.Mouse().X/Y` | P0 |
+| FR-1.10z | **`Init()` + `RequestWindowSize`**：v2 `RequestWindowSize` 返回 `WindowSizeMsg`（**非** `tea.Cmd`）；与 `tea.Batch(listenPrompt, LoadInitialHistory, …)` 组合策略须明确（DESIGN §3.1） | P0 |
+| FR-1.10aa | **`KeyReleaseMsg` 排除**：`update.go` 优先 `case tea.KeyPressMsg:`；若保留 `case tea.KeyMsg:` 须在分支内 type-switch **忽略** `KeyReleaseMsg`，避免 Enter/Esc/Ctrl+C 双触发 | P0 |
+| FR-1.10ab | **`Running` 模式 viewport 转发**：`updateInput` 在 `m.Running` 时 `chatVP.Update(msg)` 须接收 v2 `KeyPressMsg`/`MouseWheelMsg` 等（PgUp/PgDn 滚动历史） | P1 |
+| FR-1.10ac | **Permission 双通道**：`run.go` 中 `Events` goroutine `p.Send` **与** `listenPrompt()`（`PromptCh` → Cmd 闭包 → `PromptRequestMsg`）并存；bubble 子代理权限 ask 走 `PromptCh`；迁 v2 后两路径均须回归 | P0 |
+| FR-1.10ad | **Alt+Enter 多行**：`updateInput` Enter 提交判定 `key.Type==KeyEnter && !key.Alt` → `KeyPressMsg.String()=="enter" && !msg.Mod.Contains(tea.ModAlt)`（或等价 `msg.Code`/`msg.Mod` 组合） | P0 |
+| FR-1.10ae | **测试色板 API**：`markdown/render_test.go` 等 `lipgloss.SetColorProfile(termenv.TrueColor)` 对齐 lipgloss v2 / `tea.WithColorProfile`（tuitest 确定性渲染） | P1 |
 | FR-1.11 | v0.1.2 `viewport_hp.go`（HP + SyncScrollArea）：**删除**；滚动语义由 `scroll/` pending/drain + v2 渲染器承担（DESIGN §3） | P0 |
 | FR-1.12 | 升级后修复全部编译与 `-race` 单测；**不**借迁移无关重构 Agent 层 | P0 |
 | FR-1.13 | `go mod tidy` 后 `go.sum` **无** v1 charm 模块行；`verify-charm-v2` grep **全部** `github.com/charmbracelet/{bubbletea,bubbles,lipgloss,glamour}`；评估 `muesli/termenv` 与 lipgloss v2 `ColorProfile()` 兼容性 | P0 |
@@ -107,9 +123,10 @@
 
 | ID | 描述 | 优先级 | 落点 |
 |----|------|--------|------|
-| FR-3.1 | 子代理 prompt `@` 展开：`spawn/execute.go` 子 `ctxSvc` 注入 `AtExpander`（与主会话 `app/runner.go` 一致） | P1 | `execute.go` ~L100 `ctxSvc` 组装 |
+| FR-3.1 | 子代理 prompt `@` 展开：`spawn/execute.go` 子 `ctxSvc` 注入 `AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm}`（与主会话 `app/runner.go` 一致；`perm` 为子代理 `Engine`） | P1 | `execute.go` ~L99 `ctxSvc` 组装 |
 | FR-3.2 | 浮层选区（`/help`、权限 prompt）：打开浮层时禁用聊天选区（v0.1.2 首期）；完整版可在浮层内选区复制 | P1 | `selection_update.go`、`overlay/*` |
 | FR-3.3 | 选区增强：双击选词、三击选行；`Shift+↑/↓/Home/End` 键盘扩展 | P1–P2 | `MouseClickMsg` 时间戳；`KeyPressMsg` |
+| FR-3.7 | **TUI 聊天区虚拟列表**（承接 v0.1.2 FR-9.12「不实现」→ v0.1.3 **实现**）：见 FR-3.7.1–3.7.7 | P1 | `chat/`、`model/view/render.go`、`sync.go` |
 | FR-3.5 | Transcript scrollback / classic 无 AltScreen 渲染器 | P2 | 可选；v2 `View.AltScreen` 更易预埋 |
 | FR-3.6 | `LoadSkill` skill 名 `..` 拦截 — **保持现状**，不纳入本版 | — | Out of scope |
 
@@ -120,6 +137,22 @@
 | FR-3.4.1 | 空闲态全局退出：`tea.Quit` / v2 等价路径；声明式 `View.AltScreen=false` 由框架清理 | P0 |
 | FR-3.4.2 | Agent 回合 Esc → `RequestCancelTurn`；**不**误触全局 Quit | P0 |
 | FR-3.4.3 | 双击 Ctrl+C 退出后终端无 alt screen 残留 | P1 |
+
+#### FR-3.7 聊天区虚拟列表（原 v0.1.2 FR-9.12）
+
+> **背景**：v0.1.2 `chat.RenderCache` 仅缓存 **block** 级渲染行，但 `SyncChat` 仍将 header+全部 block **拼接为整段字符串** 后 `chatVP.SetContent`；删 HP 迁 v2 后，极长 transcript 的全量拼接 + lipgloss 重绘成本随总行数线性增长。虚拟列表只向 viewport 提交 **可见行窗口**（+ 可选 overscan），plain 行索引与选区坐标系保持全局一致。
+
+| ID | 描述 | 优先级 |
+|----|------|--------|
+| FR-3.7.1 | **保留** block 级 `RenderCache` / `markdown.SegmentCache`；新增 **行级目录**（header 行 + 各 block 展开后的 plain/styled 行数、块→行偏移） | P1 |
+| FR-3.7.2 | `SyncChat`（及 drain 结束后的 flush）向 `chatVP.SetContent` 仅写入 `[YOffset, YOffset+Height)` 对应 **styled** 切片（DESIGN §5.5） | P1 |
+| FR-3.7.3 | **总行数**、`chatVP.YOffset`、滚轮 pending/drain、PgUp/PgDn、工具面板路由与 v0.1.2 **语义一致**；虚拟列表为内部优化，用户不可见行为变化 | P0 |
+| FR-3.7.4 | **选区 / 复制**：维护全量 **plain** 行切片（`plainLines` 或等价结构），供 `selection.Extract` / `mapMousePoint`；**不要求**维护全量 styled 字符串 | P1 |
+| FR-3.7.5 | **流式更新**：仅 invalidate 尾部 block（及 header 若变）的行目录；drain 活跃期间（FR-9.7 语义）不重建可见窗口外的 styled 内容 | P1 |
+| FR-3.7.6 | **选区高亮**：`visibleHighlightedLines` 仍在可见窗口内 overlay；`selDragging` 时可见窗口全量 refresh（衔接 FR-1.10q，**不**回退全 transcript styled 拼接） | P1 |
+| FR-3.7.7 | 单测 / benchmark：合成 ≥500 行 transcript，`syncChatView` 或可见窗口 rebuild 耗时 **不随总行数线性增长**（允许随 viewport 高度线性） | P1 |
+| FR-3.7.8 | **`jumpViewport` / drain YOffset**：`wheel_scroll.jumpViewport` 与 `SyncChat` 的 `atBottom`/`GotoBottom`/`SetYOffset` 在虚拟列表下统一由 model/`LineCatalog` 维护 `totalLines` 并 clamp `[0, totalLines-height]`；**禁止** YOffset 漂移导致空白或截断 | P0 |
+| FR-3.7.9 | **`WindowSizeMsg` resize**：width/height 变化时 invalidate `LineCatalog`、`headerCache`、`RenderCache`（width 键）；`overlay.OnWindowSize` 后可见窗口 rebuild；选区 `mapMousePoint` 坐标仍正确 | P1 |
 
 ### FR-4 移除 Deprecated `IsSensitiveAbs`
 
@@ -133,8 +166,8 @@
 
 | ID | 描述 |
 |----|------|
-| NFR-1 | v2 迁移（FR-1）与 FR-2 为 **P0 发布门槛**；FR-3 P1 可文档化延期但须在 CHANGELOG 说明 |
-| NFR-2 | 长 transcript 滚轮：p95 **不劣于** v0.1.2；v2 Cursed Renderer 允许更快 |
+| NFR-1 | v2 迁移（FR-1）与 FR-2 为 **P0 发布门槛**；FR-3 P1（含 **FR-3.7**）同版本交付；未合入须在 CHANGELOG 说明 |
+| NFR-2 | 长 transcript：滚轮 p95 **不劣于** v0.1.2；虚拟列表（FR-3.7）下 `syncChatView` **不**随总行数线性恶化；v2 Cursed Renderer 允许更快 |
 | NFR-3 | 二进制体积 ±15% 内（v2 渲染栈略增可接受） |
 | NFR-4 | CI / Makefile 增加 v1 import 守卫（DESIGN §10） |
 | NFR-5 | 新增/改动的 TUI 行为须有单测或 tuitest 覆盖 |
@@ -147,13 +180,14 @@
 
 **In scope**
 
-- 全部 `internal/ui/**`（含 `theme/colors.go`、`selection/selection.go`）与 TUI 相关 `internal/logging/warn.go`（lipgloss）
-- `internal/ui/clipboard/**`（FR-1.9 `tea.SetClipboard` 评估）
+- 全部 `internal/ui/**`（含 `theme/colors.go`、`selection/selection.go`、`style/`、`layout/`、`deps/deps.go`）与 TUI 相关 `internal/logging/warn.go`（lipgloss）
+- `internal/ui/clipboard/**`（FR-1.9 `tea.SetClipboard` 评估；`clipboard_test.go` 降级路径）
 - `go.mod` / `go.sum`
 - `internal/agent/spawn/execute.go`（FR-3.1）
+- `internal/agent/spawn/execute_test.go`（FR-3.1 `@` 单测）
 - `internal/permission/sensitive.go`、`path_api.go`（FR-4）
-- `internal/tuitest/**`
-- `docs/v0.1.3/**`、`CHANGELOG.md`、`internal/ui/tui/README.md`、`CLAUDE.md`
+- `internal/tuitest/**`（harness 直连 `model.Update`，见 FR-1.10x）
+- `docs/v0.1.3/**`、`CHANGELOG.md`、`README.md`（若提及 Charm 版本）、`internal/ui/tui/README.md`、`CLAUDE.md`
 - `.github/workflows`（`ci.yml` / `release.yml`）或 `Makefile`：v1 import 守卫（NFR-4、NFR-9）
 - `docs/v0.1.0/CONFIG.md`、`docs/v0.1.0/SECURITY-SYNC.md`（若剪贴板/OSC52 行为变更）
 
@@ -170,9 +204,9 @@
 |------|------|
 | **A** | `go.mod` → charm.land v2；import 批量替换（66 文件） |
 | **B** | `View() tea.View` 骨架 + `run.go` + `safe_model` + `Init`/`RequestWindowSize`；**View 去副作用**（FR-1.10q） |
-| **C** | `update.go` 键鼠迁移；`PasteMsg`；`mouse_escape`；`KeyPressMsg` 全仓库 |
+| **C** | `update.go` 键鼠迁移；`PasteMsg`；`mouse_escape`；`KeyPressMsg`/`MouseMotionMsg` 全仓库；排除 `KeyReleaseMsg`（FR-1.10aa） |
 | **D** | 滚动：删 HP/`withHPSync`/`viewportScrollCmdFromLines`；`scroll/wheel.go` + `wheel_scroll.go` 接 `MouseWheelMsg`（FR-1.10t） |
 | **E** | 选区 + clipboard（含 `tea.SetClipboard` 评估） |
 | **F** | `make test` + `make test-tui` 全绿 |
-| **G** | FR-4 + FR-3 延期项 |
+| **G** | FR-4 + FR-3 延期项 + **FR-3.7 虚拟列表**（建议在删 HP / 回归通过后实施，DESIGN §5.5） |
 | **H** | 手动矩阵 + CHANGELOG + v1 守卫脚本 |

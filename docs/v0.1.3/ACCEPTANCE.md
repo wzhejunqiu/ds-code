@@ -3,7 +3,7 @@
 > 版本：v0.1.3  
 > 状态：规划中  
 > 更新日期：2026-06-20  
-> 审核：2026-06-20（三轮）  
+> 审核：2026-06-20（五轮）  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md) · 设计：[DESIGN.md](DESIGN.md)
 
 ## 1. 总体验收
@@ -35,7 +35,7 @@
 |------|------|
 | `Model.View()` / `safeModel.View()` 签名 | 返回 `tea.View` |
 | `Model.View()` / `safeModel.View()` | **无**副作用（不调用 `applyViewportHP`、不惰性写 `plainLines`）（FR-1.10q） |
-| `safe_model` panic fallback | 返回 `tea.View` 且 `AltScreen=true`（FR-1.10k） |
+| `safe_model` panic fallback | 返回 `tea.View` 且 `AltScreen=true`；**透传** inner `MouseMode`/`Cursor`（FR-1.10k） |
 | `run.go` | **无** `WithAltScreen` / `WithMouseCellMotion` |
 | `View` 字段 | `AltScreen=true`、`MouseMode=CellMotion` |
 | `Init()` | 含 `tea.RequestWindowSize`（FR-1.10n） |
@@ -50,8 +50,10 @@
 | Ctrl+C 双击退出 | 正常；无 alt screen 残留 |
 | 空格 / Tab / PgUp/PgDn | `KeyPressMsg.String()` 路径正常（FR-1.10h） |
 | 滚轮 | `MouseWheelMsg`；`msg.Mouse().Y` 分区 chat/tool；平滑滚动 |
-| 拖拽选区 | `MouseClickMsg` / `MouseReleaseMsg`；`tea.MouseLeft` |
-| 大段粘贴 | `PasteMsg` 正确进入 textinput（FR-1.10o） |
+| 拖拽选区 | `MouseClickMsg` / `MouseReleaseMsg` / `MouseMotionMsg`；`tea.MouseLeft` |
+| `KeyReleaseMsg` | `update.go` **不**对 release 重复处理 Enter/Esc/Ctrl+C（FR-1.10aa） |
+| 大段粘贴 | `PasteMsg` 正确进入 textinput（FR-1.10o）；bracketed paste 默认启用 |
+| Alt+Enter | 多行输入不触发 SubmitLine（FR-1.10ad） |
 | `updateInput` Enter | 使用 `KeyPressMsg`/`String()`，**无** `key.Type`/`key.Alt`（FR-1.10h） |
 | `bubbles/key.Matches` | 已迁 v2 或改为字符串匹配（`wheel_scroll.go`） |
 
@@ -60,7 +62,8 @@
 | 检查 | 预期 |
 |------|------|
 | `viewport_hp.go` | **已删除** |
-| `withHPSync` / `applyViewportHP` / `syncChatViewportHP` | **无**引用（含 `update.go` 16 处、`ticks.go` 1 处） |
+| `withHPSync` / `applyViewportHP` / `syncChatViewportHP` / `viewportSyncCmd*` | **无**引用（含 `update.go` 16 处、`ticks.go` 1 处含 `handleNoticeScrollTick`） |
+| `toolVP.HighPerformanceRendering` | **无**赋值 |
 | `viewportScrollCmdFromLines` / `viewportSyncCmdFor` | **无**引用（`wheel_scroll.go` 已改，FR-1.10t） |
 | `viewportHPEnabled` | **无** HP 赋值；浮层/选区禁入逻辑保留为独立函数（FR-1.10s） |
 | `viewport.Sync` / `ViewUp` / `ViewDown` | **无**引用 |
@@ -72,7 +75,7 @@
 | 检查 | 预期 |
 |------|------|
 | `mouse_escape_test.go` | 全绿（v2 消息类型；无 `tea.MouseEvent`/`KeyRunes`） |
-| `RecoverLeakedMouseKeys` / `AccumulateLeakedMouseKeys` | 输出 v2 鼠标消息；passthrough 用 `KeyPressMsg.Text` |
+| `RecoverLeakedMouseKeys` / `AccumulateLeakedMouseKeys` | 输出 v2 鼠标消息；passthrough 用 `KeyPressMsg.Text`；**无** `passthrough.Runes` |
 | iTerm2 快速滚轮 | 输入框**无** `[<64;…M` SGR 乱码 |
 | `update.go` | 键分支先 `AccumulateLeakedMouseKeys` 再 `updateKey` |
 
@@ -104,6 +107,15 @@
 | copy-on-select | 成功 toast；SSH 优先 OSC52（`tea.SetClipboard` 或等价） |
 | 复制失败 | footer/status 提示；不 panic |
 | 降级 | `internal/ui/clipboard` 仍可用（无 pbcopy 环境） |
+
+### AC-2.10 异步通道与 tuitest harness（FR-1.10x）
+
+| 检查 | 预期 |
+|------|------|
+| `run.go` `p.Send(msg)` | 迁后仍编译；stream / `TurnDoneMsg` 到达 `Update` |
+| `listenPrompt()` + `PromptCh` | permission prompt 经 Cmd 闭包注入；bubble 子代理 ask 可用（FR-1.10ac） |
+| `internal/tuitest/harness_test.go` | 全绿；`events` goroutine + `model.Update` 路径可用 v2 消息 |
+| Agent 回合 smoke | 流式输出、工具块、`TurnDone` 后 `Running=false` |
 
 ## 3. v0.1.2 TUI 能力回归（FR-2）
 
@@ -139,7 +151,7 @@
 |------|------|
 | 无选区滚轮 | Cursed Renderer diff；手感不劣于 v0.1.2 |
 | 拖拽建立选区 | 高亮正确；可边滚边选 |
-| `selDragging` 期间 | 全量 `SetContent`；不依赖 HP 标志 |
+| `selDragging` 期间 | 可见窗口 refresh；不依赖 HP；选区 overlay 正确（FR-3.7.6） |
 
 ### AC-3.4 iTerm2 SGR（FR-2.10）
 
@@ -183,6 +195,7 @@
 | 主会话 `@file` | 仍展开（回归） |
 | `task` 子代理 prompt 含 `@file foo.go` | 子代理上下文含 `foo.go` 内容 |
 | worktree 子代理 `@` | respect 子代理 `perm.Workspace` |
+| 单测 | `internal/agent/spawn/execute_test.go` 新增或扩展 `TestExecuteRun_atExpand`（或等价） |
 
 ### AC-5.2 浮层选区（FR-3.2，P1）
 
@@ -208,10 +221,32 @@
 | `go doc permission.IsSensitiveAbs` | 不存在或 Deprecated 且包外不可引用 |
 | `make test` permission 相关 | 全绿 |
 
+### AC-5.5 聊天区虚拟列表（FR-3.7，P1）
+
+| 检查 | 预期 |
+|------|------|
+| `SyncChat` / `chatVP.SetContent` | **不**再写入全 transcript styled 全文（仅可见窗口 + 可选 overscan） |
+| `chat.RenderCache` | block 级缓存 **保留**；`TestRenderCache*` 仍绿 |
+| 总行数 / `YOffset` | 与 v0.1.2 滚轮、PgUp/PgDn、跳底、`jumpViewport` 语义一致（FR-3.7.3、FR-3.7.8） |
+| resize | 缩放宽高后 catalog/选区坐标正确（FR-3.7.9） |
+| 选区 / copy-on-select | `plainLines` 全局坐标正确；AC-3.1 手动项不退化 |
+| 流式 tail 更新 | 仅尾 block/catalog invalidate；无明显全屏闪屏 |
+| 性能 | `TestLineCatalog_windowCost` 或 benchmark：500 行 vs 1000 行 rebuild **非线性**恶化（FR-3.7.7） |
+| 长会话手动 | 100+ 轮 transcript 快速滚轮 + 流式输出：手感不劣于 v0.1.2 |
+
 ## 6. 测试清单
 
 ### 6.1 须全绿或改写（P0）
 
+- [ ] `internal/ui/tui/chattool/render_test.go`（lipgloss v2）
+- [ ] `internal/ui/tui/header_width_test.go`
+- [ ] `internal/ui/tui/header/scroll_test.go`
+- [ ] `internal/ui/tui/chat/cache_test.go`
+- [ ] `internal/ui/tui/chat/planning_test.go`
+- [ ] `internal/ui/tui/markdown/incremental_test.go`
+- [ ] `internal/ui/tui/markdown/stress_test.go`
+- [ ] `internal/ui/tui/selection/selection_test.go`
+- [ ] `internal/ui/clipboard/clipboard_test.go`（降级路径；FR-1.9）
 - [ ] `internal/ui/tui/scroll/drain_test.go`
 - [ ] `internal/ui/tui/header/notice_test.go`（lipgloss v2）
 - [ ] `internal/ui/tui/chat/render_test.go`（lipgloss v2）
@@ -220,7 +255,7 @@
 - [ ] `internal/ui/tui/model/turn/*_test.go`（async、cancel、update、blocks）
 - [ ] `internal/ui/tui/model/session/resume_test.go`
 - [ ] `internal/ui/tui/model/view/render_test.go`
-- [ ] `internal/ui/tui/model/viewport_hp_test.go` → **删除**
+- [ ] `internal/ui/tui/model/viewport_hp_test.go` → **改写**（`HistoryLoaded`/`SessionResumed` 断言 `scheduleSyncChatView` 或非 HP sync；FR-1.10m）
 - [ ] `internal/ui/tui/model/selection_test.go`（**移除** HP 断言）
 - [ ] `internal/ui/tui/model/input/mouse_escape_test.go`
 - [ ] `internal/ui/tui/model/input_test.go`
@@ -229,10 +264,25 @@
 - [ ] `internal/ui/tui/component/picker_test.go`
 - [ ] `internal/ui/tui/model/subagent/nav_test.go`
 - [ ] `internal/ui/tui/markdown/render_test.go`
+- [ ] `internal/ui/tui/history/history_test.go`
+- [ ] `internal/ui/tui/model/turn/update_test.go`
+- [ ] `internal/ui/tui/model/turn/cancel_test.go`
+- [ ] `internal/ui/tui/model/turn/blocks_test.go`
+- [ ] `internal/ui/tui/model/turn_metrics_test.go`
+- [ ] `internal/ui/tui/subagent/registry_test.go`
 - [ ] `internal/tuitest/*`
 
 ### 6.2 新增建议
 
+- [ ] `TestLineCatalog_totalLines`（FR-3.7.1）
+- [ ] `TestSyncChat_visibleWindowOnly`（FR-3.7.2；SetContent 长度 ≈ viewport 行数）
+- [ ] `TestLineCatalog_windowCost` / `BenchmarkSyncChatView`（FR-3.7.7）
+- [ ] `TestVirtualList_selectionPlainLines`（FR-3.7.4；跨窗口选区复制）
+- [ ] `TestVirtualList_streamTailInvalidate`（FR-3.7.5）
+- [ ] `TestKeyRelease_ignored`（FR-1.10aa）
+- [ ] `TestMouseMotion_dragSelection`（FR-1.10y）
+- [ ] `TestRunningMode_chatVPScrollKey`（FR-1.10ab）
+- [ ] `TestEventsChannel_turnDone`（FR-1.10x）
 - [ ] `TestPasteMsg_textinput`（FR-1.10o）
 - [ ] `TestView_noSideEffects`（FR-1.10q）
 - [ ] `TestFallbackView_returnsTeaView`（panic 路径）
@@ -248,7 +298,14 @@
 - [ ] `TestTextinput_cursorOrViewCursor`（FR-1.10w；若 v2 需要）
 - [ ] `TestSetClipboard_orFallback`
 - [ ] `TestScrollSpeed_env`（`DS_CODE_SCROLL_SPEED`）
-- [ ] FR-3.1：`TestSpawnSubagent_atExpand`
+- [ ] FR-3.1：`TestExecuteRun_atExpand`（`spawn/execute_test.go`）
+- [ ] `TestJumpViewport_clampsTotalLines`（FR-3.7.8）
+- [ ] `TestSyncChat_gotoBottomVirtualList`（FR-3.7.8）
+- [ ] `TestWindowSize_invalidatesCatalog`（FR-3.7.9）
+- [ ] `TestAltEnter_noSubmit`（FR-1.10ad）
+- [ ] `TestListenPrompt_permissionAsk`（FR-1.10ac）
+- [ ] `TestSafeModel_passthroughTeaView`（FR-1.10k）
+- [ ] `TestMarkdownRender_colorProfile`（FR-1.10ae）
 - [ ] FR-4：`TestIsSensitiveAbs_notExported`
 
 ## 7. 手动验证
@@ -267,6 +324,7 @@ bin/ds-code --permission-mode auto
 # 10: iTerm2 快速滚轮无 SGR 乱码（#41）
 # 11: 复制后滚轮高亮保留（#42）
 # 12: DS_CODE_SCROLL_SPEED=0.5 / 2
+# 13: 长 transcript（100+ 轮）滚轮 + 流式 — 虚拟列表不退化（FR-3.7）
 ```
 
 ## 8. 非目标确认
@@ -274,7 +332,8 @@ bin/ds-code --permission-mode auto
 - [ ] **不**保留 v1 bubbletea 双栈
 - [ ] Transcript/classic（FR-3.5 P2）可延期
 - [ ] Agent/MCP/路径权限 **无**行为变更（除 FR-4）
-- [ ] Kitty 键盘增强、React 虚拟列表、MCP spill GC **未**实现
+- [ ] **FR-3.7 虚拟列表** 已实现（原 v0.1.2 FR-9.12「不实现」）
+- [ ] Kitty 键盘增强、MCP spill GC、`@` compact 脱敏、**View.OnMouse** **未**实现
 - [ ] CI **仍可不**跑 `make test-tui`（NFR-8 本地必跑）
 
 ## 9. 发布阻塞
@@ -284,5 +343,6 @@ bin/ds-code --permission-mode auto
 | P0 | FR-1 v2 迁移 + FR-2 回归 + FR-4 |
 | CHANGELOG | Breaking: charm.land v2 import |
 | P1 延期 | FR-3.1–3.3 未合入须在 Known limitations 说明 |
+| P1 虚拟列表 | FR-3.7 为 v0.1.3 **In scope**；未合入须在 CHANGELOG 说明 |
 | 守卫 | `verify-charm-v2` 纳入 `verify-release` / release workflow（NFR-9） |
 | test-tui | 发布前本地 `make test-tui`（CI/release **均未**跑） |

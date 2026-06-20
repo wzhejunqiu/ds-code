@@ -4,7 +4,7 @@
 > 状态：规划中  
 > 基线版本：v0.1.2  
 > 更新日期：2026-06-20  
-> 审核：2026-06-20（三轮；对照 v0.1.2 基线代码 **66** 个 charm import 文件 + [UPGRADE_GUIDE_V2](https://github.com/charmbracelet/bubbletea/blob/main/UPGRADE_GUIDE_V2.md)）
+> 审核：2026-06-20（五轮；对照 v0.1.2 基线代码 **66** 个 charm import 文件 + [UPGRADE_GUIDE_V2](https://github.com/charmbracelet/bubbletea/blob/main/UPGRADE_GUIDE_V2.md)）
 
 ## 概述
 
@@ -12,7 +12,7 @@ v0.1.3 聚焦三类工作：
 
 1. **Charm 终端 UI 栈一次性迁 v2**（需求 1）：将 Bubble Tea 生态从 v1（`github.com/charmbracelet/*`）**直接**升级到 v2（`charm.land/*/v2`），含 `bubbletea`、`bubbles`、`lipgloss`、`glamour` 及关联 `x/ansi` 等；**跳过** v1.3.x 中间态，避免双次迁移。
 2. **迁移后全量回归**（需求 2）：`make test` / `make test-tui` / 手动 TUI 清单 / 关键终端矩阵，确保 v0.1.2 已交付能力（选区复制、平滑滚轮、Markdown、header 通知区等）**语义不退化**（实现路径可因 Cursed Renderer 变化）。
-3. **历史延期项补全**（需求 3）：v0.1.0–v0.1.2 文档中「另开需求 / P1–P2 延期」条目；与 v2 迁移同版本交付，能复用 v2 新 API 的优先用新 API（如 `tea.SetClipboard`）。
+3. **历史延期项补全 + 长 transcript 性能**（需求 3）：v0.1.0–v0.1.2 标记延期的条目；**新增** v0.1.2 曾明确不做的 **React 式虚拟列表**（FR-3.7 / 原 FR-9.12），与删 HP 后的 v2 Cursed Renderer 配合，避免极长会话全量 `SetContent`。
 
 ## 文档索引
 
@@ -64,7 +64,7 @@ v0.1.3 聚焦三类工作：
 | 鼠标 | `tea.MouseMsg`（struct；`msg.X`/`Action`/`MouseButton*`） | `MouseClickMsg` 等；坐标 `msg.Mouse().X/Y`；`MouseLeft` 等常量 |
 | 粘贴 | `KeyMsg` + `Paste`/`Runes` | `tea.PasteMsg`（`Content`）；`updateInput` 须显式分支 |
 | 终端特性 | `WithAltScreen()`、`EnterAltScreen` 等 Cmd | `View.AltScreen`、`View.MouseMode` 字段 |
-| 滚动渲染 | HP + `SyncScrollArea` + `withHPSync` | **Cursed Renderer**；删除 `viewport_hp.go` 与 HP 调用链（DESIGN §3.4） |
+| 滚动渲染 | HP + `SyncScrollArea` + `withHPSync` | **Cursed Renderer** + **虚拟列表**（FR-3.7）；删 `viewport_hp.go` |
 | 滚轮输入 | `tea.MouseMsg` + `MouseButtonWheel*` | `MouseWheelMsg`；`scroll/wheel.go` 同步改签名（FR-1.10l） |
 | 键位匹配 | `tea.KeyType` + `bubbles/key.Matches` | `KeyPressMsg.String()` + bubbles v2 `key` 或集中键位表（FR-1.10h） |
 | iTerm2 SGR | `mouse_escape.go` 从 `KeyRunes` 恢复 `MouseMsg` | 适配 v2 键鼠类型；迁后须 iTerm2 回归（FR-1.10j） |
@@ -81,10 +81,11 @@ v0.1.3 聚焦三类工作：
 | §5.4 删除 `IsSensitiveAbs` | **P0** | v0.1.2 承诺 |
 | FR-7.8 浮层选区 | **P1** | `/help`、权限 prompt |
 | FR-7.10–11 选区增强 | **P1** | 双击/键盘扩展 |
-| FR-3.10 子代理 `@` | **P1** | spawn AtExpander |
-| FR-3.7–3.8 transcript/classic | **P2** | 可选；v2 声明式 View 更易预埋 |
+| FR-3.1 子代理 `@` | **P1** | spawn AtExpander |
+| **FR-3.7 虚拟列表** | **P1** | 原 FR-9.12；仅渲染可见窗口 |
+| FR-3.5 transcript/classic | **P2** | 可选；v2 声明式 View 更易预埋 |
 
-## 审核结论（2026-06-20，三轮）
+## 审核结论（2026-06-20，五轮）
 
 对照 v0.1.2 代码库与 Bubble Tea v2 Upgrade Guide，文档缺口与处置如下（已同步至 REQUIREMENTS / DESIGN / ACCEPTANCE）。
 
@@ -145,13 +146,49 @@ v0.1.3 聚焦三类工作：
 | **CI + release 均不跑 `test-tui`** | P1 | NFR-8（扩展说明） |
 | **v0.1.2 FR-7.14**（不改 AltScreen 用户行为）与 v2 声明式迁移的说明 | P2 | 已知限制 |
 
-**不在 v0.1.3 范围**（保持 v0.1.2 非目标）：Kitty 键盘增强全量绑定、React 虚拟列表、MCP spill GC、`@` compact 专用脱敏、`View.OnMouse` 拦截。
+### 第四轮（异步通道 / Init 语义 / 拖拽 / tuitest / KeyRelease）
+
+| 缺口 | 严重度 | 处置 |
+|------|--------|------|
+| **Agent 异步 `Deps.Events` → `Program.Send`**（permission prompt、stream、turnDone）未列入迁移面 | P0 | FR-1.10x；DESIGN §3.10 |
+| **`tuitest` harness 直连 `model.Update`**，不经 `run.go`/`safeModel`/`NewProgram` | P1 | FR-1.10x；AC-2.10 |
+| **`MouseMotionMsg` 拖拽选区**（v1 `MouseActionMotion` + `MouseButtonLeft`）未单列 | P0 | 扩展 FR-1.10d/p；AC-2.3 |
+| **`Init()` + `RequestWindowSize`**：v2 返回 `WindowSizeMsg`（非 Cmd）与 `tea.Batch(listenPrompt, …)` 组合模式未写清 | P0 | FR-1.10z；DESIGN §3.1 |
+| **`update.go` 保留 `case tea.KeyMsg:`** 可能收到 `KeyReleaseMsg` 双触发 Enter/Esc | P0 | FR-1.10aa |
+| **`passthrough.Runes` / `len(passthrough.Runes)`**（`update.go` ~L44–55）未在 FR-1.10u 点名 | P0 | 扩展 FR-1.10u |
+| **`Running` 时 `updateInput` → `chatVP.Update(msg)`** 须转发 v2 键鼠 | P1 | FR-1.10ab |
+| **FR-3.1 设计示例缺 `Perm: perm`**（子代理 worktree 边界） | P1 | DESIGN §5.1 |
+| **`QuitAfterWait` + 双击退出** 与 v2 声明式 AltScreen 清理 | P1 | FR-3.4.3；DESIGN §3.11 |
+| **测试清单遗漏** lipgloss 相关：`chattool/render_test`、`header_width_test`、`header/scroll_test`、`chat/cache_test`、`markdown/incremental_test`/`stress_test` | P2 | ACCEPTANCE §6 |
+| **FR-3.1 单测落点** 应在 `spawn/execute_test.go` 而非仅 tuitest | P1 | AC-5.1 |
+| **`internal/ui/clipboard/clipboard_test.go`** 迁后仍须全绿（降级路径） | P1 | ACCEPTANCE §6 |
+| root **`README.md`** 未列入文档更新 | P2 | DESIGN §9 |
+
+### 第五轮（toolVP / 双通道 / 虚拟列表 YOffset / 测试落点）
+
+| 缺口 | 严重度 | 处置 |
+|------|--------|------|
+| **`toolVP` HP 与 Sync 链**：`applyViewportHP` 亦设 `toolVP.HighPerformanceRendering`；`viewportSyncCmd` batch chat+tool | P0 | 扩展 FR-1.10m；AC-2.4 |
+| **Permission 双通道**：`PromptCh`+`listenPrompt()`（Cmd 闭包）与 `Events`+`p.Send` 并存；bubble 子代理权限 ask 走前者 | P0 | FR-1.10ac；DESIGN §3.10 |
+| **Alt+Enter 多行输入**：`updateInput` 仍用 `key.Type==KeyEnter && !key.Alt` | P0 | FR-1.10ad |
+| **drain/jump 仍依赖 HP 辅助**：`LineUp`/`LineDown` 返回值 + `viewportScrollCmdFromLines`/`viewportSyncCmdFor`；`jumpViewport` 直接 `SetYOffset` | P0 | 扩展 FR-1.10t；FR-3.7.8 |
+| **`SyncChat` `atBottom`/`GotoBottom`/`SetYOffset`** 与虚拟列表 totalLines 须统一 clamp 语义 | P0 | FR-3.7.8；DESIGN §5.5 |
+| **`handleNoticeScrollTick` → `withHPSync`**：header 通知滚动 sync 路径删 HP 后须改 | P1 | 扩展 FR-1.10m |
+| **`WindowSizeMsg` resize**：行目录 / `headerCache` / `RenderCache` width 变化 invalidate | P1 | FR-3.7.9 |
+| **`safeModel.View() string`**：inner 迁 `tea.View` 后 wrapper 须透传 `AltScreen`/`MouseMode`/`Cursor` | P0 | 扩展 FR-1.10k |
+| **Bracketed paste 默认**：`PasteMsg` 依赖终端 bracketed paste；v2 经 `View.DisableBracketedPasteMode` 控制 | P1 | 扩展 FR-1.10o |
+| **`lipgloss.SetColorProfile`**（`markdown/render_test.go`）v2 测试 API 对齐 | P1 | FR-1.10ae |
+| **影响面遗漏 9 文件**：`deps/`、`style/`、`layout/`、`chattool/styles`、`*update.go`（turn/subagent/session/overlay） | P1 | DESIGN §4 |
+| **`viewport_hp_test.go` 应改写非删除**：断言 HP sync → `scheduleSyncChatView` 或 sync 语义 | P1 | ACCEPTANCE §6 |
+| **测试清单遗漏**：`history_test`、`turn/update_test`/`cancel_test`/`blocks_test`、`turn_metrics_test`、`subagent/registry_test` | P2 | ACCEPTANCE §6 |
+
+**不在 v0.1.3 范围**（保持 v0.1.2 非目标）：Kitty 键盘增强全量绑定、MCP spill GC、`@` compact 专用脱敏、`View.OnMouse` 拦截、transcript/classic 模式（FR-3.5）。
 
 ## 已知限制
 
 | 限制 | 说明 |
 |------|------|
-| **Breaking TUI 内部实现** | 对外用户行为力求等价；HP/`SyncScrollArea`/`withHPSync` 删除，由 Cursed Renderer + 选区时全量 `SetContent` 接管 |
+| **Breaking TUI 内部实现** | 对外用户行为力求等价；HP/`SyncScrollArea`/`withHPSync` 删除；聊天区改 **虚拟列表 + Cursed Renderer**（FR-3.7） |
 | **v1 不再支持** | v0.1.3 起全仓库 `.go` 与 `go.mod`/`go.sum` 不应残留 `github.com/charmbracelet/bubbletea` v1.x |
 | **流式选区错位** | FR-7.9 保留 |
 | **Windows** | release 矩阵仍与 v0.1.2 一致；v2 改善 Windows 输入，可选手动矩阵 |
