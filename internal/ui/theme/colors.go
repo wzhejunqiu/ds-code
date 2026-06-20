@@ -2,7 +2,7 @@
 // Import these instead of hard-coding hex values so chat, input, and lists stay consistent.
 package theme
 
-import "github.com/charmbracelet/lipgloss"
+import "charm.land/lipgloss/v2"
 
 // Claude Code–inspired light palette.
 var (

@@ -1,10 +1,11 @@
 package model
 
 import (
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"time"
+
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
@@ -38,9 +39,13 @@ type Model struct {
 
 	plainLines     []string
 	toolPlainLines []string
+	lineCatalog    chat.LineCatalog
+	chatScrollY    int
 	selRange       selection.Range
 	selDragging    bool
 	selTarget      int
+	lastClickAt    time.Time
+	lastClickPt    selection.Point
 
 	scroll          scroll.Controller
 	scrollDeferSync bool
@@ -58,11 +63,13 @@ func New(d *deps.Deps) *Model {
 	ti := textinput.New()
 	ti.Focus()
 	ti.CharLimit = 0
-	ti.Width = 40
+	ti.SetWidth(40)
 	ti.Prompt = ""
 	ti.Placeholder = ""
-	ti.Cursor.Style = lipgloss.NewStyle().Reverse(true)
-	ti.TextStyle = style.InputText
+	inputStyles := textinput.DefaultLightStyles()
+	inputStyles.Focused.Text = style.InputText
+	inputStyles.Blurred.Text = style.InputText
+	ti.SetStyles(inputStyles)
 
 	m := &Model{
 		State: state.State{
@@ -70,8 +77,8 @@ func New(d *deps.Deps) *Model {
 			SessionID:      d.SessionID,
 			StartupNotices: append([]header.Notice(nil), d.StartupNotices...),
 		},
-		chatVP: viewport.New(40, 10),
-		toolVP: viewport.New(40, 4),
+		chatVP: viewport.New(viewport.WithWidth(40), viewport.WithHeight(10)),
+		toolVP: viewport.New(viewport.WithWidth(40), viewport.WithHeight(4)),
 		input:  ti,
 		scroll: scroll.NewController(),
 	}
@@ -84,6 +91,7 @@ func (m *Model) Init() tea.Cmd {
 		m.listenPrompt(),
 		session.LoadInitialHistory(&m.State),
 		m.scheduleNoticeScroll(),
+		func() tea.Msg { return tea.RequestWindowSize() },
 	)
 }
 
@@ -120,25 +128,21 @@ func (m *Model) syncAllViews() {
 	}
 }
 
-func (m *Model) View() string {
-	m.applyViewportHP()
-	innerW := m.Width - 2
-	if innerW < 10 {
-		innerW = 10
-	}
+func (m *Model) View() tea.View {
 	var sel *view.SelectionOverlay
 	if m.selRange.Active() {
 		sel = &view.SelectionOverlay{
-			ChatPlain:  m.plainLines,
-			ChatRange:  m.selRange,
-			ToolPlain:  m.toolPlainLines,
-			ToolRange:  m.selRange,
-			ChatActive: m.selTarget == selTargetChat,
-			ToolActive: m.selTarget == selTargetTool,
+			ChatPlain:   m.plainLines,
+			ChatRange:   m.selRange,
+			ToolPlain:   m.toolPlainLines,
+			ToolRange:   m.selRange,
+			ChatActive:  m.selTarget == selTargetChat,
+			ToolActive:  m.selTarget == selTargetTool,
+			ChatScrollY: m.chatScrollY,
 		}
 	}
-	if len(m.plainLines) == 0 && m.Width > 0 {
-		m.plainLines = view.ChatPlainContent(&m.State, innerW, m.syncCaches())
-	}
-	return view.Render(&m.State, &m.chatVP, &m.toolVP, &m.input, sel)
+	v := tea.NewView(view.Render(&m.State, &m.chatVP, &m.toolVP, &m.input, sel))
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }

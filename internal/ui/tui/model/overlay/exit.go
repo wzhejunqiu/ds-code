@@ -3,7 +3,7 @@ package overlay
 import (
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
 )

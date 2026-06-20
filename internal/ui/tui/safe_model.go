@@ -3,8 +3,8 @@ package tui
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
@@ -47,11 +47,14 @@ func (s *safeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s, cmd
 }
 
-func (s *safeModel) View() string {
+func (s *safeModel) View() tea.View {
 	if s == nil || s.inner == nil {
-		return style.App.Render("TUI internal error\n")
+		v := tea.NewView(style.App.Render("TUI internal error\n"))
+		v.AltScreen = true
+		v.MouseMode = tea.MouseModeCellMotion
+		return v
 	}
-	var view string
+	var view tea.View
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -61,21 +64,24 @@ func (s *safeModel) View() string {
 		}()
 		view = s.inner.View()
 	}()
-	if view == "" {
+	if view.Content == "" && !view.AltScreen {
 		view = s.fallbackView()
 	}
 	return view
 }
 
-func (s *safeModel) fallbackView() string {
+func (s *safeModel) fallbackView() tea.View {
 	msg := "TUI render error"
 	if s.inner != nil && s.inner.ErrLine != "" {
 		msg = s.inner.ErrLine
 	}
-	return style.App.Render(
+	v := tea.NewView(style.App.Render(
 		lipgloss.NewStyle().Foreground(theme.Error).Render(msg) +
 			"\n\nPress Esc to clear this message.",
-	)
+	))
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func formatRecoveredError(phase string, r any) string {

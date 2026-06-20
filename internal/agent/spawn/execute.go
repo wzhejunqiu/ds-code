@@ -97,12 +97,13 @@ func ExecuteRun(
 	}
 
 	ctxSvc := &ctxpkg.Service{
-		Cfg:      cfg,
-		Store:    store,
-		Tools:    childReg,
-		LLM:      llmClient,
-		AgentsMD: agentsMD,
-		Rules:    rules,
+		Cfg:        cfg,
+		Store:      store,
+		Tools:      childReg,
+		LLM:        llmClient,
+		AgentsMD:   agentsMD,
+		Rules:      rules,
+		AtExpander: &ctxpkg.AtExpander{Cfg: cfg, Perm: perm},
 	}
 
 	isFork := run.SpawnKind == subagentstore.SpawnFork

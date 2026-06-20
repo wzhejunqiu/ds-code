@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
@@ -142,7 +142,7 @@ func Back(s *state.State, picker *component.Picker, sync func()) bool {
 	}
 }
 
-func HandleListKey(s *state.State, msg tea.KeyMsg, picker *component.Picker, sync func()) (tea.Cmd, bool) {
+func HandleListKey(s *state.State, msg tea.KeyPressMsg, picker *component.Picker, sync func()) (tea.Cmd, bool) {
 	if s.SubagentNav != state.SubagentNavList {
 		return nil, false
 	}
@@ -168,7 +168,7 @@ func HandleListKey(s *state.State, msg tea.KeyMsg, picker *component.Picker, syn
 	return nil, true
 }
 
-func HandleNavKey(s *state.State, msg tea.KeyMsg, picker *component.Picker, sync func()) (tea.Cmd, bool) {
+func HandleNavKey(s *state.State, msg tea.KeyPressMsg, picker *component.Picker, sync func()) (tea.Cmd, bool) {
 	overlayBlocks := s.Overlay != state.OverlayNone &&
 		s.Overlay != state.OverlaySubagentList
 	switch msg.String() {

@@ -4,19 +4,24 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/glamour/ansi"
-	glamourStyles "github.com/charmbracelet/glamour/styles"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
+	glamour "charm.land/glamour/v2"
+	"charm.land/glamour/v2/ansi"
+	glamourStyles "charm.land/glamour/v2/styles"
+	"charm.land/lipgloss/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
+)
+
+const (
+	mdColorDeepSeek = "#4D6BFE"
+	mdColorText     = "#3D3D3D"
+	mdColorMuted    = "#8A8A8A"
+	mdColorError    = "#C2410C"
 )
 
 var (
 	mdMu       sync.Mutex
 	mdRenderer *glamour.TermRenderer
 	mdWidth    int
-	mdProfile  termenv.Profile
 
 	codeBlockBoxStyle = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
@@ -27,13 +32,11 @@ var (
 func markdownRenderer(width int) (*glamour.TermRenderer, error) {
 	mdMu.Lock()
 	defer mdMu.Unlock()
-	profile := lipgloss.ColorProfile()
-	if mdRenderer != nil && mdWidth == width && mdProfile == profile {
+	if mdRenderer != nil && mdWidth == width {
 		return mdRenderer, nil
 	}
 	r, err := glamour.NewTermRenderer(
 		glamour.WithStyles(chatMarkdownStyles()),
-		glamour.WithColorProfile(lipgloss.ColorProfile()),
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {
@@ -41,7 +44,6 @@ func markdownRenderer(width int) (*glamour.TermRenderer, error) {
 	}
 	mdRenderer = r
 	mdWidth = width
-	mdProfile = profile
 	return r, nil
 }
 
@@ -50,9 +52,9 @@ func chatMarkdownStyles() ansi.StyleConfig {
 	zero := uint(0)
 	s.Document.Margin = &zero
 
-	deepSeek := string(theme.DeepSeek)
-	text := string(theme.Text)
-	muted := string(theme.Muted)
+	deepSeek := mdColorDeepSeek
+	text := mdColorText
+	muted := mdColorMuted
 
 	s.Heading = ansi.StyleBlock{
 		StylePrimitive: ansi.StylePrimitive{
@@ -114,14 +116,14 @@ func chatMarkdownStyles() ansi.StyleConfig {
 func codeBlockChromaStyles() *ansi.Chroma {
 	c := glamourStyles.LightStyleConfig.CodeBlock.Chroma
 	if c == nil {
-		text := string(theme.Text)
+		text := mdColorText
 		return &ansi.Chroma{
 			Text: ansi.StylePrimitive{Color: &text},
 		}
 	}
 	ch := *c
 	clearChromaBackgrounds(&ch)
-	errColor := string(theme.Error)
+	errColor := mdColorError
 	ch.Error = ansi.StylePrimitive{Color: &errColor}
 	return &ch
 }

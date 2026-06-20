@@ -1,17 +1,29 @@
 # tui
 
-ds-code 的交互式终端 UI（Bubble Tea）：聊天记录、输入框、浮层，以及 agent 回合的流式更新。
+ds-code 的交互式终端 UI（Bubble Tea v2 / `charm.land`）：聊天记录、输入框、浮层，以及 agent 回合的流式更新。
 
 ## 消息流（概览）
 
 ```
-tea.KeyMsg / tea.WindowSizeMsg / 异步 tea.Msg
+tea.KeyPressMsg / tea.Mouse*Msg / tea.PasteMsg / tea.WindowSizeMsg / 异步 tea.Msg
         │
         ▼
   model.Update  ──► updateKey（浮层、快捷键）──已处理?──► return
         │
         └──► updateInput（textinput、补全、Enter 提交）
 ```
+
+## 聊天虚拟列表
+
+长 transcript 不再全量 `SetContent`：
+
+```
+[]chatBlock ──RenderCached──► block 行切片
+        ──LineCatalog──► totalLines、plainLines（选区坐标）
+        ──RenderVisibleChat(yOffset, height)──► 可见 styled 行 ──► chatVP.SetContent
+```
+
+全局滚动由 `Model.chatScrollY` 维护；viewport `YOffset` 固定为 0。`syncChatView` / `WindowSizeMsg` 会 invalidate catalog。
 
 `running == true` 时，键盘输入仅用于滚动聊天视口；提交与大部分浮层会禁用，直到本回合结束。
 

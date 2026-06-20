@@ -5,7 +5,7 @@ package tcase
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
@@ -42,7 +42,7 @@ func SyncPicker(s *state.State, picker *component.Picker) {
 	s.OverlayText = picker.View()
 }
 
-func HandleKey(s *state.State, picker *component.Picker, msg tea.KeyMsg) bool {
+func HandleKey(s *state.State, picker *component.Picker, msg tea.KeyPressMsg) bool {
 	if s.Overlay != state.OverlayTCase {
 		return false
 	}

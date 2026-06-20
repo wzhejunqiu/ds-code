@@ -1,4 +1,4 @@
-.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release lint vet staticcheck vuln install fetch-tokenizers check-commit check-push install-hooks
+.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release verify-charm-v2 lint vet staticcheck vuln install fetch-tokenizers check-commit check-push install-hooks
 
 COVERPROFILE ?= coverage.out
 
@@ -46,7 +46,16 @@ build-tui-test: $(TOKENIZERS_LIB)
 test-tui: $(TOKENIZERS_LIB)
 	go test -tags=tuitest -race -count=1 ./internal/tuitest/...
 
-verify-release: $(TOKENIZERS_LIB)
+verify-charm-v2:
+	@! rg 'github.com/charmbracelet/(bubbletea|bubbles|lipgloss|glamour)' \
+		--glob '*.go' --glob 'go.mod' . | grep -v '^#' \
+		|| (echo "v1 charm import detected"; exit 1)
+	@rg -q 'charm.land/bubbletea/v2' go.mod || (echo "missing charm.land/bubbletea/v2"; exit 1)
+	@rg -q 'charm.land/bubbles/v2' go.mod || (echo "missing charm.land/bubbles/v2"; exit 1)
+	@rg -q 'charm.land/lipgloss/v2' go.mod || (echo "missing charm.land/lipgloss/v2"; exit 1)
+	@rg -q 'charm.land/glamour/v2' go.mod || (echo "missing charm.land/glamour/v2"; exit 1)
+
+verify-release: $(TOKENIZERS_LIB) verify-charm-v2
 	go build -ldflags "$(LDFLAGS)" -o bin/ds-code ./cmd/ds-code
 	@! strings bin/ds-code | grep -qE '/tcase|tuitest|__tcase__' || (echo "release binary contains tuitest strings"; exit 1)
 

@@ -1,7 +1,7 @@
 package tui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Run starts the interactive Bubble Tea UI.
@@ -10,7 +10,7 @@ func Run(deps Deps) error {
 	deps.Events = events
 	d := deps
 	m := newSafeModel(&d)
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithoutCatchPanics())
+	p := tea.NewProgram(m, tea.WithoutCatchPanics())
 	go func() {
 		for msg := range events {
 			p.Send(msg)

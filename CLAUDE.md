@@ -39,7 +39,7 @@ internal/session/      Session 领域模型 + Store 接口
   sqlite/              SQLite 持久化（modernc.org/sqlite，按 project_id 分库）
 internal/llm/          llm.Client 接口
   deepseek/client/     DeepSeek OpenAI-compatible HTTP 客户端（stream、usage、strict tools /beta）
-internal/ui/tui/       Bubble Tea 全屏 TUI（chat/chattool/layout/header 等子包）
+internal/ui/tui/       Bubble Tea v2 全屏 TUI（`charm.land`；chat/chattool/layout/header 等子包）
 internal/lsp/          Language Server 管理器（stdio 子进程，仅 diagnostics）
 internal/mcp/          MCP 客户端管理器
 internal/checkpoint/   写操作前文件快照

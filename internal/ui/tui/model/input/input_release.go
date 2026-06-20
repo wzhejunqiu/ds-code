@@ -2,7 +2,7 @@
 
 package input
 
-import tea "github.com/charmbracelet/bubbletea"
+import tea "charm.land/bubbletea/v2"
 
 func trySubmitDevSlash(cmd, _ string) (tea.Cmd, bool) {
 	return nil, false

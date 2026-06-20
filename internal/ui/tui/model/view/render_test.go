@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/viewport"
+	"charm.land/bubbles/v2/viewport"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
@@ -59,8 +59,8 @@ func TestSyncChatIncludesHeader(t *testing.T) {
 			{Role: chat.RoleUser, Content: "hello"},
 		},
 	}
-	chatVP := viewport.New(60, 10)
-	toolVP := viewport.New(60, 4)
+	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
+	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
 
 	SyncChat(s, &chatVP, &toolVP, nil, nil)
 	body := chatVP.View()
@@ -72,16 +72,45 @@ func TestSyncChatIncludesHeader(t *testing.T) {
 	}
 }
 
+func TestSyncChat_sentinelScrollsToBottom(t *testing.T) {
+	s := &state.State{
+		Width:  80,
+		Height: 24,
+		Deps: &deps.Deps{
+			Version: "test",
+		},
+		Chat: []chat.Block{
+			{Role: chat.RoleUser, Content: strings.Repeat("line\n", 60)},
+		},
+	}
+	var catalog chat.LineCatalog
+	scrollY := 1 << 30
+	caches := &SyncCaches{Catalog: &catalog, ChatScrollY: &scrollY}
+	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
+	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
+
+	SyncChat(s, &chatVP, &toolVP, nil, caches)
+
+	total := catalog.TotalLines()
+	maxY := total - chatVP.Height()
+	if maxY < 0 {
+		maxY = 0
+	}
+	if scrollY != maxY {
+		t.Fatalf("scrollY = %d, want bottom %d (total %d)", scrollY, maxY, total)
+	}
+}
+
 func TestLayoutUsesFullContentLineCount(t *testing.T) {
 	s := &state.State{
 		Width:  80,
 		Height: 24,
 	}
-	chatVP := viewport.New(60, 10)
-	toolVP := viewport.New(60, 4)
+	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
+	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
 
 	Layout(s, &chatVP, &toolVP, nil, 100)
-	if chatVP.Height >= 100 {
-		t.Fatalf("chat height = %d, expected capped below content lines", chatVP.Height)
+	if chatVP.Height() >= 100 {
+		t.Fatalf("chat height = %d, expected capped below content lines", chatVP.Height())
 	}
 }

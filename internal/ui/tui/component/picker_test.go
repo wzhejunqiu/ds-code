@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestPickerViewHighlightsSelection(t *testing.T) {
@@ -80,7 +80,7 @@ func TestPickerHandleKeyTabSelectsFirst(t *testing.T) {
 	p := Picker{Items: []string{"a", "b"}}
 	p.Cursor = 1
 
-	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyTab}, PickerKeyOpts{Tab: PickerTabSelectFirst})
+	action, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab}, PickerKeyOpts{Tab: PickerTabSelectFirst})
 	if !handled || action != PickerKeyConfirmFirst {
 		t.Fatalf("action=%v handled=%v", action, handled)
 	}
@@ -90,7 +90,7 @@ func TestPickerHandleKeyTabMovesDown(t *testing.T) {
 	p := Picker{Items: []string{"a", "b"}}
 	p.Cursor = 0
 
-	_, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyTab}, PickerKeyOpts{Tab: PickerTabMoveDown})
+	_, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab}, PickerKeyOpts{Tab: PickerTabMoveDown})
 	if !handled {
 		t.Fatal("expected tab to be handled")
 	}
@@ -101,7 +101,7 @@ func TestPickerHandleKeyTabMovesDown(t *testing.T) {
 
 func TestPickerHandleKeyEscCancel(t *testing.T) {
 	p := Picker{Items: []string{"a"}}
-	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyEsc}, PickerKeyOpts{})
+	action, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyEsc}, PickerKeyOpts{})
 	if !handled || action != PickerKeyCancel {
 		t.Fatalf("action=%v handled=%v", action, handled)
 	}
@@ -110,7 +110,7 @@ func TestPickerHandleKeyEscCancel(t *testing.T) {
 func TestPickerHandleKeyEnterConfirm(t *testing.T) {
 	p := Picker{Items: []string{"a", "b"}}
 	p.Cursor = 1
-	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyEnter}, PickerKeyOpts{})
+	action, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyEnter}, PickerKeyOpts{})
 	if !handled || action != PickerKeyConfirm {
 		t.Fatalf("action=%v handled=%v", action, handled)
 	}
@@ -118,7 +118,7 @@ func TestPickerHandleKeyEnterConfirm(t *testing.T) {
 
 func TestPickerHandleKeyEnterEmptyList(t *testing.T) {
 	p := Picker{}
-	action, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyEnter}, PickerKeyOpts{})
+	action, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyEnter}, PickerKeyOpts{})
 	if !handled || action != PickerKeyNone {
 		t.Fatalf("action=%v handled=%v", action, handled)
 	}
@@ -128,7 +128,7 @@ func TestPickerHandleKeyPageKeys(t *testing.T) {
 	p := Picker{PageSize: 3}
 	p.SetItems([]string{"1", "2", "3", "4", "5", "6", "7"})
 
-	_, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyPgDown}, PickerKeyOpts{})
+	_, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyPgDown}, PickerKeyOpts{})
 	if !handled {
 		t.Fatal("expected pgdown to be handled")
 	}
@@ -136,7 +136,7 @@ func TestPickerHandleKeyPageKeys(t *testing.T) {
 		t.Fatalf("cursor = %d, want 3 after pgdown", p.Cursor)
 	}
 
-	_, handled = p.HandleKey(tea.KeyMsg{Type: tea.KeyPgUp}, PickerKeyOpts{})
+	_, handled = p.HandleKey(tea.KeyPressMsg{Code: tea.KeyPgUp}, PickerKeyOpts{})
 	if !handled {
 		t.Fatal("expected pgup to be handled")
 	}
@@ -147,7 +147,7 @@ func TestPickerHandleKeyPageKeys(t *testing.T) {
 
 func TestPickerHandleKeyPageKeysIgnoredWithoutPageSize(t *testing.T) {
 	p := Picker{Items: []string{"a", "b", "c"}}
-	_, handled := p.HandleKey(tea.KeyMsg{Type: tea.KeyPgDown}, PickerKeyOpts{})
+	_, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyPgDown}, PickerKeyOpts{})
 	if handled {
 		t.Fatal("expected pgdown to be ignored when PageSize is 0")
 	}

@@ -1,7 +1,7 @@
 package chattool
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/theme"
 )
 

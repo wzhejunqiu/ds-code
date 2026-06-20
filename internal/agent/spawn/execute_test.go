@@ -2,6 +2,8 @@ package spawn_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -54,6 +56,62 @@ func TestExecuteRun_verificationVerdict(t *testing.T) {
 	}
 	if !strings.Contains(summary, "VERDICT: FAIL") {
 		t.Fatalf("expected VERDICT in summary, got %q", summary)
+	}
+}
+
+func TestExecuteRun_atExpand(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hello world"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{
+		ProjectRoot:    dir,
+		ProjectDataDir: dir,
+		LLM:            config.LLMConfig{Model: "m", MaxTokens: 4096},
+		Context:        config.ContextConfig{ToolResultMaxChars: 50_000},
+		Agent:          config.AgentConfig{MaxTurns: 2},
+	}
+	mockLLM := &mock.Client{
+		Responses: []*llm.Response{{
+			Content:      "done",
+			FinishReason: "stop",
+		}},
+	}
+	sub := subagentstore.NewMemoryStore()
+	perm := permission.NewEngine("readonly", dir, false)
+	reg := tool.NewRegistry()
+	register.ExploreTools(reg, cfg, perm, nil, false)
+
+	run, err := sub.CreateRun(context.Background(), subagentstore.CreateRunParams{
+		ParentSessionID: "parent", ParentToolCallID: "tc-at",
+		AgentType: "Explore", SpawnKind: subagentstore.SpawnSync,
+		Prompt: "check @hello.txt", Model: "m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	def, err := spawn.NewRegistry().Resolve("Explore")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := spawn.ExecuteRun(context.Background(), cfg, mockLLM, run, def, perm, reg, sub, nil, nil, 1, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(mockLLM.Calls) == 0 {
+		t.Fatal("expected LLM call")
+	}
+	var found bool
+	for _, call := range mockLLM.Calls {
+		for _, m := range call.Messages {
+			if m.Role == "user" && strings.Contains(m.Content, "hello world") {
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected expanded @hello.txt in LLM messages, got %d calls", len(mockLLM.Calls))
 	}
 }
 

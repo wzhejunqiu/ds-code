@@ -3,7 +3,7 @@ package model
 import (
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
 	tuimsg "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/overlay"
@@ -20,8 +20,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		cmd := overlay.OnWindowSize(&m.State, msg.Width, msg.Height, m.syncAllViews)
-		return m, m.withHPSync(tea.Batch(cmd, m.scheduleNoticeScroll()))
-	case tea.KeyMsg:
+		return m, tea.Batch(cmd, m.scheduleNoticeScroll())
+	case tea.KeyPressMsg:
 		events, passthrough, pending := input.AccumulateLeakedMouseKeys(&m.mouseLeakBuf, msg)
 		if pending {
 			var cmds []tea.Cmd
@@ -41,7 +41,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, cmd)
 				}
 			}
-			if len(passthrough.Runes) > 0 {
+			if passthrough.Text != "" {
 				msg = passthrough
 				if cmd, handled := m.updateKey(msg); handled {
 					return m, tea.Batch(append(cmds, cmd)...)
@@ -51,12 +51,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Batch(cmds...)
 		}
-		if len(passthrough.Runes) > 0 {
+		if passthrough.Text != "" {
 			msg = passthrough
 		}
 		if cmd, handled := m.updateKey(msg); handled {
 			return m, cmd
 		}
+		return m.updateInput(msg)
+	case tea.PasteMsg:
 		return m.updateInput(msg)
 	case tuimsg.StreamContentMsg:
 		turn.UpdateStreamContent(&m.State, msg, func() {})
@@ -83,43 +85,43 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.SlashOutputMsg:
 		m.refreshStatus()
 		session.UpdateSlashOutput(&m.State, msg, m.syncChatView)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.ResumeFilterTickMsg:
 		return m, session.UpdateResumeFilterTick(&m.State, msg)
 	case tuimsg.ResumeListMsg:
 		return m, session.UpdateResumeList(&m.State, msg, &m.resumePicker)
 	case tuimsg.SessionResumedMsg:
-		session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatViewResetting, m.syncToolView, m.refreshStatus)
-		return m, m.syncChatViewportHP()
+		session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatAfterLoad, m.syncToolView, m.refreshStatus)
+		return m, m.scheduleSyncChatView()
 	case tuimsg.HistoryLoadedMsg:
-		session.UpdateHistoryLoaded(&m.State, msg, m.syncChatViewResetting, m.refreshStatus)
-		return m, m.syncChatViewportHP()
+		session.UpdateHistoryLoaded(&m.State, msg, m.syncChatAfterLoad, m.refreshStatus)
+		return m, m.scheduleSyncChatView()
 	case tuimsg.ToolStartMsg:
 		turn.UpdateToolStart(&m.State, msg, m.syncChatView, m.syncToolView)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.AssistantSegmentEndMsg:
 		turn.UpdateAssistantSegmentEnd(&m.State)
 		return m, m.scheduleSyncChatView()
 	case tuimsg.ToolEndMsg:
 		turn.UpdateToolEnd(&m.State, msg, m.syncChatView, m.syncToolView)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.SubagentStartMsg:
 		subagentui.UpdateStart(&m.State, msg, m.syncChatView)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.SubagentEndMsg:
 		cmd := subagentui.UpdateEnd(&m.State, msg, m.syncChatView)
 		m.refreshStatus()
 		m.syncChatView()
-		return m, m.withHPSync(cmd)
+		return m, cmd
 	case tuimsg.SubagentToolStartMsg:
 		subagentui.UpdateToolStart(&m.State, msg, m.syncChatView)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.SubagentToolEndMsg:
 		subagentui.UpdateToolEnd(&m.State, msg, m.syncChatView)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.TurnStartedMsg:
 		turn.UpdateTurnStarted(&m.State, msg, m.syncChatView)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.ContextOverlayMsg:
 		return m, overlay.UpdateContext(&m.State, msg)
 	case tuimsg.HelpOverlayMsg:
@@ -129,26 +131,26 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.TurnDoneMsg:
 		m.mdSegmentCache.Reset()
 		turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case tuimsg.UsageUpdateMsg:
 		m.refreshStatus()
 		return m, m.scheduleSyncChatView()
 	case chatSyncFlushMsg:
 		m.chatSyncScheduled = false
 		m.syncChatView()
-		return m, m.syncChatViewportHP()
+		return m, nil
 	case tuimsg.ExitConfirmTimeoutMsg:
 		return m, overlay.UpdateExitConfirmTimeout(&m.State)
 	case tuimsg.PromptRequestMsg:
 		return m, overlay.UpdatePromptRequest(&m.State, msg, m.listenPrompt)
 	case tuimsg.OverlayCloseMsg:
 		overlay.UpdateClose(&m.State, m.syncChatView, m.refreshStatus)
-		return m, m.syncChatViewportHP()
+		return m, m.scheduleSyncChatView()
 	case copyResultMsg:
 		return m.handleCopyResult(msg)
 	case copyToastClearMsg:
 		return m.handleCopyToastClear()
-	case tea.MouseMsg:
+	case tea.MouseClickMsg, tea.MouseReleaseMsg, tea.MouseMotionMsg, tea.MouseWheelMsg:
 		m.updatePlainLines()
 		return m.handleMouse(msg)
 	default:
@@ -156,12 +158,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+func (m *Model) updateKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 	if cmd, handled := m.handleManualCopyKey(msg); handled {
 		return cmd, true
 	}
+	if cmd, handled := m.handleSelectionKey(msg); handled {
+		return cmd, true
+	}
 	if cmd, handled := subagentui.HandleNavKey(&m.State, msg, &m.subagentPicker, m.syncChatViewResetting); handled {
-		return m.withHPSync(cmd), true
+		return cmd, true
 	}
 	cmd, handled := overlay.HandleKey(&m.State, msg, overlay.KeyDeps{
 		HandleResumeEnter: func() (tea.Cmd, bool) {
@@ -184,19 +189,19 @@ func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 			}
 			return session.FetchSessions(&m.State, m.ResumeFilter, m.ResumeFilterSeq), true
 		},
-		HandleResumeKey: func(k tea.KeyMsg) bool {
+		HandleResumeKey: func(k tea.KeyPressMsg) bool {
 			return session.HandleResumeKey(&m.State, k, &m.resumePicker)
 		},
-		HandleCompleteKey: func(k tea.KeyMsg) bool {
+		HandleCompleteKey: func(k tea.KeyPressMsg) bool {
 			return input.HandleCompleteKey(&m.State, k, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd)
 		},
 		HandleTCaseEnter: func() (tea.Cmd, bool) {
 			return tcase.ConfirmSelection(&m.State, &m.tcasePicker, m.syncChatView, m.syncToolView)
 		},
-		HandleTCaseKey: func(k tea.KeyMsg) bool {
+		HandleTCaseKey: func(k tea.KeyPressMsg) bool {
 			return tcase.HandleKey(&m.State, &m.tcasePicker, k)
 		},
-		HandlePromptKey: func(k tea.KeyMsg) tea.Cmd {
+		HandlePromptKey: func(k tea.KeyPressMsg) tea.Cmd {
 			return turn.HandlePromptKey(&m.State, k.String(), m.listenPrompt)
 		},
 		ListenPrompt: m.listenPrompt,
@@ -209,13 +214,13 @@ func (m *Model) updateKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		ExitTimeout: exitConfirmTimeoutTick,
 	})
 	if handled {
-		return m.withHPSync(cmd), true
+		return cmd, true
 	}
 	return nil, false
 }
 
 func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if key, ok := msg.(tea.KeyMsg); ok {
+	if key, ok := msg.(tea.KeyPressMsg); ok {
 		if cmd, handled := m.handleViewportScrollKey(key); handled {
 			return m, cmd
 		}
@@ -235,7 +240,7 @@ func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, c)
 	}
 
-	if key, ok := msg.(tea.KeyMsg); ok && key.Type == tea.KeyEnter && !key.Alt {
+	if key, ok := msg.(tea.KeyPressMsg); ok && key.String() == "enter" && !key.Mod.Contains(tea.ModAlt) {
 		if m.Overlay == state.OverlayResume || m.Overlay == state.OverlayTCase {
 			return m, tea.Batch(cmds...)
 		}

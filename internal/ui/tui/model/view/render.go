@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	"charm.land/lipgloss/v2"
 	"github.com/wzhejunqiu/ds-code/internal/billing"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/session"
@@ -29,19 +29,22 @@ const runningTurnHint = "Press Esc to cancel the current turn"
 
 // SelectionOverlay carries in-app text selection state for chat and tool panels.
 type SelectionOverlay struct {
-	ChatPlain  []string
-	ChatRange  selection.Range
-	ToolPlain  []string
-	ToolRange  selection.Range
-	ChatActive bool
-	ToolActive bool
+	ChatPlain   []string
+	ChatRange   selection.Range
+	ToolPlain   []string
+	ToolRange   selection.Range
+	ChatActive  bool
+	ToolActive  bool
+	ChatScrollY int
 }
 
 // SyncCaches holds optional render caches for chat sync.
 type SyncCaches struct {
-	Chat   *chat.RenderCache
-	MD     *markdown.SegmentCache
-	Header *HeaderCache
+	Chat        *chat.RenderCache
+	MD          *markdown.SegmentCache
+	Header      *HeaderCache
+	Catalog     *chat.LineCatalog
+	ChatScrollY *int
 }
 
 // HeaderCache caches the header segment inside the chat viewport.
@@ -158,8 +161,19 @@ func buildChatBody(s *state.State, width int, caches *SyncCaches) (text string, 
 
 // ChatPlainContent returns the full unstylized chat viewport text (header + body).
 func ChatPlainContent(s *state.State, width int, caches *SyncCaches) []string {
+	if caches != nil && caches.Catalog != nil && len(caches.Catalog.PlainLines()) > 0 {
+		return caches.Catalog.PlainLines()
+	}
 	content, _ := buildViewportContent(s, width, caches)
 	return selection.LinesFromContent(selection.StripANSI(content))
+}
+
+func rebuildCatalog(s *state.State, width int, caches *SyncCaches) {
+	if caches == nil || caches.Catalog == nil {
+		return
+	}
+	hdr := buildHeaderCached(s, width, cacheHeader(caches))
+	caches.Catalog.Rebuild(hdr, s.Chat, width, time.Now(), s.ToolDetailsVisible, toolDisplayContext(s), caches.Chat, caches.MD)
 }
 
 func visibleHighlightedLines(all []string, yOffset, height int, r selection.Range) string {
@@ -210,17 +224,49 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 		innerW = 10
 	}
 
-	atBottom := chatVP.AtBottom()
-	yoff := chatVP.YOffset
+	rebuildCatalog(s, innerW, caches)
 
-	content, chatLines := buildViewportContent(s, innerW, caches)
-
-	Layout(s, chatVP, toolVP, input, chatLines)
-	chatVP.SetContent(content)
-	if atBottom {
-		chatVP.GotoBottom()
+	globalY := 0
+	if caches != nil && caches.ChatScrollY != nil {
+		globalY = *caches.ChatScrollY
+	}
+	totalLines := 0
+	if caches != nil && caches.Catalog != nil {
+		totalLines = caches.Catalog.TotalLines()
 	} else {
-		chatVP.SetYOffset(yoff)
+		_, totalLines = buildViewportContent(s, innerW, caches)
+	}
+
+	Layout(s, chatVP, toolVP, input, totalLines)
+
+	chatH := chatVP.Height()
+	if chatH < 1 {
+		chatH = 1
+	}
+	maxY := totalLines - chatH
+	if maxY < 0 {
+		maxY = 0
+	}
+	atBottom := globalY >= maxY
+	if atBottom {
+		globalY = maxY
+	}
+	if globalY < 0 {
+		globalY = 0
+	}
+
+	var content string
+	if caches != nil && caches.Catalog != nil && totalLines > 0 {
+		visible := caches.Catalog.VisibleStyled(globalY, chatH)
+		content = strings.Join(visible, "\n")
+	} else {
+		content, _ = buildViewportContent(s, innerW, caches)
+	}
+
+	chatVP.SetContent(content)
+	chatVP.SetYOffset(0)
+	if caches != nil && caches.ChatScrollY != nil {
+		*caches.ChatScrollY = globalY
 	}
 }
 
@@ -237,8 +283,13 @@ func SyncTool(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 	if innerW < 10 {
 		innerW = 10
 	}
-	_, chatLines := buildViewportContent(s, innerW, caches)
-	Layout(s, chatVP, toolVP, input, chatLines)
+	totalLines := 0
+	if caches != nil && caches.Catalog != nil && caches.Catalog.TotalLines() > 0 {
+		totalLines = caches.Catalog.TotalLines()
+	} else {
+		_, totalLines = buildViewportContent(s, innerW, caches)
+	}
+	Layout(s, chatVP, toolVP, input, totalLines)
 	toolVP.GotoBottom()
 }
 
@@ -259,7 +310,7 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 		innerW = 10
 	}
 	if input != nil {
-		input.Width = innerW - 2
+		input.SetWidth(innerW - 2)
 	}
 
 	chromeH := gapAfterChat + inputFrameH + gapAfterInput + footerH
@@ -287,12 +338,12 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	}
 
 	if chatVP != nil {
-		chatVP.Width = innerW
-		chatVP.Height = chatH
+		chatVP.SetWidth(innerW)
+		chatVP.SetHeight(chatH)
 	}
 	if toolVP != nil {
-		toolVP.Width = innerW
-		toolVP.Height = toolLines
+		toolVP.SetWidth(innerW)
+		toolVP.SetHeight(toolLines)
 	}
 }
 
@@ -366,10 +417,14 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	}
 	var b strings.Builder
 
-	if chatVP.Height > 0 {
+	if chatVP.Height() > 0 {
+		scrollY := chatVP.YOffset()
+		if sel != nil && sel.ChatActive {
+			scrollY = sel.ChatScrollY
+		}
 		chatView := chatVP.View()
 		if sel != nil && sel.ChatActive && len(sel.ChatPlain) > 0 {
-			if highlighted := visibleHighlightedLines(sel.ChatPlain, chatVP.YOffset, chatVP.Height, sel.ChatRange); highlighted != "" {
+			if highlighted := visibleHighlightedLines(sel.ChatPlain, scrollY, chatVP.Height(), sel.ChatRange); highlighted != "" {
 				chatView = highlighted
 			}
 		}
@@ -377,10 +432,10 @@ func Render(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 		b.WriteString("\n")
 	}
 
-	if s.ToolOpen && toolVP.Height > 0 {
+	if s.ToolOpen && toolVP.Height() > 0 {
 		toolView := toolVP.View()
 		if sel != nil && sel.ToolActive && len(sel.ToolPlain) > 0 {
-			if highlighted := visibleHighlightedLines(sel.ToolPlain, toolVP.YOffset, toolVP.Height, sel.ToolRange); highlighted != "" {
+			if highlighted := visibleHighlightedLines(sel.ToolPlain, toolVP.YOffset(), toolVP.Height(), sel.ToolRange); highlighted != "" {
 				toolView = highlighted
 			}
 		}

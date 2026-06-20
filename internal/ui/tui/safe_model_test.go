@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
@@ -43,7 +43,7 @@ func TestResumeDoubleEnterIgnoredWhilePending(t *testing.T) {
 	m.Overlay = state.OverlayResume
 	m.TestSyncResumePicker()
 
-	enter := tea.KeyMsg{Type: tea.KeyEnter}
+	enter := tea.KeyPressMsg{Code: tea.KeyEnter}
 	updated, cmd1 := sm.Update(enter)
 	sm = updated.(*safeModel)
 	if cmd1 == nil {
@@ -86,7 +86,7 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 	sm.inner.ResumeSessions = []session.Summary{{ID: sess.ID, Title: "hello"}}
 	sm.inner.TestSyncResumePicker()
 
-	enter := tea.KeyMsg{Type: tea.KeyEnter}
+	enter := tea.KeyPressMsg{Code: tea.KeyEnter}
 
 	updated, resumeCmd := sm.Update(enter)
 	if s, ok := updated.(*safeModel); ok {

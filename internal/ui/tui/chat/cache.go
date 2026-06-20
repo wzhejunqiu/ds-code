@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chattool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
@@ -75,6 +75,63 @@ func RenderCached(blocks []Block, width int, now time.Time, showToolDetails bool
 		lines = append(lines, blockLines...)
 	}
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
+}
+
+// RenderCachedLines formats chat blocks into styled line slices, reusing block cache.
+func RenderCachedLines(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, cache *RenderCache, mdCache *markdown.SegmentCache) []string {
+	if width < 20 {
+		width = 20
+	}
+	if cache == nil {
+		return renderAllBlockLines(blocks, width, now, showToolDetails, disp, mdCache)
+	}
+	if cache.width != width || cache.showToolDetails != showToolDetails {
+		cache.Reset()
+		cache.width = width
+		cache.showToolDetails = showToolDetails
+	}
+	if len(cache.entries) != len(blocks) {
+		cache.entries = resizeEntries(cache.entries, len(blocks))
+		cache.mdBlockIdx = -1
+	}
+
+	var lines []string
+	for i := range blocks {
+		key := blockFingerprint(&blocks[i], now, showToolDetails)
+		if i < len(cache.entries) && cache.entries[i].key == key && cache.entries[i].lines != nil {
+			lines = append(lines, cache.entries[i].lines...)
+			continue
+		}
+		if useMDCache(&blocks[i]) {
+			if cache.mdBlockIdx != i {
+				if mdCache != nil {
+					mdCache.Reset()
+				}
+				cache.mdBlockIdx = i
+			}
+		}
+		blockLines := renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)
+		cache.entries[i] = cacheEntry{key: key, lines: blockLines}
+		lines = append(lines, blockLines...)
+	}
+	if len(lines) > 0 {
+		// trim trailing blank lines from body
+		for len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+		}
+	}
+	return lines
+}
+
+func renderAllBlockLines(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, mdCache *markdown.SegmentCache) []string {
+	var lines []string
+	for i := range blocks {
+		lines = append(lines, renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)...)
+	}
+	for len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	return lines
 }
 
 func renderAllBlocks(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, mdCache *markdown.SegmentCache) string {

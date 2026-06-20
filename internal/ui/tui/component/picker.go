@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Picker is a keyboard-navigable overlay list (slash completion, /resume, etc.).
@@ -102,7 +102,7 @@ func (p *Picker) MovePage(pages int) {
 // HandleKey processes navigation keys. When handled is true, the caller should
 // not pass the key to the text input. Confirm/cancel actions need domain logic
 // in the TUI (apply completion, resume session, dismiss overlay).
-func (p *Picker) HandleKey(msg tea.KeyMsg, opts PickerKeyOpts) (PickerKeyAction, bool) {
+func (p *Picker) HandleKey(msg tea.KeyPressMsg, opts PickerKeyOpts) (PickerKeyAction, bool) {
 	switch msg.String() {
 	case "up":
 		p.Move(-1)
