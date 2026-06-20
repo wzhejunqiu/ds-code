@@ -19,7 +19,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
-var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabSelectFirst}
+var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabConfirm}
 
 func SyncCompleteOverlay(s *state.State, picker *component.Picker) {
 	items := make([]string, len(s.Complete))

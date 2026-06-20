@@ -86,6 +86,16 @@ func TestPickerHandleKeyTabSelectsFirst(t *testing.T) {
 	}
 }
 
+func TestPickerHandleKeyTabConfirmsCursor(t *testing.T) {
+	p := Picker{Items: []string{"a", "b"}}
+	p.Cursor = 1
+
+	action, handled := p.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab}, PickerKeyOpts{Tab: PickerTabConfirm})
+	if !handled || action != PickerKeyConfirm {
+		t.Fatalf("action=%v handled=%v, want PickerKeyConfirm", action, handled)
+	}
+}
+
 func TestPickerHandleKeyTabMovesDown(t *testing.T) {
 	p := Picker{Items: []string{"a", "b"}}
 	p.Cursor = 0

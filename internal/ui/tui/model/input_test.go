@@ -77,7 +77,7 @@ func TestRunningEscDismissesCompleteOverlay(t *testing.T) {
 	}
 }
 
-func TestHandleCompleteKeyTabSelectsFirst(t *testing.T) {
+func TestHandleCompleteKeyTabSelectsCursor(t *testing.T) {
 	m := New(&deps.Deps{})
 	m.Complete = []slash.Command{
 		{Name: "clear", Description: "new session"},
@@ -89,8 +89,8 @@ func TestHandleCompleteKeyTabSelectsFirst(t *testing.T) {
 	if !input.HandleCompleteKey(&m.State, tea.KeyPressMsg{Code: tea.KeyTab}, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd) {
 		t.Fatal("expected tab to be handled")
 	}
-	if got := m.input.Value(); got != "/clear " {
-		t.Errorf("input = %q, want /clear ", got)
+	if got := m.input.Value(); got != "/compact " {
+		t.Errorf("input = %q, want /compact ", got)
 	}
 	if m.Overlay != state.OverlayNone || m.Complete != nil {
 		t.Error("expected completion overlay to close after tab")
