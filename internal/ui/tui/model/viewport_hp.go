@@ -7,7 +7,7 @@ import (
 )
 
 func (m *Model) viewportHPEnabled() bool {
-	if m.selDragging || m.selRange.Active() {
+	if m.selDragging {
 		return false
 	}
 	if m.Overlay != state.OverlayNone || m.Prompt != nil {

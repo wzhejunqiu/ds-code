@@ -171,6 +171,58 @@ func TestSelection_runningTurnAllowsHistory(t *testing.T) {
 	}
 }
 
+func TestSelection_wheelScrollAfterCopy(t *testing.T) {
+	m := New(testDeps(true))
+	m.Width = 80
+	m.chatVP.Width = 80
+	m.chatVP.Height = 10
+	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+	m.plainLines = []string{"hello world"}
+	m.selDragging = true
+	m.selRange = selection.Range{
+		Start: selection.Point{Line: 0, Col: 0},
+		End:   selection.Point{Line: 0, Col: 5},
+	}
+
+	_, cmd := m.handleMouse(tea.MouseMsg{
+		Action: tea.MouseActionRelease,
+		Button: tea.MouseButtonLeft,
+		X:      5,
+		Y:      0,
+	})
+	if cmd == nil {
+		t.Fatal("expected async copy command on mouse release")
+	}
+	if m.selDragging {
+		t.Fatal("selDragging should be cleared after release")
+	}
+	if !m.selRange.Active() {
+		t.Fatal("selection highlight should remain after copy")
+	}
+
+	m.applyViewportHP()
+	if !m.chatVP.HighPerformanceRendering {
+		t.Fatal("HP should remain enabled after copy-on-select release")
+	}
+
+	before := m.chatVP.YOffset
+	_, cmd = m.handleMouse(tea.MouseMsg{
+		Action: tea.MouseActionPress,
+		Button: tea.MouseButtonWheelDown,
+		X:      5,
+		Y:      2,
+	})
+	if cmd == nil {
+		t.Fatal("wheel should scroll after copy-on-select")
+	}
+	for i := 0; i < 8 && m.chatVP.YOffset <= before; i++ {
+		m.handleWheelScrollTick()
+	}
+	if m.chatVP.YOffset <= before {
+		t.Fatalf("wheel down after copy: yOffset = %d, want > %d", m.chatVP.YOffset, before)
+	}
+}
+
 func TestSelection_plainTextFromStyled(t *testing.T) {
 	styled := "\x1b[1mhello\x1b[0m world"
 	plain := selection.StripANSI(styled)
