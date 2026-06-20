@@ -24,6 +24,8 @@ export DEEPSEEK_API_KEY=sk-...
 
 从 [GitHub Releases](https://github.com/wzhejunqiu/ds-code/releases) 下载对应平台的压缩包，解压后将 `ds-code` 放到 PATH 中。
 
+下方 `curl` 示例使用 `releases/latest/download/`，会自动获取**最新正式版**（非 draft）；若需指定版本，请在 Releases 页选择对应 tag。安装后可运行 `ds-code version` 确认实际版本。
+
 | 你的环境 | 下载文件 |
 |----------|----------|
 | macOS Apple Silicon | `ds-code-darwin-arm64.tar.gz` |
@@ -37,7 +39,7 @@ export DEEPSEEK_API_KEY=sk-...
 
 ```bash
 # WSL2 内示例（x86_64）
-curl -LO https://github.com/wzhejunqiu/ds-code/releases/download/v0.1.0/ds-code-linux-amd64.tar.gz
+curl -LO https://github.com/wzhejunqiu/ds-code/releases/latest/download/ds-code-linux-amd64.tar.gz
 tar xzf ds-code-linux-amd64.tar.gz
 chmod +x ds-code
 mkdir -p ~/.local/bin && mv ds-code ~/.local/bin/
@@ -47,7 +49,7 @@ export PATH="$HOME/.local/bin:$PATH"
 示例（macOS Apple Silicon）：
 
 ```bash
-curl -LO https://github.com/wzhejunqiu/ds-code/releases/download/v0.1.0/ds-code-darwin-arm64.tar.gz
+curl -LO https://github.com/wzhejunqiu/ds-code/releases/latest/download/ds-code-darwin-arm64.tar.gz
 tar xzf ds-code-darwin-arm64.tar.gz
 chmod +x ds-code
 sudo mv ds-code /usr/local/bin/   # 或放入任意 PATH 目录
