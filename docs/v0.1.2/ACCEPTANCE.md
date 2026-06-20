@@ -8,20 +8,20 @@
 ## 1. 总体验收
 
 - [ ] 版本号标记为 v0.1.2（release/tag 由发布流程完成）
-- [ ] `make test` 通过
-- [ ] `make lint` / `make vet` 无新增失败
+- [x] `make test` 通过
+- [x] `make lint` / `make vet` 无新增失败
 - [x] [SECURITY-SYNC.md](SECURITY-SYNC.md) 草稿已合入 [SECURITY.md](../v0.1.0/SECURITY.md) 与 [CONFIG.md](../v0.1.0/CONFIG.md)（**发布阻塞**；含 `tui.copy_on_select`、`tools.search.skip_dirs`、`@` 预算交叉引用 §2.5、威胁模型 §S3-S / §1.1d 行）
-- [ ] [CHANGELOG.md](../../CHANGELOG.md) v0.1.2 条目
-- [ ] [../v0.1.0/DESIGN.md](../v0.1.0/DESIGN.md) 权限节已补充 Engine 路径 API 一览（DESIGN §8）
-- [ ] `internal/agent/README.md`、`internal/tool/builtin/README.md` 路径/MCP 相关描述已同步
-- [ ] `grep`/`glob`/`list_dir` 工具 `Desc` 与 `*.md` **不含**「遵循 .gitignore」（FR-6.7）
-- [ ] `read_file.md` / `DescReadFile` 已说明非文本文件拒绝（FR-8.8）
-- [ ] `go.mod` 含 `github.com/oklog/ulid/v2`（NFR-19）
-- [ ] `internal/tool` 下无对 `workspace.ValidateRel` / `EnsureAbsUnder` 的直接调用
-- [ ] `internal/tool/globmatch` **无**对 `permission.IsSensitiveAbs` 的直接调用（FR-1.8）
-- [ ] `spawn/execute.go` **所有**新建 `Engine` 分支设置 `perm.ProjectRoot = cfg.ProjectRoot`（含 readonly worktree，NFR-14）
-- [ ] `spawn/execute.go` 子 `Runner` 注入 `MCPResults`（与父同一 `*resultstore.Store`，FR-4.8）
-- [ ] `IsSensitiveAbs` 已降可见性或标 `Deprecated`（DESIGN §5.4）
+- [x] [CHANGELOG.md](../../CHANGELOG.md) v0.1.2 条目
+- [x] [../v0.1.0/DESIGN.md](../v0.1.0/DESIGN.md) 权限节已补充 Engine 路径 API 一览（DESIGN §8）
+- [x] `internal/agent/README.md`、`internal/tool/builtin/README.md` 路径/MCP 相关描述已同步
+- [x] `grep`/`glob`/`list_dir` 工具 `Desc` 与 `*.md` **不含**「遵循 .gitignore」（FR-6.7）
+- [x] `read_file.md` / `DescReadFile` 已说明非文本文件拒绝（FR-8.8）
+- [x] `go.mod` 含 `github.com/oklog/ulid/v2`（NFR-19）
+- [x] `internal/tool` 下无对 `workspace.ValidateRel` / `EnsureAbsUnder` 的直接调用
+- [x] `internal/tool/globmatch` **无**对 `permission.IsSensitiveAbs` 的直接调用（FR-1.8）
+- [x] `spawn/execute.go` **所有**新建 `Engine` 分支设置 `perm.ProjectRoot = cfg.ProjectRoot`（含 readonly worktree，NFR-14）
+- [x] `spawn/execute.go` 子 `Runner` 注入 `MCPResults`（与父同一 `*resultstore.Store`，FR-4.8）
+- [x] `IsSensitiveAbs` 已降可见性或标 `Deprecated`（DESIGN §5.4）
 
 ## 2. 路径规范化（FR-2）
 
@@ -492,8 +492,8 @@
 | 步骤 | 预期 |
 |------|------|
 | 无选区时滚轮 | HP 路径生效；帧率优于全量重绘 |
-| 拖拽建立选区 | 选区高亮正常；可边滚边选 |
-| 选区活跃时滚轮 | 允许滚动；高亮不丢失（HP 临时关闭可接受） |
+| 拖拽建立选区 | 选区高亮正常；可边滚边选（**仅 `selDragging` 时** HP 临时关闭） |
+| 复制后保留高亮 | 滚轮仍可滚动；高亮不丢失（HP 保持启用） |
 
 ### AC-8.5 终端 profile（FR-9.3，P1）
 
@@ -542,88 +542,88 @@
 
 ## 10. 测试清单
 
-- [ ] `TestValidateRel_allowsDotDotInside`（新）
-- [ ] `TestValidateRel_rejectsTraversal`（仍用 `../outside`）
-- [ ] `TestValidateRel_rejectsSymlinkEscape`（回归）
-- [ ] `TestEngine_checkReadablePath_dotDotInside`（新）
-- [ ] `TestEngine_shell_dotDotInside`（新）
-- [ ] `TestEngine_resolvePath_blocksTraversal` 更新断言（不误拒 `foo/../bar`）
-- [ ] `TestCheckPathCandidate_allowsGitRevisionRange`（新：`origin/main..v0.1.1`、`origin/main...v0.1.1`）
-- [ ] `TestCheckPathCandidate_allowsGoTestEllipsis`（新：`./...`）
-- [ ] `TestCheckPathCandidate_blocksRelativeTraversal`（新：`../outside`）
-- [ ] `TestEngine_shell_gitDiffGoTest`（新：整命令 `Check` 无 ErrDenied）
-- [ ] `TestMCPResultStore_Save`（新）
-- [ ] `TestFinalizeToolResult_mcpSpillAndTruncate`（新）
-- [ ] `TestSpillCallFilename_emptyUsesDistinctULID`（新：FR-4.4，两次空 id 不同文件名）
-- [ ] `TestFinalizeToolResult_mcpUnderLimit`（新）
-- [ ] `TestFinalizeToolResult_builtinNoSpill`（回归）
-- [ ] `TestFinalizeToolResult_mcpSpillHintBudget`（新：正文+hint ≤ max）
-- [ ] `TestFinalizeToolResult_spillSaveFailed`（新：无 hint + Warn）
-- [ ] `TestCheckReadablePath_mcpSpillFile`（新：本 session spill 可读）
-- [ ] `TestCheckReadablePath_mcpSpillOtherSession`（新：同 project 其他 session **可读**）
-- [ ] `TestCheckReadablePath_otherProjectDenied`（新：其他 project_id 拒绝）
-- [ ] `TestCheckReadablePath_agentsOutputAllowed`（新：FR-4.7，`agents/*.output` 可读）
-- [ ] `TestCheckReadablePath_sessionsDB`（新：project 数据目录 `.db` 可读）
-- [ ] `TestFinalizeToolResult_mcpErrorNoSpill`（新：FR-4.16）
-- [ ] `TestFinalizeToolResult_mcpSuccessBodyStartsWithError`（新：`isToolErrorBody` 不误判成功响应）
-- [ ] `TestEngine_shell_deniesSpillAbsPath`（新：FR-4.17）
-- [ ] `TestCheckReadablePath_mcpSpillOtherSessionReadable`（新：FR-4.15 父可读子 spill）
-- [ ] `TestSpawnExecute_worktreeSetsProjectRoot`（新：NFR-14，inherit worktree）
-- [ ] `TestSpawnExecute_readonlyWorktreeSetsProjectRoot`（新：readonly worktree `ProjectRoot`）
-- [ ] `TestSpawnExecute_childInheritsMCPResults`（新：FR-4.8）
-- [ ] `TestFinalizeToolResult_mcpHintBudgetLongPath`（新：FR-4.14 边界）
-- [ ] `TestFinalizeToolResult_mcpHintPathReadable`（新：hint 路径 `read_file` 成功）
-- [ ] `TestShortenSpillPathForHint_noTildeNoTruncate`（新：禁止 `~` / 不可解析尾部）
-- [ ] `TestMCPResultStore_overwriteSameCallID`（新：FR-4.19）
-- [ ] `TestSpillCallFilename_sanitizesSlashes`（新：FR-4.4，`call/foo` → `call_foo.txt`）
-- [ ] `TestCheckReadablePath_mcpSpillRelativePathDenied`（新：相对路径拒绝）
-- [ ] `TestCheckReadablePath_projectDataDirDenied`（新：目录路径拒绝）
-- [ ] `TestCheckReadablePath_mcpSpillBudgetZeroHintOnly`（新：FR-4.14 budget=0）
-- [ ] `TestCheckReadablePath_agentsOutputAllowed`（新：FR-4.7）
-- [ ] `TestCheckReadablePath_mcpSpillReadonlyMode`（新：NFR-22，readonly 无 ask）
-- [ ] `TestCompactAPIContext_spillHintNotInSummary`（新：AC-4.14）
-- [ ] `TestRunEphemeral_noMCPSpill`（新：NFR-20 / FR-3.11）
-- [ ] `TestApplyPatch_allowsDotDotInside`（新：FR-2.7）
-- [ ] `TestGlobmatch_skipDirSkipsNodeModules`（新：FR-6.14 Walk 不进入 skip_dirs）
-- [ ] `TestGlobTool_explicitSkipDirPath`（新：AC-6.2，`glob path=node_modules` 穿透）
-- [ ] `TestListDir_explicitSkipDirPath`（新：AC-6.2，`list_dir path=node_modules` 穿透）
-- [ ] `TestGrepTool_explicitGitPathEmpty`（新：FR-6.14）
-- [ ] `TestSearchSkip_invalidConfigEntries`（新：FR-6.15）
-- [ ] `TestDiagnosticsTool_respectsSkipDirs`（新）
-- [ ] `TestDiagnosticsTool_alwaysFiltersGit`（新：AC-6.12）
-- [ ] `TestListDir_skipsSensitiveEntries`（新：FR-6.4）
-- [ ] `TestFormatMCPCallDisplay_withArgs`（新）
-- [ ] `TestFormatMCPCallDisplay_emptyArgs`（新）
-- [ ] `TestLogMCPCall_argsPreview`（新）
-- [ ] `TestSearchSkip_alwaysSkipsGit`（新）
-- [ ] `TestSearchSkip_userSkipDirs`（新）
-- [ ] `TestGrepTool_noGitignoreFilter`（新）
-- [ ] `TestGlobTool_respectsSkipDirs`（新）
-- [ ] `TestAtExpander_dirIgnoresSkipDirs`（新：`@dir/` 不受 skip_dirs）
-- [ ] `TestAtExpander_dirIgnoresGitignore`（新：`@dir/` 不受 gitignore）
-- [ ] `TestAtExpander_dirAllowsSensitive`（新：`@.env` 可读）
-- [ ] `TestAtExpander_dirAllowsNodeModules`（新）
-- [ ] `TestAtExpander_sensitiveDenied` **删除或改写**（v0.1.2：`@.env` 应成功）
-- [ ] `TestAtExpander_dirSkipsSensitiveFiles` **删除或改写**（v0.1.2：`@dir/` 不 skip S3）
-- [ ] `TestAtExpander_dirSkipsSensitiveDirectory` **删除或改写**（v0.1.2：`@./` 可进入 `.ssh`）
-- [ ] `TestGrepTool_respectsGitignoreInSubdirectory` **删除**（v0.1.2 不再遵循 gitignore）
-- [ ] `TestGrepTool_planModeNoGitignore`（新：Plan 模式）
-- [ ] `TestDisplay_MCPCallDisplay_legacyPrefix`（新：FR-5.8）
-- [ ] `TestSelection_plainTextFromStyled`（新：FR-7.3，ANSI 剥离）
-- [ ] `TestClipboard_write_macOS` / `TestClipboard_write_linux`（新：FR-7.6，按 GOOS 条件）
-- [ ] `TestSelection_viewportHitTest`（新：FR-7.1，坐标→文本）
-- [ ] `TestSelection_copyOnSelect`（新：FR-7.4）
-- [ ] `TestSelection_runningTurnAllowsHistory`（新：FR-7.9）
-- [ ] `TestSelection_overlayDisablesChatSelect`（新：FR-7.8）
-- [ ] `TestSelection_copiesVisibleMCPArgs`（新：FR-5.9 + NFR-18）
-- [ ] `TestGrepTool_descNoGitignore`（新：FR-6.7）
-- [ ] `TestIsTextFile_matchesIsSearchable`（新：FR-8.4，委托一致）
-- [ ] `TestReadFile_rejectsNonText`（新：FR-8，PNG/PDF）
-- [ ] `TestReadFile_allowsEmptyFile`（新：FR-8.5）
-- [ ] `TestReadFile_allowsMCPSpill`（新：FR-8.6，与 spill 集成）
-- [ ] `TestReadFile_nonTextLogsInfo`（新：FR-8.3，log capture）
-- [ ] `TestDrain_proportional_*` / `TestDrain_adaptive_*`（新：FR-9.3，`internal/ui/tui/scroll`）
-- [ ] `TestWheelScroll_*` / `TestScroll_jumpBy_clearsPending`（新：FR-9.1–9.2）
+- [x] `TestValidateRel_allowsDotDotInside`（新）
+- [x] `TestValidateRel_rejectsTraversal`（仍用 `../outside`）
+- [x] `TestValidateRel_rejectsSymlinkEscape`（回归）
+- [x] `TestEngine_checkReadablePath_dotDotInside`（新）
+- [x] `TestEngine_shell_dotDotInside`（新）
+- [x] `TestEngine_resolvePath_blocksTraversal` 更新断言（不误拒 `foo/../bar`）
+- [x] `TestCheckPathCandidate_allowsGitRevisionRange`（新：`origin/main..v0.1.1`、`origin/main...v0.1.1`）
+- [x] `TestCheckPathCandidate_allowsGoTestEllipsis`（新：`./...`）
+- [x] `TestCheckPathCandidate_blocksRelativeTraversal`（新：`../outside`）
+- [x] `TestEngine_shell_gitDiffGoTest`（新：整命令 `Check` 无 ErrDenied）
+- [x] `TestMCPResultStore_Save`（新）
+- [x] `TestFinalizeToolResult_mcpSpillAndTruncate`（新）
+- [x] `TestSpillCallFilename_emptyUsesDistinctULID`（新：FR-4.4，两次空 id 不同文件名）
+- [x] `TestFinalizeToolResult_mcpUnderLimit`（新）
+- [x] `TestFinalizeToolResult_builtinNoSpill`（回归）
+- [x] `TestFinalizeToolResult_mcpSpillHintBudget`（新：正文+hint ≤ max）
+- [x] `TestFinalizeToolResult_spillSaveFailed`（新：无 hint + Warn）
+- [x] `TestCheckReadablePath_mcpSpillFile`（新：本 session spill 可读）
+- [x] `TestCheckReadablePath_mcpSpillOtherSession`（新：同 project 其他 session **可读**）
+- [x] `TestCheckReadablePath_otherProjectDenied`（新：其他 project_id 拒绝）
+- [x] `TestCheckReadablePath_agentsOutputAllowed`（新：FR-4.7，`agents/*.output` 可读）
+- [x] `TestCheckReadablePath_sessionsDB`（新：project 数据目录 `.db` 可读）
+- [x] `TestFinalizeToolResult_mcpErrorNoSpill`（新：FR-4.16）
+- [x] `TestFinalizeToolResult_mcpSuccessBodyStartsWithError`（新：`isToolErrorBody` 不误判成功响应）
+- [x] `TestEngine_shell_deniesSpillAbsPath`（新：FR-4.17）
+- [x] `TestCheckReadablePath_mcpSpillOtherSessionReadable`（新：FR-4.15 父可读子 spill）
+- [x] `TestSpawnExecute_worktreeSetsProjectRoot`（新：NFR-14，inherit worktree）
+- [x] `TestSpawnExecute_readonlyWorktreeSetsProjectRoot`（新：readonly worktree `ProjectRoot`）
+- [x] `TestSpawnExecute_childInheritsMCPResults`（新：FR-4.8）
+- [x] `TestFinalizeToolResult_mcpHintBudgetLongPath`（新：FR-4.14 边界）
+- [x] `TestFinalizeToolResult_mcpHintPathReadable`（新：hint 路径 `read_file` 成功）
+- [x] `TestShortenSpillPathForHint_noTildeNoTruncate`（新：禁止 `~` / 不可解析尾部）
+- [x] `TestMCPResultStore_overwriteSameCallID`（新：FR-4.19）
+- [x] `TestSpillCallFilename_sanitizesSlashes`（新：FR-4.4，`call/foo` → `call_foo.txt`）
+- [x] `TestCheckReadablePath_mcpSpillRelativePathDenied`（新：相对路径拒绝）
+- [x] `TestCheckReadablePath_projectDataDirDenied`（新：目录路径拒绝）
+- [x] `TestCheckReadablePath_mcpSpillBudgetZeroHintOnly`（新：FR-4.14 budget=0）
+- [x] `TestCheckReadablePath_agentsOutputAllowed`（新：FR-4.7）
+- [x] `TestCheckReadablePath_mcpSpillReadonlyMode`（新：NFR-22，readonly 无 ask）
+- [x] `TestCompactAPIContext_spillHintNotInSummary`（新：AC-4.14）
+- [x] `TestRunEphemeral_noMCPSpill`（新：NFR-20 / FR-3.11）
+- [x] `TestApplyPatch_allowsDotDotInside`（新：FR-2.7）
+- [x] `TestGlobmatch_skipDirSkipsNodeModules`（新：FR-6.14 Walk 不进入 skip_dirs）
+- [x] `TestGlobTool_explicitSkipDirPath`（新：AC-6.2，`glob path=node_modules` 穿透）
+- [x] `TestListDir_explicitSkipDirPath`（新：AC-6.2，`list_dir path=node_modules` 穿透）
+- [x] `TestGrepTool_explicitGitPathEmpty`（新：FR-6.14）
+- [x] `TestSearchSkip_invalidConfigEntries`（新：FR-6.15）
+- [x] `TestDiagnosticsTool_respectsSkipDirs`（新）
+- [x] `TestDiagnosticsTool_alwaysFiltersGit`（新：AC-6.12）
+- [x] `TestListDir_skipsSensitiveEntries`（新：FR-6.4）
+- [x] `TestFormatMCPCallDisplay_withArgs`（新）
+- [x] `TestFormatMCPCallDisplay_emptyArgs`（新）
+- [x] `TestLogMCPCall_argsPreview`（新）
+- [x] `TestSearchSkip_alwaysSkipsGit`（新）
+- [x] `TestSearchSkip_userSkipDirs`（新）
+- [x] `TestGrepTool_noGitignoreFilter`（新）
+- [x] `TestGlobTool_respectsSkipDirs`（新）
+- [x] `TestAtExpander_dirIgnoresSkipDirs`（新：`@dir/` 不受 skip_dirs）
+- [x] `TestAtExpander_dirIgnoresGitignore`（新：`@dir/` 不受 gitignore）
+- [x] `TestAtExpander_dirAllowsSensitive`（新：`@.env` 可读）
+- [x] `TestAtExpander_dirAllowsNodeModules`（新）
+- [x] `TestAtExpander_sensitiveDenied` **删除或改写**（v0.1.2：`@.env` 应成功）
+- [x] `TestAtExpander_dirSkipsSensitiveFiles` **删除或改写**（v0.1.2：`@dir/` 不 skip S3）
+- [x] `TestAtExpander_dirSkipsSensitiveDirectory` **删除或改写**（v0.1.2：`@./` 可进入 `.ssh`）
+- [x] `TestGrepTool_respectsGitignoreInSubdirectory` **删除**（v0.1.2 不再遵循 gitignore）
+- [x] `TestGrepTool_planModeNoGitignore`（新：Plan 模式）
+- [x] `TestDisplay_MCPCallDisplay_legacyPrefix`（新：FR-5.8）
+- [x] `TestSelection_plainTextFromStyled`（新：FR-7.3，ANSI 剥离）
+- [x] `TestClipboard_write_macOS` / `TestClipboard_write_linux`（新：FR-7.6，按 GOOS 条件）
+- [x] `TestSelection_viewportHitTest`（新：FR-7.1，坐标→文本）
+- [x] `TestSelection_copyOnSelect`（新：FR-7.4）
+- [x] `TestSelection_runningTurnAllowsHistory`（新：FR-7.9）
+- [x] `TestSelection_overlayDisablesChatSelect`（新：FR-7.8）
+- [x] `TestSelection_copiesVisibleMCPArgs`（新：FR-5.9 + NFR-18）
+- [x] `TestGrepTool_descNoGitignore`（新：FR-6.7）
+- [x] `TestIsTextFile_matchesIsSearchable`（新：FR-8.4，委托一致）
+- [x] `TestReadFile_rejectsNonText`（新：FR-8，PNG/PDF）
+- [x] `TestReadFile_allowsEmptyFile`（新：FR-8.5）
+- [x] `TestReadFile_allowsMCPSpill`（新：FR-8.6，与 spill 集成）
+- [x] `TestReadFile_nonTextLogsInfo`（新：FR-8.3，log capture）
+- [x] `TestDrain_proportional_*` / `TestDrain_adaptive_*`（新：FR-9.3，`internal/ui/tui/scroll`）
+- [x] `TestWheelScroll_*` / `TestScroll_jumpBy_clearsPending`（新：FR-9.1–9.2）
 
 ## 11. 手动验证
 
@@ -702,6 +702,10 @@ bin/ds-code --permission-mode auto
 # 35. 滚轮中按 PgUp → pending 清空并跳页
 # 36. Ctrl+T 工具面板内滚轮 → 面板平滑滚动
 # 37. /help 浮层打开时滚轮 → 忽略
+
+# TUI iTerm2 / 复制后滚轮（v0.1.2 bugfix 回归，建议在 iTerm2 验证）：
+# 41. iTerm2 快速滚轮 → 输入框**无** `[<64;…M` 等 SGR 乱码
+# 42. copy-on-select 复制后**不点击**直接滚轮 → 聊天区继续滚动，高亮保留
 
 # read_file 文本限制（需求 6）：
 # 38. read_file path=*.png → 错误「无法读取非文本文件」；日志含 skipped non-text

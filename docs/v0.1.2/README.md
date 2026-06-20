@@ -159,7 +159,7 @@ v0.1.1 及更早版本中，路径安全依赖多层重复逻辑：
 | **审计日志** | `audit.jsonl` 仍仅存 args 哈希；MCP `args_preview` 不进 audit（行为不变）。 |
 | **TUI 复制范围** | 仅聊天 viewport 与工具面板；输入框、浮层内复制策略见 FR-7.8；不实现 transcript 刷回 scrollback。流式输出进行中选区可能错位（FR-7.9）。 |
 | **远程剪贴板** | SSH/tmux 下依赖 OSC 52 或 tmux paste buffer；部分终端默认禁用 OSC 52，复制可能失败并提示（FR-7.6–7.7）。 |
-| **TUI 滚轮与选区** | 文本选区活跃时 HP 滚动临时关闭，回退全量渲染（FR-9.6）；快速滚轮 + 拖拽选区并存时以选区高亮为准。 |
+| **TUI 滚轮与选区** | **仅拖拽选区时**（`selDragging`）HP 滚动临时关闭；复制后保留高亮仍可滚轮。快速滚轮 + 拖拽选区并存时以选区高亮为准。 |
 | **集成终端手感** | VS Code / Cursor 内置终端与 iTerm2/Ghostty 使用不同 drain 曲线（FR-9.3）；极端 burst 可能 snap 截断 pending（>30 行）。 |
 
 ## 依赖与前置

@@ -4,12 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.1.2] - 2026-06-19
+## [0.1.2] - 2026-06-20
 
 ### Added
 
 - MCP tool results spill to `~/.ds-code/projects/<id>/mcp-result/<session_id>/` with `read_file` hint when truncated
 - TUI in-app mouse text selection with copy-on-select (`tui.copy_on_select`, default true)
+- TUI smooth wheel scroll with pending drain (native vs integrated terminal profiles; `DS_CODE_SCROLL_SPEED`)
 - `tools.search.skip_dirs` for Agent enumeration walk pruning (`.git` always skipped)
 - `read_file` rejects non-text files via `textfile.IsTextFile`
 
@@ -20,6 +21,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - User `@file` / `@dir/` references may bypass S3 denylist (explicit user intent; see SECURITY §S3-S)
 - MCP tool calls show JSON args preview in TUI and debug logs (`args_preview`)
 - Agent search tools no longer follow `.gitignore`; only `.git` + configured `skip_dirs`
+- TUI history strips task-notification XML from persisted user messages before display
+
+### Fixed
+
+- iTerm2 wheel scroll leaking SGR mouse escape sequences into the input prompt (fragment reassembly)
+- Wheel scroll stuck after copy-on-select (HP disabled only while dragging, not while highlight remains)
+- TUI HP viewport sync and `@` reference display alignment
 
 ## [0.1.1] - 2026-06-19
 
