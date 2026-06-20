@@ -1,14 +1,14 @@
 # v0.1.3 验收标准
 
 > 版本：v0.1.3  
-> 状态：已实现（待发布 tag）  
+> 状态：已发布（`v0.1.3`，2026-06-20）  
 > 更新日期：2026-06-20  
 > 审核：2026-06-20（五轮）  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md) · 设计：[DESIGN.md](DESIGN.md)
 
 ## 1. 总体验收
 
-- [ ] 版本号标记为 v0.1.3（发布打 `v0.1.3` tag 时由 ldflags 注入）
+- [x] 版本号标记为 v0.1.3（发布打 `v0.1.3` tag 时由 ldflags 注入）
 - [x] `go.mod` 目标：`charm.land/bubbletea/v2` v2.0.7+、`bubbles/v2` v2.1.0+、`lipgloss/v2` v2.0.4+、`glamour/v2` v2.0.1+（FR-1.1–1.4）
 - [x] **无** `github.com/charmbracelet/{bubbletea,bubbles,lipgloss,glamour}` 在 `go.mod`、`.go` 源码中（注释除外）（FR-1.7、NFR-7）
 - [x] `go.sum` tidy 后无 v1 charm 模块行（FR-1.13）
