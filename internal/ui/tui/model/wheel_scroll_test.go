@@ -116,3 +116,26 @@ func TestWheelScroll_worksAfterCopySelection(t *testing.T) {
 		t.Fatalf("wheel down after copy: chatScrollY = %d, want > %d", m.chatScrollY, before)
 	}
 }
+
+func TestJumpViewport_clampsTotalLines(t *testing.T) {
+	m := New(testDeps(true))
+	m.Width = 80
+	m.Height = 24
+	seedChatLines(m, 80)
+	m.syncChatView()
+	m.chatVP.SetHeight(10)
+
+	m.jumpViewport(&m.chatVP, 9999)
+	maxY := m.lineCatalog.TotalLines() - m.chatVP.Height()
+	if maxY < 0 {
+		maxY = 0
+	}
+	if m.chatScrollY != maxY {
+		t.Fatalf("chatScrollY = %d, want clamped max %d", m.chatScrollY, maxY)
+	}
+
+	m.jumpViewport(&m.chatVP, -9999)
+	if m.chatScrollY != 0 {
+		t.Fatalf("chatScrollY = %d, want 0", m.chatScrollY)
+	}
+}

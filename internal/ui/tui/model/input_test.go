@@ -220,3 +220,23 @@ func TestUpdate_bracketThenNormalText(t *testing.T) {
 		t.Fatalf("input = %q, want [foo", got)
 	}
 }
+
+func TestUpdate_altEnterNoSubmit(t *testing.T) {
+	m := New(&deps.Deps{})
+	m.input.SetValue("line one")
+	before := m.input.Value()
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter, Mod: tea.ModAlt})
+	m = updated.(*Model)
+	if m.input.Value() != before {
+		t.Fatalf("input changed on alt+enter: %q", m.input.Value())
+	}
+}
+
+func TestUpdate_pasteMsg(t *testing.T) {
+	m := New(&deps.Deps{})
+	updated, _ := m.Update(tea.PasteMsg{Content: "pasted text"})
+	m = updated.(*Model)
+	if !strings.Contains(m.input.Value(), "pasted text") {
+		t.Fatalf("input = %q, want pasted content", m.input.Value())
+	}
+}

@@ -271,12 +271,12 @@ func (m *Model) copyText(text string) tea.Cmd {
 	if text == "" {
 		return nil
 	}
+	// Prefer Bubble Tea native clipboard (OSC52 over SSH). Platform copy is best-effort
+	// supplement; its failure must not mask a successful SetClipboard.
 	return tea.Batch(
 		tea.SetClipboard(text),
 		func() tea.Msg {
-			if err := clipboard.Write(text); err != nil {
-				return copyResultMsg{err: err}
-			}
+			_ = clipboard.Write(text)
 			return copyResultMsg{}
 		},
 	)

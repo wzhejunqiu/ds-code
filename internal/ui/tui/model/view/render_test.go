@@ -114,3 +114,32 @@ func TestLayoutUsesFullContentLineCount(t *testing.T) {
 		t.Fatalf("chat height = %d, expected capped below content lines", chatVP.Height())
 	}
 }
+
+func TestSyncChat_visibleWindowOnly(t *testing.T) {
+	s := &state.State{
+		Width:  80,
+		Height: 24,
+		Deps: &deps.Deps{
+			Version: "test",
+		},
+		Chat: []chat.Block{
+			{Role: chat.RoleUser, Content: strings.Repeat("line\n", 200)},
+		},
+	}
+	var catalog chat.LineCatalog
+	var cache chat.RenderCache
+	scrollY := 0
+	caches := &SyncCaches{Catalog: &catalog, Chat: &cache, ChatScrollY: &scrollY}
+	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
+	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
+
+	SyncChat(s, &chatVP, &toolVP, nil, caches)
+
+	visibleLines := ContentLineCount(chatVP.View())
+	if visibleLines > chatVP.Height()+2 {
+		t.Fatalf("viewport content lines = %d, want about viewport height %d", visibleLines, chatVP.Height())
+	}
+	if catalog.TotalLines() <= chatVP.Height() {
+		t.Fatalf("catalog total %d should exceed viewport height %d", catalog.TotalLines(), chatVP.Height())
+	}
+}

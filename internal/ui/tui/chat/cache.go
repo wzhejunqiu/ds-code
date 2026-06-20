@@ -77,13 +77,25 @@ func RenderCached(blocks []Block, width int, now time.Time, showToolDetails bool
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
 
-// RenderCachedLines formats chat blocks into styled line slices, reusing block cache.
-func RenderCachedLines(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, cache *RenderCache, mdCache *markdown.SegmentCache) []string {
+// BlockLines returns cached styled lines for block i after SyncBlockLineSlices.
+func (c *RenderCache) BlockLines(i int) []string {
+	if c == nil || i < 0 || i >= len(c.entries) {
+		return nil
+	}
+	return c.entries[i].lines
+}
+
+// SyncBlockLineSlices updates the block cache and returns styled line slices per block.
+func SyncBlockLineSlices(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, cache *RenderCache, mdCache *markdown.SegmentCache) [][]string {
 	if width < 20 {
 		width = 20
 	}
 	if cache == nil {
-		return renderAllBlockLines(blocks, width, now, showToolDetails, disp, mdCache)
+		out := make([][]string, len(blocks))
+		for i := range blocks {
+			out[i] = renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)
+		}
+		return out
 	}
 	if cache.width != width || cache.showToolDetails != showToolDetails {
 		cache.Reset()
@@ -95,11 +107,11 @@ func RenderCachedLines(blocks []Block, width int, now time.Time, showToolDetails
 		cache.mdBlockIdx = -1
 	}
 
-	var lines []string
+	out := make([][]string, len(blocks))
 	for i := range blocks {
 		key := blockFingerprint(&blocks[i], now, showToolDetails)
 		if i < len(cache.entries) && cache.entries[i].key == key && cache.entries[i].lines != nil {
-			lines = append(lines, cache.entries[i].lines...)
+			out[i] = cache.entries[i].lines
 			continue
 		}
 		if useMDCache(&blocks[i]) {
@@ -112,24 +124,22 @@ func RenderCachedLines(blocks []Block, width int, now time.Time, showToolDetails
 		}
 		blockLines := renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)
 		cache.entries[i] = cacheEntry{key: key, lines: blockLines}
-		lines = append(lines, blockLines...)
+		out[i] = blockLines
+	}
+	return out
+}
+
+// RenderCachedLines formats chat blocks into styled line slices, reusing block cache.
+func RenderCachedLines(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, cache *RenderCache, mdCache *markdown.SegmentCache) []string {
+	slices := SyncBlockLineSlices(blocks, width, now, showToolDetails, disp, cache, mdCache)
+	var lines []string
+	for _, slice := range slices {
+		lines = append(lines, slice...)
 	}
 	if len(lines) > 0 {
-		// trim trailing blank lines from body
 		for len(lines) > 0 && lines[len(lines)-1] == "" {
 			lines = lines[:len(lines)-1]
 		}
-	}
-	return lines
-}
-
-func renderAllBlockLines(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, mdCache *markdown.SegmentCache) []string {
-	var lines []string
-	for i := range blocks {
-		lines = append(lines, renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)...)
-	}
-	for len(lines) > 0 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
 	}
 	return lines
 }

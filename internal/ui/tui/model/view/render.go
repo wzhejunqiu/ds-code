@@ -168,12 +168,23 @@ func ChatPlainContent(s *state.State, width int, caches *SyncCaches) []string {
 	return selection.LinesFromContent(selection.StripANSI(content))
 }
 
-func rebuildCatalog(s *state.State, width int, caches *SyncCaches) {
-	if caches == nil || caches.Catalog == nil {
-		return
+func rebuildCatalog(s *state.State, width int, caches *SyncCaches) chat.CatalogInput {
+	in := chat.CatalogInput{
+		Header:          buildHeaderCached(s, width, cacheHeader(caches)),
+		Blocks:          s.Chat,
+		Width:           width,
+		Now:             time.Now(),
+		ShowToolDetails: s.ToolDetailsVisible,
+		Disp:            toolDisplayContext(s),
 	}
-	hdr := buildHeaderCached(s, width, cacheHeader(caches))
-	caches.Catalog.Rebuild(hdr, s.Chat, width, time.Now(), s.ToolDetailsVisible, toolDisplayContext(s), caches.Chat, caches.MD)
+	if caches != nil {
+		in.Cache = caches.Chat
+		in.MDCache = caches.MD
+		if caches.Catalog != nil {
+			caches.Catalog.Rebuild(in)
+		}
+	}
+	return in
 }
 
 func visibleHighlightedLines(all []string, yOffset, height int, r selection.Range) string {
@@ -224,7 +235,7 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 		innerW = 10
 	}
 
-	rebuildCatalog(s, innerW, caches)
+	catalogIn := rebuildCatalog(s, innerW, caches)
 
 	globalY := 0
 	if caches != nil && caches.ChatScrollY != nil {
@@ -257,7 +268,7 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 
 	var content string
 	if caches != nil && caches.Catalog != nil && totalLines > 0 {
-		visible := caches.Catalog.VisibleStyled(globalY, chatH)
+		visible := caches.Catalog.VisibleStyled(globalY, chatH, catalogIn)
 		content = strings.Join(visible, "\n")
 	} else {
 		content, _ = buildViewportContent(s, innerW, caches)
