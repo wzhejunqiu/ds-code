@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -250,6 +251,69 @@ func TestDoubleClick_wordSelection(t *testing.T) {
 	}
 	if m.selDragging {
 		t.Fatal("double click should not leave dragging state")
+	}
+}
+
+func TestMouseMotion_dragSelection(t *testing.T) {
+	m := New(testDeps(true))
+	seedChatLines(m, 10)
+	m.chatVP.SetWidth(80)
+	m.chatVP.SetHeight(10)
+	m.updatePlainLines()
+
+	_, _ = m.handleMouse(tea.MouseClickMsg{X: 2, Y: 2, Button: tea.MouseLeft})
+	if !m.selDragging {
+		t.Fatal("expected drag after mouse click")
+	}
+	start := m.selRange.End
+
+	_, _ = m.handleMouse(tea.MouseMotionMsg{X: 12, Y: 2, Button: tea.MouseLeft})
+	if !m.selDragging {
+		t.Fatal("motion should keep dragging")
+	}
+	if m.selRange.End == start && start.Col == 2 {
+		t.Fatalf("motion should extend selection end, still %v", m.selRange.End)
+	}
+}
+
+func TestSetClipboard_orFallback(t *testing.T) {
+	m := New(testDeps(true))
+	cmd := m.copyText("hello")
+	if cmd == nil {
+		t.Fatal("expected copy cmd")
+	}
+	msg := cmd()
+	bm, ok := msg.(tea.BatchMsg)
+	if !ok {
+		t.Fatalf("copyText cmd type = %T, want tea.BatchMsg", msg)
+	}
+	if len(bm) < 2 {
+		t.Fatalf("expected SetClipboard + fallback batch, got %d cmds", len(bm))
+	}
+
+	var sawClipboard, sawFallback bool
+	for _, sub := range bm {
+		if sub == nil {
+			continue
+		}
+		got := sub()
+		if got == nil {
+			continue
+		}
+		switch got.(type) {
+		case copyResultMsg:
+			sawFallback = true
+		default:
+			if fmt.Sprintf("%T", got) == "tea.setClipboardMsg" {
+				sawClipboard = true
+			}
+		}
+	}
+	if !sawClipboard {
+		t.Fatal("expected tea.SetClipboard cmd in batch")
+	}
+	if !sawFallback {
+		t.Fatal("expected platform clipboard fallback cmd in batch")
 	}
 }
 

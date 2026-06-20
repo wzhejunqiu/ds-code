@@ -195,7 +195,7 @@ v0.1.3 聚焦三类工作：
 | **P2 延期项** | transcript/classic 未实现时行为与 v0.1.2 相同 |
 | **CI / release 无 test-tui** | GitHub Actions 与 release workflow 当前不跑 `make test-tui`；发布前须本地执行（NFR-8） |
 | **FR-7.14 用户语义** | v2 将 AltScreen 迁入 `View.AltScreen`，**用户仍**全屏 TUI；非 classic/transcript 模式 |
-| **verify-charm-v2** | 文档已定义 Makefile target，实现前须本地 grep 或手工验收 |
+| **verify-charm-v2** | 已纳入 Makefile、`verify-release` 与 CI `test` job |
 
 ## 依赖与前置
 

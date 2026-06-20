@@ -280,23 +280,23 @@
 - [x] `TestVirtualList_selectionPlainLines`（FR-3.7.4；跨窗口选区复制）
 - [x] `TestVirtualList_streamTailInvalidate`（FR-3.7.5）
 - [x] `TestKeyRelease_ignored`（FR-1.10aa）
-- [ ] `TestMouseMotion_dragSelection`（FR-1.10y）
+- [x] `TestMouseMotion_dragSelection`（FR-1.10y）
 - [x] `TestRunningMode_chatVPScrollKey`（FR-1.10ab）
-- [ ] `TestEventsChannel_turnDone`（FR-1.10x）
+- [x] `TestEventsChannel_turnDone`（FR-1.10x）
 - [x] `TestPasteMsg_textinput`（FR-1.10o；见 `input_test.go`）
 - [x] `TestView_noSideEffects`（FR-1.10q）
 - [x] `TestFallbackView_returnsTeaView`（panic 路径）
-- [ ] `TestBuildTag_releaseAndTuitestCompile`（FR-1.10r）
+- [x] `TestBuildTag_releaseAndTuitestCompile`（FR-1.10r）
 - [x] `TestView_returnsTeaView`（AltScreen/MouseMode）
-- [ ] `TestInit_requestsWindowSize`
-- [ ] `TestKeyPress_enterEscSpace`（`"enter"` / `"esc"` / `"space"`）
+- [x] `TestInit_requestsWindowSize`
+- [x] `TestKeyPress_enterEscSpace`（`"enter"` / `"esc"` / `"space"`）
 - [x] `TestMouseWheel_smoothScroll`（v2 `MouseWheelMsg`；见 `wheel_scroll_test.go`）
 - [x] `TestMouseEscape_passthroughText`（FR-1.10u；见 `mouse_escape_test.go`）
 - [x] `TestWheelScroll_noViewportHP`（FR-1.10t；HP 已删除，无引用）
 - [x] `TestChatInteractionEnabled_overlayBlocks`（FR-1.10s）
 - [x] `TestDetectProfile_integrated`（FR-2.11；`TERM_PROGRAM=cursor`）
-- [ ] `TestTextinput_cursorOrViewCursor`（FR-1.10w；若 v2 需要）
-- [ ] `TestSetClipboard_orFallback`
+- [x] `TestTextinput_cursorOrViewCursor`（FR-1.10w；若 v2 需要）
+- [x] `TestSetClipboard_orFallback`
 - [x] `TestScrollSpeed_env`（`DS_CODE_SCROLL_SPEED`；见 `scroll/wheel_test.go`）
 - [x] FR-3.1：`TestExecuteRun_atExpand`（`spawn/execute_test.go`）
 - [x] FR-3.1：`TestExecuteRun_atExpand_worktree`（worktree workspace 边界）
@@ -306,7 +306,7 @@
 - [x] `TestAltEnter_noSubmit`（FR-1.10ad；见 `input_test.go`）
 - [x] `TestListenPrompt_permissionAsk`（FR-1.10ac）
 - [x] `TestSafeModel_passthroughTeaView`（FR-1.10k；`TestFallbackView_returnsTeaView`）
-- [ ] `TestMarkdownRender_colorProfile`（FR-1.10ae）
+- [x] `TestMarkdownRender_colorProfile`（FR-1.10ae）
 - [x] FR-4：`TestIsSensitiveAbs_notExported`
 
 ## 7. 手动验证

@@ -232,6 +232,42 @@ func TestUpdate_altEnterNoSubmit(t *testing.T) {
 	}
 }
 
+func TestKeyPress_enterEscSpace(t *testing.T) {
+	m := New(&deps.Deps{})
+	m.Overlay = state.OverlayComplete
+	m.Complete = []slash.Command{{Name: "clear", Description: "new session"}}
+	input.SyncCompleteOverlay(&m.State, &m.completePicker)
+
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
+	m = updated.(*Model)
+	if m.Overlay != state.OverlayNone {
+		t.Fatalf("esc overlay = %v, want overlayNone", m.Overlay)
+	}
+
+	m = New(&deps.Deps{})
+	space := tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
+	if space.String() != "space" {
+		t.Fatalf("space String() = %q, want space", space.String())
+	}
+	updated, _ = m.Update(space)
+	m = updated.(*Model)
+	if m.input.Value() != " " {
+		t.Fatalf("space input = %q, want single space", m.input.Value())
+	}
+
+	m = New(&deps.Deps{})
+	m.TestInputSetValue("hello")
+	var cmd tea.Cmd
+	updated, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = updated.(*Model)
+	if m.input.Value() != "" {
+		t.Fatalf("enter should submit and clear input, got %q", m.input.Value())
+	}
+	if cmd == nil {
+		t.Fatal("enter submit expected async cmd")
+	}
+}
+
 func TestUpdate_pasteMsg(t *testing.T) {
 	m := New(&deps.Deps{})
 	updated, _ := m.Update(tea.PasteMsg{Content: "pasted text"})

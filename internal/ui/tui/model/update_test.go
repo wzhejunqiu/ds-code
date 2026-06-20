@@ -49,6 +49,20 @@ func TestView_noSideEffects(t *testing.T) {
 	}
 }
 
+func TestEventsChannel_turnDone(t *testing.T) {
+	m := New(testDeps(true))
+	m.Running = true
+
+	updated, cmd := m.Update(tuimsg.TurnDoneMsg{})
+	m = updated.(*Model)
+	if m.Running {
+		t.Fatal("TurnDoneMsg should clear Running")
+	}
+	if cmd == nil {
+		t.Fatal("expected follow-up sync cmd after TurnDoneMsg")
+	}
+}
+
 func TestListenPrompt_permissionAsk(t *testing.T) {
 	ch := make(chan permission.PromptRequest, 1)
 	m := New(testDeps(true))

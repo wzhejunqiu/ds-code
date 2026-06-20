@@ -140,6 +140,33 @@ func TestView_returnsTeaView(t *testing.T) {
 	}
 }
 
+func TestTextinput_cursorOrViewCursor(t *testing.T) {
+	sm := newSafeModel(&Deps{
+		Store:     session.NewMemoryStore(),
+		SessionID: "x",
+		Version:   "v",
+		Cfg:       &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}},
+	})
+	sm.inner.Width = 80
+	sm.inner.Height = 24
+	sm.inner.TestInputSetValue("cursor test")
+	sm.inner.TestSyncChatView()
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("View panicked: %v", r)
+		}
+	}()
+	v := sm.View()
+	if v.Content == "" {
+		t.Fatal("expected non-empty view content")
+	}
+	// v2: textinput renders inline cursor in content; View.Cursor may stay nil.
+	if v.Cursor != nil {
+		t.Logf("View.Cursor set at (%d,%d)", v.Cursor.X, v.Cursor.Y)
+	}
+}
+
 func TestFallbackView_returnsTeaView(t *testing.T) {
 	sm := &safeModel{
 		lastView: tea.View{

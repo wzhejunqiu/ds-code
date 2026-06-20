@@ -18,8 +18,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - TUI `View()` returns declarative `tea.View` (AltScreen + MouseModeCellMotion); removed HP viewport rendering layer
 - Wheel scroll uses `chatScrollY` + virtual catalog instead of viewport HP sync
+- Chat virtual list: on-demand styled rendering and incremental `LineCatalog` rebuild (reduces full-transcript refresh cost during scroll/stream)
 - Clipboard: prefer `tea.SetClipboard`; fall back to OSC52 / platform copy with toast
 - `permission.IsSensitiveAbs` unexported (use `SkipSensitiveAbs` / `ResolveAccessPath` from outside package)
+
+### Fixed
+
+- Restore slash command completion after `/resume` session restore
+- Confirm highlighted slash command on Tab (not only move selection)
 
 ### Breaking
 
@@ -126,6 +132,7 @@ Windows is not supported in this release.
 - Session database schema is not migrated automatically; delete `sessions.db` and restart if schema mismatch errors occur
 - Non-TTY runs with default `ask` permission reject write operations (use `--permission-mode readonly` or `--dangerously-auto` in scripts)
 
+[0.1.3]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.3
 [0.1.2]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.2
 [0.1.1]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.1
 [0.1.0]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.0
