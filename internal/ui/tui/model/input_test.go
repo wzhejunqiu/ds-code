@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
@@ -62,7 +62,7 @@ func TestRunningEscDismissesCompleteOverlay(t *testing.T) {
 	m.Complete = []slash.Command{{Name: "clear", Description: "new session"}}
 	input.SyncCompleteOverlay(&m.State, &m.completePicker)
 
-	_, handled := m.updateKey(tea.KeyMsg{Type: tea.KeyEsc})
+	_, handled := m.updateKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if !handled {
 		t.Fatal("expected esc to be handled")
 	}
@@ -77,7 +77,7 @@ func TestRunningEscDismissesCompleteOverlay(t *testing.T) {
 	}
 }
 
-func TestHandleCompleteKeyTabSelectsFirst(t *testing.T) {
+func TestHandleCompleteKeyTabSelectsCursor(t *testing.T) {
 	m := New(&deps.Deps{})
 	m.Complete = []slash.Command{
 		{Name: "clear", Description: "new session"},
@@ -86,11 +86,11 @@ func TestHandleCompleteKeyTabSelectsFirst(t *testing.T) {
 	m.completePicker.Cursor = 1
 	m.Overlay = state.OverlayComplete
 
-	if !input.HandleCompleteKey(&m.State, tea.KeyMsg{Type: tea.KeyTab}, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd) {
+	if !input.HandleCompleteKey(&m.State, tea.KeyPressMsg{Code: tea.KeyTab}, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd) {
 		t.Fatal("expected tab to be handled")
 	}
-	if got := m.input.Value(); got != "/clear " {
-		t.Errorf("input = %q, want /clear ", got)
+	if got := m.input.Value(); got != "/compact " {
+		t.Errorf("input = %q, want /compact ", got)
 	}
 	if m.Overlay != state.OverlayNone || m.Complete != nil {
 		t.Error("expected completion overlay to close after tab")
@@ -103,7 +103,7 @@ func TestHandleCompleteKeyEnterDefersWhenReadyToSubmit(t *testing.T) {
 	m.Complete = []slash.Command{{Name: "context", Description: "panel"}}
 	m.Overlay = state.OverlayComplete
 
-	if input.HandleCompleteKey(&m.State, tea.KeyMsg{Type: tea.KeyEnter}, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd) {
+	if input.HandleCompleteKey(&m.State, tea.KeyPressMsg{Code: tea.KeyEnter}, &m.completePicker, m.input.Value(), m.input.SetValue, m.input.CursorEnd) {
 		t.Fatal("enter should submit command, not pick from list")
 	}
 }
@@ -155,16 +155,11 @@ var _ = textinput.New
 
 func TestUpdate_recoversLeakedMouseWheelWithoutInputGarbage(t *testing.T) {
 	m := New(&deps.Deps{})
-	m.Width = 80
-	m.chatVP.Width = 80
-	m.chatVP.Height = 10
-	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+	seedChatLines(m, 50)
+	m.chatVP.SetHeight(10)
 
-	before := m.chatVP.YOffset
-	updated, cmd := m.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune("[<65;87;6M"),
-	})
+	before := m.chatScrollY
+	updated, cmd := m.Update(tea.KeyPressMsg{Text: "[<65;87;6M", Code: tea.KeyExtended})
 	m = updated.(*Model)
 	if m.input.Value() != "" {
 		t.Fatalf("input = %q, want empty", m.input.Value())
@@ -172,30 +167,25 @@ func TestUpdate_recoversLeakedMouseWheelWithoutInputGarbage(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected wheel scroll tick command")
 	}
-	for i := 0; i < 8 && m.chatVP.YOffset <= before; i++ {
+	for i := 0; i < 8 && m.chatScrollY <= before; i++ {
 		updated, _ = m.Update(msg.WheelScrollTickMsg{})
 		m = updated.(*Model)
 	}
-	if m.chatVP.YOffset <= before {
-		t.Fatalf("wheel down: yOffset = %d, want > %d", m.chatVP.YOffset, before)
+	if m.chatScrollY <= before {
+		t.Fatalf("wheel down: chatScrollY = %d, want > %d", m.chatScrollY, before)
 	}
 }
 
 func TestUpdate_recoversLeakedMouseWheelCharByChar(t *testing.T) {
 	m := New(&deps.Deps{})
-	m.Width = 80
-	m.chatVP.Width = 80
-	m.chatVP.Height = 10
-	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+	seedChatLines(m, 50)
+	m.chatVP.SetHeight(10)
 
 	seq := "[<65;87;6M"
 	var updated tea.Model = m
 	var cmd tea.Cmd
 	for _, r := range seq {
-		updated, cmd = updated.Update(tea.KeyMsg{
-			Type:  tea.KeyRunes,
-			Runes: []rune{r},
-		})
+		updated, cmd = updated.Update(tea.KeyPressMsg{Text: string(r), Code: tea.KeyExtended})
 	}
 	m = updated.(*Model)
 	if m.input.Value() != "" {
@@ -208,25 +198,81 @@ func TestUpdate_recoversLeakedMouseWheelCharByChar(t *testing.T) {
 		t.Fatal("expected wheel scroll tick command")
 	}
 	before := 0
-	for i := 0; i < 8 && m.chatVP.YOffset <= before; i++ {
+	for i := 0; i < 8 && m.chatScrollY <= before; i++ {
 		updated, _ = m.Update(msg.WheelScrollTickMsg{})
 		m = updated.(*Model)
 	}
-	if m.chatVP.YOffset <= before {
-		t.Fatalf("wheel down: yOffset = %d, want > %d", m.chatVP.YOffset, before)
+	if m.chatScrollY <= before {
+		t.Fatalf("wheel down: chatScrollY = %d, want > %d", m.chatScrollY, before)
 	}
 }
 
 func TestUpdate_bracketThenNormalText(t *testing.T) {
 	m := New(&deps.Deps{})
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[")})
+	updated, _ := m.Update(tea.KeyPressMsg{Text: "[", Code: tea.KeyExtended})
 	m = updated.(*Model)
 	if m.input.Value() != "" {
 		t.Fatal("expected [ to be buffered, not inserted")
 	}
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo")})
+	updated, _ = m.Update(tea.KeyPressMsg{Text: "foo", Code: tea.KeyExtended})
 	m = updated.(*Model)
 	if got := m.input.Value(); got != "[foo" {
 		t.Fatalf("input = %q, want [foo", got)
+	}
+}
+
+func TestUpdate_altEnterNoSubmit(t *testing.T) {
+	m := New(&deps.Deps{})
+	m.input.SetValue("line one")
+	before := m.input.Value()
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter, Mod: tea.ModAlt})
+	m = updated.(*Model)
+	if m.input.Value() != before {
+		t.Fatalf("input changed on alt+enter: %q", m.input.Value())
+	}
+}
+
+func TestKeyPress_enterEscSpace(t *testing.T) {
+	m := New(&deps.Deps{})
+	m.Overlay = state.OverlayComplete
+	m.Complete = []slash.Command{{Name: "clear", Description: "new session"}}
+	input.SyncCompleteOverlay(&m.State, &m.completePicker)
+
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
+	m = updated.(*Model)
+	if m.Overlay != state.OverlayNone {
+		t.Fatalf("esc overlay = %v, want overlayNone", m.Overlay)
+	}
+
+	m = New(&deps.Deps{})
+	space := tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
+	if space.String() != "space" {
+		t.Fatalf("space String() = %q, want space", space.String())
+	}
+	updated, _ = m.Update(space)
+	m = updated.(*Model)
+	if m.input.Value() != " " {
+		t.Fatalf("space input = %q, want single space", m.input.Value())
+	}
+
+	m = New(&deps.Deps{})
+	m.TestInputSetValue("hello")
+	var cmd tea.Cmd
+	updated, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = updated.(*Model)
+	if m.input.Value() != "" {
+		t.Fatalf("enter should submit and clear input, got %q", m.input.Value())
+	}
+	if cmd == nil {
+		t.Fatal("enter submit expected async cmd")
+	}
+}
+
+func TestUpdate_pasteMsg(t *testing.T) {
+	m := New(&deps.Deps{})
+	updated, _ := m.Update(tea.PasteMsg{Content: "pasted text"})
+	m = updated.(*Model)
+	if !strings.Contains(m.input.Value(), "pasted text") {
+		t.Fatalf("input = %q, want pasted content", m.input.Value())
 	}
 }

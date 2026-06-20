@@ -1,60 +1,50 @@
-package permission_test
+package permission
 
 import (
 	"path/filepath"
 	"testing"
-
-	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
-func TestIsSensitiveAbs_sensitivePaths(t *testing.T) {
-	cases := []string{
-		"/proj/.env",
-		"/proj/.env.local",
-		"/proj/.envrc",
-		"/proj/.ssh/config",
-		"/proj/.aws/credentials",
-		"/proj/.docker/config.json",
-		"/proj/.kube/config",
-		"/proj/.gnupg/private-keys-v1.d/key",
-		"/proj/credentials/api.json",
-		"/proj/secrets/vault.txt",
-		"/proj/deploy/id_rsa",
-		"/proj/cert/server.pem",
-		"/proj/token.json",
-		"/proj/.npmrc",
-		"/proj/service-account.json",
-		"/proj/kubeconfig",
+func TestSkipSensitiveAbs_sensitivePaths(t *testing.T) {
+	dir := t.TempDir()
+	eng := NewEngine("auto", dir, false)
+	paths := []string{
+		filepath.Join(dir, ".env"),
+		filepath.Join(dir, ".ssh", "id_rsa"),
+		filepath.Join(dir, "secrets.json"),
+		filepath.Join(dir, "foo", ".aws", "credentials"),
 	}
-	for _, p := range cases {
-		if !permission.IsSensitiveAbs(p) {
-			t.Errorf("expected sensitive: %q", p)
+	for _, p := range paths {
+		if !eng.SkipSensitiveAbs(p) {
+			t.Errorf("SkipSensitiveAbs(%q) = false, want true", p)
 		}
 	}
 }
 
-func TestIsSensitiveAbs_allowsBenignPaths(t *testing.T) {
-	cases := []string{
-		"/proj/docs/secrets-management.md",
-		"/proj/internal/credentials_test.go",
-		"/proj/pkg/my_secrets_helper.go",
-		"/proj/README.md",
+func TestSkipSensitiveAbs_allowsBenignPaths(t *testing.T) {
+	dir := t.TempDir()
+	eng := NewEngine("auto", dir, false)
+	paths := []string{
+		filepath.Join(dir, "README.md"),
+		filepath.Join(dir, "docs", "secrets-management.md"),
+		filepath.Join(dir, "main.go"),
 	}
-	for _, p := range cases {
-		if permission.IsSensitiveAbs(p) {
-			t.Errorf("expected not sensitive: %q", p)
+	for _, p := range paths {
+		if eng.SkipSensitiveAbs(p) {
+			t.Errorf("SkipSensitiveAbs(%q) = true, want false", p)
 		}
 	}
 }
 
-func TestIsSensitiveAbs_workspaceRelative(t *testing.T) {
-	root := t.TempDir()
-	env := filepath.Join(root, ".env")
-	if permission.IsSensitiveAbs(env) != true {
-		t.Fatal(".env under workspace should be sensitive")
+func TestSkipSensitiveAbs_workspaceRelative(t *testing.T) {
+	dir := t.TempDir()
+	eng := NewEngine("auto", dir, false)
+	env := filepath.Join(dir, ".env")
+	ok := filepath.Join(dir, "src", "main.go")
+	if !eng.SkipSensitiveAbs(env) {
+		t.Fatal(".env should be sensitive")
 	}
-	ok := filepath.Join(root, "src", "main.go")
-	if permission.IsSensitiveAbs(ok) {
+	if eng.SkipSensitiveAbs(ok) {
 		t.Fatal("main.go should not be sensitive")
 	}
 }

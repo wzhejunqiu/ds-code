@@ -2,10 +2,11 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/session"
@@ -54,6 +55,50 @@ func TestInit_noPeriodicStatusTick(t *testing.T) {
 		t.Fatal("Init returned nil cmd")
 	}
 	assertNoUsageUpdateMsg(t, cmd())
+}
+
+func TestInit_requestsWindowSize(t *testing.T) {
+	m := New(&deps.Deps{
+		Cfg:       &config.Config{ProjectRoot: t.TempDir()},
+		Store:     session.NewMemoryStore(),
+		SessionID: "sess",
+	})
+	cmd := m.Init()
+	if cmd == nil {
+		t.Fatal("Init returned nil cmd")
+	}
+	if !initBatchContainsRequestWindowSize(t, cmd) {
+		t.Fatal("Init batch must include tea.RequestWindowSize")
+	}
+}
+
+func initBatchContainsRequestWindowSize(t *testing.T, cmd tea.Cmd) bool {
+	t.Helper()
+	wantType := fmt.Sprintf("%T", tea.RequestWindowSize())
+	for _, sub := range initBatchSubCmds(cmd) {
+		if sub == nil {
+			continue
+		}
+		msg := sub()
+		if msg == nil {
+			continue
+		}
+		if fmt.Sprintf("%T", msg) == wantType {
+			return true
+		}
+	}
+	return false
+}
+
+func initBatchSubCmds(cmd tea.Cmd) []tea.Cmd {
+	if cmd == nil {
+		return nil
+	}
+	msg := cmd()
+	if bm, ok := msg.(tea.BatchMsg); ok {
+		return bm
+	}
+	return []tea.Cmd{cmd}
 }
 
 func assertNoUsageUpdateMsg(t *testing.T, msg tea.Msg) {

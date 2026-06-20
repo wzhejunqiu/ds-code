@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"

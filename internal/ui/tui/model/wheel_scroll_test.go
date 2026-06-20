@@ -1,36 +1,30 @@
 package model
 
 import (
-	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 )
 
 func TestWheelScroll_drainsMultipleLinesPerTick(t *testing.T) {
 	m := New(testDeps(true))
-	m.chatVP.SetContent(strings.Repeat("line\n", 50))
-	m.chatVP.Height = 10
-
-	_, cmd := m.handleMouse(tea.MouseMsg{
-		Action: tea.MouseActionPress,
-		Button: tea.MouseButtonWheelDown,
-		X:      0,
-		Y:      0,
-	})
+	seedChatLines(m, 50)
+	m.chatVP.SetHeight(10)
+	_, cmd := m.handleMouse(tea.MouseWheelMsg{Button: tea.MouseWheelDown, X: 0, Y: 2})
 	if cmd == nil {
 		t.Fatal("expected scroll tick command")
 	}
-	if m.chatVP.YOffset != 0 {
-		t.Fatalf("yOffset = %d, want 0 before first tick", m.chatVP.YOffset)
+	if m.chatScrollY != 0 {
+		t.Fatalf("chatScrollY = %d, want 0 before first tick", m.chatScrollY)
 	}
 
 	before := m.scroll.ChatPending
 	m.handleWheelScrollTick()
-	if m.chatVP.YOffset < 1 {
-		t.Fatalf("yOffset = %d, want > 0 after drain", m.chatVP.YOffset)
+	if m.chatScrollY < 1 {
+		t.Fatalf("chatScrollY = %d, want > 0 after drain", m.chatScrollY)
 	}
 	if m.scroll.ChatPending >= before {
 		t.Fatalf("pending should decrease after drain")
@@ -39,7 +33,7 @@ func TestWheelScroll_drainsMultipleLinesPerTick(t *testing.T) {
 
 func TestWheelScroll_coalescesRapidNotches(t *testing.T) {
 	m := New(testDeps(true))
-	m.chatVP.SetContent(strings.Repeat("line\n", 100))
+	seedChatLines(m, 100)
 
 	m.queueWheelScroll(scroll.TargetChat, 3)
 	m.queueWheelScroll(scroll.TargetChat, 3)
@@ -63,105 +57,100 @@ func TestWheelScroll_capsPending(t *testing.T) {
 
 func TestScroll_jumpBy_clearsPending(t *testing.T) {
 	m := New(testDeps(true))
-	m.chatVP.SetContent(strings.Repeat("line\n", 100))
-	m.chatVP.Height = 10
+	seedChatLines(m, 100)
+	m.chatVP.SetHeight(10)
 	m.scroll.ChatPending = 12
 	m.scroll.BeginDrain()
 
-	cmd := m.jumpViewport(&m.chatVP, m.chatVP.Height/2)
+	m.jumpViewport(&m.chatVP, m.chatVP.Height()/2)
 
 	if m.scroll.HasPending() {
 		t.Fatal("page jump should clear pending")
 	}
-	if m.chatVP.YOffset <= 0 {
-		t.Fatalf("yOffset = %d, want page down from 0", m.chatVP.YOffset)
-	}
-	if cmd == nil {
-		t.Fatal("expected viewport sync command after page jump with HP enabled")
+	if m.chatScrollY <= 0 {
+		t.Fatalf("chatScrollY = %d, want page down from 0", m.chatScrollY)
 	}
 }
 
-func TestWheelScroll_drainReturnsHPCmd(t *testing.T) {
+func TestWheelScroll_drainReturnsCmdWhenDeferred(t *testing.T) {
 	m := New(testDeps(true))
-	m.chatVP.SetContent(strings.Repeat("line\n", 50))
-	m.chatVP.Height = 10
-	m.applyViewportHP()
-	if !m.chatVP.HighPerformanceRendering {
-		t.Fatal("HP should be enabled without selection")
-	}
+	seedChatLines(m, 50)
+	m.chatVP.SetHeight(10)
+	m.scrollDeferSync = true
 
 	m.queueWheelScroll(scroll.TargetChat, 5)
 	cmd := m.handleWheelScrollTick()
 	if cmd == nil {
-		t.Fatal("expected scroll drain command with HP path")
+		t.Fatal("expected sync command when scrollDeferSync is set")
 	}
 }
 
-func TestViewportHP_disabledWhileDragging(t *testing.T) {
+func TestChatInteractionEnabled_overlayBlocks(t *testing.T) {
 	m := New(testDeps(true))
-	m.applyViewportHP()
-	if !m.chatVP.HighPerformanceRendering {
-		t.Fatal("HP should start enabled")
-	}
-
-	m.selDragging = true
-	m.selRange = selection.Range{
-		Start: selection.Point{Line: 0, Col: 0},
-		End:   selection.Point{Line: 0, Col: 1},
-	}
-	m.applyViewportHP()
-	if m.chatVP.HighPerformanceRendering {
-		t.Fatal("HP should be disabled while dragging selection")
-	}
-}
-
-func TestViewportHP_enabledAfterCopySelection(t *testing.T) {
-	m := New(testDeps(true))
-	m.selDragging = false
-	m.selRange = selection.Range{
-		Start: selection.Point{Line: 0, Col: 0},
-		End:   selection.Point{Line: 0, Col: 5},
-	}
-	m.applyViewportHP()
-	if !m.chatVP.HighPerformanceRendering {
-		t.Fatal("HP should stay enabled when selection highlight remains after copy")
+	m.Overlay = state.OverlayHelp
+	if m.chatInteractionEnabled() {
+		t.Fatal("overlay should disable chat interaction")
 	}
 }
 
 func TestWheelScroll_worksAfterCopySelection(t *testing.T) {
 	m := New(testDeps(true))
-	m.Width = 80
-	m.chatVP.Width = 80
-	m.chatVP.Height = 10
-	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+	seedChatLines(m, 50)
+	m.chatVP.SetWidth(80)
+	m.chatVP.SetHeight(10)
 	m.selDragging = false
 	m.selRange = selection.Range{
 		Start: selection.Point{Line: 0, Col: 0},
 		End:   selection.Point{Line: 0, Col: 5},
 	}
-	m.applyViewportHP()
-	if !m.chatVP.HighPerformanceRendering {
-		t.Fatal("HP should be enabled after copy selection")
-	}
 
-	before := m.chatVP.YOffset
-	_, cmd := m.handleMouse(tea.MouseMsg{
-		Action: tea.MouseActionPress,
-		Button: tea.MouseButtonWheelDown,
-		X:      5,
-		Y:      2,
-	})
+	before := m.chatScrollY
+	_, cmd := m.handleMouse(tea.MouseWheelMsg{Button: tea.MouseWheelDown, X: 5, Y: 2})
 	if cmd == nil {
 		t.Fatal("expected wheel scroll tick command after copy selection")
 	}
-	drainCmd := m.handleWheelScrollTick()
-	if drainCmd == nil {
-		t.Fatal("expected scroll drain command with HP enabled after copy selection")
-	}
-	for i := 0; i < 8 && m.chatVP.YOffset <= before; i++ {
+	for i := 0; i < 8 && m.chatScrollY <= before; i++ {
 		m.handleWheelScrollTick()
 	}
-	if m.chatVP.YOffset <= before {
-		t.Fatalf("wheel down after copy: yOffset = %d, want > %d", m.chatVP.YOffset, before)
+	if m.chatScrollY <= before {
+		t.Fatalf("wheel down after copy: chatScrollY = %d, want > %d", m.chatScrollY, before)
+	}
+}
+
+func TestRunningMode_chatVPScrollKey(t *testing.T) {
+	m := New(testDeps(true))
+	seedChatLines(m, 80)
+	m.chatVP.SetHeight(10)
+	m.Running = true
+	m.chatScrollY = 0
+
+	before := m.chatScrollY
+	updated, _ := m.updateInput(tea.KeyPressMsg{Code: tea.KeyPgDown})
+	m = updated.(*Model)
+	if m.chatScrollY <= before {
+		t.Fatalf("chatScrollY = %d, want > %d after page down while running", m.chatScrollY, before)
+	}
+}
+
+func TestJumpViewport_clampsTotalLines(t *testing.T) {
+	m := New(testDeps(true))
+	m.Width = 80
+	m.Height = 24
+	seedChatLines(m, 80)
+	m.syncChatView()
+	m.chatVP.SetHeight(10)
+
+	m.jumpViewport(&m.chatVP, 9999)
+	maxY := m.lineCatalog.TotalLines() - m.chatVP.Height()
+	if maxY < 0 {
+		maxY = 0
+	}
+	if m.chatScrollY != maxY {
+		t.Fatalf("chatScrollY = %d, want clamped max %d", m.chatScrollY, maxY)
+	}
+
+	m.jumpViewport(&m.chatVP, -9999)
+	if m.chatScrollY != 0 {
+		t.Fatalf("chatScrollY = %d, want 0", m.chatScrollY)
 	}
 }

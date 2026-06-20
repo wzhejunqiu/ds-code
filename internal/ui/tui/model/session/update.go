@@ -1,7 +1,7 @@
 package session
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
@@ -31,6 +31,9 @@ func UpdateResumeList(s *state.State, m msg.ResumeListMsg, picker *component.Pic
 	if m.Filter == "" && len(m.Sessions) == 0 {
 		s.ErrLine = "No saved sessions."
 		ClearResumePicker(s, picker)
+		return nil
+	}
+	if s.Overlay != state.OverlayResume && !s.ResumePending {
 		return nil
 	}
 	ApplyResumeSessions(s, m.Filter, m.Sessions, picker)

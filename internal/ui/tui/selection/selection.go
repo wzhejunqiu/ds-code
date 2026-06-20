@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 var (
@@ -144,4 +144,33 @@ func clampCol(col, max int) int {
 		return max
 	}
 	return col
+}
+
+// WordBounds returns start/end column indices for the word at col in line.
+func WordBounds(line string, col int) (start, end int) {
+	runes := []rune(line)
+	if len(runes) == 0 {
+		return 0, 0
+	}
+	if col < 0 {
+		col = 0
+	}
+	if col >= len(runes) {
+		col = len(runes) - 1
+	}
+	isWord := func(r rune) bool {
+		return r != ' ' && r != '\t'
+	}
+	start = col
+	for start > 0 && isWord(runes[start-1]) {
+		start--
+	}
+	end = col
+	for end < len(runes) && isWord(runes[end]) {
+		end++
+	}
+	if start == end && end < len(runes) {
+		end++
+	}
+	return start, end
 }

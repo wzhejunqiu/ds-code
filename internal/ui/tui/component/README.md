@@ -28,7 +28,7 @@ TUI 共用的 Bubble Tea UI 组件。目前主要是 `Picker`。
 
 `PickerTabBehavior` 因两种 picker 的 Tab 语义不同：
 
-- **斜杠补全**（`PickerTabSelectFirst`）：Tab 确认第一项，即使高亮在其他行（输入时快速接受）。
+- **斜杠补全**（`PickerTabConfirm`）：Tab 确认当前高亮项（与 Enter 一致）。
 - **恢复列表**（`PickerTabMoveDown`）：Tab 下移，类似常见 CLI 菜单；Enter 在 `tui.updateKey` 中按会话 ID 恢复。
 
 ### 滚动（`ensureScrollVisible`）

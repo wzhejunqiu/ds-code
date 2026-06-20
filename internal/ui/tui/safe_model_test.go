@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
@@ -43,7 +43,7 @@ func TestResumeDoubleEnterIgnoredWhilePending(t *testing.T) {
 	m.Overlay = state.OverlayResume
 	m.TestSyncResumePicker()
 
-	enter := tea.KeyMsg{Type: tea.KeyEnter}
+	enter := tea.KeyPressMsg{Code: tea.KeyEnter}
 	updated, cmd1 := sm.Update(enter)
 	sm = updated.(*safeModel)
 	if cmd1 == nil {
@@ -86,7 +86,7 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 	sm.inner.ResumeSessions = []session.Summary{{ID: sess.ID, Title: "hello"}}
 	sm.inner.TestSyncResumePicker()
 
-	enter := tea.KeyMsg{Type: tea.KeyEnter}
+	enter := tea.KeyPressMsg{Code: tea.KeyEnter}
 
 	updated, resumeCmd := sm.Update(enter)
 	if s, ok := updated.(*safeModel); ok {
@@ -118,6 +118,73 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 		}
 	}()
 	_ = sm.View()
+}
+
+func TestView_returnsTeaView(t *testing.T) {
+	sm := newSafeModel(&Deps{
+		Store:     session.NewMemoryStore(),
+		SessionID: "x",
+		Version:   "v",
+		Cfg:       &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}},
+	})
+	sm.inner.Width = 80
+	sm.inner.Height = 24
+	sm.inner.TestSyncChatView()
+
+	v := sm.View()
+	if !v.AltScreen {
+		t.Fatal("expected AltScreen=true")
+	}
+	if v.MouseMode != tea.MouseModeCellMotion {
+		t.Fatalf("mouse mode = %v, want CellMotion", v.MouseMode)
+	}
+}
+
+func TestTextinput_cursorOrViewCursor(t *testing.T) {
+	sm := newSafeModel(&Deps{
+		Store:     session.NewMemoryStore(),
+		SessionID: "x",
+		Version:   "v",
+		Cfg:       &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}},
+	})
+	sm.inner.Width = 80
+	sm.inner.Height = 24
+	sm.inner.TestInputSetValue("cursor test")
+	sm.inner.TestSyncChatView()
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("View panicked: %v", r)
+		}
+	}()
+	v := sm.View()
+	if v.Content == "" {
+		t.Fatal("expected non-empty view content")
+	}
+	// v2: textinput renders inline cursor in content; View.Cursor may stay nil.
+	if v.Cursor != nil {
+		t.Logf("View.Cursor set at (%d,%d)", v.Cursor.X, v.Cursor.Y)
+	}
+}
+
+func TestFallbackView_returnsTeaView(t *testing.T) {
+	sm := &safeModel{
+		lastView: tea.View{
+			AltScreen: true,
+			MouseMode: tea.MouseModeCellMotion,
+			Cursor:    tea.NewCursor(3, 2),
+		},
+	}
+	v := sm.fallbackView()
+	if !v.AltScreen {
+		t.Fatal("expected AltScreen=true")
+	}
+	if v.MouseMode != tea.MouseModeCellMotion {
+		t.Fatalf("mouse mode = %v, want passthrough CellMotion", v.MouseMode)
+	}
+	if v.Cursor == nil || v.Cursor.X != 3 || v.Cursor.Y != 2 {
+		t.Fatalf("cursor = %+v, want passthrough at (3,2)", v.Cursor)
+	}
 }
 
 // silence deps import

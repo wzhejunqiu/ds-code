@@ -5,12 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 )
 
 func TestMain(m *testing.M) {
-	lipgloss.SetColorProfile(termenv.TrueColor)
 	os.Exit(m.Run())
 }
 
@@ -30,6 +29,21 @@ func TestRenderHeadingsStyled(t *testing.T) {
 		if !headingTextPresent(out, text) {
 			t.Fatalf("missing %q in output:\n%s", text, out)
 		}
+	}
+}
+
+func TestMarkdownRender_colorProfile(t *testing.T) {
+	old := lipgloss.Writer.Profile
+	lipgloss.Writer.Profile = colorprofile.Ascii
+	t.Cleanup(func() { lipgloss.Writer.Profile = old })
+
+	out, err := Render("# Title\n\n**bold** body", 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain := StripANSI(out)
+	if !strings.Contains(plain, "Title") || !strings.Contains(plain, "body") {
+		t.Fatalf("unexpected render under Ascii profile:\n%s", plain)
 	}
 }
 

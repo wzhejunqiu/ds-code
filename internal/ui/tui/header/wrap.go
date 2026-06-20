@@ -3,7 +3,7 @@ package header
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // wrapCells breaks s into lines of at most maxCells terminal columns (UTF-8 safe).

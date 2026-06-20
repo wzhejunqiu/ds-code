@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chattool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
@@ -75,6 +75,73 @@ func RenderCached(blocks []Block, width int, now time.Time, showToolDetails bool
 		lines = append(lines, blockLines...)
 	}
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
+}
+
+// BlockLines returns cached styled lines for block i after SyncBlockLineSlices.
+func (c *RenderCache) BlockLines(i int) []string {
+	if c == nil || i < 0 || i >= len(c.entries) {
+		return nil
+	}
+	return c.entries[i].lines
+}
+
+// SyncBlockLineSlices updates the block cache and returns styled line slices per block.
+func SyncBlockLineSlices(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, cache *RenderCache, mdCache *markdown.SegmentCache) [][]string {
+	if width < 20 {
+		width = 20
+	}
+	if cache == nil {
+		out := make([][]string, len(blocks))
+		for i := range blocks {
+			out[i] = renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)
+		}
+		return out
+	}
+	if cache.width != width || cache.showToolDetails != showToolDetails {
+		cache.Reset()
+		cache.width = width
+		cache.showToolDetails = showToolDetails
+	}
+	if len(cache.entries) != len(blocks) {
+		cache.entries = resizeEntries(cache.entries, len(blocks))
+		cache.mdBlockIdx = -1
+	}
+
+	out := make([][]string, len(blocks))
+	for i := range blocks {
+		key := blockFingerprint(&blocks[i], now, showToolDetails)
+		if i < len(cache.entries) && cache.entries[i].key == key && cache.entries[i].lines != nil {
+			out[i] = cache.entries[i].lines
+			continue
+		}
+		if useMDCache(&blocks[i]) {
+			if cache.mdBlockIdx != i {
+				if mdCache != nil {
+					mdCache.Reset()
+				}
+				cache.mdBlockIdx = i
+			}
+		}
+		blockLines := renderBlock(&blocks[i], width, now, showToolDetails, disp, mdCache)
+		cache.entries[i] = cacheEntry{key: key, lines: blockLines}
+		out[i] = blockLines
+	}
+	return out
+}
+
+// RenderCachedLines formats chat blocks into styled line slices, reusing block cache.
+func RenderCachedLines(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, cache *RenderCache, mdCache *markdown.SegmentCache) []string {
+	slices := SyncBlockLineSlices(blocks, width, now, showToolDetails, disp, cache, mdCache)
+	var lines []string
+	for _, slice := range slices {
+		lines = append(lines, slice...)
+	}
+	if len(lines) > 0 {
+		for len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+		}
+	}
+	return lines
 }
 
 func renderAllBlocks(blocks []Block, width int, now time.Time, showToolDetails bool, disp tool.DisplayContext, mdCache *markdown.SegmentCache) string {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Picker is a keyboard-navigable overlay list (slash completion, /resume, etc.).
@@ -24,8 +24,10 @@ type PickerTabBehavior int
 const (
 	// PickerTabDefault leaves Tab to the text input (not handled by the picker).
 	PickerTabDefault PickerTabBehavior = iota
-	// PickerTabSelectFirst confirms the first item (slash completion).
+	// PickerTabSelectFirst confirms the first item regardless of cursor.
 	PickerTabSelectFirst
+	// PickerTabConfirm confirms the highlighted item (slash completion Tab).
+	PickerTabConfirm
 	// PickerTabMoveDown moves the cursor down (resume session list).
 	PickerTabMoveDown
 )
@@ -102,7 +104,7 @@ func (p *Picker) MovePage(pages int) {
 // HandleKey processes navigation keys. When handled is true, the caller should
 // not pass the key to the text input. Confirm/cancel actions need domain logic
 // in the TUI (apply completion, resume session, dismiss overlay).
-func (p *Picker) HandleKey(msg tea.KeyMsg, opts PickerKeyOpts) (PickerKeyAction, bool) {
+func (p *Picker) HandleKey(msg tea.KeyPressMsg, opts PickerKeyOpts) (PickerKeyAction, bool) {
 	switch msg.String() {
 	case "up":
 		p.Move(-1)
@@ -115,6 +117,11 @@ func (p *Picker) HandleKey(msg tea.KeyMsg, opts PickerKeyOpts) (PickerKeyAction,
 		case PickerTabSelectFirst:
 			if p.Len() > 0 {
 				return PickerKeyConfirmFirst, true
+			}
+			return PickerKeyNone, true
+		case PickerTabConfirm:
+			if p.Len() > 0 {
+				return PickerKeyConfirm, true
 			}
 			return PickerKeyNone, true
 		case PickerTabMoveDown:

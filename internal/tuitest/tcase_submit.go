@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"

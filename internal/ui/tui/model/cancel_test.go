@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
@@ -60,7 +60,7 @@ func TestUpdate_escCancelsRunningTurn(t *testing.T) {
 	_, turnCancel = context.WithCancel(context.Background())
 	defer turnCancel()
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = next.(*Model)
 
 	if !turn.CurrentTurnInterrupted(&m.State) {
@@ -78,7 +78,7 @@ func TestUpdate_ctrlCDuringRunningDoesNotCancelTurn(t *testing.T) {
 	m.TurnCancel = func() { close(cancelled) }
 	m.Chat = []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant, Streaming: true}}
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	next, _ := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	m = next.(*Model)
 
 	select {
@@ -138,7 +138,7 @@ func TestUpdate_escDuringPermissionPromptCancelsTurn(t *testing.T) {
 	m.Prompt = &permission.PromptRequest{Tool: "shell", Reply: reply}
 	m.Chat = []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant, Streaming: true}}
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = next.(*Model)
 	if !turn.CurrentTurnInterrupted(&m.State) {
 		t.Fatal("expected interrupt marker when Esc during permission prompt")

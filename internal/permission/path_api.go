@@ -20,7 +20,7 @@ const (
 
 // SkipSensitiveAbs reports whether abs is on the sensitive denylist (S3) and should be skipped during enumeration.
 func (e *Engine) SkipSensitiveAbs(abs string) bool {
-	return IsSensitiveAbs(abs)
+	return isSensitiveAbs(abs)
 }
 
 // ResolveAccessPath resolves rel under the workspace and applies S2+S3 per intent.
@@ -30,7 +30,7 @@ func (e *Engine) ResolveAccessPath(rel string, intent PathIntent) (string, error
 		return "", fmt.Errorf("%w: %w", ErrDenied, err)
 	}
 	if intent == PathRead || intent == PathWrite {
-		if IsSensitiveAbs(abs) {
+		if isSensitiveAbs(abs) {
 			return "", fmt.Errorf("%w: sensitive path %s", ErrDenied, rel)
 		}
 	}
@@ -52,7 +52,7 @@ func (e *Engine) CheckAbsPath(abs string, intent PathIntent) error {
 		return fmt.Errorf("%w: outside workspace: %s", ErrDenied, abs)
 	}
 	if intent == PathRead || intent == PathWrite {
-		if IsSensitiveAbs(abs) {
+		if isSensitiveAbs(abs) {
 			return fmt.Errorf("%w: sensitive path %s", ErrDenied, abs)
 		}
 	}

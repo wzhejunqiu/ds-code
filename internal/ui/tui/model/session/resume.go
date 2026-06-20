@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/component"
@@ -84,7 +84,7 @@ func formatUpdated(t time.Time) string {
 	return t.Local().Format("2006-01-02 15:04")
 }
 
-func HandleResumeKey(s *state.State, msg tea.KeyMsg, picker *component.Picker) bool {
+func HandleResumeKey(s *state.State, msg tea.KeyPressMsg, picker *component.Picker) bool {
 	action, handled := picker.HandleKey(msg, resumePickerKeys)
 	if !handled {
 		return false
@@ -101,9 +101,12 @@ func ClearResumePicker(s *state.State, picker *component.Picker) {
 	s.Overlay = state.OverlayNone
 	s.ResumeSessions = nil
 	s.ResumeFilter = ""
+	s.Complete = nil
+	s.CompleteFilterKey = ""
 	picker.Clear()
 	s.OverlayText = ""
 	s.ResumePending = false
+	s.ResumeFilterSeq++
 }
 
 func ScheduleResumeFilter(s *state.State, filter string, picker *component.Picker) tea.Cmd {

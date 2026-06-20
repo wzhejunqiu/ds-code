@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	uipkg "github.com/wzhejunqiu/ds-code/internal/ui"
 	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
@@ -19,7 +19,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/subagent"
 )
 
-var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabSelectFirst}
+var completePickerKeys = component.PickerKeyOpts{Tab: component.PickerTabConfirm}
 
 func SyncCompleteOverlay(s *state.State, picker *component.Picker) {
 	items := make([]string, len(s.Complete))
@@ -36,8 +36,8 @@ func ClearCompletePicker(s *state.State, picker *component.Picker) {
 	picker.Clear()
 }
 
-func HandleCompleteKey(s *state.State, msg tea.KeyMsg, picker *component.Picker, inputValue string, setInput func(string), cursorEnd func()) bool {
-	if CompletionReadyToSubmit(inputValue) && msg.Type == tea.KeyEnter {
+func HandleCompleteKey(s *state.State, msg tea.KeyPressMsg, picker *component.Picker, inputValue string, setInput func(string), cursorEnd func()) bool {
+	if CompletionReadyToSubmit(inputValue) && msg.String() == "enter" {
 		return false
 	}
 	if len(s.Complete) > 0 {

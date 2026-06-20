@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // leakedSGRMouseRe matches xterm SGR mouse events missing the leading ESC prefix.
@@ -20,42 +20,42 @@ const (
 )
 
 // RecoverLeakedMouseKeys detects SGR mouse escape sequences that Bubble Tea
-// failed to parse when the entire payload arrives in a single KeyRunes message.
-func RecoverLeakedMouseKeys(msg tea.KeyMsg) ([]tea.MouseMsg, bool) {
+// failed to parse when the entire payload arrives in a single KeyPressMsg.
+func RecoverLeakedMouseKeys(msg tea.KeyPressMsg) ([]tea.Msg, bool) {
 	var buf string
 	events, passthrough, pending := AccumulateLeakedMouseKeys(&buf, msg)
-	if pending || len(passthrough.Runes) > 0 || len(events) == 0 {
+	if pending || passthrough.Text != "" || len(events) == 0 {
 		return nil, false
 	}
 	return events, true
 }
 
 // AccumulateLeakedMouseKeys reassembles SGR mouse escape sequences split across
-// multiple KeyRunes messages (common in iTerm2). When pending is true the chunk
+// multiple KeyPressMsg messages (common in iTerm2). When pending is true the chunk
 // is fully consumed and must not reach textinput.
-func AccumulateLeakedMouseKeys(buf *string, msg tea.KeyMsg) ([]tea.MouseMsg, tea.KeyMsg, bool) {
-	if msg.Type != tea.KeyRunes || len(msg.Runes) == 0 {
+func AccumulateLeakedMouseKeys(buf *string, msg tea.KeyPressMsg) ([]tea.Msg, tea.KeyPressMsg, bool) {
+	if msg.Text == "" {
 		return nil, msg, false
 	}
 
-	*buf += string(msg.Runes)
+	*buf += msg.Text
 	events := extractLeakedSGREvents(buf)
 
 	if isLeakedSGRPrefix(*buf) {
-		return events, tea.KeyMsg{}, true
+		return events, tea.KeyPressMsg{}, true
 	}
 
 	if *buf == "" {
-		return events, tea.KeyMsg{}, false
+		return events, tea.KeyPressMsg{}, false
 	}
 
-	passthrough := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(*buf)}
+	passthrough := tea.KeyPressMsg{Text: *buf, Code: tea.KeyExtended}
 	*buf = ""
 	return events, passthrough, false
 }
 
-func extractLeakedSGREvents(buf *string) []tea.MouseMsg {
-	var out []tea.MouseMsg
+func extractLeakedSGREvents(buf *string) []tea.Msg {
+	var out []tea.Msg
 	for {
 		loc := leakedSGRMouseRe.FindStringIndex(*buf)
 		if loc == nil || loc[0] != 0 {
@@ -65,10 +65,10 @@ func extractLeakedSGREvents(buf *string) []tea.MouseMsg {
 		btn, _ := strconv.Atoi(sub[1])
 		x, _ := strconv.Atoi(sub[2])
 		y, _ := strconv.Atoi(sub[3])
-		ev := parseLeakedSGRButton(btn)
-		ev.X = x - 1
-		ev.Y = y - 1
-		out = append(out, tea.MouseMsg(ev))
+		wheel := parseLeakedSGRWheel(btn)
+		wheel.X = x - 1
+		wheel.Y = y - 1
+		out = append(out, wheel)
 		*buf = (*buf)[loc[1]:]
 	}
 	return out
@@ -89,15 +89,9 @@ func isLeakedSGRPrefix(s string) bool {
 	}
 }
 
-func parseLeakedSGRButton(b int) tea.MouseEvent {
-	var m tea.MouseEvent
-	m.Action = tea.MouseActionPress
-
+func parseLeakedSGRWheel(b int) tea.MouseWheelMsg {
 	if b&sgrBitWheel != 0 {
-		m.Button = tea.MouseButtonWheelUp + tea.MouseButton(b&sgrBitsMask)
-		return m
+		return tea.MouseWheelMsg{Button: tea.MouseWheelUp + tea.MouseButton(b&sgrBitsMask)}
 	}
-
-	m.Button = tea.MouseButtonLeft + tea.MouseButton(b&sgrBitsMask)
-	return m
+	return tea.MouseWheelMsg{Button: tea.MouseLeft + tea.MouseButton(b&sgrBitsMask)}
 }

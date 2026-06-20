@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	uipkg "github.com/wzhejunqiu/ds-code/internal/ui"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
@@ -46,7 +46,7 @@ func (m *Model) handleNoticeScrollTick() tea.Cmd {
 	}
 	m.headerCache.Invalidate()
 	m.syncChatView()
-	return m.withHPSync(m.scheduleNoticeScroll())
+	return m.scheduleNoticeScroll()
 }
 
 func (m *Model) nextThinkingTickCmd() tea.Cmd {

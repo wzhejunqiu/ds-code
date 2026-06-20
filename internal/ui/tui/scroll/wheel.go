@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 const (
@@ -27,7 +27,7 @@ func WheelSpeed() float64 {
 }
 
 // ComputeWheelStep returns signed lines to accumulate for a wheel event.
-func (c *Controller) ComputeWheelStep(msg tea.MouseMsg, now time.Time) int {
+func (c *Controller) ComputeWheelStep(msg tea.MouseWheelMsg, now time.Time) int {
 	dir := wheelDirection(msg)
 	if dir == 0 {
 		return 0
@@ -56,11 +56,11 @@ func (c *Controller) ComputeWheelStep(msg tea.MouseMsg, now time.Time) int {
 	return n
 }
 
-func wheelDirection(msg tea.MouseMsg) int {
+func wheelDirection(msg tea.MouseWheelMsg) int {
 	switch msg.Button {
-	case tea.MouseButtonWheelDown:
+	case tea.MouseWheelDown:
 		return 1
-	case tea.MouseButtonWheelUp:
+	case tea.MouseWheelUp:
 		return -1
 	default:
 		return 0

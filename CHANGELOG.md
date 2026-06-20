@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.3] - 2026-06-20
+
+### Added
+
+- Bubble Tea **v2** stack (`charm.land/bubbletea/v2`, `bubbles/v2`, `lipgloss/v2`, `glamour/v2`)
+- Chat area **virtual list** (`LineCatalog`): only visible window is styled/rendered; `plainLines` retained for selection
+- TUI double-click word selection and Shift+arrow keyboard selection extension
+- Sub-agent `@file` / `@dir/` expansion via `AtExpander` in spawn `ExecuteRun`
+- Makefile `verify-charm-v2` guard (no v1 `github.com/charmbracelet/*` imports)
+
+### Changed
+
+- TUI `View()` returns declarative `tea.View` (AltScreen + MouseModeCellMotion); removed HP viewport rendering layer
+- Wheel scroll uses `chatScrollY` + virtual catalog instead of viewport HP sync
+- Chat virtual list: on-demand styled rendering and incremental `LineCatalog` rebuild (reduces full-transcript refresh cost during scroll/stream)
+- Clipboard: prefer `tea.SetClipboard`; fall back to OSC52 / platform copy with toast
+- `permission.IsSensitiveAbs` unexported (use `SkipSensitiveAbs` / `ResolveAccessPath` from outside package)
+
+### Fixed
+
+- Restore slash command completion after `/resume` session restore
+- Confirm highlighted slash command on Tab (not only move selection)
+
+### Breaking
+
+- **Bubble Tea v1 → v2**: import paths moved to `charm.land/*/v2`; `KeyMsg`/`MouseMsg` replaced by `KeyPressMsg`, typed mouse messages, and `PasteMsg`
+- Program options `WithAltScreen` / `WithMouseCellMotion` removed; configured on `tea.View` instead
+
+### Known limitations
+
+- Triple-click line selection and column (block) selection not yet implemented (P2)
+
 ## [0.1.2] - 2026-06-20
 
 ### Added
@@ -100,6 +132,7 @@ Windows is not supported in this release.
 - Session database schema is not migrated automatically; delete `sessions.db` and restart if schema mismatch errors occur
 - Non-TTY runs with default `ask` permission reject write operations (use `--permission-mode readonly` or `--dangerously-auto` in scripts)
 
+[0.1.3]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.3
 [0.1.2]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.2
 [0.1.1]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.1
 [0.1.0]: https://github.com/wzhejunqiu/ds-code/releases/tag/v0.1.0

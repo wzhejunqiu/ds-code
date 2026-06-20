@@ -3,7 +3,7 @@ package overlay
 import (
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/turn"
@@ -11,11 +11,11 @@ import (
 
 type KeyDeps struct {
 	HandleResumeEnter func() (tea.Cmd, bool)
-	HandleResumeKey   func(tea.KeyMsg) bool
-	HandleCompleteKey func(tea.KeyMsg) bool
+	HandleResumeKey   func(tea.KeyPressMsg) bool
+	HandleCompleteKey func(tea.KeyPressMsg) bool
 	HandleTCaseEnter  func() (tea.Cmd, bool)
-	HandleTCaseKey    func(tea.KeyMsg) bool
-	HandlePromptKey   func(tea.KeyMsg) tea.Cmd
+	HandleTCaseKey    func(tea.KeyPressMsg) bool
+	HandlePromptKey   func(tea.KeyPressMsg) tea.Cmd
 	ListenPrompt      func() tea.Cmd
 	RequestCancelTurn func()
 	ShowHelp          func() tea.Cmd
@@ -24,12 +24,12 @@ type KeyDeps struct {
 	ExitTimeout       func() tea.Cmd
 }
 
-func HandleKey(s *state.State, msg tea.KeyMsg, d KeyDeps) (tea.Cmd, bool) {
+func HandleKey(s *state.State, msg tea.KeyPressMsg, d KeyDeps) (tea.Cmd, bool) {
 	if !IsExitConfirmKey(msg.String()) {
 		ClearExitConfirm(s)
 	}
 	if s.Overlay == state.OverlayResume {
-		if msg.Type == tea.KeyEnter && !msg.Alt {
+		if msg.String() == "enter" && !msg.Mod.Contains(tea.ModAlt) {
 			if cmd, ok := d.HandleResumeEnter(); ok {
 				return cmd, true
 			}
@@ -51,7 +51,7 @@ func HandleKey(s *state.State, msg tea.KeyMsg, d KeyDeps) (tea.Cmd, bool) {
 		}
 	}
 	if s.Overlay == state.OverlayTCase {
-		if msg.Type == tea.KeyEnter && !msg.Alt && d.HandleTCaseEnter != nil {
+		if msg.String() == "enter" && !msg.Mod.Contains(tea.ModAlt) && d.HandleTCaseEnter != nil {
 			if cmd, ok := d.HandleTCaseEnter(); ok {
 				return cmd, true
 			}
@@ -115,6 +115,6 @@ func HandleKey(s *state.State, msg tea.KeyMsg, d KeyDeps) (tea.Cmd, bool) {
 }
 
 // HandlePromptKey wraps turn.HandlePromptKey for overlay KeyDeps wiring.
-func HandlePromptKey(s *state.State, msg tea.KeyMsg, listenPrompt func() tea.Cmd) tea.Cmd {
+func HandlePromptKey(s *state.State, msg tea.KeyPressMsg, listenPrompt func() tea.Cmd) tea.Cmd {
 	return turn.HandlePromptKey(s, msg.String(), listenPrompt)
 }
