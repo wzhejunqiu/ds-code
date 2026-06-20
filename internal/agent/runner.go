@@ -72,7 +72,7 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 		tc.Arguments = string(rawArgs)
 	}
 	args := tool.ArgsMap(rawArgs)
-	if tc.Name == "shell" && r.Audit != nil {
+	if tool.NameShell.Matches(tc.Name) && r.Audit != nil {
 		if cmd, _ := args["command"].(string); cmd != "" {
 			dec, reason := classifier.Classify(cmd)
 			_ = r.Audit.LogWithReason(tc.Name, rawArgs, string(dec), reason)
@@ -90,7 +90,7 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 		)
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, fmt.Errorf("checkpoint: %w", err))
 	}
-	if r.Audit != nil && tc.Name != "shell" {
+	if r.Audit != nil && !tool.NameShell.Matches(tc.Name) {
 		_ = r.Audit.Log(tc.Name, rawArgs)
 	}
 	out, err := r.Tools.Execute(WithToolInvocation(ctx, sessionID, tc.ID), tc.Name, rawArgs)

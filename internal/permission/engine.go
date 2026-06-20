@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/patch"
 	"github.com/wzhejunqiu/ds-code/internal/security/classifier"
+	"github.com/wzhejunqiu/ds-code/internal/toolname"
 	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
 	"go.uber.org/zap"
 )
@@ -68,10 +69,10 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 }
 
 func (e *Engine) check(tool string, args map[string]any) error {
-	if tool == "shell" && IsShellReadOnlyOp(args) {
+	if tool == toolname.Bash && IsShellReadOnlyOp(args) {
 		return e.checkShellReadOnly(args)
 	}
-	if tool == "shell" {
+	if tool == toolname.Bash {
 		if cmd, _ := args["command"].(string); cmd != "" {
 			handled, err := e.checkShellCommand(cmd)
 			if err != nil {
@@ -118,7 +119,7 @@ func (e *Engine) check(tool string, args map[string]any) error {
 			}
 		}
 	}
-	if tool == "shell" {
+	if tool == toolname.Bash {
 		if cmd, _ := args["command"].(string); cmd != "" {
 			if err := e.checkSensitiveShell(cmd); err != nil {
 				return err
@@ -127,7 +128,7 @@ func (e *Engine) check(tool string, args map[string]any) error {
 	}
 
 	if e.isWriteTool(tool) && e.Mode == "ask" && e.Interactive {
-		if tool == "shell" {
+		if tool == toolname.Bash {
 			if cmd, _ := args["command"].(string); cmd != "" {
 				if dec, _ := classifier.Classify(cmd); dec == classifier.Ask || dec == classifier.Allow {
 					return nil
@@ -176,7 +177,7 @@ func (e *Engine) checkShellCommand(cmd string) (handled bool, err error) {
 		if !e.Interactive || e.Prompter == nil {
 			return true, fmt.Errorf("%w: %s requires approval (non-interactive)", ErrDenied, reason)
 		}
-		ok, err := e.Prompter("shell", cmd)
+		ok, err := e.Prompter(toolname.Bash, cmd)
 		if err != nil {
 			return true, err
 		}
@@ -191,7 +192,7 @@ func (e *Engine) checkShellCommand(cmd string) (handled bool, err error) {
 
 func (e *Engine) summarizeArgs(tool string, args map[string]any) string {
 	switch tool {
-	case "shell":
+	case toolname.Bash:
 		if c, _ := args["command"].(string); c != "" {
 			return c
 		}
@@ -257,7 +258,7 @@ func (e *Engine) isWriteTool(tool string) bool {
 		return true
 	}
 	switch tool {
-	case "shell", "write_file", "apply_patch":
+	case toolname.Bash, "write_file", "apply_patch":
 		return true
 	default:
 		return false

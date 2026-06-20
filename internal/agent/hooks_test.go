@@ -26,14 +26,14 @@ printf '%s' "$HOOK_INPUT"
 		t.Fatal(err)
 	}
 	hm := LoadHooks(dir)
-	results := hm.Run(context.Background(), HookPreToolUse, `{"tool":"shell"}`)
+	results := hm.Run(context.Background(), HookPreToolUse, `{"tool":"bash"}`)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
 	if results[0].Error != nil {
 		t.Fatal(results[0].Error)
 	}
-	if results[0].Output != `{"tool":"shell"}` {
+	if results[0].Output != `{"tool":"bash"}` {
 		t.Fatalf("unexpected output %q", results[0].Output)
 	}
 }

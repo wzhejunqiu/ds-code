@@ -87,7 +87,7 @@ func ToolEndRows(name string, rawArgs []byte, workspace string) []ToolDisplayRow
 func DisplaySummary(name string, rawArgs []byte, workspace string, disp DisplayContext) (argsLine, command string) {
 	args := ArgsMap(rawArgs)
 	switch name {
-	case "shell":
+	case NameShell.String():
 		return ShellSummary(rawArgs)
 	case "read_file":
 		if p, _ := args["path"].(string); p != "" {

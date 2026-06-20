@@ -24,7 +24,7 @@ func TestBuildRegistry_planOmitsWriteTools(t *testing.T) {
 			t.Fatalf("plan missing %s", name)
 		}
 	}
-	for _, name := range []string{"shell", "apply_patch", "write_file", "agent"} {
+	for _, name := range []string{"bash", "apply_patch", "write_file", "agent"} {
 		if _, ok := plan.Get(name); ok {
 			t.Fatalf("plan should not have %s", name)
 		}

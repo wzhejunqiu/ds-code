@@ -18,7 +18,7 @@ func TestEngine_check_deniesHighRiskShell_variants(t *testing.T) {
 		"echo x |  bash",
 	}
 	for _, cmd := range cases {
-		err := e.Check("shell", map[string]any{"command": cmd})
+		err := e.Check("bash", map[string]any{"command": cmd})
 		if err == nil {
 			t.Fatalf("expected denial for %q", cmd)
 		}

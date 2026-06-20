@@ -7,7 +7,7 @@ import (
 func TestApplyPreToolUseResults_shellCommand(t *testing.T) {
 	raw := []byte(`{"command":"pip install foo"}`)
 	results := []HookResult{{Output: `{"command":"uv pip install foo"}`}}
-	out := applyPreToolUseResults("shell", raw, results)
+	out := applyPreToolUseResults("bash", raw, results)
 	if string(out) != `{"command":"uv pip install foo"}` {
 		t.Fatalf("got %s", string(out))
 	}
@@ -25,7 +25,7 @@ func TestApplyPreToolUseResults_argsMerge(t *testing.T) {
 func TestApplyPreToolUseResults_invalidJSONIgnored(t *testing.T) {
 	raw := []byte(`{"command":"ls"}`)
 	results := []HookResult{{Output: "not json"}}
-	out := applyPreToolUseResults("shell", raw, results)
+	out := applyPreToolUseResults("bash", raw, results)
 	if string(out) != string(raw) {
 		t.Fatalf("got %s", string(out))
 	}
@@ -37,7 +37,7 @@ func TestApplyPreToolUseResults_usesFirstValid(t *testing.T) {
 		{Output: "nope"},
 		{Output: `{"command":"new"}`},
 	}
-	out := applyPreToolUseResults("shell", raw, results)
+	out := applyPreToolUseResults("bash", raw, results)
 	if string(out) != `{"command":"new"}` {
 		t.Fatalf("got %s", string(out))
 	}

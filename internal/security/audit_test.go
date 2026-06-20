@@ -53,7 +53,7 @@ func TestS4_highRiskShellDenied(t *testing.T) {
 		"echo ok; sudo id",
 	}
 	for _, cmd := range cases {
-		err := perm.Check("shell", map[string]any{"command": cmd})
+		err := perm.Check("bash", map[string]any{"command": cmd})
 		if err == nil {
 			t.Fatalf("expected high-risk shell deny for %q", cmd)
 		}
@@ -110,7 +110,7 @@ func TestS11_readonlyBlocksWriteFile(t *testing.T) {
 
 func TestS14_readonlyBlocksShellHighRisk(t *testing.T) {
 	perm := permission.NewEngine("readonly", t.TempDir(), false)
-	err := perm.Check("shell", map[string]any{"command": "rm -rf /tmp/x"})
+	err := perm.Check("bash", map[string]any{"command": "rm -rf /tmp/x"})
 	if err == nil {
 		t.Fatal("expected readonly deny for rm -rf")
 	}

@@ -162,7 +162,7 @@ func itoa(n int) string {
 
 // IsShellDisplay reports tools using description + commands dual-line title.
 func IsShellDisplay(name string) bool {
-	return name == "shell"
+	return NameShell.Matches(name)
 }
 
 // ShellSummary formats shell tool display for non-command modes.
@@ -193,7 +193,7 @@ func ShellSummary(rawArgs []byte) (argsLine, command string) {
 		if cmd != "" {
 			desc = truncateOneLine(cmd, 80)
 		} else {
-			desc = "shell"
+			desc = NameShell.String()
 		}
 	}
 	list := FormatShellCommandsList(ParseShellCommands(cmd))

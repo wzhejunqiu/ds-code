@@ -1,5 +1,7 @@
 package tool
 
+import "github.com/wzhejunqiu/ds-code/internal/toolname"
+
 // Name is the canonical LLM-visible identifier for a registered builtin tool.
 // Each builtin tool's Name() returns the matching constant below.
 type Name string
@@ -8,7 +10,7 @@ const (
 	NameReadFile    Name = "read_file"
 	NameWriteFile   Name = "write_file"
 	NameApplyPatch  Name = "apply_patch"
-	NameShell       Name = "shell"
+	NameShell       Name = toolname.Bash
 	NameGlob        Name = "glob"
 	NameGrep        Name = "grep"
 	NameListDir     Name = "list_dir"

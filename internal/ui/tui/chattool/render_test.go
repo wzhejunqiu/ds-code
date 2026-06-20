@@ -15,7 +15,7 @@ func renderOut(b Block, width int, showDetails bool) string {
 func TestRenderBlockCollapsed_wrapsAtWidth(t *testing.T) {
 	long := strings.Repeat("x", 120)
 	out := renderOut(Block{
-		Name: "shell", Command: "echo",
+		Name: "bash", Command: "echo",
 		Result: long + "\n",
 	}, 40, false)
 	if strings.Contains(out, long) {
@@ -25,7 +25,7 @@ func TestRenderBlockCollapsed_wrapsAtWidth(t *testing.T) {
 
 func TestRenderBlockCollapsed(t *testing.T) {
 	out := renderOut(Block{
-		Name: "shell", Args: "echo hi",
+		Name: "bash", Args: "echo hi",
 		Command: "echo\x00echo hi", Result: "hi\n",
 	}, 60, false)
 	for _, want := range []string{"echo hi", "echo", "└", "hi"} {
@@ -61,7 +61,7 @@ func TestRenderBlockExpandHint(t *testing.T) {
 		lines = append(lines, fmt.Sprintf("line%d", i))
 	}
 	out := renderOut(Block{
-		Name: "shell", Command: "seq",
+		Name: "bash", Command: "seq",
 		Result: strings.Join(lines, "\n"),
 	}, 60, false)
 	if !strings.Contains(out, "+3 lines (ctrl+o to expand)") {
@@ -71,7 +71,7 @@ func TestRenderBlockExpandHint(t *testing.T) {
 
 func TestRenderBlockExpanded(t *testing.T) {
 	out := renderOut(Block{
-		Name: "shell", Args: "echo hi",
+		Name: "bash", Args: "echo hi",
 		Command: "echo\x00echo hi", Result: "hi\n",
 	}, 60, true)
 	for _, want := range []string{"echo hi", "command:", "echo hi", "└", "hi"} {

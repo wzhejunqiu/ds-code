@@ -135,7 +135,7 @@ func TestUpdate_escDuringPermissionPromptCancelsTurn(t *testing.T) {
 	m.Running = true
 	m.TurnCancel = func() {}
 	m.Overlay = state.OverlayPrompt
-	m.Prompt = &permission.PromptRequest{Tool: "shell", Reply: reply}
+	m.Prompt = &permission.PromptRequest{Tool: "bash", Reply: reply}
 	m.Chat = []chat.Block{{Role: chat.RoleUser}, {Role: chat.RoleAssistant, Streaming: true}}
 
 	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})

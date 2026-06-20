@@ -206,7 +206,7 @@ func toolShell() *Scenario {
 		Turns: []Turn{
 			{
 				ToolCalls: []llm.ToolCall{{
-					ID: "call_sh_1", Name: "shell", Arguments: string(args),
+					ID: "call_sh_1", Name: "bash", Arguments: string(args),
 				}},
 				FinishReason: "tool_calls",
 			},

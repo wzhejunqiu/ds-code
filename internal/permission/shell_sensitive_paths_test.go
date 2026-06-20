@@ -65,7 +65,7 @@ func TestEngine_shell_allowsGitDiffTripleDot(t *testing.T) {
 	root := t.TempDir()
 	e := NewEngine("auto", root, true)
 	cmd := "git diff origin/main...v0.1.1 --stat"
-	if err := e.Check("shell", map[string]any{"command": cmd}); err != nil {
+	if err := e.Check("bash", map[string]any{"command": cmd}); err != nil {
 		t.Fatalf("permission should allow git revision range: %v", err)
 	}
 }
@@ -73,7 +73,7 @@ func TestEngine_shell_allowsGitDiffTripleDot(t *testing.T) {
 func TestEngine_shell_allowsGoTestEllipsis(t *testing.T) {
 	root := t.TempDir()
 	e := NewEngine("auto", root, true)
-	if err := e.Check("shell", map[string]any{"command": "go test ./..."}); err != nil {
+	if err := e.Check("bash", map[string]any{"command": "go test ./..."}); err != nil {
 		t.Fatalf("permission should allow go package ellipsis: %v", err)
 	}
 }
@@ -95,7 +95,7 @@ func TestEngine_shell_gitDiffGoTest(t *testing.T) {
 		"go test ./...",
 	}
 	for _, cmd := range cmds {
-		if err := e.Check("shell", map[string]any{"command": cmd}); err != nil {
+		if err := e.Check("bash", map[string]any{"command": cmd}); err != nil {
 			t.Fatalf("command %q should be allowed: %v", cmd, err)
 		}
 	}
@@ -110,7 +110,7 @@ func TestEngine_shell_dotDotInside(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := NewEngine("auto", root, true)
-	if err := e.Check("shell", map[string]any{"command": "cat pkg/../pkg/readme.txt"}); err != nil {
+	if err := e.Check("bash", map[string]any{"command": "cat pkg/../pkg/readme.txt"}); err != nil {
 		t.Fatalf("legal .. segment should be allowed: %v", err)
 	}
 }
@@ -137,7 +137,7 @@ func TestEngine_shell_deniesSpillAbsPath(t *testing.T) {
 	e.SpillSessionID = "sess-1"
 
 	cmd := "cat " + spillPath
-	if err := e.Check("shell", map[string]any{"command": cmd}); err == nil {
+	if err := e.Check("bash", map[string]any{"command": cmd}); err == nil {
 		t.Fatal("shell should deny reading spill absolute path outside workspace")
 	}
 	if _, err := e.CheckReadablePath(spillPath); err != nil {

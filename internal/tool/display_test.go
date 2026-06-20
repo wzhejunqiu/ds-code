@@ -12,7 +12,7 @@ import (
 
 func TestDisplaySummary_shell(t *testing.T) {
 	args := `{"description":"Run tests","command":"cd /tmp && go test ./..."}`
-	line, cmd := tool.DisplaySummary("shell", []byte(args), "", tool.DisplayContext{})
+	line, cmd := tool.DisplaySummary("bash", []byte(args), "", tool.DisplayContext{})
 	if line != "Run tests" {
 		t.Fatalf("argsLine = %q", line)
 	}

@@ -3,6 +3,8 @@ package agent
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 // preToolUseOutput is optional JSON from a PreToolUse hook stdout.
@@ -31,7 +33,7 @@ func applyPreToolUseResults(toolName string, rawArgs []byte, results []HookResul
 			args = make(map[string]any)
 		}
 		changed := false
-		if patch.Command != "" && toolName == "shell" {
+		if patch.Command != "" && tool.NameShell.Matches(toolName) {
 			args["command"] = patch.Command
 			changed = true
 		}

@@ -12,7 +12,7 @@ import (
 
 func TestEngine_askNonInteractive_deniesShell(t *testing.T) {
 	e := permission.NewEngine("ask", t.TempDir(), false)
-	err := e.Check("shell", map[string]any{"command": "echo hi"})
+	err := e.Check("bash", map[string]any{"command": "echo hi"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -23,14 +23,14 @@ func TestEngine_askNonInteractive_deniesShell(t *testing.T) {
 
 func TestEngine_readonly_allowsGitStatus(t *testing.T) {
 	e := permission.NewEngine("readonly", t.TempDir(), true)
-	if err := e.Check("shell", map[string]any{"command": "git status"}); err != nil {
+	if err := e.Check("bash", map[string]any{"command": "git status"}); err != nil {
 		t.Fatalf("git status should be allowed in readonly: %v", err)
 	}
 }
 
 func TestEngine_readonly_deniesShellHighRisk(t *testing.T) {
 	e := permission.NewEngine("readonly", t.TempDir(), true)
-	err := e.Check("shell", map[string]any{"command": "rm -rf /tmp/foo"})
+	err := e.Check("bash", map[string]any{"command": "rm -rf /tmp/foo"})
 	if err == nil {
 		t.Fatal("expected error for rm -rf")
 	}
@@ -38,7 +38,7 @@ func TestEngine_readonly_deniesShellHighRisk(t *testing.T) {
 
 func TestEngine_readonly_deniesPrivilegedShell(t *testing.T) {
 	e := permission.NewEngine("readonly", t.TempDir(), true)
-	err := e.Check("shell", map[string]any{"command": "git push origin main"})
+	err := e.Check("bash", map[string]any{"command": "git push origin main"})
 	if err == nil {
 		t.Fatal("expected error for git push in readonly")
 	}
@@ -51,7 +51,7 @@ func TestEngine_askInteractive_shellAskSinglePrompt(t *testing.T) {
 		prompts++
 		return true, nil
 	}
-	if err := e.Check("shell", map[string]any{"command": "git push origin main"}); err != nil {
+	if err := e.Check("bash", map[string]any{"command": "git push origin main"}); err != nil {
 		t.Fatalf("git push: %v", err)
 	}
 	if prompts != 1 {
@@ -124,14 +124,14 @@ func TestEngine_resolvePath_rejectsAbsoluteOutsideWorkspace(t *testing.T) {
 
 func TestEngine_readonly_allowsShellListJobs(t *testing.T) {
 	e := permission.NewEngine("readonly", t.TempDir(), true)
-	if err := e.Check("shell", map[string]any{"list_jobs": true}); err != nil {
+	if err := e.Check("bash", map[string]any{"list_jobs": true}); err != nil {
 		t.Fatalf("list_jobs should be allowed in readonly: %v", err)
 	}
 }
 
 func TestEngine_askNonInteractive_deniesShellJobPoll(t *testing.T) {
 	e := permission.NewEngine("ask", t.TempDir(), false)
-	err := e.Check("shell", map[string]any{"job_id": "job-1"})
+	err := e.Check("bash", map[string]any{"job_id": "job-1"})
 	if !errors.Is(err, permission.ErrNeedTTY) {
 		t.Fatalf("err = %v, want ErrNeedTTY", err)
 	}
@@ -159,7 +159,7 @@ func TestEngine_check_deniesSensitivePathInPathsArray(t *testing.T) {
 
 func TestEngine_check_deniesHighRiskShell(t *testing.T) {
 	e := permission.NewEngine("auto", t.TempDir(), true)
-	err := e.Check("shell", map[string]any{"command": "rm -rf /"})
+	err := e.Check("bash", map[string]any{"command": "rm -rf /"})
 	if err == nil {
 		t.Fatal("expected high-risk shell denial")
 	}
@@ -178,7 +178,7 @@ func TestEngine_auto_deniesShellReadingSensitiveFile(t *testing.T) {
 		`python3 -c 'open(".env").read()'`,
 	}
 	for _, cmd := range cases {
-		err := e.Check("shell", map[string]any{"command": cmd})
+		err := e.Check("bash", map[string]any{"command": cmd})
 		if err == nil {
 			t.Fatalf("auto mode should deny shell reading sensitive paths: %q", cmd)
 		}
@@ -194,7 +194,7 @@ func TestEngine_auto_allowsShellBenignRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := permission.NewEngine("auto", root, true)
-	if err := e.Check("shell", map[string]any{"command": "cat readme.txt"}); err != nil {
+	if err := e.Check("bash", map[string]any{"command": "cat readme.txt"}); err != nil {
 		t.Fatalf("benign shell read should be allowed in auto: %v", err)
 	}
 }
@@ -324,7 +324,7 @@ func TestEngine_askInteractive_prompterRejects(t *testing.T) {
 
 func TestEngine_askInteractive_noPrompter(t *testing.T) {
 	e := permission.NewEngine("ask", t.TempDir(), true)
-	err := e.Check("shell", map[string]any{"command": "git push origin main"})
+	err := e.Check("bash", map[string]any{"command": "git push origin main"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -390,7 +390,7 @@ func TestEngine_auto_deniesShellOutsideWorkspace(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("secret\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err := e.Check("shell", map[string]any{"command": "cat " + outside})
+	err := e.Check("bash", map[string]any{"command": "cat " + outside})
 	if err == nil {
 		t.Fatal("expected denial for absolute path outside workspace")
 	}
@@ -401,7 +401,7 @@ func TestEngine_auto_deniesShellOutsideWorkspace(t *testing.T) {
 
 func TestEngine_auto_allowsShellRedirectToken(t *testing.T) {
 	e := permission.NewEngine("auto", t.TempDir(), true)
-	if err := e.Check("shell", map[string]any{"command": "echo hi 2>/dev/null"}); err != nil {
+	if err := e.Check("bash", map[string]any{"command": "echo hi 2>/dev/null"}); err != nil {
 		t.Fatalf("redirect token should not be blocked: %v", err)
 	}
 }

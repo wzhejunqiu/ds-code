@@ -189,10 +189,10 @@ func TestExecuteRun_atExpand_worktree(t *testing.T) {
 func TestExploreShell_gitStatusAllowed_rmDenied(t *testing.T) {
 	dir := t.TempDir()
 	perm := permission.NewEngine("readonly", dir, false)
-	if err := perm.Check("shell", map[string]any{"command": "git status"}); err != nil {
+	if err := perm.Check("bash", map[string]any{"command": "git status"}); err != nil {
 		t.Fatalf("git status should be allowed: %v", err)
 	}
-	if err := perm.Check("shell", map[string]any{"command": "rm -rf /"}); err == nil {
+	if err := perm.Check("bash", map[string]any{"command": "rm -rf /"}); err == nil {
 		t.Fatal("rm -rf should be denied in readonly")
 	}
 }

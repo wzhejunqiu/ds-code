@@ -39,6 +39,28 @@ func TestFormatRuntimeEnv_emptyCwdAndZeroTime(t *testing.T) {
 	}
 }
 
+func TestDefaultSystemBase_injectsBuiltinToolNames(t *testing.T) {
+	base := DefaultSystemBase()
+	for _, want := range []string{
+		"read_file",
+		"apply_patch",
+		"write_file",
+		"glob",
+		"grep",
+		"bash",
+	} {
+		if !strings.Contains(base, want) {
+			t.Fatalf("missing builtin tool name %q in DefaultSystemBase", want)
+		}
+	}
+	if strings.Contains(base, "使用 Read") || strings.Contains(base, "使用 Edit") {
+		t.Fatalf("DefaultSystemBase should not contain generic tool names: %q", base)
+	}
+	if !strings.Contains(base, "`methodName`") || !strings.Contains(base, "`method_name`") {
+		t.Fatalf("DefaultSystemBase should preserve markdown inline code from prompt.md: %q", base)
+	}
+}
+
 func TestMergeSystem_runtimeEnvBeforeAgentsMD(t *testing.T) {
 	merged := MergeSystem("BASE", "工作区（project_root）：/x", "AGENTS", "", "", "", "")
 	if !strings.Contains(merged, "## 运行环境") {

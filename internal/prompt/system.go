@@ -7,7 +7,7 @@ func MergeSystemStatic(systemBase, toolsJSON string) string {
 	var b strings.Builder
 	base := systemBase
 	if strings.TrimSpace(base) == "" {
-		base = DefaultSystemBase
+		base = DefaultSystemBase()
 	}
 	b.WriteString(strings.TrimSpace(base))
 	appendSection(&b, SectionTools, toolsJSON)

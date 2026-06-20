@@ -247,7 +247,7 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 		s.Cfg.ProjectRoot, cwd, time.Now(), versioninfo.PlatformForPrompt(),
 	)
 	view := &APIContextView{
-		SystemPrompt: prompt.DefaultSystemBase,
+		SystemPrompt: prompt.DefaultSystemBase(),
 		RuntimeEnv:   runtimeEnv,
 		AgentsMD:     s.AgentsMD,
 		Rules:        s.Rules,

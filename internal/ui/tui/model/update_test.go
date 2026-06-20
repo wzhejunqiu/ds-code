@@ -71,7 +71,7 @@ func TestListenPrompt_permissionAsk(t *testing.T) {
 	initCmd := m.Init()
 	_ = initCmd
 
-	ch <- permission.PromptRequest{Tool: "shell", Summary: "rm -rf /"}
+	ch <- permission.PromptRequest{Tool: "bash", Summary: "rm -rf /"}
 	if listenCmd := m.listenPrompt(); listenCmd != nil {
 		if msg := listenCmd(); msg != nil {
 			updated, _ := m.Update(msg)
@@ -85,7 +85,7 @@ func TestListenPrompt_permissionAsk(t *testing.T) {
 	if m.Prompt == nil {
 		t.Fatal("expected prompt request stored")
 	}
-	if m.Prompt.Tool != "shell" {
+	if m.Prompt.Tool != "bash" {
 		t.Fatalf("prompt tool = %q", m.Prompt.Tool)
 	}
 

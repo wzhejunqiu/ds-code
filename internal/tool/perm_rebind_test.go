@@ -53,10 +53,10 @@ func TestRebindRegistryPerm_deferred(t *testing.T) {
 	child := permission.NewEngine("auto", "/worktree", false)
 
 	reg := NewRegistry()
-	reg.Register(WrapDeferred(&permToolStub{name: "shell", perm: parent}))
+	reg.Register(WrapDeferred(&permToolStub{name: "bash", perm: parent}))
 
 	out := RebindRegistryPerm(reg, child)
-	tl, ok := out.Get("shell")
+	tl, ok := out.Get("bash")
 	if !ok {
 		t.Fatal("missing tool")
 	}
