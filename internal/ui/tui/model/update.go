@@ -22,6 +22,38 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := overlay.OnWindowSize(&m.State, msg.Width, msg.Height, m.syncAllViews)
 		return m, m.withHPSync(tea.Batch(cmd, m.scheduleNoticeScroll()))
 	case tea.KeyMsg:
+		events, passthrough, pending := input.AccumulateLeakedMouseKeys(&m.mouseLeakBuf, msg)
+		if pending {
+			var cmds []tea.Cmd
+			for _, mm := range events {
+				_, cmd := m.handleMouse(mm)
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+			}
+			return m, tea.Batch(cmds...)
+		}
+		if len(events) > 0 {
+			var cmds []tea.Cmd
+			for _, mm := range events {
+				_, cmd := m.handleMouse(mm)
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+			}
+			if len(passthrough.Runes) > 0 {
+				msg = passthrough
+				if cmd, handled := m.updateKey(msg); handled {
+					return m, tea.Batch(append(cmds, cmd)...)
+				}
+				updated, cmd := m.updateInput(msg)
+				return updated, tea.Batch(append(cmds, cmd)...)
+			}
+			return m, tea.Batch(cmds...)
+		}
+		if len(passthrough.Runes) > 0 {
+			msg = passthrough
+		}
 		if cmd, handled := m.updateKey(msg); handled {
 			return m, cmd
 		}

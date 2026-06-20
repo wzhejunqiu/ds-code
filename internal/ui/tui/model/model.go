@@ -44,6 +44,7 @@ type Model struct {
 
 	scroll          scroll.Controller
 	scrollDeferSync bool
+	mouseLeakBuf    string
 }
 
 const (

@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/slash"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/input"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
 
@@ -151,3 +152,81 @@ func TestUpdateCompletionPreservesCursorOnSameFilter(t *testing.T) {
 
 // silence import
 var _ = textinput.New
+
+func TestUpdate_recoversLeakedMouseWheelWithoutInputGarbage(t *testing.T) {
+	m := New(&deps.Deps{})
+	m.Width = 80
+	m.chatVP.Width = 80
+	m.chatVP.Height = 10
+	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+
+	before := m.chatVP.YOffset
+	updated, cmd := m.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("[<65;87;6M"),
+	})
+	m = updated.(*Model)
+	if m.input.Value() != "" {
+		t.Fatalf("input = %q, want empty", m.input.Value())
+	}
+	if cmd == nil {
+		t.Fatal("expected wheel scroll tick command")
+	}
+	for i := 0; i < 8 && m.chatVP.YOffset <= before; i++ {
+		updated, _ = m.Update(msg.WheelScrollTickMsg{})
+		m = updated.(*Model)
+	}
+	if m.chatVP.YOffset <= before {
+		t.Fatalf("wheel down: yOffset = %d, want > %d", m.chatVP.YOffset, before)
+	}
+}
+
+func TestUpdate_recoversLeakedMouseWheelCharByChar(t *testing.T) {
+	m := New(&deps.Deps{})
+	m.Width = 80
+	m.chatVP.Width = 80
+	m.chatVP.Height = 10
+	m.chatVP.SetContent(strings.Repeat("line\n", 50))
+
+	seq := "[<65;87;6M"
+	var updated tea.Model = m
+	var cmd tea.Cmd
+	for _, r := range seq {
+		updated, cmd = updated.Update(tea.KeyMsg{
+			Type:  tea.KeyRunes,
+			Runes: []rune{r},
+		})
+	}
+	m = updated.(*Model)
+	if m.input.Value() != "" {
+		t.Fatalf("input = %q, want empty", m.input.Value())
+	}
+	if m.mouseLeakBuf != "" {
+		t.Fatalf("mouseLeakBuf = %q, want empty", m.mouseLeakBuf)
+	}
+	if cmd == nil {
+		t.Fatal("expected wheel scroll tick command")
+	}
+	before := 0
+	for i := 0; i < 8 && m.chatVP.YOffset <= before; i++ {
+		updated, _ = m.Update(msg.WheelScrollTickMsg{})
+		m = updated.(*Model)
+	}
+	if m.chatVP.YOffset <= before {
+		t.Fatalf("wheel down: yOffset = %d, want > %d", m.chatVP.YOffset, before)
+	}
+}
+
+func TestUpdate_bracketThenNormalText(t *testing.T) {
+	m := New(&deps.Deps{})
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[")})
+	m = updated.(*Model)
+	if m.input.Value() != "" {
+		t.Fatal("expected [ to be buffered, not inserted")
+	}
+	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo")})
+	m = updated.(*Model)
+	if got := m.input.Value(); got != "[foo" {
+		t.Fatalf("input = %q, want [foo", got)
+	}
+}
