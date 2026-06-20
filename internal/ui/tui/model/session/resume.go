@@ -101,9 +101,12 @@ func ClearResumePicker(s *state.State, picker *component.Picker) {
 	s.Overlay = state.OverlayNone
 	s.ResumeSessions = nil
 	s.ResumeFilter = ""
+	s.Complete = nil
+	s.CompleteFilterKey = ""
 	picker.Clear()
 	s.OverlayText = ""
 	s.ResumePending = false
+	s.ResumeFilterSeq++
 }
 
 func ScheduleResumeFilter(s *state.State, filter string, picker *component.Picker) tea.Cmd {

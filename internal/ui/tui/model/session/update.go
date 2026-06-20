@@ -33,6 +33,9 @@ func UpdateResumeList(s *state.State, m msg.ResumeListMsg, picker *component.Pic
 		ClearResumePicker(s, picker)
 		return nil
 	}
+	if s.Overlay != state.OverlayResume && !s.ResumePending {
+		return nil
+	}
 	ApplyResumeSessions(s, m.Filter, m.Sessions, picker)
 	return nil
 }

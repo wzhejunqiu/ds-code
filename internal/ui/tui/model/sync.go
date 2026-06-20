@@ -42,6 +42,14 @@ func (m *Model) syncChatView() {
 	m.updatePlainLines()
 }
 
+func (m *Model) refreshLayout() {
+	if m.Width == 0 {
+		return
+	}
+	totalLines := m.lineCatalog.TotalLines()
+	view.Layout(&m.State, &m.chatVP, &m.toolVP, &m.input, totalLines)
+}
+
 func (m *Model) scheduleSyncChatView() tea.Cmd {
 	if m.scroll.ScrollActive() || m.scroll.HasPending() {
 		m.scrollDeferSync = true

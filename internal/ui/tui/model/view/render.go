@@ -328,6 +328,7 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 	if s.ErrLine != "" {
 		chromeH += 2
 	}
+	chromeH += overlayChromeLines(s)
 
 	toolLines := 0
 	if s.ToolOpen && len(s.ToolLines) > 0 {
@@ -356,6 +357,15 @@ func Layout(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.Mod
 		toolVP.SetWidth(innerW)
 		toolVP.SetHeight(toolLines)
 	}
+}
+
+// overlayChromeLines returns terminal rows reserved below the footer for OverlayText (see Render).
+func overlayChromeLines(s *state.State) int {
+	if s.Overlay == state.OverlayNone || s.OverlayText == "" {
+		return 0
+	}
+	// Render appends "\n\n" before the overlay box.
+	return ContentLineCount(s.OverlayText) + 2
 }
 
 func RefreshStatus(s *state.State) {

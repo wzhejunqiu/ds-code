@@ -115,6 +115,29 @@ func TestLayoutUsesFullContentLineCount(t *testing.T) {
 	}
 }
 
+func TestLayout_reservesOverlaySpace(t *testing.T) {
+	s := &state.State{
+		Width:  80,
+		Height: 24,
+	}
+	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
+	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
+
+	Layout(s, &chatVP, &toolVP, nil, 200)
+	withoutOverlay := chatVP.Height()
+
+	s.Overlay = state.OverlayComplete
+	s.OverlayText = "/help — show help\n/resume — resume session\n/clear — new session"
+	Layout(s, &chatVP, &toolVP, nil, 200)
+	withOverlay := chatVP.Height()
+
+	wantDelta := overlayChromeLines(s)
+	if withoutOverlay-withOverlay != wantDelta {
+		t.Fatalf("chat height delta = %d, want %d (without=%d with=%d)",
+			withoutOverlay-withOverlay, wantDelta, withoutOverlay, withOverlay)
+	}
+}
+
 func TestSyncChat_visibleWindowOnly(t *testing.T) {
 	s := &state.State{
 		Width:  80,

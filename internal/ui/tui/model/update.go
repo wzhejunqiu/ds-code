@@ -89,10 +89,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.ResumeFilterTickMsg:
 		return m, session.UpdateResumeFilterTick(&m.State, msg)
 	case tuimsg.ResumeListMsg:
-		return m, session.UpdateResumeList(&m.State, msg, &m.resumePicker)
+		session.UpdateResumeList(&m.State, msg, &m.resumePicker)
+		m.refreshLayout()
+		return m, nil
 	case tuimsg.SessionResumedMsg:
 		session.UpdateSessionResumed(&m.State, msg, &m.resumePicker, m.syncChatAfterLoad, m.syncToolView, m.refreshStatus)
-		return m, m.scheduleSyncChatView()
+		var cmds []tea.Cmd
+		cmds = append(cmds, m.scheduleSyncChatView())
+		if c := input.UpdateCompletion(&m.State, m.input.Value(), &m.completePicker, &m.resumePicker); c != nil {
+			cmds = append(cmds, c)
+		}
+		m.refreshLayout()
+		return m, tea.Batch(cmds...)
 	case tuimsg.HistoryLoadedMsg:
 		session.UpdateHistoryLoaded(&m.State, msg, m.syncChatAfterLoad, m.refreshStatus)
 		return m, m.scheduleSyncChatView()
@@ -239,6 +247,7 @@ func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if c := input.UpdateCompletion(&m.State, m.input.Value(), &m.completePicker, &m.resumePicker); c != nil {
 		cmds = append(cmds, c)
 	}
+	m.refreshLayout()
 
 	if key, ok := msg.(tea.KeyPressMsg); ok && key.String() == "enter" && !key.Mod.Contains(tea.ModAlt) {
 		if m.Overlay == state.OverlayResume || m.Overlay == state.OverlayTCase {
@@ -250,6 +259,7 @@ func (m *Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Overlay = state.OverlayNone
 			input.ClearCompletePicker(&m.State, &m.completePicker)
 			session.ClearResumePicker(&m.State, &m.resumePicker)
+			m.refreshLayout()
 			cmds = append(cmds, input.SubmitLine(&m.State, line, m.syncChatView, m.syncToolView))
 			if turn.NeedsPlanningTick(&m.State) {
 				cmds = append(cmds, m.nextThinkingTickCmd())
