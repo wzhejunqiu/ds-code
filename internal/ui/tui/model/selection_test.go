@@ -203,3 +203,71 @@ func TestSelection_plainTextFromStyled(t *testing.T) {
 		t.Fatalf("got %q", plain)
 	}
 }
+
+func TestVirtualList_selectionPlainLines(t *testing.T) {
+	m := New(testDeps(true))
+	seedChatLines(m, 40)
+	m.updatePlainLines()
+
+	catalogPlain := m.lineCatalog.PlainLines()
+	if len(m.plainLines) == 0 || len(catalogPlain) == 0 {
+		t.Fatal("expected plain lines from virtual catalog")
+	}
+	if len(m.plainLines) != len(catalogPlain) {
+		t.Fatalf("plainLines len %d != catalog len %d", len(m.plainLines), len(catalogPlain))
+	}
+	for i := range m.plainLines {
+		if m.plainLines[i] != catalogPlain[i] {
+			t.Fatalf("line %d mismatch: %q vs %q", i, m.plainLines[i], catalogPlain[i])
+		}
+	}
+
+	m.selRange = selection.Range{
+		Start: selection.Point{Line: 5, Col: 0},
+		End:   selection.Point{Line: 7, Col: 3},
+	}
+	text := selection.Extract(m.plainLines, m.selRange)
+	if text == "" {
+		t.Fatal("expected non-empty cross-window selection extract")
+	}
+}
+
+func TestDoubleClick_wordSelection(t *testing.T) {
+	m := New(testDeps(true))
+	seedChatLines(m, 5)
+	m.chatVP.SetHeight(10)
+	m.updatePlainLines()
+	if len(m.plainLines) == 0 {
+		t.Fatal("expected plain lines")
+	}
+
+	click := tea.MouseClickMsg{X: 5, Y: 2, Button: tea.MouseLeft}
+	_, _ = m.handleMouse(click)
+	_, _ = m.handleMouse(click)
+
+	if !m.selRange.Active() {
+		t.Fatal("expected word selection after double click")
+	}
+	if m.selDragging {
+		t.Fatal("double click should not leave dragging state")
+	}
+}
+
+func TestShiftDown_extendsSelection(t *testing.T) {
+	m := New(testDeps(true))
+	seedChatLines(m, 20)
+	m.updatePlainLines()
+	m.selRange = selection.Range{
+		Start: selection.Point{Line: 2, Col: 0},
+		End:   selection.Point{Line: 2, Col: 4},
+	}
+
+	cmd, handled := m.handleSelectionKey(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModShift})
+	if !handled {
+		t.Fatal("expected shift+down to extend selection")
+	}
+	if m.selRange.End.Line != 3 {
+		t.Fatalf("end line = %d, want 3", m.selRange.End.Line)
+	}
+	_ = cmd
+}

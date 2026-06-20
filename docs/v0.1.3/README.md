@@ -1,7 +1,7 @@
 # ds-code v0.1.3 版本文档
 
 > 版本：v0.1.3  
-> 状态：规划中  
+> 状态：已实现（待发布 tag）  
 > 基线版本：v0.1.2  
 > 更新日期：2026-06-20  
 > 审核：2026-06-20（五轮；对照 v0.1.2 基线代码 **66** 个 charm import 文件 + [UPGRADE_GUIDE_V2](https://github.com/charmbracelet/bubbletea/blob/main/UPGRADE_GUIDE_V2.md)）

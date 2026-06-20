@@ -12,7 +12,8 @@ import (
 
 // safeModel wraps the TUI model and recovers from render/update panics.
 type safeModel struct {
-	inner *model.Model
+	inner    *model.Model
+	lastView tea.View
 }
 
 func newSafeModel(d *Deps) *safeModel {
@@ -63,6 +64,7 @@ func (s *safeModel) View() tea.View {
 			}
 		}()
 		view = s.inner.View()
+		s.lastView = view
 	}()
 	if view.Content == "" && !view.AltScreen {
 		view = s.fallbackView()
@@ -79,8 +81,15 @@ func (s *safeModel) fallbackView() tea.View {
 		lipgloss.NewStyle().Foreground(theme.Error).Render(msg) +
 			"\n\nPress Esc to clear this message.",
 	))
-	v.AltScreen = true
-	v.MouseMode = tea.MouseModeCellMotion
+	v.AltScreen = s.lastView.AltScreen
+	v.MouseMode = s.lastView.MouseMode
+	v.Cursor = s.lastView.Cursor
+	if !v.AltScreen {
+		v.AltScreen = true
+	}
+	if v.MouseMode == tea.MouseModeNone {
+		v.MouseMode = tea.MouseModeCellMotion
+	}
 	return v
 }
 

@@ -120,5 +120,45 @@ func TestResumeDoubleEnterViewDoesNotPanic(t *testing.T) {
 	_ = sm.View()
 }
 
+func TestView_returnsTeaView(t *testing.T) {
+	sm := newSafeModel(&Deps{
+		Store:     session.NewMemoryStore(),
+		SessionID: "x",
+		Version:   "v",
+		Cfg:       &config.Config{ProjectRoot: "/tmp", LLM: config.LLMConfig{Model: "m"}},
+	})
+	sm.inner.Width = 80
+	sm.inner.Height = 24
+	sm.inner.TestSyncChatView()
+
+	v := sm.View()
+	if !v.AltScreen {
+		t.Fatal("expected AltScreen=true")
+	}
+	if v.MouseMode != tea.MouseModeCellMotion {
+		t.Fatalf("mouse mode = %v, want CellMotion", v.MouseMode)
+	}
+}
+
+func TestFallbackView_returnsTeaView(t *testing.T) {
+	sm := &safeModel{
+		lastView: tea.View{
+			AltScreen: true,
+			MouseMode: tea.MouseModeCellMotion,
+			Cursor:    tea.NewCursor(3, 2),
+		},
+	}
+	v := sm.fallbackView()
+	if !v.AltScreen {
+		t.Fatal("expected AltScreen=true")
+	}
+	if v.MouseMode != tea.MouseModeCellMotion {
+		t.Fatalf("mouse mode = %v, want passthrough CellMotion", v.MouseMode)
+	}
+	if v.Cursor == nil || v.Cursor.X != 3 || v.Cursor.Y != 2 {
+		t.Fatalf("cursor = %+v, want passthrough at (3,2)", v.Cursor)
+	}
+}
+
 // silence deps import
 var _ = deps.Deps{}

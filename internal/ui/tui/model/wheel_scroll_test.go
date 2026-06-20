@@ -117,6 +117,21 @@ func TestWheelScroll_worksAfterCopySelection(t *testing.T) {
 	}
 }
 
+func TestRunningMode_chatVPScrollKey(t *testing.T) {
+	m := New(testDeps(true))
+	seedChatLines(m, 80)
+	m.chatVP.SetHeight(10)
+	m.Running = true
+	m.chatScrollY = 0
+
+	before := m.chatScrollY
+	updated, _ := m.updateInput(tea.KeyPressMsg{Code: tea.KeyPgDown})
+	m = updated.(*Model)
+	if m.chatScrollY <= before {
+		t.Fatalf("chatScrollY = %d, want > %d after page down while running", m.chatScrollY, before)
+	}
+}
+
 func TestJumpViewport_clampsTotalLines(t *testing.T) {
 	m := New(testDeps(true))
 	m.Width = 80

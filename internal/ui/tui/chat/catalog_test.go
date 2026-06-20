@@ -95,3 +95,46 @@ func TestLineCatalog_noStyledStorage(t *testing.T) {
 		t.Fatal("expected visible styled window")
 	}
 }
+
+func TestWindowSize_invalidatesCatalog(t *testing.T) {
+	var c LineCatalog
+	blocks := []Block{{Role: RoleUser, Content: strings.Repeat("word ", 200)}}
+	wide := catalogInput("", blocks)
+	wide.Width = 80
+	c.Rebuild(wide)
+	wideLines := c.TotalLines()
+
+	narrow := catalogInput("", blocks)
+	narrow.Width = 40
+	c.Rebuild(narrow)
+	narrowLines := c.TotalLines()
+
+	if narrowLines <= wideLines {
+		t.Fatalf("narrow width should increase line count: wide=%d narrow=%d", wideLines, narrowLines)
+	}
+	if !c.NeedsRebuild(80, false) {
+		t.Fatal("catalog should need rebuild after width change")
+	}
+}
+
+func TestVirtualList_streamTailInvalidate(t *testing.T) {
+	var c LineCatalog
+	var cache RenderCache
+	blocks := []Block{{Role: RoleUser, Content: "hello"}}
+	in := catalogInput("hdr", blocks)
+	in.Cache = &cache
+	c.Rebuild(in)
+	prefix := append([]string(nil), c.plain[:min(3, len(c.plain))]...)
+
+	blocks = append(blocks, Block{Role: RoleUser, Content: "world"})
+	in.Blocks = blocks
+	c.Rebuild(in)
+	if len(c.plain) <= len(prefix) {
+		t.Fatal("expected tail append to grow catalog")
+	}
+	for i := range prefix {
+		if c.plain[i] != prefix[i] {
+			t.Fatalf("prefix line %d changed on tail invalidate", i)
+		}
+	}
+}

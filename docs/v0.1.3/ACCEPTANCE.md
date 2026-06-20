@@ -1,21 +1,21 @@
 # v0.1.3 验收标准
 
 > 版本：v0.1.3  
-> 状态：规划中  
+> 状态：已实现（待发布 tag）  
 > 更新日期：2026-06-20  
 > 审核：2026-06-20（五轮）  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md) · 设计：[DESIGN.md](DESIGN.md)
 
 ## 1. 总体验收
 
-- [ ] 版本号标记为 v0.1.3
-- [ ] `go.mod` 目标：`charm.land/bubbletea/v2` v2.0.7+、`bubbles/v2` v2.1.0+、`lipgloss/v2` v2.0.4+、`glamour/v2` v2.0.1+（FR-1.1–1.4）
-- [ ] **无** `github.com/charmbracelet/{bubbletea,bubbles,lipgloss,glamour}` 在 `go.mod`、`.go` 源码中（注释除外）（FR-1.7、NFR-7）
-- [ ] `go.sum` tidy 后无 v1 charm 模块行（FR-1.13）
-- [ ] `make test` / `make test-tui` / `make lint` / `make vet` / `make verify-release` 通过
-- [ ] `make verify-charm-v2`（或等价脚本）通过（NFR-4）
-- [ ] [CHANGELOG.md](../../CHANGELOG.md) v0.1.3 条目（含 **Breaking: Bubble Tea v2**）
-- [ ] `permission.IsSensitiveAbs` 不可包外引用（FR-4）
+- [ ] 版本号标记为 v0.1.3（发布打 `v0.1.3` tag 时由 ldflags 注入）
+- [x] `go.mod` 目标：`charm.land/bubbletea/v2` v2.0.7+、`bubbles/v2` v2.1.0+、`lipgloss/v2` v2.0.4+、`glamour/v2` v2.0.1+（FR-1.1–1.4）
+- [x] **无** `github.com/charmbracelet/{bubbletea,bubbles,lipgloss,glamour}` 在 `go.mod`、`.go` 源码中（注释除外）（FR-1.7、NFR-7）
+- [x] `go.sum` tidy 后无 v1 charm 模块行（FR-1.13）
+- [x] `make test` / `make test-tui` / `make lint` / `make vet` / `make verify-release` 通过
+- [x] `make verify-charm-v2`（或等价脚本）通过（NFR-4）；已纳入 CI `test` job
+- [x] [CHANGELOG.md](../../CHANGELOG.md) v0.1.3 条目（含 **Breaking: Bubble Tea v2**）
+- [x] `permission.IsSensitiveAbs` 不可包外引用（FR-4）
 
 ## 2. v2 迁移验收（FR-1）
 
@@ -27,7 +27,7 @@
 | `rg 'charm.land/bubbletea/v2' internal/` | TUI 与 tuitest 均 v2 import |
 | `rg 'charm.land/lipgloss/v2' internal/logging/warn.go` | v2 lipgloss |
 | `go list -m charm.land/bubbletea/v2` | v2.0.7 或更高 |
-| charm import `.go` 文件数 | 66 个全部完成路径替换（NFR-6） |
+| charm import `.go` 文件数 | 64 个完成路径替换（NFR-6；原规划 66，随删 HP 相关文件略减） |
 
 ### AC-2.2 声明式 View
 
@@ -238,75 +238,76 @@
 
 ### 6.1 须全绿或改写（P0）
 
-- [ ] `internal/ui/tui/chattool/render_test.go`（lipgloss v2）
-- [ ] `internal/ui/tui/header_width_test.go`
-- [ ] `internal/ui/tui/header/scroll_test.go`
-- [ ] `internal/ui/tui/chat/cache_test.go`
-- [ ] `internal/ui/tui/chat/planning_test.go`
-- [ ] `internal/ui/tui/markdown/incremental_test.go`
-- [ ] `internal/ui/tui/markdown/stress_test.go`
-- [ ] `internal/ui/tui/selection/selection_test.go`
-- [ ] `internal/ui/clipboard/clipboard_test.go`（降级路径；FR-1.9）
-- [ ] `internal/ui/tui/scroll/drain_test.go`
-- [ ] `internal/ui/tui/header/notice_test.go`（lipgloss v2）
-- [ ] `internal/ui/tui/chat/render_test.go`（lipgloss v2）
-- [ ] `internal/ui/tui/model/wheel_scroll_test.go`（**移除** `HighPerformanceRendering` 断言）
-- [ ] `internal/ui/tui/model/status_test.go`
-- [ ] `internal/ui/tui/model/turn/*_test.go`（async、cancel、update、blocks）
-- [ ] `internal/ui/tui/model/session/resume_test.go`
-- [ ] `internal/ui/tui/model/view/render_test.go`
-- [ ] `internal/ui/tui/model/viewport_hp_test.go` → **改写**（`HistoryLoaded`/`SessionResumed` 断言 `scheduleSyncChatView` 或非 HP sync；FR-1.10m）
-- [ ] `internal/ui/tui/model/selection_test.go`（**移除** HP 断言）
-- [ ] `internal/ui/tui/model/input/mouse_escape_test.go`
-- [ ] `internal/ui/tui/model/input_test.go`
-- [ ] `internal/ui/tui/model/cancel_test.go`
-- [ ] `internal/ui/tui/safe_model_test.go`
-- [ ] `internal/ui/tui/component/picker_test.go`
-- [ ] `internal/ui/tui/model/subagent/nav_test.go`
-- [ ] `internal/ui/tui/markdown/render_test.go`
-- [ ] `internal/ui/tui/history/history_test.go`
-- [ ] `internal/ui/tui/model/turn/update_test.go`
-- [ ] `internal/ui/tui/model/turn/cancel_test.go`
-- [ ] `internal/ui/tui/model/turn/blocks_test.go`
-- [ ] `internal/ui/tui/model/turn_metrics_test.go`
-- [ ] `internal/ui/tui/subagent/registry_test.go`
-- [ ] `internal/tuitest/*`
+- [x] `internal/ui/tui/chattool/render_test.go`（lipgloss v2）
+- [x] `internal/ui/tui/header_width_test.go`
+- [x] `internal/ui/tui/header/scroll_test.go`
+- [x] `internal/ui/tui/chat/cache_test.go`
+- [x] `internal/ui/tui/chat/planning_test.go`
+- [x] `internal/ui/tui/markdown/incremental_test.go`
+- [x] `internal/ui/tui/markdown/stress_test.go`
+- [x] `internal/ui/tui/selection/selection_test.go`
+- [x] `internal/ui/clipboard/clipboard_test.go`（降级路径；FR-1.9）
+- [x] `internal/ui/tui/scroll/drain_test.go`
+- [x] `internal/ui/tui/header/notice_test.go`（lipgloss v2）
+- [x] `internal/ui/tui/chat/render_test.go`（lipgloss v2）
+- [x] `internal/ui/tui/model/wheel_scroll_test.go`（**移除** `HighPerformanceRendering` 断言）
+- [x] `internal/ui/tui/model/status_test.go`
+- [x] `internal/ui/tui/model/turn/*_test.go`（async、cancel、update、blocks）
+- [x] `internal/ui/tui/model/session/resume_test.go`
+- [x] `internal/ui/tui/model/view/render_test.go`
+- [x] `internal/ui/tui/model/resume_scroll_test.go`（替代 `viewport_hp_test.go`；`HistoryLoaded`/`SessionResumed` 滚底；FR-1.10m）
+- [x] `internal/ui/tui/model/selection_test.go`（**移除** HP 断言）
+- [x] `internal/ui/tui/model/input/mouse_escape_test.go`
+- [x] `internal/ui/tui/model/input_test.go`
+- [x] `internal/ui/tui/model/cancel_test.go`
+- [x] `internal/ui/tui/safe_model_test.go`
+- [x] `internal/ui/tui/component/picker_test.go`
+- [x] `internal/ui/tui/model/subagent/nav_test.go`
+- [x] `internal/ui/tui/markdown/render_test.go`
+- [x] `internal/ui/tui/history/history_test.go`
+- [x] `internal/ui/tui/model/turn/update_test.go`
+- [x] `internal/ui/tui/model/turn/cancel_test.go`
+- [x] `internal/ui/tui/model/turn/blocks_test.go`
+- [x] `internal/ui/tui/model/turn_metrics_test.go`
+- [x] `internal/ui/tui/subagent/registry_test.go`
+- [x] `internal/tuitest/*`
 
 ### 6.2 新增建议
 
-- [ ] `TestLineCatalog_totalLines`（FR-3.7.1）
-- [ ] `TestSyncChat_visibleWindowOnly`（FR-3.7.2；SetContent 长度 ≈ viewport 行数）
-- [ ] `TestLineCatalog_windowCost` / `BenchmarkSyncChatView`（FR-3.7.7）
-- [ ] `TestVirtualList_selectionPlainLines`（FR-3.7.4；跨窗口选区复制）
-- [ ] `TestVirtualList_streamTailInvalidate`（FR-3.7.5）
-- [ ] `TestKeyRelease_ignored`（FR-1.10aa）
+- [x] `TestLineCatalog_totalLines`（FR-3.7.1）
+- [x] `TestSyncChat_visibleWindowOnly`（FR-3.7.2；SetContent 长度 ≈ viewport 行数）
+- [x] `TestLineCatalog_windowCost` / `BenchmarkSyncChatView`（FR-3.7.7）
+- [x] `TestVirtualList_selectionPlainLines`（FR-3.7.4；跨窗口选区复制）
+- [x] `TestVirtualList_streamTailInvalidate`（FR-3.7.5）
+- [x] `TestKeyRelease_ignored`（FR-1.10aa）
 - [ ] `TestMouseMotion_dragSelection`（FR-1.10y）
-- [ ] `TestRunningMode_chatVPScrollKey`（FR-1.10ab）
+- [x] `TestRunningMode_chatVPScrollKey`（FR-1.10ab）
 - [ ] `TestEventsChannel_turnDone`（FR-1.10x）
-- [ ] `TestPasteMsg_textinput`（FR-1.10o）
-- [ ] `TestView_noSideEffects`（FR-1.10q）
-- [ ] `TestFallbackView_returnsTeaView`（panic 路径）
+- [x] `TestPasteMsg_textinput`（FR-1.10o；见 `input_test.go`）
+- [x] `TestView_noSideEffects`（FR-1.10q）
+- [x] `TestFallbackView_returnsTeaView`（panic 路径）
 - [ ] `TestBuildTag_releaseAndTuitestCompile`（FR-1.10r）
-- [ ] `TestView_returnsTeaView`（AltScreen/MouseMode）
+- [x] `TestView_returnsTeaView`（AltScreen/MouseMode）
 - [ ] `TestInit_requestsWindowSize`
 - [ ] `TestKeyPress_enterEscSpace`（`"enter"` / `"esc"` / `"space"`）
-- [ ] `TestMouseWheel_smoothScroll`（v2 `MouseWheelMsg`）
-- [ ] `TestMouseEscape_passthroughText`（FR-1.10u；非 `Runes`）
-- [ ] `TestWheelScroll_noViewportHP`（FR-1.10t）
-- [ ] `TestChatInteractionEnabled_overlayBlocks`（FR-1.10s）
-- [ ] `TestDetectProfile_integrated`（FR-2.11；`TERM_PROGRAM=cursor`）
+- [x] `TestMouseWheel_smoothScroll`（v2 `MouseWheelMsg`；见 `wheel_scroll_test.go`）
+- [x] `TestMouseEscape_passthroughText`（FR-1.10u；见 `mouse_escape_test.go`）
+- [x] `TestWheelScroll_noViewportHP`（FR-1.10t；HP 已删除，无引用）
+- [x] `TestChatInteractionEnabled_overlayBlocks`（FR-1.10s）
+- [x] `TestDetectProfile_integrated`（FR-2.11；`TERM_PROGRAM=cursor`）
 - [ ] `TestTextinput_cursorOrViewCursor`（FR-1.10w；若 v2 需要）
 - [ ] `TestSetClipboard_orFallback`
-- [ ] `TestScrollSpeed_env`（`DS_CODE_SCROLL_SPEED`）
-- [ ] FR-3.1：`TestExecuteRun_atExpand`（`spawn/execute_test.go`）
-- [ ] `TestJumpViewport_clampsTotalLines`（FR-3.7.8）
-- [ ] `TestSyncChat_gotoBottomVirtualList`（FR-3.7.8）
-- [ ] `TestWindowSize_invalidatesCatalog`（FR-3.7.9）
-- [ ] `TestAltEnter_noSubmit`（FR-1.10ad）
-- [ ] `TestListenPrompt_permissionAsk`（FR-1.10ac）
-- [ ] `TestSafeModel_passthroughTeaView`（FR-1.10k）
+- [x] `TestScrollSpeed_env`（`DS_CODE_SCROLL_SPEED`；见 `scroll/wheel_test.go`）
+- [x] FR-3.1：`TestExecuteRun_atExpand`（`spawn/execute_test.go`）
+- [x] FR-3.1：`TestExecuteRun_atExpand_worktree`（worktree workspace 边界）
+- [x] `TestJumpViewport_clampsTotalLines`（FR-3.7.8）
+- [x] `TestSyncChat_gotoBottomVirtualList`（FR-3.7.8；见 `resume_scroll_test.go`）
+- [x] `TestWindowSize_invalidatesCatalog`（FR-3.7.9）
+- [x] `TestAltEnter_noSubmit`（FR-1.10ad；见 `input_test.go`）
+- [x] `TestListenPrompt_permissionAsk`（FR-1.10ac）
+- [x] `TestSafeModel_passthroughTeaView`（FR-1.10k；`TestFallbackView_returnsTeaView`）
 - [ ] `TestMarkdownRender_colorProfile`（FR-1.10ae）
-- [ ] FR-4：`TestIsSensitiveAbs_notExported`
+- [x] FR-4：`TestIsSensitiveAbs_notExported`
 
 ## 7. 手动验证
 
@@ -329,12 +330,12 @@ bin/ds-code --permission-mode auto
 
 ## 8. 非目标确认
 
-- [ ] **不**保留 v1 bubbletea 双栈
-- [ ] Transcript/classic（FR-3.5 P2）可延期
-- [ ] Agent/MCP/路径权限 **无**行为变更（除 FR-4）
-- [ ] **FR-3.7 虚拟列表** 已实现（原 v0.1.2 FR-9.12「不实现」）
-- [ ] Kitty 键盘增强、MCP spill GC、`@` compact 脱敏、**View.OnMouse** **未**实现
-- [ ] CI **仍可不**跑 `make test-tui`（NFR-8 本地必跑）
+- [x] **不**保留 v1 bubbletea 双栈
+- [x] Transcript/classic（FR-3.5 P2）可延期
+- [x] Agent/MCP/路径权限 **无**行为变更（除 FR-4）
+- [x] **FR-3.7 虚拟列表** 已实现（原 v0.1.2 FR-9.12「不实现」）
+- [x] Kitty 键盘增强、MCP spill GC、`@` compact 脱敏、**View.OnMouse** **未**实现
+- [x] CI **仍可不**跑 `make test-tui`（NFR-8 本地必跑）
 
 ## 9. 发布阻塞
 
@@ -344,5 +345,5 @@ bin/ds-code --permission-mode auto
 | CHANGELOG | Breaking: charm.land v2 import |
 | P1 延期 | FR-3.1–3.3 未合入须在 Known limitations 说明 |
 | P1 虚拟列表 | FR-3.7 为 v0.1.3 **In scope**；未合入须在 CHANGELOG 说明 |
-| 守卫 | `verify-charm-v2` 纳入 `verify-release` / release workflow（NFR-9） |
+| 守卫 | `verify-charm-v2` 已纳入 `verify-release` 与 CI `test` job（NFR-9） |
 | test-tui | 发布前本地 `make test-tui`（CI/release **均未**跑） |
