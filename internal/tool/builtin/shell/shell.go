@@ -91,7 +91,7 @@ func (t *ShellTool) Execute(ctx context.Context, args json.RawMessage) (string, 
 func (t *ShellTool) runBackground(ctx context.Context, command, description string, timeoutMs int) (string, error) {
 	command = strings.TrimSpace(command)
 	if command == "" {
-		return "", fmt.Errorf("%s", ErrCommandRequiredSync)
+		return "", fmt.Errorf("%s", ErrCommandRequired)
 	}
 
 	timeout, err := ResolveShellTimeout(t.Cfg, timeoutMs)
@@ -139,7 +139,7 @@ func (t *ShellTool) formatFinishedJob(job shelljobs.Job, waitErr error) (string,
 func (t *ShellTool) runSync(ctx context.Context, command string, timeoutMs int) (string, error) {
 	command = strings.TrimSpace(command)
 	if command == "" {
-		return "", fmt.Errorf("%s", ErrCommandRequiredSync)
+		return "", fmt.Errorf("%s", ErrCommandRequired)
 	}
 
 	timeout, err := ResolveShellTimeout(t.Cfg, timeoutMs)

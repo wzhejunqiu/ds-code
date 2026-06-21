@@ -55,11 +55,10 @@ func renderDesc(vars descVars) string {
 const (
 	SchemaShellCommand    = "要执行的 bash 命令字符串"
 	SchemaRunInBackground = "为 true 时在后台并行执行并阻塞至完成；同轮可与其他 run_in_background 或只读工具并行；不要在 command 末尾加 &"
-	SchemaTimeoutMs       = "可选，command 的超时毫秒数；省略时使用 tools.shell.timeout（默认 120 秒）；最大 600000；超时将强制终止子进程"
+	SchemaTimeoutMs       = "可选，command 执行的超时毫秒数（最大 600000）"
 
 	ErrBackgroundUnavailable = "shell 后台任务不可用"
 	ErrCommandRequired       = "command 为必填项"
-	ErrCommandRequiredSync   = "command 为必填项"
 	ErrTimeoutMsNonNegative  = "timeout_ms 必须为非负整数"
 
 	ResultNoOutput   = "（无输出）"
