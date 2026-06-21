@@ -3,14 +3,203 @@ package shell_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
 )
+
+func newSyncShellTool(t *testing.T, dir string) *shell.ShellTool {
+	t.Helper()
+	return &shell.ShellTool{
+		Cfg: &config.Config{
+			ProjectRoot: dir,
+			Tools: config.ToolsConfig{
+				Shell: config.ShellToolConfig{Timeout: 120 * time.Second},
+			},
+		},
+		Perm:   permission.NewEngine("auto", dir, false),
+		Strict: false,
+	}
+}
+
+func TestShellTool_nameAndPermissionLevel(t *testing.T) {
+	st := &shell.ShellTool{}
+	if st.Name() != tool.NameShell.String() {
+		t.Fatalf("Name() = %q, want %q", st.Name(), tool.NameShell)
+	}
+	if st.PermissionLevel() != permission.LevelHighest {
+		t.Fatalf("PermissionLevel() = %v, want LevelHighest", st.PermissionLevel())
+	}
+}
+
+func TestShellTool_withPermRebindsEngine(t *testing.T) {
+	parent := permission.NewEngine("auto", "/parent", false)
+	child := permission.NewEngine("auto", "/child", false)
+	st := &shell.ShellTool{Perm: parent}
+
+	rebound, ok := st.WithPerm(child).(*shell.ShellTool)
+	if !ok {
+		t.Fatal("WithPerm should return *ShellTool")
+	}
+	if rebound.Perm.Workspace != "/child" {
+		t.Fatalf("rebound workspace = %q, want /child", rebound.Perm.Workspace)
+	}
+	if st.Perm.Workspace != "/parent" {
+		t.Fatalf("original tool should be unchanged, workspace = %q", st.Perm.Workspace)
+	}
+}
+
+func TestShellTool_syncEchoStdout(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{"command": "echo hello-shell"})
+
+	out, err := st.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "hello-shell") {
+		t.Fatalf("expected stdout in output, got: %q", out)
+	}
+}
+
+func TestShellTool_syncCapturesStderr(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{"command": "echo err-msg >&2"})
+
+	out, err := st.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "stderr:") || !strings.Contains(out, "err-msg") {
+		t.Fatalf("expected stderr in output, got: %q", out)
+	}
+}
+
+func TestShellTool_syncNoOutput(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{"command": "true"})
+
+	out, err := st.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != shell.ResultNoOutput {
+		t.Fatalf("expected no output marker, got: %q", out)
+	}
+}
+
+func TestShellTool_syncNonZeroExitCode(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{"command": "exit 7"})
+
+	out, err := st.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, shell.ResultExitPrefix+"exit status 7") {
+		t.Fatalf("expected exit status in output, got: %q", out)
+	}
+}
+
+func TestShellTool_emptyCommandRejected(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+
+	for _, raw := range []json.RawMessage{
+		[]byte(`{"command":""}`),
+		[]byte(`{"command":"   "}`),
+		[]byte(`{}`),
+	} {
+		_, err := st.Execute(context.Background(), raw)
+		if err == nil || !strings.Contains(err.Error(), shell.ErrCommandRequired) {
+			t.Fatalf("args %s: expected %q, got err=%v", raw, shell.ErrCommandRequired, err)
+		}
+	}
+}
+
+func TestShellTool_invalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+	_, err := st.Execute(context.Background(), json.RawMessage("{bad"))
+	if err == nil {
+		t.Fatal("expected JSON unmarshal error")
+	}
+}
+
+func TestShellTool_cancelledContext(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{"command": "echo hi"})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := st.Execute(ctx, args)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestShellTool_backgroundUnavailableWithoutJobs(t *testing.T) {
+	dir := t.TempDir()
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{
+		"command":           "echo hi",
+		"run_in_background": true,
+	})
+
+	_, err := st.Execute(context.Background(), args)
+	if err == nil || !strings.Contains(err.Error(), shell.ErrBackgroundUnavailable) {
+		t.Fatalf("expected %q, got err=%v", shell.ErrBackgroundUnavailable, err)
+	}
+}
+
+func TestShellTool_runsInWorkspace(t *testing.T) {
+	dir := t.TempDir()
+	marker := "workspace-marker.txt"
+	if err := os.WriteFile(filepath.Join(dir, marker), []byte("ok"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{"command": "ls"})
+
+	out, err := st.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, marker) {
+		t.Fatalf("expected %q in ls output, got: %q", marker, out)
+	}
+}
+
+func TestShellTool_respectsShellEnv(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("SHELL", "/bin/sh")
+
+	st := newSyncShellTool(t, dir)
+	args, _ := json.Marshal(map[string]any{"command": "echo shell-env-ok"})
+
+	out, err := st.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "shell-env-ok") {
+		t.Fatalf("expected command output via $SHELL, got: %q", out)
+	}
+}
 
 func TestShellTool_schemaHasNewFields(t *testing.T) {
 	tool := &shell.ShellTool{Strict: false}

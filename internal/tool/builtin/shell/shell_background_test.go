@@ -85,6 +85,79 @@ func TestShellTool_backgroundStoresDescription(t *testing.T) {
 	t.Fatalf("no job with description %q in %v", "Run unit tests", jobs)
 }
 
+func TestShellTool_emptyCommandRejectedWithJobs(t *testing.T) {
+	testutil.IsolatedHome(t)
+	dir := t.TempDir()
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Shell: config.ShellToolConfig{MaxBackground: 2}},
+	}
+	mgr, err := manager.Open(dir, cfg.Tools.Shell)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Close()
+
+	tool := &shell.ShellTool{Cfg: cfg, Perm: permission.NewEngine("auto", dir, false), Jobs: mgr, Strict: false}
+	args, _ := json.Marshal(map[string]any{"command": "  "})
+
+	_, err = tool.Execute(context.Background(), args)
+	if err == nil || !strings.Contains(err.Error(), shell.ErrCommandRequired) {
+		t.Fatalf("expected %q, got err=%v", shell.ErrCommandRequired, err)
+	}
+}
+
+func TestShellTool_backgroundNonZeroExit(t *testing.T) {
+	testutil.IsolatedHome(t)
+	dir := t.TempDir()
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Shell: config.ShellToolConfig{MaxBackground: 2}},
+	}
+	mgr, err := manager.Open(dir, cfg.Tools.Shell)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Close()
+
+	tool := &shell.ShellTool{Cfg: cfg, Perm: permission.NewEngine("auto", dir, false), Jobs: mgr, Strict: false}
+	args, _ := json.Marshal(map[string]any{
+		"command":           "exit 3",
+		"run_in_background": true,
+	})
+	out, err := tool.Execute(context.Background(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, shell.ResultExitPrefix+"exit status 3") {
+		t.Fatalf("expected exit status in output, got: %q", out)
+	}
+}
+
+func TestShellTool_backgroundEmptyCommandRejected(t *testing.T) {
+	testutil.IsolatedHome(t)
+	dir := t.TempDir()
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Tools:       config.ToolsConfig{Shell: config.ShellToolConfig{MaxBackground: 2}},
+	}
+	mgr, err := manager.Open(dir, cfg.Tools.Shell)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Close()
+
+	tool := &shell.ShellTool{Cfg: cfg, Perm: permission.NewEngine("auto", dir, false), Jobs: mgr, Strict: false}
+	args, _ := json.Marshal(map[string]any{
+		"command":           "   ",
+		"run_in_background": true,
+	})
+	_, err = tool.Execute(context.Background(), args)
+	if err == nil || !strings.Contains(err.Error(), shell.ErrCommandRequired) {
+		t.Fatalf("expected %q, got err=%v", shell.ErrCommandRequired, err)
+	}
+}
+
 func TestShellTool_backgroundTimeout(t *testing.T) {
 	testutil.IsolatedHome(t)
 	dir := t.TempDir()
