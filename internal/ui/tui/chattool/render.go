@@ -3,6 +3,7 @@ package chattool
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -18,17 +19,17 @@ const (
 )
 
 // Render returns styled lines for a tool block in the main chat transcript.
-func Render(b Block, width int, showDetails bool, disp tool.DisplayContext) []string {
+func Render(b Block, width int, showDetails bool, disp tool.DisplayContext, now time.Time) []string {
 	expanded := showDetails || b.Expanded
-	return renderBlock(b, width, expanded, disp)
+	return renderBlock(b, width, expanded, disp, now)
 }
 
-func renderBlock(b Block, width int, expanded bool, disp tool.DisplayContext) []string {
+func renderBlock(b Block, width int, expanded bool, disp tool.DisplayContext, now time.Time) []string {
 	indent := lipgloss.Width(bullet)
 	var body []string
 
 	if b.Running {
-		body = append(body, renderRunningTitle(b.Name, b.Command, b.Args, disp))
+		body = append(body, renderRunningTitle(b.Name, b.Command, b.Args, b.TimeoutDeadline, now, disp))
 		if !tool.UsesHumanDisplay(b.Name, disp) && !tool.IsShellDisplay(b.Name) && !tool.IsApplyPatchDisplay(b.Name) {
 			switch {
 			case b.Command != "":
@@ -121,9 +122,15 @@ func renderApplyPatchTitle(filename, statsEnc string, isError bool) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
 
-func renderRunningTitle(name, command, args string, disp tool.DisplayContext) string {
+func renderRunningTitle(name, command, args string, deadline time.Time, now time.Time, disp tool.DisplayContext) string {
 	line := renderTitleLine(name, command, args, false, disp)
-	return lipgloss.JoinHorizontal(lipgloss.Top, line, styleToolMeta.Render(" …"))
+	suffix := " …"
+	if tool.IsShellDisplay(name) && !deadline.IsZero() {
+		if cd := tool.FormatTimeoutCountdown(deadline, now); cd != "" {
+			suffix = "  " + cd
+		}
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, line, styleToolMeta.Render(suffix))
 }
 
 func toolRunningTitle(name, args, command string, disp tool.DisplayContext) string {

@@ -14,6 +14,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
 	"go.uber.org/zap"
 )
 
@@ -204,13 +205,14 @@ func (r *Runner) runToolCalls(
 			rawArgs := []byte(tc.Arguments)
 			patchDisplays := tool.ApplyPatchStarts(tc.Name, rawArgs, r.Perm.Workspace)
 			if cb != nil && cb.OnToolStart != nil {
+				deadline, _ := shell.ShellTimeoutDeadline(time.Now(), r.Cfg, rawArgs)
 				if len(patchDisplays) > 0 {
 					for _, d := range patchDisplays {
-						cb.OnToolStart(tc.Name, d.Args, d.Command)
+						cb.OnToolStart(tc.Name, d.Args, d.Command, deadline)
 					}
 				} else {
 					argsLine, command := tool.DisplaySummary(tc.Name, rawArgs, r.Perm.Workspace, tool.FromRegistry(r.Tools))
-					cb.OnToolStart(tc.Name, argsLine, command)
+					cb.OnToolStart(tc.Name, argsLine, command, deadline)
 				}
 			}
 		}

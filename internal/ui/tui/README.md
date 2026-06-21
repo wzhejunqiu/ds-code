@@ -164,7 +164,7 @@ TUI 工具块标题由 `internal/tool.DisplaySummary` 生成人类可读单行�
 | `read_file` | `Read sample.go L1-3` |
 | `write_file` | `Write sample.go` |
 | `grep` / `glob` / `list_dir` | `Grepped … in ds-code` / `Searched files …` / `List tuitest` |
-| `shell` | `{description}` + 浅色命令名片段（`cd, 2+`）；展开显示完整 `command` |
+| `bash` | `{description}` + 浅色命令名片段（`cd, 2+`）；Running 时 sync 命令显示**递减倒计时**（如 `1:23`）；展开显示完整 `command` |
 | `apply_patch` | 每文件一行 `Edit file.go` + 绿色 `+N` + 红色 `-N` |
 | `task` / `web_fetch` | `Task: …` / `Fetch https://…` |
 | `mcp__*` | `MCP server · tool` |

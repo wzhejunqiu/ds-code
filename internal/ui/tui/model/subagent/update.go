@@ -2,6 +2,8 @@ package subagent
 
 import (
 	"charm.land/bubbletea/v2"
+	"time"
+
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/msg"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
@@ -39,7 +41,7 @@ func UpdateToolStart(s *state.State, m msg.SubagentToolStartMsg, sync SyncFn) te
 		return nil
 	}
 	disp := tool.FromRegistry(s.Deps.Runner.Tools)
-	s.Subagents.ToolStart(m.SubagentID, m.Name, m.Args, m.Command, disp)
+	s.Subagents.ToolStart(m.SubagentID, m.Name, m.Args, m.Command, time.Time{}, disp)
 	if s.SubagentNav == state.SubagentNavDetail && s.ViewingSubagentID == m.SubagentID {
 		s.SyncDisplayedChat()
 		sync()

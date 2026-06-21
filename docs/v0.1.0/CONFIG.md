@@ -363,9 +363,9 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.glob.max_results` | int | **100** | `glob` / `list_dir` 结果条数上限 |
 | `tools.search.skip_dirs` | []string | **`[]`** | Agent 枚举（`grep`/`glob`/`list_dir`/`diagnostics` walk）额外跳过的目录名（相对 `perm.Workspace`）；`.git` 硬编码 SkipDir；**不**影响 `@dir/`；v0.1.2 起 Agent **不**读取 `.gitignore` |
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |
-| `tools.shell.timeout` | duration | **120s** | `shell` 同步执行超时 |
+| `tools.shell.timeout` | duration | **120s** | `bash` 命令默认超时（sync 与 `run_in_background` 均适用）；可被单次 `timeout_ms` 覆盖 |
 | `tools.shell.max_background` | int | **5** | 后台 shell 任务数量上限 |
-| `tools.shell.background_output_max_bytes` | int | **262144** | 单次轮询后台任务返回的最大输出字节 |
+| `tools.shell.background_output_max_bytes` | int | **262144** | 单次读取后台 job 输出的最大字节 |
 | `tools.shell.env_blacklist` | []string | `[]` | 子进程环境变量名正则黑名单（与内置 secret 键名过滤为 OR）；作用于 `shell`、后台 job、MCP stdio |
 | `tools.agent.max_parallel` | int | **3** | 子代理 `agent` 并发上限 |
 | `tools.agent.summary_max_chars` | int | **16000** | 子代理摘要字符上限（超长结果写入 output-file） |

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"sync/atomic"
+	"time"
 )
 
 type turnCallbacksKey struct{}
@@ -101,7 +102,7 @@ func SubagentToolCallbacks(parent *TurnCallbacks, subagentID string) *TurnCallba
 		return nil
 	}
 	return &TurnCallbacks{
-		OnToolStart: func(name, args, command string) {
+		OnToolStart: func(name, args, command string, timeoutDeadline time.Time) {
 			if parent.OnSubagentToolStart != nil {
 				parent.OnSubagentToolStart(subagentID, name, args, command)
 			}

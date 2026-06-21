@@ -118,9 +118,9 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 			buf.appendReasoning(s)
 			buf.trySendReasoning(events)
 		},
-		OnToolStart: func(name, args, command string) {
+		OnToolStart: func(name, args, command string, timeoutDeadline time.Time) {
 			buf.flush(events)
-			sendAgentEvent(events, msg.ToolStartMsg{Name: name, Args: args, Command: command}, false)
+			sendAgentEvent(events, msg.ToolStartMsg{Name: name, Args: args, Command: command, TimeoutDeadline: timeoutDeadline}, false)
 		},
 		OnToolEnd: func(name, args, command, result string, isError bool) {
 			sendAgentEvent(events, msg.ToolEndMsg{Name: name, Args: args, Command: command, Result: result, IsError: isError}, true)

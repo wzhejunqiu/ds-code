@@ -10,7 +10,7 @@
 - [ ] 版本号 v0.1.4
 - [ ] `make test` / `make lint` / `make vet` 通过
 - [ ] [TOOL_PROMPTS.md](TOOL_PROMPTS.md) 中 **12 项工具 + 共享 Schema** 均为「已定稿」且有你确认记录
-- [ ] `CHANGELOG.md` 含 `bash` 改名 breaking（若本版合入）
+- [ ] `CHANGELOG.md` 含 `bash` 改名 breaking 及 `run_in_background` breaking（若本版合入）
 
 **说明**：系统提示词 `prompt.md` 未全部审定时，可不阻塞发布，但须在 CHANGELOG 标明「部分 system 章节待后续」——除非你决定将 system 纳入本版 P0。
 
@@ -19,31 +19,42 @@
 - [ ] 无未经你确认的大批量 Desc 替换合入
 - [ ] 每个已定稿工具在 PR/对话中有可追溯的确认
 
+## 2.1 FR-0 标准模式验收（每个工具）
+
+| 检查 | 预期 |
+|------|------|
+| 存在 `<tool>/prompt.md` | 是 |
+| `text.go` 含 `//go:embed prompt.md` + `RenderDesc()` | 是 |
+| `<tool>.go` 的 `Description()` 仅调用 `RenderDesc()` | 是 |
+| 无大段 `const Desc*` / `fmt.Sprintf` 拼 Description | 是 |
+| `text_test.go`（建议）无 `{{.` 残留 | 是 |
+| 参考对照 | 与 [`shell/`](../../internal/tool/builtin/shell/) 结构一致 |
+
 ## 3. 逐工具提示词验收
 
 每项：**你已审定文案** + 代码已合入 + 下表「检查」通过。
 
 | 工具 | 检查 | 通过 |
 |------|------|------|
-| `read_file` | `Description()` 非空；含目录/二进制/分段读取等你要求的要点 | [ ] |
-| `grep` | Desc + pattern/path/output_mode schema 已更新 | [ ] |
-| `glob` | Desc + pattern schema 已更新 | [ ] |
-| `list_dir` | Desc + path schema 已更新 | [ ] |
-| `diagnostics` | Desc + paths/severity schema 已更新 | [ ] |
-| `web_fetch` | Desc + url schema 已更新 | [ ] |
-| `web_search` | Desc + query schema 已更新（可与未注册状态一致） | [ ] |
-| `bash` | Desc + command/description/background/job schema 已更新；registry 名为 `bash` | [ ] |
-| `apply_patch` | Desc + patch schema 已更新 | [ ] |
-| `write_file` | Desc + path/content schema 已更新 | [ ] |
-| `tool_search` | 文案在 `text.go`；`tool_name` schema 已更新 | [ ] |
-| `agent` | Desc + 全部 agent schema 已更新 | [ ] |
-| 共享 `builtin/text.go` | 各 `SchemaPath*` 等与你定稿一致 | [ ] |
+| `read_file` | FR-0 + 目录/二进制/分段读取等要点 | [ ] |
+| `grep` | FR-0 + pattern/path/output_mode schema | [ ] |
+| `glob` | FR-0 + pattern schema | [ ] |
+| `list_dir` | FR-0 + path schema | [ ] |
+| `diagnostics` | FR-0 + paths/severity schema | [ ] |
+| `web_fetch` | FR-0 + url schema | [ ] |
+| `web_search` | FR-0 + query schema | [ ] |
+| `bash` | FR-0 ✅ + FR-5 行为；schema 含 `run_in_background`、`timeout_ms`；无 `background`/`list_jobs` | [x] |
+| `apply_patch` | FR-0 + patch schema | [ ] |
+| `write_file` | FR-0 + path/content schema | [ ] |
+| `tool_search` | FR-0 + `tool_name` schema | [ ] |
+| `agent` | FR-0 + 全部 agent schema | [ ] |
+| 共享 `builtin/text.go` | 各 `SchemaPath*` 等定稿 | [ ] |
 
 ### AC-3.1 API 抽查（手动，可选）
 
 启动 agent 模式，`-vv` 查看首轮 `tools` JSON：
 
-- 每个内建工具的 `description` 与 `text.go` 定稿一致
+- 每个内建工具的 `description` 与对应 `prompt.md` 渲染结果一致
 - 无残留 wire 名 `shell`
 
 ## 4. `bash` 改名回归
@@ -57,6 +68,18 @@
 | TUI 工具行 | 显示 `bash` |
 
 **自动化**：`go test ./internal/toolname/... ./internal/permission/... ./internal/tool/...`
+
+## 4.1 bash 工具行为验收（FR-5）
+
+| 检查 | 预期 |
+|------|------|
+| tools JSON | 含 `run_in_background`、`timeout_ms`；**无** `background`、`list_jobs`、`job_id`、`cancel` |
+| `timeout_ms` + 长 sleep（sync 或 bg） | 超时 kill，输出含 deadline exceeded 或 signal killed |
+| `timeout_ms` + bg 且已有 stdout | 超时后仍返回已产生 stdout（若有），并附带 `exit:` |
+| `run_in_background` | **受** `timeout_ms` / 默认 timeout 限制；阻塞至完成返回 stdout/stderr |
+| TUI Running | sync 与 `run_in_background` bash 标题末尾 **递减**倒计时 |
+| 退出 ds-code | 本会话 running shell job 被 kill；**无** `/kill` slash |
+| [`shell.md`](../../internal/tool/builtin/shell/shell.md) | 与代码、prompt 一致 |
 
 ## 5. 非目标（不阻塞发布）
 

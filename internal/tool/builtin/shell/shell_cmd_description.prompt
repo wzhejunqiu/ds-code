@@ -1,0 +1,20 @@
+# 规则中文翻译
+使用主动语态，清晰简洁说明该命令功能。描述中不得出现“复杂”“风险”类词汇，仅客观陈述执行行为。
+
+## 简单命令（git、npm、标准命令行工具）：简短描述（5–10 个英文单词）
+示例：
+- ls → 列出当前目录文件
+- git status → 展示工作区状态
+- npm install → 安装项目依赖包
+
+## 不易一眼看懂的命令（管道组合、冷门参数等）：补充足够上下文说明用途
+示例：
+- find . -name "*.tmp" -exec rm {} \; → 递归查找并删除全部 .tmp 文件
+- git reset --hard origin/main → 舍弃所有本地修改，同步远端 main 分支
+- curl -s url | jq '.data[]' → 拉取接口 JSON 并提取 data 数组内元素
+
+# 配套英文标准句式模板（供直接写命令说明）
+1. 基础单命令
+`[Command]` → `[Verb phrase describing core action]`
+2. 管道/多参数复合命令
+`[Full command string]` → `[Explain full end-to-end operation]`

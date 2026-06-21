@@ -2,8 +2,11 @@ package testutil
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 )
 
 // SetIsolatedHome redirects HOME (and USERPROFILE on Windows) to dir.
@@ -46,4 +49,25 @@ func IsolatedHome(t testing.TB) string {
 		t.Setenv("USERPROFILE", dir)
 	}
 	return dir
+}
+
+// IsolatedProjectRoot returns a workspace directory under an isolated HOME.
+// Both the workspace and ~/.ds-code under that HOME are removed when the test finishes.
+func IsolatedProjectRoot(t testing.TB) string {
+	t.Helper()
+	home := IsolatedHome(t)
+	root := filepath.Join(home, "workspace")
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// CleanupProjectData removes ~/.ds-code/projects/<id>/ for projectRoot.
+func CleanupProjectData(projectRoot string) error {
+	dir, err := datadir.ProjectDataDir(projectRoot)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(dir)
 }

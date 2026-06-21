@@ -1,6 +1,10 @@
 package agent
 
-import "github.com/wzhejunqiu/ds-code/internal/llm"
+import (
+	"time"
+
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+)
 
 // TurnCallbacks receives streaming and tool events during RunTurn.
 // The TUI implements these in run.go (runTurnAsync → tea.Msg on deps.Events).
@@ -8,7 +12,7 @@ import "github.com/wzhejunqiu/ds-code/internal/llm"
 type TurnCallbacks struct {
 	OnContentDelta        func(string) // assistant reply token(s)
 	OnReasoningDelta      func(string) // thinking stream token(s)
-	OnToolStart           func(name, args, command string)
+	OnToolStart           func(name, args, command string, timeoutDeadline time.Time)
 	OnToolEnd             func(name, args, command, result string, isError bool)
 	OnAssistantSegmentEnd func() // end of one assistant segment (before tools or next sub-round)
 	// OnPlanningStart: before each LLM HTTP request after the first (round>0).

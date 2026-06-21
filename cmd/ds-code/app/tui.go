@@ -48,6 +48,7 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 	}
 
 	subStore := a.subStore
+	_, _ = a.openShellJobs()
 	var backgroundAgents func() int
 	if at, ok := runner.Tools.Get("agent"); ok {
 		if agt, ok := at.(*agenttool.AgentTool); ok {

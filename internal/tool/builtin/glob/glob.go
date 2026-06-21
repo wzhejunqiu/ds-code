@@ -12,6 +12,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/filecandidate"
 	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
@@ -94,7 +95,7 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		limit = builtin.DefaultMaxResults
 	}
 
-	candidates, err := builtin.CollectGlobPattern(ctx, t.Perm, root, in.Pattern, builtin.FileFilter{}, func(rel string) bool {
+	candidates, err := filecandidate.CollectGlobPattern(ctx, t.Perm, root, in.Pattern, filecandidate.FileFilter{}, func(rel string) bool {
 		return t.searchIgnored(rel, base)
 	}, func(relFromRoot string) bool {
 		return t.searchSkipWalk(relFromRoot, base)
@@ -103,8 +104,8 @@ func (t *GlobTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 		return "", err
 	}
 	builtin.SortByModTimeDesc(candidates,
-		func(c builtin.FileCandidate) time.Time { return c.ModTime },
-		func(c builtin.FileCandidate) string { return c.Rel },
+		func(c filecandidate.FileCandidate) time.Time { return c.ModTime },
+		func(c filecandidate.FileCandidate) string { return c.Rel },
 	)
 
 	var lines []string

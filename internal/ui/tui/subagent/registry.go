@@ -156,13 +156,13 @@ func (r *Registry) End(id, summary string, runErr error) {
 	}
 }
 
-func (r *Registry) ToolStart(id, name, args, command string, disp tool.DisplayContext) {
+func (r *Registry) ToolStart(id, name, args, command string, deadline time.Time, disp tool.DisplayContext) {
 	rec := r.Get(id)
 	if rec == nil {
 		return
 	}
-	appendToolBlock(rec, name, args, command, "", true, false)
-	rec.ToolLines = append(rec.ToolLines, chattool.Line(name, args, command, "", true, false, disp))
+	appendToolBlock(rec, name, args, command, "", true, false, deadline)
+	rec.ToolLines = append(rec.ToolLines, chattool.Line(name, args, command, "", true, false, deadline, time.Now(), disp))
 }
 
 func (r *Registry) ToolEnd(id, name, args, command, result string, isError bool, disp tool.DisplayContext) {
@@ -179,12 +179,12 @@ func (r *Registry) ToolEnd(id, name, args, command, result string, isError bool,
 			if preview == "" && b.ToolRunning {
 				preview = "…"
 			}
-			rec.ToolLines = append(rec.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError, disp))
+			rec.ToolLines = append(rec.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError, b.ToolTimeoutDeadline, time.Now(), disp))
 		}
 	}
 }
 
-func appendToolBlock(rec *Record, name, args, command, result string, running, isError bool) {
+func appendToolBlock(rec *Record, name, args, command, result string, running, isError bool, deadline time.Time) {
 	if len(rec.Chat) > 0 {
 		last := &rec.Chat[len(rec.Chat)-1]
 		if last.Role == chat.RoleAssistant {
@@ -193,13 +193,14 @@ func appendToolBlock(rec *Record, name, args, command, result string, running, i
 		}
 	}
 	rec.Chat = append(rec.Chat, chat.Block{
-		Role:        chat.RoleTool,
-		ToolName:    name,
-		ToolArgs:    args,
-		ToolCommand: command,
-		ToolResult:  result,
-		ToolRunning: running,
-		ToolError:   isError,
+		Role:                chat.RoleTool,
+		ToolName:            name,
+		ToolArgs:            args,
+		ToolCommand:         command,
+		ToolResult:          result,
+		ToolRunning:         running,
+		ToolError:           isError,
+		ToolTimeoutDeadline: deadline,
 	})
 }
 
@@ -214,9 +215,10 @@ func finishToolBlock(rec *Record, name, args, command, result string, isError bo
 		rec.Chat[i].ToolResult = result
 		rec.Chat[i].ToolRunning = false
 		rec.Chat[i].ToolError = isError
+		rec.Chat[i].ToolTimeoutDeadline = time.Time{}
 		return
 	}
-	appendToolBlock(rec, name, args, command, result, false, isError)
+	appendToolBlock(rec, name, args, command, result, false, isError, time.Time{})
 }
 
 func finalizeAssistant(rec *Record, at time.Time) {

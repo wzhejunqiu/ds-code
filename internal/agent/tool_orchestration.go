@@ -7,6 +7,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
 )
 
 const maxConcurrentReadTools = 10
@@ -35,13 +36,7 @@ func partitionToolCalls(reg *tool.Registry, calls []llm.ToolCall) []toolBatch {
 	}
 
 	for _, tc := range calls {
-		t, ok := reg.Get(tc.Name)
-		if !ok {
-			flush()
-			batches = append(batches, toolBatch{concurrent: false, calls: []llm.ToolCall{tc}})
-			continue
-		}
-		if tool.IsToolConcurrencySafe(t) && tool.IsToolReadOnly(t) {
+		if isConcurrentToolCall(reg, tc) {
 			pending = append(pending, tc)
 			if len(pending) >= maxConcurrentReadTools {
 				flush()
@@ -53,6 +48,17 @@ func partitionToolCalls(reg *tool.Registry, calls []llm.ToolCall) []toolBatch {
 	}
 	flush()
 	return batches
+}
+
+func isConcurrentToolCall(reg *tool.Registry, tc llm.ToolCall) bool {
+	t, ok := reg.Get(tc.Name)
+	if !ok {
+		return false
+	}
+	if tool.IsToolConcurrencySafe(t) && tool.IsToolReadOnly(t) {
+		return true
+	}
+	return tool.NameShell.Matches(tc.Name) && shell.IsBackgroundArgs([]byte(tc.Arguments))
 }
 
 func (r *Runner) runConcurrentBatch(ctx context.Context, sessionID string, calls []llm.ToolCall) error {

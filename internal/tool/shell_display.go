@@ -165,26 +165,9 @@ func IsShellDisplay(name string) bool {
 	return NameShell.Matches(name)
 }
 
-// ShellSummary formats shell tool display for non-command modes.
+// ShellSummary formats shell tool display (description + command).
 func ShellSummary(rawArgs []byte) (argsLine, command string) {
 	args := ArgsMap(rawArgs)
-	if list, _ := args["list_jobs"].(bool); list {
-		return "List background jobs", ""
-	}
-	if jobID, _ := args["job_id"].(string); jobID != "" {
-		if cancel, _ := args["cancel"].(bool); cancel {
-			return "Cancel job " + jobID, ""
-		}
-		return "Check job " + jobID, ""
-	}
-	if bg, _ := args["background"].(bool); bg {
-		cmd, _ := args["command"].(string)
-		c := FormatShellCommandsList(ParseShellCommands(cmd))
-		if c != "" {
-			return "Start background job", c
-		}
-		return "Start background job", ""
-	}
 	desc, _ := args["description"].(string)
 	desc = strings.TrimSpace(desc)
 	cmd, _ := args["command"].(string)

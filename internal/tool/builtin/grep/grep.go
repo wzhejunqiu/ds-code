@@ -17,6 +17,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/filecandidate"
 	"github.com/wzhejunqiu/ds-code/internal/tool/globmatch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
@@ -174,14 +175,14 @@ func (t *GrepTool) searchSkipDir(rel, walkRoot string) bool {
 	return t.SearchSkip.ShouldSkipWalkDir(rel, walkRoot)
 }
 
-func (t *GrepTool) collectCandidates(ctx context.Context, searchPath string) ([]builtin.FileCandidate, error) {
+func (t *GrepTool) collectCandidates(ctx context.Context, searchPath string) ([]filecandidate.FileCandidate, error) {
 	if globmatch.HasMeta(searchPath) {
 		return t.collectGlobPath(ctx, searchPath)
 	}
 	return t.collectExactPath(ctx, searchPath)
 }
 
-func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]builtin.FileCandidate, error) {
+func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]filecandidate.FileCandidate, error) {
 	root, err := t.Perm.CheckReadablePath(searchPath)
 	if err != nil {
 		return nil, err
@@ -190,15 +191,15 @@ func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]b
 	if err != nil {
 		return nil, err
 	}
-	filter := builtin.FileFilter{MaxFileBytes: maxFileBytes}
+	filter := filecandidate.FileFilter{MaxFileBytes: maxFileBytes}
 	if !info.IsDir() {
-		if c := builtin.MakeFileCandidate(t.Perm, root, filter); c != nil {
-			return []builtin.FileCandidate{*c}, nil
+		if c := filecandidate.MakeFileCandidate(t.Perm, root, filter); c != nil {
+			return []filecandidate.FileCandidate{*c}, nil
 		}
 		return nil, nil
 	}
 
-	var out []builtin.FileCandidate
+	var out []filecandidate.FileCandidate
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return nil
@@ -219,7 +220,7 @@ func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]b
 			}
 			return nil
 		}
-		if c := builtin.MakeFileCandidate(t.Perm, path, filter); c != nil {
+		if c := filecandidate.MakeFileCandidate(t.Perm, path, filter); c != nil {
 			if t.searchIgnored(c.Rel, searchPath) {
 				return nil
 			}
@@ -230,13 +231,13 @@ func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]b
 	return out, err
 }
 
-func (t *GrepTool) collectGlobPath(ctx context.Context, searchPath string) ([]builtin.FileCandidate, error) {
+func (t *GrepTool) collectGlobPath(ctx context.Context, searchPath string) ([]filecandidate.FileCandidate, error) {
 	base, pattern := globmatch.SplitPath(searchPath)
 	root, err := t.Perm.CheckReadablePath(base)
 	if err != nil {
 		return nil, err
 	}
-	return builtin.CollectGlobPattern(ctx, t.Perm, root, pattern, builtin.FileFilter{MaxFileBytes: maxFileBytes},
+	return filecandidate.CollectGlobPattern(ctx, t.Perm, root, pattern, filecandidate.FileFilter{MaxFileBytes: maxFileBytes},
 		func(rel string) bool { return t.searchIgnored(rel, base) },
 		func(relFromRoot string) bool {
 			fullRel := filepath.ToSlash(relFromRoot)
@@ -248,10 +249,10 @@ func (t *GrepTool) collectGlobPath(ctx context.Context, searchPath string) ([]bu
 	)
 }
 
-func (t *GrepTool) searchCandidates(ctx context.Context, candidates []builtin.FileCandidate, re *regexp.Regexp, mode outputMode, limit int) searchResult {
+func (t *GrepTool) searchCandidates(ctx context.Context, candidates []filecandidate.FileCandidate, re *regexp.Regexp, mode outputMode, limit int) searchResult {
 	builtin.SortByModTimeDesc(candidates,
-		func(c builtin.FileCandidate) time.Time { return c.ModTime },
-		func(c builtin.FileCandidate) string { return c.Rel },
+		func(c filecandidate.FileCandidate) time.Time { return c.ModTime },
+		func(c filecandidate.FileCandidate) string { return c.Rel },
 	)
 
 	workers := maxWorkers
@@ -296,7 +297,7 @@ func (t *GrepTool) searchCandidates(ctx context.Context, candidates []builtin.Fi
 		var wg sync.WaitGroup
 		for j, c := range batch {
 			wg.Add(1)
-			go func(j int, c builtin.FileCandidate) {
+			go func(j int, c filecandidate.FileCandidate) {
 				defer wg.Done()
 				if ctx.Err() != nil {
 					return

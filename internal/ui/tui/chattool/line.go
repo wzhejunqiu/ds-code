@@ -2,17 +2,23 @@ package chattool
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
 // Line renders a compact one-line tool summary for the side panel.
-func Line(name, args, command, preview string, running, isError bool, disp tool.DisplayContext) string {
+func Line(name, args, command, preview string, running, isError bool, deadline time.Time, now time.Time, disp tool.DisplayContext) string {
 	label := sidebarLabel(name, args, command, disp)
 	var s string
 	switch {
 	case running:
 		s = fmt.Sprintf("→ %s …", label)
+		if tool.IsShellDisplay(name) && !deadline.IsZero() {
+			if cd := tool.FormatTimeoutCountdown(deadline, now); cd != "" {
+				s = fmt.Sprintf("→ %s  %s", label, cd)
+			}
+		}
 	case isError:
 		s = fmt.Sprintf("✗ %s", label)
 	default:

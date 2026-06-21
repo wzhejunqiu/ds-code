@@ -65,7 +65,7 @@ func UpdatePlanningEnd(s *state.State, sync SyncFn) tea.Cmd {
 }
 
 func UpdateThinkingTick(s *state.State, sync SyncFn, nextTick NextThinkingTickFn) tea.Cmd {
-	if NeedsThinkingTick(s) || NeedsPlanningTick(s) {
+	if NeedsThinkingTick(s) || NeedsPlanningTick(s) || NeedsBashTimeoutTick(s) {
 		sync()
 		return nextTick()
 	}
@@ -78,8 +78,8 @@ func UpdateToolStart(s *state.State, m msg.ToolStartMsg, syncChat, syncTool Sync
 	}
 	withMainChat(s, func() {
 		disp := tool.FromRegistry(s.Deps.Runner.Tools)
-		AppendToolBlock(s, m.Name, m.Args, m.Command, "", true, false)
-		s.ToolLines = append(s.ToolLines, chattool.Line(m.Name, m.Args, m.Command, "", true, false, disp))
+		AppendToolBlock(s, m.Name, m.Args, m.Command, "", true, false, m.TimeoutDeadline)
+		s.ToolLines = append(s.ToolLines, chattool.Line(m.Name, m.Args, m.Command, "", true, false, m.TimeoutDeadline, time.Now(), disp))
 	})
 	syncChat()
 	syncTool()
@@ -109,7 +109,7 @@ func UpdateToolEnd(s *state.State, m msg.ToolEndMsg, syncChat, syncTool SyncFn) 
 				if preview == "" && b.ToolRunning {
 					preview = "…"
 				}
-				s.ToolLines = append(s.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError, disp))
+				s.ToolLines = append(s.ToolLines, chattool.Line(b.ToolName, b.ToolArgs, b.ToolCommand, preview, b.ToolRunning, b.ToolError, b.ToolTimeoutDeadline, time.Now(), disp))
 			}
 		}
 	})

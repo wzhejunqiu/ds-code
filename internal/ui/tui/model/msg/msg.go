@@ -3,6 +3,7 @@ package msg
 
 import (
 	"context"
+	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
@@ -15,6 +16,7 @@ type StreamContentMsg struct{ Delta string }
 type StreamReasoningMsg struct{ Delta string }
 type ToolStartMsg struct {
 	Name, Args, Command string
+	TimeoutDeadline     time.Time
 }
 type ToolEndMsg struct {
 	Name, Args, Command, Result string

@@ -122,21 +122,6 @@ func TestEngine_resolvePath_rejectsAbsoluteOutsideWorkspace(t *testing.T) {
 	}
 }
 
-func TestEngine_readonly_allowsShellListJobs(t *testing.T) {
-	e := permission.NewEngine("readonly", t.TempDir(), true)
-	if err := e.Check("bash", map[string]any{"list_jobs": true}); err != nil {
-		t.Fatalf("list_jobs should be allowed in readonly: %v", err)
-	}
-}
-
-func TestEngine_askNonInteractive_deniesShellJobPoll(t *testing.T) {
-	e := permission.NewEngine("ask", t.TempDir(), false)
-	err := e.Check("bash", map[string]any{"job_id": "job-1"})
-	if !errors.Is(err, permission.ErrNeedTTY) {
-		t.Fatalf("err = %v, want ErrNeedTTY", err)
-	}
-}
-
 func TestEngine_check_deniesSensitivePathOnWriteFile(t *testing.T) {
 	root := t.TempDir()
 	e := permission.NewEngine("auto", root, true)

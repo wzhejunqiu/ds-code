@@ -14,8 +14,9 @@ import (
 )
 
 // Start launches a background shell command in workspace.
-func (m *Manager) Start(command string) (shelljobs.Job, error) {
+func (m *Manager) Start(command, description string) (shelljobs.Job, error) {
 	command = strings.TrimSpace(command)
+	description = strings.TrimSpace(description)
 	if command == "" {
 		return shelljobs.Job{}, fmt.Errorf("command is required")
 	}
@@ -39,10 +40,11 @@ func (m *Manager) Start(command string) (shelljobs.Job, error) {
 	id := uuid.NewString()[:8]
 	placeholder := &runningJob{
 		Job: shelljobs.Job{
-			ID:        id,
-			Command:   command,
-			Status:    shelljobs.StatusRunning,
-			StartedAt: time.Now().UTC(),
+			ID:          id,
+			Description: description,
+			Command:     command,
+			Status:      shelljobs.StatusRunning,
+			StartedAt:   time.Now().UTC(),
 		},
 	}
 	m.jobs[id] = placeholder
@@ -87,13 +89,14 @@ func (m *Manager) Start(command string) (shelljobs.Job, error) {
 	_ = stderrFile.Close()
 
 	job := shelljobs.Job{
-		ID:         id,
-		Command:    command,
-		PID:        cmd.Process.Pid,
-		Status:     shelljobs.StatusRunning,
-		StartedAt:  time.Now().UTC(),
-		StdoutPath: stdoutPath,
-		StderrPath: stderrPath,
+		ID:          id,
+		Description: description,
+		Command:     command,
+		PID:         cmd.Process.Pid,
+		Status:      shelljobs.StatusRunning,
+		StartedAt:   time.Now().UTC(),
+		StdoutPath:  stdoutPath,
+		StderrPath:  stderrPath,
 	}
 	if err := m.writeMeta(job); err != nil {
 		_ = cmd.Process.Kill()
@@ -101,12 +104,14 @@ func (m *Manager) Start(command string) (shelljobs.Job, error) {
 		return shelljobs.Job{}, err
 	}
 
+	done := make(chan struct{})
 	m.mu.Lock()
-	rj := &runningJob{Job: job, cmd: cmd}
+	rj := &runningJob{Job: job, cmd: cmd, done: done}
 	m.jobs[id] = rj
 	m.mu.Unlock()
 
-	go m.waitJob(id, cmd)
+	go m.waitJob(id, cmd, done)
+	trackJob(m.jobsDir, id)
 	return job, nil
 }
 
@@ -114,9 +119,12 @@ func (m *Manager) removeJob(id string) {
 	m.mu.Lock()
 	delete(m.jobs, id)
 	m.mu.Unlock()
+	untrackJob(m.jobsDir, id)
 }
 
-func (m *Manager) waitJob(id string, cmd *exec.Cmd) {
+func (m *Manager) waitJob(id string, cmd *exec.Cmd, done chan struct{}) {
+	defer close(done)
+	defer untrackJob(m.jobsDir, id)
 	err := cmd.Wait()
 	code := 0
 	status := shelljobs.StatusCompleted

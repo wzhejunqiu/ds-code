@@ -77,7 +77,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.WheelScrollTickMsg:
 		return m, m.handleWheelScrollTick()
 	case tuimsg.ThinkingTickMsg:
-		if turn.NeedsThinkingTick(&m.State) || turn.NeedsPlanningTick(&m.State) {
+		if turn.NeedsThinkingTick(&m.State) || turn.NeedsPlanningTick(&m.State) || turn.NeedsBashTimeoutTick(&m.State) {
 			cmd := turn.UpdateThinkingTick(&m.State, func() {}, m.nextThinkingTickCmd)
 			return m, tea.Batch(cmd, m.scheduleSyncChatView())
 		}

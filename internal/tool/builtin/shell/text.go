@@ -1,30 +1,67 @@
 package shell
 
-const (
-	DescShell = "在项目工作区运行 shell 命令。background=true 可后台启动，用 job_id 轮询或取消。"
+import (
+	_ "embed"
+	"strings"
+	"text/template"
 
-	SchemaShellDescription = "用一句自然语言简述本次 shell 调用的目的，不要重复完整命令"
-	SchemaShellCommand     = "Shell 命令（同步/后台启动时必填）"
-	SchemaBackground       = "为 true 时在后台启动并返回 job_id"
-	SchemaJobID            = "轮询后台任务输出/状态；cancel=true 时取消任务"
-	SchemaCancel           = "终止后台任务（需 job_id）"
-	SchemaListJobs         = "列出本项目的后台任务"
+	"github.com/wzhejunqiu/ds-code/internal/tool"
+)
+
+//go:embed usage.prompt
+var descTemplate string
+
+//go:embed shell_cmd_description.prompt
+var SchemaShellDescription string
+
+// descVars holds named values injected into the bash tool description template.
+type descVars struct {
+	Bash       string
+	ReadFile   string
+	Grep       string
+	Glob       string
+	ListDir    string
+	ApplyPatch string
+	WriteFile  string
+}
+
+var descTmpl = template.Must(template.New("bashUsage").Parse(descTemplate))
+
+// RenderDesc returns the bash tool description with builtin tool names injected.
+func RenderDesc() string {
+	return renderDesc(defaultDescVars())
+}
+
+func defaultDescVars() descVars {
+	return descVars{
+		Bash:       tool.NameShell.String(),
+		ReadFile:   tool.NameReadFile.String(),
+		Grep:       tool.NameGrep.String(),
+		Glob:       tool.NameGlob.String(),
+		ListDir:    tool.NameListDir.String(),
+		ApplyPatch: tool.NameApplyPatch.String(),
+		WriteFile:  tool.NameWriteFile.String(),
+	}
+}
+
+func renderDesc(vars descVars) string {
+	var b strings.Builder
+	if err := descTmpl.Execute(&b, vars); err != nil {
+		panic("shell: bash desc template: " + err.Error())
+	}
+	return b.String()
+}
+
+const (
+	SchemaShellCommand    = "要执行的 shell 命令字符串（同步或 run_in_background 时必填）"
+	SchemaRunInBackground = "为 true 时在后台并行执行并阻塞至完成；同轮可与其他 run_in_background 或只读工具并行；不要在 command 末尾加 &"
+	SchemaTimeoutMs       = "可选，command 的超时毫秒数（同步与 run_in_background 均适用）；省略时使用 tools.shell.timeout（默认 120 秒）；最大 600000；超时将强制终止子进程"
 
 	ErrBackgroundUnavailable = "shell 后台任务不可用"
-	ErrCommandRequired       = "command 为必填项（或使用 job_id / list_jobs）"
+	ErrCommandRequired       = "command 为必填项"
 	ErrCommandRequiredSync   = "command 为必填项"
+	ErrTimeoutMsNonNegative  = "timeout_ms 必须为非负整数"
 
-	ResultNoBackgroundJobs  = "无后台 shell 任务。"
-	ResultNoOutput          = "（无输出）"
-	ResultKilledJob         = "已终止后台任务 %s（%s）"
-	ResultBackgroundStarted = "后台任务已启动\njob_id: %s\npid: %d\nstatus: %s\ncommand: %s"
-	ResultJobHeader         = "job_id: %s\nstatus: %s\ncommand: %s\npid: %d\nstarted: %s\n"
-	ResultJobFinished       = "finished: %s\n"
-	ResultJobExitCode       = "exit_code: %d\n"
-	ResultStdout            = "\nstdout:\n"
-	ResultStderr            = "\nstderr:\n"
-	ResultNoOutputYet       = "\n（尚无输出）\n"
-	ResultJobListHeader     = "后台 shell 任务：\n"
-	ResultJobListLine       = "  %s  %s  pid=%d%s  %q\n"
-	ResultExitPrefix        = "exit: "
+	ResultNoOutput   = "（无输出）"
+	ResultExitPrefix = "exit: "
 )

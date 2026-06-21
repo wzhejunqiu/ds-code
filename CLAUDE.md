@@ -47,7 +47,7 @@ internal/patch/        Codex 式 apply_patch 解析 + 应用
 internal/prompt/       系统提示词模板
 internal/config/       YAML 配置加载（用户级 ~/.ds-code/config/ + 项目级 .ds-code/）
 internal/tokenizer/    DeepSeek V4 tokenizer（CGO 精确 + 纯 Go 字符估算降级）
-internal/shelljobs/    后台 shell 任务管理
+internal/shelljobs/    后台 shell 任务管理（本会话跟踪；退出 Close kill；Open reconcile stale meta）
 ```
 
 ### 核心流程

@@ -4,24 +4,25 @@ import "time"
 
 // Block is one row in the in-memory transcript (rendered by Render).
 type Block struct {
-	Role               Role
-	Content            string
-	Reasoning          string
-	ReasoningOpen      bool
-	ReasoningStartedAt time.Time
-	ReasoningEndedAt   time.Time
-	PlanningStartedAt  time.Time
-	ReasoningDuration  time.Duration
-	TurnDuration       time.Duration
-	Streaming          bool
-	ToolName           string
-	ToolCallID         string
-	ToolArgs           string
-	ToolCommand        string
-	ToolResult         string
-	ToolRunning        bool
-	ToolError          bool
-	ToolExpanded       bool
+	Role                Role
+	Content             string
+	Reasoning           string
+	ReasoningOpen       bool
+	ReasoningStartedAt  time.Time
+	ReasoningEndedAt    time.Time
+	PlanningStartedAt   time.Time
+	ReasoningDuration   time.Duration
+	TurnDuration        time.Duration
+	Streaming           bool
+	ToolName            string
+	ToolCallID          string
+	ToolArgs            string
+	ToolCommand         string
+	ToolResult          string
+	ToolRunning         bool
+	ToolError           bool
+	ToolExpanded        bool
+	ToolTimeoutDeadline time.Time
 }
 
 // AppendContent appends assistant/user visible text.

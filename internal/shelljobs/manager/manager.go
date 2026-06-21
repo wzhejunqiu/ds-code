@@ -1,8 +1,8 @@
 package manager
 
 import (
+	"context"
 	"fmt"
-	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
 	"os"
 	"os/exec"
 	"sync"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/shelljobs"
 )
 
 // Manager tracks background shell processes for one project.
@@ -18,13 +19,15 @@ type Manager struct {
 	jobsDir   string
 	cfg       config.ShellToolConfig
 
-	mu   sync.Mutex
-	jobs map[string]*runningJob
+	mu          sync.Mutex
+	jobs        map[string]*runningJob
+	reconcileWG sync.WaitGroup
 }
 
 type runningJob struct {
 	shelljobs.Job
-	cmd *exec.Cmd
+	cmd  *exec.Cmd
+	done chan struct{}
 }
 
 // OpenManager creates a shell job manager for a project.
@@ -42,11 +45,30 @@ func Open(projectRoot string, cfg config.ShellToolConfig) (*Manager, error) {
 		cfg:       cfg,
 		jobs:      make(map[string]*runningJob),
 	}
-	m.loadExisting()
+	m.startReconcileStaleJobs()
 	return m, nil
 }
 
-func (m *Manager) loadExisting() {
+func (m *Manager) startReconcileStaleJobs() {
+	m.reconcileWG.Add(1)
+	go func() {
+		defer m.reconcileWG.Done()
+		m.reconcileStaleJobs()
+	}()
+}
+
+var reconcileMu sync.Mutex
+
+func processAlive(pid int) bool {
+	return syscall.Kill(pid, 0) == nil
+}
+
+// reconcileStaleJobs fixes disk meta for jobs left running from a prior session.
+// Orphan PIDs are killed; jobs are not re-attached to this manager.
+func (m *Manager) reconcileStaleJobs() {
+	reconcileMu.Lock()
+	defer reconcileMu.Unlock()
+
 	entries, err := os.ReadDir(m.jobsDir)
 	if err != nil {
 		return
@@ -56,37 +78,42 @@ func (m *Manager) loadExisting() {
 			continue
 		}
 		id := e.Name()
-		job, err := m.readMeta(id)
-		if err != nil {
+		if isTracked(m.jobsDir, id) {
 			continue
 		}
-		if job.Status == shelljobs.StatusRunning {
-			// Process may have died while ds-code was down; verify PID.
-			if job.PID > 0 && processAlive(job.PID) {
-				m.jobs[id] = &runningJob{Job: job}
-			} else {
-				job.Status = shelljobs.StatusFailed
-				now := time.Now().UTC()
-				job.FinishedAt = &now
-				code := -1
-				job.ExitCode = &code
-				_ = m.writeMeta(job)
-			}
+		job, err := m.readMeta(id)
+		if err != nil || job.Status != shelljobs.StatusRunning {
+			continue
 		}
+		now := time.Now().UTC()
+		code := -1
+		if job.PID > 0 && processAlive(job.PID) {
+			_ = syscall.Kill(job.PID, syscall.SIGKILL)
+			job.Status = shelljobs.StatusKilled
+		} else {
+			job.Status = shelljobs.StatusFailed
+		}
+		job.FinishedAt = &now
+		job.ExitCode = &code
+		_ = m.writeMeta(job)
 	}
 }
 
-func processAlive(pid int) bool {
-	return syscall.Kill(pid, 0) == nil
-}
-
-// Close kills all in-memory tracked running jobs.
+// Close kills all running jobs started in this session and releases resources.
 func (m *Manager) Close() {
+	m.reconcileWG.Wait()
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	for _, rj := range m.jobs {
-		if rj.cmd != nil && rj.cmd.Process != nil {
-			_ = rj.cmd.Process.Kill()
+	var ids []string
+	for id, rj := range m.jobs {
+		if rj.Status == shelljobs.StatusRunning {
+			ids = append(ids, id)
 		}
 	}
+	m.mu.Unlock()
+	for _, id := range ids {
+		_, _ = m.Cancel(context.Background(), id)
+	}
+	m.mu.Lock()
+	m.jobs = nil
+	m.mu.Unlock()
 }

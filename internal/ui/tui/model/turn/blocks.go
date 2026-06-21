@@ -35,7 +35,7 @@ func NeedsPlanningTick(s *state.State) bool {
 	return s.Chat[len(s.Chat)-1].Role == chat.RolePlanning
 }
 
-func AppendToolBlock(s *state.State, name, args, command, result string, running, isError bool) {
+func AppendToolBlock(s *state.State, name, args, command, result string, running, isError bool, timeoutDeadline time.Time) {
 	if len(s.Chat) > 0 {
 		last := &s.Chat[len(s.Chat)-1]
 		if last.Role == chat.RoleAssistant {
@@ -44,13 +44,14 @@ func AppendToolBlock(s *state.State, name, args, command, result string, running
 		}
 	}
 	s.Chat = append(s.Chat, chat.Block{
-		Role:        chat.RoleTool,
-		ToolName:    name,
-		ToolArgs:    args,
-		ToolCommand: command,
-		ToolResult:  result,
-		ToolRunning: running,
-		ToolError:   isError,
+		Role:                chat.RoleTool,
+		ToolName:            name,
+		ToolArgs:            args,
+		ToolCommand:         command,
+		ToolResult:          result,
+		ToolRunning:         running,
+		ToolError:           isError,
+		ToolTimeoutDeadline: timeoutDeadline,
 	})
 }
 
@@ -77,7 +78,7 @@ func FinishToolBlock(s *state.State, name, args, command, result string, isError
 		finishToolAt(s, i, args, command, result, isError)
 		return
 	}
-	AppendToolBlock(s, name, args, command, result, false, isError)
+	AppendToolBlock(s, name, args, command, result, false, isError, time.Time{})
 }
 
 func finishToolAt(s *state.State, i int, args, command, result string, isError bool) {
@@ -86,6 +87,7 @@ func finishToolAt(s *state.State, i int, args, command, result string, isError b
 	s.Chat[i].ToolResult = result
 	s.Chat[i].ToolRunning = false
 	s.Chat[i].ToolError = isError
+	s.Chat[i].ToolTimeoutDeadline = time.Time{}
 }
 
 func FinalizeLastAssistant(s *state.State, at time.Time) {

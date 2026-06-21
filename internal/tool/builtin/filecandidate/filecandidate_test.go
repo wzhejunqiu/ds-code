@@ -1,4 +1,4 @@
-package builtin_test
+package filecandidate_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/filecandidate"
 )
 
 func TestMakeFileCandidate_workspaceRelFromSubdir(t *testing.T) {
@@ -23,7 +24,7 @@ func TestMakeFileCandidate_workspaceRelFromSubdir(t *testing.T) {
 	}
 
 	perm := permission.NewEngine("readonly", dir, false)
-	c := builtin.MakeFileCandidate(perm, f, builtin.FileFilter{})
+	c := filecandidate.MakeFileCandidate(perm, f, filecandidate.FileFilter{})
 	if c == nil {
 		t.Fatal("expected candidate")
 	}
@@ -45,10 +46,10 @@ func TestMakeFileCandidate_maxFileBytes(t *testing.T) {
 	}
 	perm := permission.NewEngine("readonly", dir, false)
 
-	if c := builtin.MakeFileCandidate(perm, f, builtin.FileFilter{MaxFileBytes: 50}); c != nil {
+	if c := filecandidate.MakeFileCandidate(perm, f, filecandidate.FileFilter{MaxFileBytes: 50}); c != nil {
 		t.Fatal("expected nil for oversized file")
 	}
-	if c := builtin.MakeFileCandidate(perm, f, builtin.FileFilter{MaxFileBytes: 200}); c == nil {
+	if c := filecandidate.MakeFileCandidate(perm, f, filecandidate.FileFilter{MaxFileBytes: 200}); c == nil {
 		t.Fatal("expected candidate under size limit")
 	}
 }
@@ -62,7 +63,7 @@ func TestMakeFileCandidate_skipsBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 	perm := permission.NewEngine("readonly", dir, false)
-	if c := builtin.MakeFileCandidate(perm, png, builtin.FileFilter{}); c != nil {
+	if c := filecandidate.MakeFileCandidate(perm, png, filecandidate.FileFilter{}); c != nil {
 		t.Fatal("expected nil for binary png")
 	}
 }
@@ -80,7 +81,7 @@ func TestValidateGlobMatches_rejectsOutsideWorkspace(t *testing.T) {
 	}
 
 	perm := permission.NewEngine("readonly", dir, false)
-	err := builtin.ValidateGlobMatches(perm, []string{link}, "escape")
+	err := filecandidate.ValidateGlobMatches(perm, []string{link}, "escape")
 	if err == nil {
 		t.Fatal("expected error for symlink outside workspace")
 	}
@@ -102,7 +103,7 @@ func TestCollectGlobPattern_preservesMatchOrderNotModTime(t *testing.T) {
 	_ = os.Chtimes(zLast, newTime, newTime)
 
 	perm := permission.NewEngine("readonly", dir, false)
-	out, err := builtin.CollectGlobPattern(context.Background(), perm, dir, "*.go", builtin.FileFilter{}, nil, nil)
+	out, err := filecandidate.CollectGlobPattern(context.Background(), perm, dir, "*.go", filecandidate.FileFilter{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,10 +114,10 @@ func TestCollectGlobPattern_preservesMatchOrderNotModTime(t *testing.T) {
 	if out[0].Rel != "a_first.go" || out[1].Rel != "z_last.go" {
 		t.Fatalf("CollectGlobPattern should not sort by ModTime: got %q, %q", out[0].Rel, out[1].Rel)
 	}
-	sorted := append([]builtin.FileCandidate(nil), out...)
+	sorted := append([]filecandidate.FileCandidate(nil), out...)
 	builtin.SortByModTimeDesc(sorted,
-		func(c builtin.FileCandidate) time.Time { return c.ModTime },
-		func(c builtin.FileCandidate) string { return c.Rel },
+		func(c filecandidate.FileCandidate) time.Time { return c.ModTime },
+		func(c filecandidate.FileCandidate) string { return c.Rel },
 	)
 	if sorted[0].Rel != "z_last.go" {
 		t.Fatalf("caller sort should order by mtime: got %q first", sorted[0].Rel)

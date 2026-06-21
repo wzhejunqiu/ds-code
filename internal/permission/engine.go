@@ -69,9 +69,6 @@ func (e *Engine) Check(tool string, args map[string]any) error {
 }
 
 func (e *Engine) check(tool string, args map[string]any) error {
-	if tool == toolname.Bash && IsShellReadOnlyOp(args) {
-		return e.checkShellReadOnly(args)
-	}
 	if tool == toolname.Bash {
 		if cmd, _ := args["command"].(string); cmd != "" {
 			handled, err := e.checkShellCommand(cmd)
@@ -228,29 +225,6 @@ func (e *Engine) isMCPToolName(tool string) bool {
 		return true
 	}
 	return false
-}
-
-// IsShellReadOnlyOp reports shell tool args that only list/poll background jobs.
-func IsShellReadOnlyOp(args map[string]any) bool {
-	if list, _ := args["list_jobs"].(bool); list {
-		return true
-	}
-	jobID, _ := args["job_id"].(string)
-	if jobID == "" {
-		return false
-	}
-	if cancel, _ := args["cancel"].(bool); cancel {
-		return false
-	}
-	return true
-}
-
-func (e *Engine) checkShellReadOnly(args map[string]any) error {
-	// Poll/list background jobs: allowed in readonly; still blocked in ask without TTY for consistency with read ops.
-	if e.Mode == "ask" && !e.Interactive {
-		return ErrNeedTTY
-	}
-	return nil
 }
 
 func (e *Engine) isWriteTool(tool string) bool {

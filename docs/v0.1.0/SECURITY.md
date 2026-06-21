@@ -55,8 +55,11 @@
 ## Shell 后台任务
 
 - 后台命令在 `project_root` 下执行，输出写入 `~/.ds-code/projects/<id>/shell-jobs/<job_id>/`。
-- 并发上限 `tools.shell.max_background`（默认 5）；轮询/列表在 `readonly` 下允许，启动与 `cancel` 仍受写权限约束。
-- 退出 ds-code 时**不**自动杀死后台任务（长任务可继续运行）；`cancel` 或进程自然结束。
+- 并发上限 `tools.shell.max_background`（默认 5）。
+- `run_in_background` 工具调用会阻塞至 job 完成；同轮多条可并行（Runner concurrent batch）。
+- **退出 ds-code 时强制 kill 本会话仍在运行的 shell job**（TUI / 非交互 `-p` 均经 `closeShellJobs` → `Manager.Close`）。
+- **不跨会话恢复 job**：`Open` 时**异步** reconcile 磁盘 stale meta（不阻塞启动；`Close` 前等待 reconcile 结束），不重新纳入 manager。
+- LLM 不可见 `job_id` / `cancel`；用户按 Esc 取消 turn 会终止当前 job。
 
 ## 报告问题
 

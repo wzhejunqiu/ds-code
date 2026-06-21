@@ -48,7 +48,7 @@ internal/tool/builtin/
 | `diagnostics` | [diagnostics/diagnostics.md](diagnostics/diagnostics.md) | Low | plan / agent（需 LSP） |
 | `web_fetch` | [web_fetch/web_fetch.md](web_fetch/web_fetch.md) | Medium | plan / agent（需配置） |
 | `web_search` | [web_search/web_search.md](web_search/web_search.md) | Medium | 占位，未注册 |
-| `shell` | [shell/shell.md](shell/shell.md) | Highest | agent only |
+| `bash` | [shell/shell.md](shell/shell.md) | Highest | agent only |
 | `apply_patch` | [apply_patch/apply_patch.md](apply_patch/apply_patch.md) | High | agent only |
 | `write_file` | [write_file/write_file.md](write_file/write_file.md) | High | agent only |
 | `tool_search` | [tool_search/tool_search.md](tool_search/tool_search.md) | Low | agent only（有 defer 时） |
@@ -87,7 +87,7 @@ BuildRegistry(runMode, deps)
 
 | 配置 | 说明 |
 |------|------|
-| `tools.defer_builtin` | 工具名列表，如 `["shell", "apply_patch"]`；命中项经 `WrapDeferred` 注册 |
+| `tools.defer_builtin` | 工具名列表，如 `["bash", "apply_patch"]`；命中项经 `WrapDeferred` 注册 |
 | `tool_search` | agent 模式下始终注册；LLM 用其按名称拉取完整 schema 后再调用目标工具 |
 
 机制：

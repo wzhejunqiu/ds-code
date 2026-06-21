@@ -62,7 +62,7 @@ func RenderCached(blocks []Block, width int, now time.Time, showToolDetails bool
 			lines = append(lines, cache.entries[i].lines...)
 			continue
 		}
-		if useMDCache(&blocks[i]) {
+		if useMDCache(&blocks[i], now) {
 			if cache.mdBlockIdx != i {
 				if mdCache != nil {
 					mdCache.Reset()
@@ -114,7 +114,7 @@ func SyncBlockLineSlices(blocks []Block, width int, now time.Time, showToolDetai
 			out[i] = cache.entries[i].lines
 			continue
 		}
-		if useMDCache(&blocks[i]) {
+		if useMDCache(&blocks[i], now) {
 			if cache.mdBlockIdx != i {
 				if mdCache != nil {
 					mdCache.Reset()
@@ -167,11 +167,11 @@ func resizeEntries(entries []cacheEntry, n int) []cacheEntry {
 	return entries
 }
 
-func useMDCache(b *Block) bool {
-	return b.Role == RoleAssistant && b.Content != "" && (b.Streaming || blockNeedsLiveNow(b))
+func useMDCache(b *Block, now time.Time) bool {
+	return b.Role == RoleAssistant && b.Content != "" && (b.Streaming || blockNeedsLiveNow(b, now))
 }
 
-func blockNeedsLiveNow(b *Block) bool {
+func blockNeedsLiveNow(b *Block, now time.Time) bool {
 	if b.Role == RolePlanning {
 		return true
 	}
@@ -179,6 +179,10 @@ func blockNeedsLiveNow(b *Block) bool {
 		return true
 	}
 	if b.Role == RoleAssistant && !b.ReasoningStartedAt.IsZero() && b.ReasoningEndedAt.IsZero() {
+		return true
+	}
+	if b.Role == RoleTool && b.ToolRunning && tool.IsShellDisplay(b.ToolName) &&
+		!b.ToolTimeoutDeadline.IsZero() && now.Before(b.ToolTimeoutDeadline) {
 		return true
 	}
 	return false
@@ -213,8 +217,12 @@ func blockFingerprint(b *Block, now time.Time, showToolDetails bool) string {
 	sb.WriteByte('|')
 	sb.WriteString(b.ToolResult)
 	fmt.Fprintf(&sb, "|tr%d|te%d|tx%d|", boolInt(b.ToolRunning), boolInt(b.ToolError), boolInt(b.ToolExpanded))
+	if !b.ToolTimeoutDeadline.IsZero() {
+		sb.WriteString(b.ToolTimeoutDeadline.Format(time.RFC3339Nano))
+	}
+	sb.WriteByte('|')
 	fmt.Fprintf(&sb, "td%d|", boolInt(showToolDetails))
-	if blockNeedsLiveNow(b) {
+	if blockNeedsLiveNow(b, now) {
 		fmt.Fprintf(&sb, "t%d", now.UnixMilli()/liveTimeBucketMs)
 	}
 	return sb.String()
@@ -256,8 +264,8 @@ func renderBlock(b *Block, width int, now time.Time, showToolDetails bool, disp 
 		lines = append(lines, chattool.Render(chattool.Block{
 			Name: b.ToolName, Args: b.ToolArgs, Command: b.ToolCommand,
 			Result: b.ToolResult, Running: b.ToolRunning, Error: b.ToolError,
-			Expanded: b.ToolExpanded,
-		}, width, showToolDetails, disp)...)
+			Expanded: b.ToolExpanded, TimeoutDeadline: b.ToolTimeoutDeadline,
+		}, width, showToolDetails, disp, now)...)
 		lines = append(lines, "")
 	case RolePlanning:
 		indent := lipgloss.Width(planningBullet)
