@@ -23,8 +23,8 @@
 
 | 检查 | 预期 |
 |------|------|
-| 存在 `<tool>/prompt.md` | 是 |
-| `text.go` 含 `//go:embed prompt.md` + `RenderDesc()` | 是 |
+| 存在 `<tool>/usage.prompt` | 是 |
+| `text.go` 含 `//go:embed usage.prompt` + `RenderDesc()` | 是 |
 | `<tool>.go` 的 `Description()` 仅调用 `RenderDesc()` | 是 |
 | 无大段 `const Desc*` / `fmt.Sprintf` 拼 Description | 是 |
 | `text_test.go`（建议）无 `{{.` 残留 | 是 |
@@ -54,7 +54,7 @@
 
 启动 agent 模式，`-vv` 查看首轮 `tools` JSON：
 
-- 每个内建工具的 `description` 与对应 `prompt.md` 渲染结果一致
+- 每个内建工具的 `description` 与对应 `usage.prompt` 渲染结果一致
 - 无残留 wire 名 `shell`
 
 ## 4. `bash` 改名回归

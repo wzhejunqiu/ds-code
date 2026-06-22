@@ -9,7 +9,7 @@
 
 v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词改写完**——包括各工具的 `Description()` 以及 JSON Schema 字段 `description`。
 
-**统一实现模式**（参照已落地的 `bash`）：每个工具子包使用 **`prompt.md` + `text.go`（`//go:embed` + `text/template`）**；正文在 Markdown 中编辑，工具名通过 `{{.ReadFile}}` 等占位符注入。详见 [REQUIREMENTS.md §4 FR-0](REQUIREMENTS.md#fr-0-工具-prompt-标准模式必遵) 与 [DESIGN.md §3](DESIGN.md#3-工具-prompt-标准模式)。
+**统一实现模式**（参照已落地的 `bash`）：每个工具子包使用 **`usage.prompt` + `text.go`（`//go:embed` + `text/template`）**；正文在 Markdown 中编辑，工具名通过 `{{.ReadFile}}` 等占位符注入。详见 [REQUIREMENTS.md §4 FR-0](REQUIREMENTS.md#fr-0-工具-prompt-标准模式必遵) 与 [DESIGN.md §3](DESIGN.md#3-工具-prompt-标准模式)。
 
 系统提示词（`internal/prompt/prompt.md`）采用同一套 embed + template 机制；**文案以你为主导**，改写前须确认。
 
@@ -28,19 +28,19 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 
 | 工具 | 提示词文件（标准布局） | 状态 |
 |------|------------------------|------|
-| `read_file` | [`read_file/prompt.md`](../../internal/tool/builtin/read_file/prompt.md) + `text.go` | **已定稿**（FR-0；参数 `filepath`） |
-| `grep` | `grep/prompt.md` + `text.go` | 待改写 |
-| `glob` | `glob/prompt.md` + `text.go` | 待改写 |
-| `list_dir` | `list_dir/prompt.md` + `text.go` | 待改写 |
-| `diagnostics` | `diagnostics/prompt.md` + `text.go` | 待改写 |
-| `web_fetch` | `web_fetch/prompt.md` + `text.go` | 待改写 |
-| `web_search` | `web_search/prompt.md` + `text.go` | 待改写（占位，默认未注册） |
-| `bash` | [`shell/prompt.md`](../../internal/tool/builtin/shell/prompt.md) + `text.go` | **参考实现**；草稿待你确认 |
-| `apply_patch` | `apply_patch/prompt.md` + `text.go` | 待改写 |
-| `write_file` | `write_file/prompt.md` + `text.go` | 待改写 |
-| `tool_search` | `tool_search/prompt.md` + `text.go` | 待改写 |
-| `agent` | `agent/prompt.md` + `text.go` | 待改写 |
-| 共享 schema | `builtin/text.go`（无 prompt.md） | 待改写 |
+| `read_file` | [`read_file/usage.prompt`](../../internal/tool/builtin/read_file/usage.prompt) + `text.go` | **已定稿**（FR-0；参数 `filepath`） |
+| `grep` | `grep/usage.prompt` + `text.go` | 待改写 |
+| `glob` | `glob/usage.prompt` + `text.go` | 待改写 |
+| `list_dir` | `list_dir/usage.prompt` + `text.go` | 待改写 |
+| `diagnostics` | `diagnostics/usage.prompt` + `text.go` | 待改写 |
+| `web_fetch` | `web_fetch/usage.prompt` + `text.go` | 待改写 |
+| `web_search` | `web_search/usage.prompt` + `text.go` | 待改写（占位，默认未注册） |
+| `bash` | [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) + `text.go` | **参考实现** |
+| `apply_patch` | `apply_patch/usage.prompt` + `text.go` | 待改写 |
+| `write_file` | `write_file/usage.prompt` + `text.go` | 待改写 |
+| `tool_search` | `tool_search/usage.prompt` + `text.go` | 待改写 |
+| `agent` | `agent/usage.prompt` + `text.go` | 待改写 |
+| 共享 schema | `builtin/text.go`（无 usage.prompt） | 待改写 |
 
 ## 协作约定（重要）
 
@@ -48,15 +48,15 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 2. **改写前必问**：Agent/实现者给出草稿或选项后，等你确认再落代码。
 3. **一次一工具或一小批**：避免大批量静默替换导致风格漂移。
 4. **系统提示词**：`internal/prompt/prompt.md` 与工具层同模式；内容由你审定。
-5. **工具 Description**：各子包 `internal/tool/builtin/<tool>/prompt.md`；**禁止**在 `text.go` 用大段 `const Desc*` 或 `fmt.Sprintf` 硬编码正文（Schema / Err / Result 除外）。
+5. **工具 Description**：各子包 `internal/tool/builtin/<tool>/usage.prompt`；**禁止**在 `text.go` 用大段 `const Desc*` 或 `fmt.Sprintf` 硬编码正文（Schema / Err / Result 除外）。
 
 ## 配套技术项（非文案核心，但同版交付）
 
 | 项 | 说明 |
 |----|------|
 | `shell` → `bash` | LLM 可见工具名与 Cursor 对齐；配置键 `tools.shell` 不变 |
-| 工具名注入 | `prompt.md` 内 `{{.Bash}}` 等；`text.go` 从 `tool.Name*` 填模板 |
-| 参考实现 | [`internal/tool/builtin/shell/`](../../internal/tool/builtin/shell/)（`prompt.md` + `RenderDesc()`） |
+| 工具名注入 | `usage.prompt` 内 `{{.Bash}}` 等；`text.go` 从 `tool.Name*` 填模板 |
+| 参考实现 | [`internal/tool/builtin/shell/`](../../internal/tool/builtin/shell/)（`usage.prompt` + `RenderDesc()`） |
 | `bash` 参数改造 | `timeout_ms`、`run_in_background`；移除 `list_jobs` |
 | TUI 倒计时 | sync bash Running 标题递减倒计时 |
 | 系统提示词 | [`internal/prompt/`](../../internal/prompt/)（同一 embed + template 模式） |

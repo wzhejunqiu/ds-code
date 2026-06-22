@@ -8,7 +8,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 )
 
-//go:embed prompt.md
+//go:embed usage.prompt
 var descTemplate string
 
 type descVars struct {

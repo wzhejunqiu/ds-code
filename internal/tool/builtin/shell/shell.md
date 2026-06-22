@@ -23,8 +23,6 @@
 | [`shell_cmd_description.prompt`](shell_cmd_description.prompt) | `description` 参数 JSON Schema 文案（embed 至 `SchemaShellDescription`） |
 | [`text.go`](text.go) | `RenderDesc()`、其余 Schema/Err/Result 常量 |
 
-> bash 参考实现使用 `usage.prompt` 而非 FR-0 通用的 `prompt.md` 文件名；其余工具改写仍目标为 `prompt.md`。
-
 详见 v0.1.4 [FR-0](../../docs/v0.1.4/REQUIREMENTS.md#fr-0-工具-prompt-标准模式必遵)。
 
 ## 参数 Schema

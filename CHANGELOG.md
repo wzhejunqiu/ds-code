@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- `read_file` tool prompt migrated to `prompt.md` + `RenderDesc()` (FR-0); LLM parameter **`path` → `filepath`**
+- `read_file` tool prompt migrated to `usage.prompt` + `RenderDesc()` (FR-0); LLM parameter **`path` → `filepath`**
 - `run_in_background` blocks until job completes (same stdout/stderr format as sync); concurrent batch for multiple bg calls in one turn
 - **Removed `/kill` slash command** and TUI kill picker; no manual job management
 - **Exit ds-code** now force-kills running shell jobs for the current session (`Manager.Close`)

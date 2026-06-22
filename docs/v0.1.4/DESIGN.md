@@ -41,7 +41,7 @@ flowchart TB
 | 层 | 路径 | 渲染入口 |
 |----|------|----------|
 | System | `internal/prompt/prompt.md` | `DefaultSystemBase()` |
-| 工具 | `internal/tool/builtin/<tool>/prompt.md` | `RenderDesc()` |
+| 工具 | `internal/tool/builtin/<tool>/usage.prompt` | `RenderDesc()` |
 
 二者均：`//go:embed` + `text/template` + `tool.Name*` 注入。
 
@@ -49,7 +49,7 @@ flowchart TB
 
 ```text
 internal/tool/builtin/shell/
-├── prompt.md       # 编辑 Description 正文
+├── usage.prompt    # 编辑 Description 正文
 ├── text.go         # embed、descVars、RenderDesc()、Schema*
 ├── shell.go        # Description() → RenderDesc()
 └── text_test.go    # 无 {{. 残留；wire 名已注入
@@ -60,7 +60,7 @@ internal/tool/builtin/shell/
 func (t *ShellTool) Description() string { return RenderDesc() }
 
 // text.go — 片段
-//go:embed prompt.md
+//go:embed usage.prompt
 var descTemplate string
 
 func RenderDesc() string {
@@ -68,7 +68,7 @@ func RenderDesc() string {
 }
 ```
 
-`prompt.md` 片段：
+`usage.prompt` 片段：
 
 ```markdown
 - 读取文件：{{.ReadFile}}（禁止 cat/head/tail）
@@ -79,32 +79,32 @@ func RenderDesc() string {
 
 ```text
 internal/tool/builtin/
-├── text.go                 # 共享 Schema*（无 prompt.md）
+├── text.go                 # 共享 Schema*（无 usage.prompt）
 ├── read_file/
-│   ├── prompt.md           # Description 正文
+│   ├── usage.prompt        # Description 正文
 │   ├── text.go             # RenderDesc + SchemaOffset 等
 │   ├── read_file.go
 │   └── text_test.go
 ├── grep/
-│   ├── prompt.md
+│   ├── usage.prompt
 │   └── …
 └── shell/                  # bash — 参考实现
     └── …
 ```
 
-**迁移**：现有 `const Desc*`、`fmt.Sprintf(Desc*, …)` 在改写时迁入 `prompt.md` 并改为模板占位符。
+**迁移**：现有 `const Desc*`、`fmt.Sprintf(Desc*, …)` 在改写时迁入 `usage.prompt` 并改为模板占位符。
 
 ### 3.4 Schema 与 Err/Result 仍留 text.go
 
 | 类型 | 位置 | 说明 |
 |------|------|------|
-| `tools[].description` | `prompt.md` → `RenderDesc()` | 长文、可含 Markdown |
+| `tools[].description` | `usage.prompt` → `RenderDesc()` | 长文、可含 Markdown |
 | `parameters.*.description` | `text.go` 的 `Schema*` | 短字段说明；可后续再 embed 独立文件（**非 v0.1.4 范围**） |
 | `Err*` / `Result*` | `text.go` | 不发给 LLM |
 
 ### 3.5 tool_search 归一
 
-将 `tool_search.go` 内联 Description 迁至 `tool_search/prompt.md` + `RenderDesc()`，结构同 FR-0。
+将 `tool_search.go` 内联 Description 迁至 `tool_search/usage.prompt` + `RenderDesc()`，结构同 FR-0。
 
 ### 3.6 测试
 
@@ -151,9 +151,9 @@ func TestXxxTool_Description_matchesRenderDesc(t *testing.T) { … }
 
 1. 与你确认：优先工具 + Desc 长短风格 + 是否在每工具重复「禁 bash 绕行」。
 2. `bash` 改名链（可与第 1 步并行）。
-3. 按 TOOL_PROMPTS 排期逐工具：草稿 → 你确认 → **`prompt.md` + `text.go`（FR-0）**。
+3. 按 TOOL_PROMPTS 排期逐工具：草稿 → 你确认 → **`usage.prompt` + `text.go`（FR-0）**。
 4. 共享 `builtin/text.go` 审定。
-5. 可选：`prompt.md` 你审定后合入。
+5. 可选：系统 `prompt.md` 你审定后合入。
 6. CHANGELOG + ACCEPTANCE 收尾。
 
 ## 9. bash 工具行为设计（FR-5）

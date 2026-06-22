@@ -22,7 +22,7 @@ flowchart LR
   A[你指定工具与风格] --> B[实现者出草稿/选项]
   B --> C{你确认?}
   C -->|否| B
-  C -->|是| D[落代码 prompt.md + text.go]
+  C -->|是| D[落代码 usage.prompt + text.go]
   D --> E[更新 TOOL_PROMPTS.md 状态]
   E --> F[单测 + ACCEPTANCE 勾选]
 ```
@@ -67,13 +67,13 @@ flowchart LR
 
 ### FR-0 工具 prompt 标准模式（必遵）
 
-后续 **全部** 内建工具 Description 改写须与 [`bash` 参考实现](../../internal/tool/builtin/shell/) 及 [`internal/prompt/`](../../internal/prompt/) 一致：**`prompt.md` + `//go:embed` + `text/template`**。
+后续 **全部** 内建工具 Description 改写须与 [`bash` 参考实现](../../internal/tool/builtin/shell/) 一致：**`usage.prompt` + `//go:embed` + `text/template`**。（系统层仍用 [`internal/prompt/prompt.md`](../../internal/prompt/prompt.md)。）
 
 #### 目录与职责
 
 ```text
 internal/tool/builtin/<tool>/
-├── prompt.md      # Description 正文（Markdown）；跨工具引用用 {{.ReadFile}} 等
+├── usage.prompt   # Description 正文（Markdown）；跨工具引用用 {{.ReadFile}} 等
 ├── text.go        # embed、模板变量、RenderDesc()、Schema*、Err*、Result*
 ├── <tool>.go      # Description() { return RenderDesc() }
 └── text_test.go   # 建议：断言工具名已注入、无 {{. 残留
@@ -81,27 +81,27 @@ internal/tool/builtin/<tool>/
 
 | 文件 | 内容 | 禁止 |
 |------|------|------|
-| `prompt.md` | 发给 LLM 的 `tools[].description` 正文 | 硬编码 wire 工具名（须用模板占位符） |
-| `text.go` | `//go:embed prompt.md`；`descVars`（或 `<tool>Vars`）；`RenderDesc()`；JSON Schema 字段 `description` 常量 | 大段 Description 字符串、`fmt.Sprintf` 拼正文 |
+| `usage.prompt` | 发给 LLM 的 `tools[].description` 正文 | 硬编码 wire 工具名（须用模板占位符） |
+| `text.go` | `//go:embed usage.prompt`；`descVars`（或 `<tool>Vars`）；`RenderDesc()`；JSON Schema 字段 `description` 常量 | 大段 Description 字符串、`fmt.Sprintf` 拼正文 |
 | `<tool>.go` | `Description()` 委托 `RenderDesc()` | 内联长文案 |
 
 #### FR-0 需求条目
 
 | ID | 描述 | 优先级 |
 |----|------|--------|
-| FR-0.1 | 每个工具子包新增或迁移至 `prompt.md` 承载 Description 正文 | P0 |
-| FR-0.2 | `text.go` 使用 `//go:embed prompt.md` + `text/template` 渲染 | P0 |
-| FR-0.3 | 模板变量值来自 `tool.Name*`（或 `toolname` 包）；`prompt.md` 中用 `{{.Field}}` 引用 | P0 |
+| FR-0.1 | 每个工具子包新增或迁移至 `usage.prompt` 承载 Description 正文 | P0 |
+| FR-0.2 | `text.go` 使用 `//go:embed usage.prompt` + `text/template` 渲染 | P0 |
+| FR-0.3 | 模板变量值来自 `tool.Name*`（或 `toolname` 包）；`usage.prompt` 中用 `{{.Field}}` 引用 | P0 |
 | FR-0.4 | 导出 `RenderDesc() string`（命名可一致）；`<tool>.go` 的 `Description()` 仅调用之 | P0 |
 | FR-0.5 | 模板渲染失败 `panic`（与 system prompt 一致，启动/测试即暴露） | P0 |
-| FR-0.6 | 无需交叉引用的工具仍使用 `prompt.md`（可为短文），**不得**退回 `const Desc*` 单文件常量 | P0 |
+| FR-0.6 | 无需交叉引用的工具仍使用 `usage.prompt`（可为短文），**不得**退回 `const Desc*` 单文件常量 | P0 |
 | FR-0.7 | 共享 `builtin/text.go` 仅保留跨工具 Schema 常量，**不**引入 embed | P0 |
-| FR-0.8 | 参考实现：[`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt)、[`shell/text.go`](../../internal/tool/builtin/shell/text.go)（bash 用 `usage.prompt` 而非通用 `prompt.md`） | — |
+| FR-0.8 | 参考实现：[`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt)、[`shell/text.go`](../../internal/tool/builtin/shell/text.go) | — |
 
 #### 模板变量约定
 
 - 字段名 PascalCase，与 `internal/prompt/text.go` 的 `systemBaseVars` 对齐（如 `Bash`、`ReadFile`、`Grep`、`Glob`、`ListDir`、`ApplyPatch`、`WriteFile`）。
-- 各工具 `descVars` **只声明本工具 `prompt.md` 用到的字段**；未用到的不必注入。
+- 各工具 `descVars` **只声明本工具 `usage.prompt` 用到的字段**；未用到的不必注入。
 - 新增占位符时同步更新 `defaultDescVars()`（或等价函数）与单测。
 
 ### FR-1 内建工具提示词全面改写（核心）
@@ -114,7 +114,7 @@ internal/tool/builtin/<tool>/
 |----|------|--------|
 | FR-1.1 | 每个已注册工具的 `Description()` 文案完成审定并合入 | P0 |
 | FR-1.2 | 每个工具 JSON Schema 的 `properties.*.description` 完成审定并合入 | P0 |
-| FR-1.3 | `tool_search` 迁至 `prompt.md` + `text.go`（FR-0），不再在 `.go` 内联 Description | P1 |
+| FR-1.3 | `tool_search` 迁至 `usage.prompt` + `text.go`（FR-0），不再在 `.go` 内联 Description | P1 |
 | FR-1.4 | 探索类工具（grep/glob/list_dir/diagnostics）对 `.git`、`skip_dirs`、先收窄 `path` 的说明风格与你确认后统一 | P1 |
 | FR-1.5 | 写工具（apply_patch/write_file/bash）对分工、高危操作的说明与你确认后统一 | P1 |
 | FR-1.6 | `agent` 对四种类型的说明与你确认；是否与 spawn overlay 去重由你决定 | P1 |
@@ -123,7 +123,7 @@ internal/tool/builtin/<tool>/
 
 #### FR-1.9 单工具交付定义（Done）
 
-- [ ] 符合 [FR-0](#fr-0-工具-prompt-标准模式必遵)：`prompt.md` + `RenderDesc()` + embed/template  
+- [ ] 符合 [FR-0](#fr-0-工具-prompt-标准模式必遵)：`usage.prompt` + `RenderDesc()` + embed/template  
 - [ ] `text.go` 中 Schema 常量已更新（若本工具涉及）  
 - [ ] 你已在台账或 PR 中确认  
 - [ ] 交叉引用经 `{{.…}}` 注入，无硬编码 wire 名（除非你明确要求字面量）  
@@ -177,14 +177,14 @@ internal/tool/builtin/<tool>/
 |----|------|
 | NFR-1 | `make test` / `make lint` / `make vet` 全绿 |
 | NFR-2 | 单工具 Desc 长度与你确认的风格一致；不为了省 token 擅自砍你定的长文 |
-| NFR-3 | Description 正文仅在各工具 `prompt.md` 与 system `internal/prompt/prompt.md`；Schema/Err/Result 在 `text.go`；业务 `<tool>.go` 不夹带 LLM 文案 |
+| NFR-3 | Description 正文仅在各工具 `usage.prompt` 与 system `internal/prompt/prompt.md`；Schema/Err/Result 在 `text.go`；业务 `<tool>.go` 不夹带 LLM 文案 |
 | NFR-4 | 改写不改变 `Schema()` 字段名、类型、enum（除非另开需求） |
 
 ## 6. 范围边界
 
 **In scope**
 
-- `internal/tool/builtin/**/prompt.md`、`**/text.go`、`**/text_test.go`
+- `internal/tool/builtin/**/usage.prompt`、`**/text.go`、`**/text_test.go`
 - `internal/tool/builtin/tool_search/`（FR-0 迁移）
 - `internal/toolname/**`、`NameShell` 改名链
 - `internal/prompt/**`（仅你已审定的 system 内容）
@@ -202,8 +202,8 @@ internal/tool/builtin/<tool>/
 | 阶段 | 内容 | gate |
 |------|------|-------|
 | **0** | 已确认：长文风格、全工具覆盖、system 逐段审定（见 [TOOL_PROMPTS.md](TOOL_PROMPTS.md)） | 已完成 |
-| **A** | `bash` 改名 + FR-0 参考实现（`shell/prompt.md`） | 已完成参考 |
-| **B** | **全部**工具：草稿 → 你确认 → `prompt.md` + `text.go`（一次 1 个） | 每工具须 FR-0 + 你确认 |
+| **A** | `bash` 改名 + FR-0 参考实现（`shell/usage.prompt`） | 已完成参考 |
+| **B** | **全部**工具：草稿 → 你确认 → `usage.prompt` + `text.go`（一次 1 个） | 每工具须 FR-0 + 你确认 |
 | **C** | 共享 `builtin/text.go` Schema 统一审定 | 你确认 |
 | **D** | 系统 `prompt.md` 逐段审定合入 | 你逐段确认 |
 | **E** | CHANGELOG、CONFIG、ACCEPTANCE 收尾 | — |

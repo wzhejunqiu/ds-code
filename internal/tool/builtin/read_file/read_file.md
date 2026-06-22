@@ -4,7 +4,7 @@
 
 在工作区内读取单个文本文件内容，支持按行范围分页，避免大文件一次性灌入上下文。
 
-LLM 可见 `Description` 由 [`prompt.md`](prompt.md) 经 `RenderDesc()` 渲染；参数说明见 [`text.go`](text.go) 的 `Schema*`。
+LLM 可见 `Description` 由 [`usage.prompt`](usage.prompt) 经 `RenderDesc()` 渲染；参数说明见 [`text.go`](text.go) 的 `Schema*`。
 
 ## 注册与可见性
 
@@ -73,7 +73,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 ## 相关代码
 
 - [`read_file.go`](read_file.go)
-- [`prompt.md`](prompt.md) — LLM 可见 Description 正文
+- [`usage.prompt`](usage.prompt) — LLM 可见 Description 正文
 - [`text.go`](text.go) — `RenderDesc()`、`Schema*`、`Err*`、`Result*`
 - [`text_test.go`](text_test.go)
 - [`read_file_test.go`](read_file_test.go)
