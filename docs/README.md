@@ -12,6 +12,12 @@
 | [v0.1.3/](v0.1.3/) | v0.1.3：Bubble Tea v2（`charm.land`）迁移、虚拟列表、选区增强、FR-3/4 延期项 |
 | [v0.1.4/](v0.1.4/) | v0.1.4：内建工具提示词全面改写（Desc + Schema）、`shell`→`bash`；系统提示词由维护者审定 |
 
+## 演进方向
+
+| 文档 | 说明 |
+|------|------|
+| [DESKTOP.md](DESKTOP.md) | 桌面版（Go + Wails + TypeScript）可行性研究与分阶段路线 |
+
 ## 快速入口
 
 - 配置：[v0.1.0/CONFIG.md](v0.1.0/CONFIG.md)
