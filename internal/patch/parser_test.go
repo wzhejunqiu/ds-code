@@ -91,6 +91,31 @@ func TestParse_delete(t *testing.T) {
 	}
 }
 
+func TestRequiredReadPaths(t *testing.T) {
+	text := `*** Begin Patch
+*** Update File: a.go
+@@
+-old
++new
+*** Add File: b.go
++line
+*** Delete File: c.go
+*** End Patch`
+	paths, err := patch.RequiredReadPaths(text, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 2 {
+		t.Fatalf("paths = %v", paths)
+	}
+	want := map[string]bool{"a.go": true, "c.go": true}
+	for _, p := range paths {
+		if !want[p] {
+			t.Fatalf("unexpected path %q", p)
+		}
+	}
+}
+
 func TestParse_move(t *testing.T) {
 	text := `*** Begin Patch
 *** Update File: src.go

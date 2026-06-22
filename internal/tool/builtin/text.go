@@ -13,7 +13,6 @@ const (
 	SchemaGlobPattern      = "Glob 模式"
 	SchemaHTTPURL          = "HTTP 或 HTTPS URL"
 	SchemaFullFileContent  = "完整文件内容"
-	SchemaPatchBody        = "Codex apply_patch 格式的完整补丁文本"
 )
 
 // Required-field and validation errors (shared).

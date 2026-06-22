@@ -36,7 +36,7 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 | `web_fetch` | `web_fetch/usage.prompt` + `text.go` | 待改写 |
 | `web_search` | `web_search/usage.prompt` + `text.go` | 待改写（占位，默认未注册） |
 | `bash` | [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) + `text.go` | **参考实现** |
-| `apply_patch` | `apply_patch/usage.prompt` + `text.go` | 待改写 |
+| `apply_patch` | `apply_patch/usage.prompt` + `text.go` | **已定稿** |
 | `write_file` | `write_file/usage.prompt` + `text.go` | 待改写 |
 | `tool_search` | `tool_search/usage.prompt` + `text.go` | 待改写 |
 | `agent` | `agent/usage.prompt` + `text.go` | 待改写 |

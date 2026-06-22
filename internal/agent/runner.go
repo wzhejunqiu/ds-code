@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/audit"
@@ -49,6 +50,10 @@ type Runner struct {
 	ForSubagent bool
 
 	sessionStarted map[string]bool
+
+	readPathsMu       sync.Mutex
+	readPaths         map[string]map[string]struct{} // sessionID → canonical abs
+	readPathsHydrated map[string]bool
 }
 
 // TurnResult is the outcome of a user turn.

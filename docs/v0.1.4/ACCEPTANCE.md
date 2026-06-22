@@ -44,7 +44,7 @@
 | `web_fetch` | FR-0 + url schema | [ ] |
 | `web_search` | FR-0 + query schema | [ ] |
 | `bash` | FR-0 ✅ + FR-5 行为；schema 含 `run_in_background`、`timeout_ms`；无 `background`/`list_jobs` | [x] |
-| `apply_patch` | FR-0 + patch schema | [ ] |
+| `apply_patch` | FR-0 + patch schema + read-guard（AC-RG-1～6） | [ ] |
 | `write_file` | FR-0 + path/content schema | [ ] |
 | `tool_search` | FR-0 + `tool_name` schema | [ ] |
 | `agent` | FR-0 + 全部 agent schema | [ ] |
@@ -98,3 +98,14 @@
 | 「在 internal/prompt 搜 DefaultSystemBase」 | `grep` |
 | 「列出 docs/v0.1.4 下文件」 | `glob` 或 `list_dir`（符合你 Desc 分工） |
 | 「跑 prompt 包测试」 | `bash` |
+
+## 3.1 apply_patch read-guard（AC-RG）
+
+| ID | 场景 | 预期 |
+|----|------|------|
+| AC-RG-1 | 未 read 直接 apply_patch(update A) | 报错 `ErrMustReadFirstFmt` |
+| AC-RG-2 | sub-round1 read(A)；sub-round2 patch(A) | 成功 |
+| AC-RG-3 | 同批 tool_calls：read(A)+patch(A) | 报错 `ErrSameBatchReadEditFmt` |
+| AC-RG-4 | patch 仅 Add File | 不要求先 read |
+| AC-RG-5 | 父 session read(A)；子代理 patch(A)（非 Fork） | 失败（不共享已读集合） |
+| AC-RG-6 | Fork seed 含父 read(A)；子 patch(A) | 成功（水合） |

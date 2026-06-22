@@ -36,6 +36,7 @@ Fork 的核心目标是**共享父会话 prompt cache 前缀**：子 agent 复�
 - **Fork 不可递归**：Fork 子消息含 `fork-boilerplate` 标签；`QuerySourceFork` 下再次 spawn 被拒绝
 - **权限 bubble**：Fork 子 agent 权限询问冒泡到父 TUI Prompter
 - **Worktree 路径校验**：删除前 `ValidatePath`，防止越界
+- **已读集合隔离**：子 agent 独立 `session_id` / `Runner`，`apply_patch` read-guard 不从父 session 继承；Fork 可从 seed 消息水合历史 read
 
 ### 父会话不阻塞
 

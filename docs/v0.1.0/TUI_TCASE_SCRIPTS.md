@@ -152,8 +152,9 @@ Then content starts; thinking collapses.
 
 | Turn | 类型 | 剧本 |
 |------|------|------|
-| 1 | tool_calls | `apply_patch` → `sample.go`（单行 hunk） |
-| 2 | SSE | `Patch applied.` → `stop` |
+| 1 | tool_calls | `read_file` → `sample.go` |
+| 2 | tool_calls | `apply_patch` → `sample.go`（单行 hunk） |
+| 3 | SSE | `Patch applied.` → `stop` |
 
 **Patch**（在单行 `Hello` 后增加 `// harness`）：
 
@@ -175,8 +176,9 @@ Then content starts; thinking collapses.
 
 | Turn | 类型 | 剧本 |
 |------|------|------|
-| 1 | tool_calls | `apply_patch` → `sample_multiline.go`（多行 hunk） |
-| 2 | SSE | `Patch applied.` → `stop` |
+| 1 | tool_calls | `read_file` → `sample_multiline.go` |
+| 2 | tool_calls | `apply_patch` → `sample_multiline.go`（多行 hunk） |
+| 3 | SSE | `Patch applied.` → `stop` |
 
 **Patch**（在多行 `Hello` 后增加 `// harness`）：
 

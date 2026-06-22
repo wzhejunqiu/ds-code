@@ -83,6 +83,17 @@
 - 写操作；Runner 可在执行前创建 checkpoint（见 `docs/v0.1.0/SECURITY.md`）
 - 不实现独立 `edit_file` 工具，编辑语义统一于此
 
+## 先读后改（read guard）
+
+修改/删除已有文件（`*** Update File:` / `*** Delete File:`）前，Runner 强制校验：
+
+1. **跨 sub-round**：目标文件须在本 session **更早的 sub-round** 内已成功 `read_file`（`*** Add File:` 豁免）。
+2. **同 sub-round**：同一条 assistant 回复中不能对**同一文件**既 `read_file` 又 `apply_patch`（read 结果下一条回复才可见）。
+3. **子代理**：已读集合按 `session_id` 隔离，不与父 session 共享；Fork 子 session 可从 seed 消息水合历史 read。
+4. **实现**：[`readgate`](../../readgate/gate.go) + [`agent/readfile_gate.go`](../../../agent/readfile_gate.go)；`runToolCalls` 注入 sub-round 快照与同批 read 集合。
+
+错误文案见 [`text.go`](text.go) 中 `ErrMustReadFirstFmt`、`ErrSameBatchReadEditFmt`。
+
 ## 设计思想
 
 - **对齐 Codex**：与 OpenAI Codex CLI 的 patch 格式一致，便于迁移 prompt 与模型习惯。

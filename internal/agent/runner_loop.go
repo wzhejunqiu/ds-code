@@ -189,6 +189,7 @@ func (r *Runner) runToolCalls(
 	stream *subRoundStream,
 	cb *TurnCallbacks,
 ) error {
+	ctx = r.readGateForSubRound(ctx, sessionID, toolCalls)
 	batches := partitionToolCalls(r.Tools, toolCalls)
 
 	for _, batch := range batches {

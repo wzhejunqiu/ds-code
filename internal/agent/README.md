@@ -279,7 +279,7 @@ FormatToolResult / FormatToolError
 
 每个工具：[`executeSingleTool`](./tool_orchestration.go) → 截断 → [`persistToolResult`](./tool_orchestration.go) 写入 session。
 
-[`runToolCalls`](./runner_loop.go) 负责 UI 回调（`OnToolStart` / `OnToolEnd`），包括 apply_patch 多行展示、read_file 行号后缀等。
+[`runToolCalls`](./runner_loop.go) 负责 UI 回调（`OnToolStart` / `OnToolEnd`），包括 apply_patch 多行展示、read_file 行号后缀等。每个 sub-round 开始时 [`readGateForSubRound`](./readfile_gate.go) 注入 [`readgate`](../tool/readgate/gate.go)：`apply_patch` 要求 update/delete 路径在更早 sub-round 已 `read_file`，且禁止同批 read+patch 同一文件。
 
 ### 取消
 

@@ -50,7 +50,7 @@
 | `web_fetch` | 待建 | `SchemaHTTPURL` 等 | 待改写 | |
 | `web_search` | 待建 | `SchemaQuery` 等 | 待改写 | 默认未注册 |
 | `bash` | ✅ [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) | ✅ `text.go` | **已定稿 + FR-5 已实现** | `timeout_ms`、`run_in_background`；无 `list_jobs`；退出 kill job |
-| `apply_patch` | 待建 | `SchemaPatchBody` 等 | 待改写 | |
+| `apply_patch` | ✅ [`usage.prompt`](../../internal/tool/builtin/apply_patch/usage.prompt) | ✅ `SchemaPatchBody` 等 | **已定稿 + FR-0 已实现** | |
 | `write_file` | 待建 | `SchemaFullFileContent` 等 | 待改写 | |
 | `tool_search` | 待建 | `tool_name` | 待改写 | 去掉 `.go` 内联 Desc |
 | `agent` | 待建 | `SchemaAgent*` | 待改写 | |

@@ -129,7 +129,9 @@ func toolPatchSingle() *Scenario {
 	return toolPatchScenario(
 		"tool-patch-single",
 		"apply patch single",
+		"call_read_patch_single",
 		"call_patch_single",
+		"sample.go",
 		`*** Begin Patch
 *** Update File: sample.go
 @@
@@ -144,7 +146,9 @@ func toolPatchMulti() *Scenario {
 	return toolPatchScenario(
 		"tool-patch-multi",
 		"apply patch multi",
+		"call_read_patch_multi",
 		"call_patch_multi",
+		"sample_multiline.go",
 		`*** Begin Patch
 *** Update File: sample_multiline.go
 @@
@@ -156,15 +160,22 @@ func toolPatchMulti() *Scenario {
 	)
 }
 
-func toolPatchScenario(name, prompt, callID, patch string) *Scenario {
-	args, _ := json.Marshal(map[string]string{"patch": patch})
+func toolPatchScenario(name, prompt, readCallID, patchCallID, filepath, patch string) *Scenario {
+	rargs, _ := json.Marshal(map[string]string{"filepath": filepath})
+	pargs, _ := json.Marshal(map[string]string{"patch": patch})
 	return &Scenario{
 		Name:   name,
 		Prompt: prompt,
 		Turns: []Turn{
 			{
 				ToolCalls: []llm.ToolCall{{
-					ID: callID, Name: "apply_patch", Arguments: string(args),
+					ID: readCallID, Name: "read_file", Arguments: string(rargs),
+				}},
+				FinishReason: "tool_calls",
+			},
+			{
+				ToolCalls: []llm.ToolCall{{
+					ID: patchCallID, Name: "apply_patch", Arguments: string(pargs),
 				}},
 				FinishReason: "tool_calls",
 			},

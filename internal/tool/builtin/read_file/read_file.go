@@ -13,6 +13,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/readgate"
 	"github.com/wzhejunqiu/ds-code/internal/tool/textfile"
 	"go.uber.org/zap"
 )
@@ -103,7 +104,16 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", err
 	}
 
-	return formatReadFileOutput(abs, start, end, rangeTruncated, maxLines)
+	out, err := formatReadFileOutput(abs, start, end, rangeTruncated, maxLines)
+	if err != nil {
+		return "", err
+	}
+	if gate, ok := readgate.FromContext(ctx); ok {
+		if err := gate.MarkPath(in.Filepath); err != nil {
+			return "", err
+		}
+	}
+	return out, nil
 }
 
 func resolveReadOffsetLimit(offset, limit, maxLines int) (readStart, readEnd int, truncated bool, err error) {

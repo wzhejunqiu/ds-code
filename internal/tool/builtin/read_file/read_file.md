@@ -67,6 +67,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 - **默认全读**：仅传 `filepath` 时从文件开头读取（最多 max_lines 行）；超大文件用 `offset`/`limit` 分段。
 - **行号前缀**：输出带 `N|` 前缀，便于与 `apply_patch` 的 `@@` 上下文及 TUI 引用对齐。
+- **先读后改**：成功 read 会记入当前 session 已读路径集合，供后续 sub-round 的 `apply_patch` 校验（同 sub-round 的 read 不计入）。
 - **先 Stat 后读**：超大文件在打开前拒绝，保护内存与 token 预算。
 - **仅文本**：工作区内二进制与媒体文件由 `IsTextFile` 拒绝；project 数据目录 regular file 不受扩展名 blocklist 限制
 

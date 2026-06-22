@@ -224,6 +224,30 @@ func registerPath(seen map[string]struct{}, validate PathValidator, path string)
 	return nil
 }
 
+// RequiredReadPaths returns update/delete source paths that must be read before apply_patch.
+func RequiredReadPaths(text string, validate PathValidator) ([]string, error) {
+	changes, err := Parse(text, validate)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]struct{})
+	var paths []string
+	for _, c := range changes {
+		if c.Kind != ChangeUpdate && c.Kind != ChangeDelete {
+			continue
+		}
+		if c.Path == "" {
+			continue
+		}
+		if _, ok := seen[c.Path]; ok {
+			continue
+		}
+		seen[c.Path] = struct{}{}
+		paths = append(paths, c.Path)
+	}
+	return paths, nil
+}
+
 // Paths returns all relative paths referenced by the patch.
 func Paths(text string, validate PathValidator) ([]string, error) {
 	changes, err := Parse(text, validate)
