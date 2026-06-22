@@ -108,7 +108,7 @@ func TestRunTurn_planningStartOnLaterRounds(t *testing.T) {
 		Responses: []*llm.Response{
 			{
 				ToolCalls: []llm.ToolCall{{
-					ID: "c1", Name: "read_file", Arguments: `{"path":"foo.txt"}`,
+					ID: "c1", Name: "read_file", Arguments: `{"filepath":"foo.txt"}`,
 				}},
 				ReasoningContent: "think",
 				FinishReason:     "tool_calls",
@@ -162,7 +162,7 @@ func TestRunTurn_prepareFailureEndsPlanning(t *testing.T) {
 		Responses: []*llm.Response{
 			{
 				ToolCalls: []llm.ToolCall{{
-					ID: "c1", Name: "read_file", Arguments: `{"path":"foo.txt"}`,
+					ID: "c1", Name: "read_file", Arguments: `{"filepath":"foo.txt"}`,
 				}},
 				FinishReason: "tool_calls",
 			},

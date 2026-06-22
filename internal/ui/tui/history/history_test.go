@@ -18,7 +18,7 @@ func TestBlocksFromMessages(t *testing.T) {
 		{Role: role.Assistant, Content: "hi", ReasoningContent: "think"},
 		{Role: role.Tool, Content: "<tool_result name=\"read_file\" id=\"1\">\noutput\n</tool_result>", ToolName: "read_file", ToolCallID: "1"},
 		{Role: role.System, Content: "rewound"},
-		{Role: role.Assistant, Content: "", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"path\":\"a.go\"}"}]`},
+		{Role: role.Assistant, Content: "", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"filepath\":\"a.go\"}"}]`},
 		{Role: role.Tool, Content: "<tool_result name=\"read_file\" id=\"1\">\nmore\n</tool_result>", ToolName: "read_file", ToolCallID: "1"},
 	}
 	blocks := BlocksFromMessages(msgs, true, "", tool.DisplayContext{})
@@ -44,7 +44,7 @@ func TestBlocksFromMessages(t *testing.T) {
 
 func TestBlocksFromMessages_reasoningBeforeTools(t *testing.T) {
 	msgs := []session.Message{
-		{Role: role.Assistant, ReasoningContent: "think first", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"path\":\"a.go\"}"}]`},
+		{Role: role.Assistant, ReasoningContent: "think first", ToolCallsJSON: `[{"id":"1","name":"read_file","arguments":"{\"filepath\":\"a.go\"}"}]`},
 		{Role: role.Tool, Content: "body", ToolName: "read_file", ToolCallID: "1"},
 	}
 	blocks := BlocksFromMessages(msgs, true, "", tool.DisplayContext{})

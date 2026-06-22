@@ -86,7 +86,7 @@ func TestAppendAssistantWithTools_persistsToolCallsJSON(t *testing.T) {
 	resp := &llm.Response{
 		Content: "seg",
 		ToolCalls: []llm.ToolCall{{
-			ID: "c1", Name: "read_file", Arguments: `{"path":"x"}`,
+			ID: "c1", Name: "read_file", Arguments: `{"filepath":"x"}`,
 		}},
 	}
 	if err := r.appendAssistantWithTools(context.Background(), sess.ID, sess.Model, resp, &subRoundStream{}); err != nil {

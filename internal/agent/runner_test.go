@@ -47,7 +47,7 @@ func TestRunner_multiRoundTool(t *testing.T) {
 				ToolCalls: []llm.ToolCall{{
 					ID:        "call_1",
 					Name:      "read_file",
-					Arguments: `{"path":"foo.txt"}`,
+					Arguments: `{"filepath":"foo.txt"}`,
 				}},
 				ReasoningContent: "thinking",
 				FinishReason:     "tool_calls",
@@ -181,7 +181,7 @@ func TestRunner_cancelledDuringToolRound(t *testing.T) {
 				ToolCalls: []llm.ToolCall{{
 					ID:        "call_1",
 					Name:      "read_file",
-					Arguments: `{"path":"foo.txt"}`,
+					Arguments: `{"filepath":"foo.txt"}`,
 				}},
 				FinishReason: "tool_calls",
 			},
@@ -287,7 +287,7 @@ func TestRunner_exceededMaxSubRounds(t *testing.T) {
 		ToolCalls: []llm.ToolCall{{
 			ID:        "call_1",
 			Name:      "read_file",
-			Arguments: `{"path":"missing.txt"}`,
+			Arguments: `{"filepath":"missing.txt"}`,
 		}},
 		FinishReason: "tool_calls",
 	}
@@ -356,7 +356,7 @@ func TestRunner_exceededMaxSubRounds_onUsageUpdate(t *testing.T) {
 		ToolCalls: []llm.ToolCall{{
 			ID:        "call_1",
 			Name:      "read_file",
-			Arguments: `{"path":"missing.txt"}`,
+			Arguments: `{"filepath":"missing.txt"}`,
 		}},
 		FinishReason: "tool_calls",
 		Usage:        llm.Usage{PromptTokens: 10, CompletionTokens: 1},
@@ -417,7 +417,7 @@ func TestRunner_exceededMaxSubRounds_summaryFailureDegraded(t *testing.T) {
 		ToolCalls: []llm.ToolCall{{
 			ID:        "call_1",
 			Name:      "read_file",
-			Arguments: `{"path":"missing.txt"}`,
+			Arguments: `{"filepath":"missing.txt"}`,
 		}},
 		FinishReason: "tool_calls",
 	}
@@ -499,7 +499,7 @@ func TestRunner_exceededMaxSubRounds_stopHookTransition(t *testing.T) {
 		ToolCalls: []llm.ToolCall{{
 			ID:        "call_1",
 			Name:      "read_file",
-			Arguments: `{"path":"missing.txt"}`,
+			Arguments: `{"filepath":"missing.txt"}`,
 		}},
 		FinishReason: "tool_calls",
 	}

@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- `bash` background parameter renamed **`run_in_background`** (default `false`); **`list_jobs` removed** from LLM schema
+- `read_file` tool prompt migrated to `prompt.md` + `RenderDesc()` (FR-0); LLM parameter **`path` → `filepath`**
 - `run_in_background` blocks until job completes (same stdout/stderr format as sync); concurrent batch for multiple bg calls in one turn
 - **Removed `/kill` slash command** and TUI kill picker; no manual job management
 - **Exit ds-code** now force-kills running shell jobs for the current session (`Manager.Close`)
@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Breaking
 
 - LLM tool name **`shell` → `bash`** (config key `tools.shell` unchanged)
+- `read_file` LLM parameter **`path` → `filepath`** (historical tool calls are not aliased)
 - Historical tool calls using `background` or `list_jobs` are **not** aliased; use `run_in_background` instead
 - LLM **`job_id` / `cancel`** removed from bash schema; use Esc to cancel turn or exit ds-code to kill jobs
 

@@ -14,10 +14,10 @@ func TestApplyPreToolUseResults_shellCommand(t *testing.T) {
 }
 
 func TestApplyPreToolUseResults_argsMerge(t *testing.T) {
-	raw := []byte(`{"path":"a.go"}`)
+	raw := []byte(`{"filepath":"a.go"}`)
 	results := []HookResult{{Output: `{"args":{"offset":10}}`}}
 	out := applyPreToolUseResults("read_file", raw, results)
-	if string(out) != `{"offset":10,"path":"a.go"}` && string(out) != `{"path":"a.go","offset":10}` {
+	if string(out) != `{"offset":10,"filepath":"a.go"}` && string(out) != `{"filepath":"a.go","offset":10}` {
 		t.Fatalf("got %s", string(out))
 	}
 }

@@ -33,9 +33,9 @@ func TestReadFile_offsetLimit(t *testing.T) {
 
 	tool := readFileTool(t, root, 500, 1<<20)
 	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
-		"path":   "f.txt",
-		"offset": 10,
-		"limit":  11,
+		"filepath": "f.txt",
+		"offset":   10,
+		"limit":    11,
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestReadFile_defaultReadsWholeFile(t *testing.T) {
 	}
 
 	tool := readFileTool(t, root, 2000, 1<<20)
-	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "f.txt"}))
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": "f.txt"}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestReadFile_defaultTruncatesAtMaxLines(t *testing.T) {
 	}
 
 	tool := readFileTool(t, root, 2000, 1<<20)
-	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "big.txt"}))
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": "big.txt"}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,9 +109,9 @@ func TestReadFile_maxLinesTruncatesLimit(t *testing.T) {
 
 	tool := readFileTool(t, root, 10, 1<<20)
 	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
-		"path":   "big.txt",
-		"offset": 1,
-		"limit":  10000,
+		"filepath": "big.txt",
+		"offset":   1,
+		"limit":    10000,
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +131,7 @@ func TestReadFile_maxBytesRejects(t *testing.T) {
 	}
 
 	tool := readFileTool(t, root, 500, 1)
-	_, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "huge.txt"}))
+	_, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": "huge.txt"}))
 	if err == nil || !strings.Contains(err.Error(), "超过上限") {
 		t.Fatalf("err = %v", err)
 	}
@@ -144,7 +144,7 @@ func TestReadFile_offsetBeyondFile(t *testing.T) {
 	}
 	tool := readFileTool(t, root, 500, 1<<20)
 	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{
-		"path": "f.txt", "offset": 5,
+		"filepath": "f.txt", "offset": 5,
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -162,7 +162,7 @@ func TestReadFile_rejectsNonText(t *testing.T) {
 		t.Fatal(err)
 	}
 	tool := readFileTool(t, root, 500, 1<<20)
-	_, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "img.png"}))
+	_, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": "img.png"}))
 	if err == nil || !strings.Contains(err.Error(), "非文本") {
 		t.Fatalf("err = %v", err)
 	}
@@ -174,7 +174,7 @@ func TestReadFile_allowsEmptyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	tool := readFileTool(t, root, 500, 1<<20)
-	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "empty.txt"}))
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": "empty.txt"}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestReadFile_allowsMCPSpill(t *testing.T) {
 	}
 	tool := &read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false}
 
-	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": spillPath}))
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": spillPath}))
 	if err != nil {
 		t.Fatalf("read spill: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestReadFile_allowsAgentsOutput(t *testing.T) {
 		Tools:       config.ToolsConfig{ReadFile: config.ReadFileToolConfig{MaxLines: 500, MaxBytes: 1 << 20}},
 	}
 	tool := &read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false}
-	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": outPath}))
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": outPath}))
 	if err != nil {
 		t.Fatalf("read agents output: %v", err)
 	}
@@ -266,7 +266,7 @@ func TestReadFile_allowsProjectDataDB(t *testing.T) {
 		Tools:       config.ToolsConfig{ReadFile: config.ReadFileToolConfig{MaxLines: 500, MaxBytes: 1 << 20}},
 	}
 	tool := &read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: false}
-	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": dbPath}))
+	out, err := tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": dbPath}))
 	if err != nil {
 		t.Fatalf("read sessions.db: %v", err)
 	}
@@ -286,15 +286,15 @@ func TestReadFile_nonTextLogsInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 	tool := readFileTool(t, root, 500, 1<<20)
-	_, _ = tool.Execute(context.Background(), mustJSON(t, map[string]any{"path": "img.png"}))
+	_, _ = tool.Execute(context.Background(), mustJSON(t, map[string]any{"filepath": "img.png"}))
 
 	entries := logs.FilterMessage("read_file skipped non-text file")
 	if entries.Len() != 1 {
 		t.Fatalf("expected info log, got %d", entries.Len())
 	}
 	ctx := entries.All()[0].ContextMap()
-	if ctx["path"] != "img.png" {
-		t.Fatalf("path field = %v", ctx["path"])
+	if ctx["filepath"] != "img.png" {
+		t.Fatalf("filepath field = %v", ctx["filepath"])
 	}
 	if ctx["abs"] == nil || ctx["abs"] == "" {
 		t.Fatal("expected abs field in log")

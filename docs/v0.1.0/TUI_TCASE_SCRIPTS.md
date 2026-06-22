@@ -131,7 +131,7 @@ Then content starts; thinking collapses.
 
 | Turn | 类型 | 剧本 |
 |------|------|------|
-| 1 | tool_calls | `read_file` `{"path":"sample.go"}`，`id=call_read_1` |
+| 1 | tool_calls | `read_file` `{"filepath":"sample.go"}`，`id=call_read_1` |
 | 2 | SSE | content: `File read complete.` → `stop` |
 
 **期望 UI**：工具块 running → 完成；第二轮 assistant 总结。  
@@ -204,7 +204,7 @@ Then content starts; thinking collapses.
 
 | Tool | ID | Arguments |
 |------|-----|-----------|
-| `read_file` | `call_r1` | `{"path":"sample.go"}` |
+| `read_file` | `call_r1` | `{"filepath":"sample.go"}` |
 | `grep` | `call_g1` | `{"pattern":"func","path":"sample.go"}` |
 
 ---

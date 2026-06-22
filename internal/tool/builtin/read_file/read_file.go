@@ -29,17 +29,15 @@ func (t *ReadFileTool) Name() string { return tool.NameReadFile.String() }
 func (t *ReadFileTool) IsReadOnly() bool        { return true }
 func (t *ReadFileTool) IsConcurrencySafe() bool { return true }
 
-func (t *ReadFileTool) Description() string {
-	return fmt.Sprintf(DescReadFile, tool.NameShell.String())
-}
+func (t *ReadFileTool) Description() string { return RenderDesc() }
 
 func (t *ReadFileTool) Schema() map[string]any {
 	maxLines := t.configuredMaxLines()
 	return tool.ObjectSchema(map[string]any{
-		"path":   map[string]any{"type": "string", "description": builtin.SchemaPathFileRelOrAbs},
-		"offset": map[string]any{"type": "integer", "description": SchemaOffset},
-		"limit":  map[string]any{"type": "integer", "description": fmt.Sprintf(SchemaLimitFmt, maxLines)},
-	}, []string{"path"}, t.Strict)
+		"filepath": map[string]any{"type": "string", "description": SchemaFilepath},
+		"offset":   map[string]any{"type": "integer", "description": SchemaOffset},
+		"limit":    map[string]any{"type": "integer", "description": fmt.Sprintf(SchemaLimitFmt, maxLines)},
+	}, []string{"filepath"}, t.Strict)
 }
 
 func (t *ReadFileTool) configuredMaxLines() int {
@@ -63,17 +61,17 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", err
 	}
 	var in struct {
-		Path   string `json:"path"`
-		Offset int    `json:"offset"`
-		Limit  int    `json:"limit"`
+		Filepath string `json:"filepath"`
+		Offset   int    `json:"offset"`
+		Limit    int    `json:"limit"`
 	}
 	if err := json.Unmarshal(args, &in); err != nil {
 		return "", err
 	}
-	if in.Path == "" {
-		return "", fmt.Errorf("%s", builtin.ErrPathRequired)
+	if in.Filepath == "" {
+		return "", fmt.Errorf("%s", ErrFilepathRequired)
 	}
-	abs, err := t.Perm.CheckReadablePath(in.Path)
+	abs, err := t.Perm.CheckReadablePath(in.Filepath)
 	if err != nil {
 		return "", err
 	}
@@ -94,10 +92,10 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 
 	if !t.Perm.IsProjectDataPath(abs) && !textfile.IsTextFile(abs) {
 		logging.L().Info("read_file skipped non-text file",
-			zap.String("path", in.Path),
+			zap.String("filepath", in.Filepath),
 			zap.String("abs", abs),
 		)
-		return "", fmt.Errorf(ErrNotTextFile, in.Path)
+		return "", fmt.Errorf(ErrNotTextFile, in.Filepath)
 	}
 
 	start, end, rangeTruncated, err := resolveReadOffsetLimit(in.Offset, in.Limit, maxLines)

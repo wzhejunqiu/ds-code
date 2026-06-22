@@ -25,7 +25,7 @@ func TestDisplaySummary_shell(t *testing.T) {
 }
 
 func TestDisplaySummary_readFile(t *testing.T) {
-	args := `{"path":"foo.go","offset":10,"limit":11}`
+	args := `{"filepath":"foo.go","offset":10,"limit":11}`
 	line, cmd := tool.DisplaySummary("read_file", []byte(args), "", tool.DisplayContext{})
 	if cmd != "" {
 		t.Fatalf("unexpected command: %q", cmd)

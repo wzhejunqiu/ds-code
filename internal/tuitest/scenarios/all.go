@@ -86,7 +86,7 @@ func streamReasoning() *Scenario {
 }
 
 func toolRead() *Scenario {
-	args, _ := json.Marshal(map[string]string{"path": "sample.go"})
+	args, _ := json.Marshal(map[string]string{"filepath": "sample.go"})
 	return &Scenario{
 		Name:   "tool-read",
 		Prompt: "read sample file",
@@ -177,7 +177,7 @@ func toolPatchScenario(name, prompt, callID, patch string) *Scenario {
 }
 
 func toolMulti() *Scenario {
-	rargs, _ := json.Marshal(map[string]string{"path": "sample.go"})
+	rargs, _ := json.Marshal(map[string]string{"filepath": "sample.go"})
 	gargs, _ := json.Marshal(map[string]string{"pattern": "func", "path": "sample.go"})
 	return &Scenario{
 		Name:   "tool-multi",

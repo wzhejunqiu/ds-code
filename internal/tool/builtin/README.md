@@ -31,7 +31,8 @@ internal/tool/builtin/
 | 文件 | 职责 |
 |------|------|
 | `<tool>.go` | 实现 `tool.Tool`（及可选的 `ReadOnlyTool` / `ConcurrencySafeTool`） |
-| `text.go` | 该工具的 `Description`、Schema 字段说明、错误文案 |
+| `prompt.md` | LLM 可见 `Description` 正文（`//go:embed` + `RenderDesc()`；`bash` 为 `usage.prompt`） |
+| `text.go` | `RenderDesc()`、`Schema*` 字段说明、错误文案 |
 | `<tool>.md` | 设计文档（部分工具尚未单独成文，见下表） |
 | `*_test.go` | 单元 / 集成测试 |
 

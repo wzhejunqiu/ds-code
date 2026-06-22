@@ -4,6 +4,8 @@
 
 在工作区内读取单个文本文件内容，支持按行范围分页，避免大文件一次性灌入上下文。
 
+LLM 可见 `Description` 由 [`prompt.md`](prompt.md) 经 `RenderDesc()` 渲染；参数说明见 [`text.go`](text.go) 的 `Schema*`。
+
 ## 注册与可见性
 
 | 模式                    | 注册                    |
@@ -12,20 +14,20 @@
 
 ## 参数 Schema
 
-| 字段     | 类型    | 必填 | 说明                                                  |
-| -------- | ------- | ---- | ----------------------------------------------------- |
-| `path`   | string  | 是   | 相对项目根的路径，或落在工作区内的绝对路径            |
-| `offset` | integer | 否   | 起始行号（1-based），默认从第 1 行                    |
-| `limit`  | integer | 否   | 最多读取行数；省略时读取整个文件（最多 max_lines 行） |
+| 字段       | 类型    | 必填 | 说明                                                  |
+| ---------- | ------- | ---- | ----------------------------------------------------- |
+| `filepath` | string  | 是   | 文件的绝对路径（LLM 提示要求绝对路径；实现层仍解析相对路径） |
+| `offset`   | integer | 否   | 起始行号（1-based），默认从第 1 行                    |
+| `limit`    | integer | 否   | 最多读取行数；省略时从文件开头读取（最多 max_lines 行） |
 
 ## 用法示例
 
 ```json
-{"path": "internal/tool/builtin/read_file.go"}
+{"filepath": "/abs/path/to/internal/tool/builtin/read_file.go"}
 ```
 
 ```json
-{"path": "docs/v0.1.0/CONFIG.md", "offset": 100, "limit": 50}
+{"filepath": "/abs/path/to/docs/v0.1.0/CONFIG.md", "offset": 100, "limit": 50}
 ```
 
 ## 返回格式
@@ -41,7 +43,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 源文件：[`read_file.go`](read_file.go)
 
-1. **权限**：`Perm.CheckReadablePath` 解析路径并拒绝敏感文件。
+1. **权限**：`Perm.CheckReadablePath` 解析路径并拒绝敏感文件；`permission.Engine` 从 `filepath` 参数取路径。
 2. **体积预检**：`os.Stat` 检查文件字节数 ≤ `tools.read_file.max_bytes`（默认 2MiB），超限直接报错，不读入内存。
 3. **文本判定**：`textfile.IsTextFile` 在打开文件前拒绝二进制/媒体文件（PNG 等）；空文件与 MCP spill `.txt` 允许。
 4. **行范围**：`resolveReadOffsetLimit` 计算 `[readStart, readEnd]`；`limit` 会被钳制到 `max_lines`。
@@ -63,7 +65,7 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 
 ## 设计思想
 
-- **默认全读**：仅传 `path` 时读取整个文件（最多 max_lines 行）；超大文件用 `offset`/`limit` 分段。
+- **默认全读**：仅传 `filepath` 时从文件开头读取（最多 max_lines 行）；超大文件用 `offset`/`limit` 分段。
 - **行号前缀**：输出带 `N|` 前缀，便于与 `apply_patch` 的 `@@` 上下文及 TUI 引用对齐。
 - **先 Stat 后读**：超大文件在打开前拒绝，保护内存与 token 预算。
 - **仅文本**：工作区内二进制与媒体文件由 `IsTextFile` 拒绝；project 数据目录 regular file 不受扩展名 blocklist 限制
@@ -71,5 +73,8 @@ TUI 通过 `FormatReadFileDisplay` / `ReadFileLineRange` 解析行号范围展�
 ## 相关代码
 
 - [`read_file.go`](read_file.go)
+- [`prompt.md`](prompt.md) — LLM 可见 Description 正文
+- [`text.go`](text.go) — `RenderDesc()`、`Schema*`、`Err*`、`Result*`
+- [`text_test.go`](text_test.go)
 - [`read_file_test.go`](read_file_test.go)
 - [`display.go`](../../display.go) — `FormatReadFileDisplay`、`ReadFileLineRange`、`AppendReadFileLineRange`

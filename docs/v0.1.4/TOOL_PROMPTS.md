@@ -42,7 +42,7 @@
 
 | 工具 | prompt.md | Schema（text.go） | 状态 | 备注 |
 |------|-----------|-------------------|------|------|
-| `read_file` | 待建 | `SchemaOffset` 等 | 待迁移 FR-0 + 定稿 | 现有 `const DescReadFile` 待迁入 |
+| `read_file` | ✅ [`prompt.md`](../../internal/tool/builtin/read_file/prompt.md) | ✅ `SchemaFilepath` 等 | **已定稿 + FR-0 已实现** | 参数 `filepath`（原 `path`）；`offset`/`limit` 不变 |
 | `grep` | 待建 | `SchemaRegexPattern` 等 | 待改写 | |
 | `glob` | 待建 | `SchemaGlobPattern` 等 | 待改写 | |
 | `list_dir` | 待建 | `SchemaPathRelDefault` 等 | 待改写 | |
@@ -58,16 +58,7 @@
 
 ## 当前文案快照（基线）
 
-定稿后删除或改为链接。`bash` 以 [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) 为准，此处不再重复。
-
-### read_file（待迁入 prompt.md）
-
-```
-读取本地文件系统中的文件。…
-用法：
-- 本工具仅支持读取文件…请通过 {bash} 工具执行 ls 命令。
-…
-```
+定稿后删除或改为链接。`bash` 以 [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) 为准；`read_file` 以 [`read_file/prompt.md`](../../internal/tool/builtin/read_file/prompt.md) 为准，此处不再重复。
 
 ### grep / glob / list_dir / …
 

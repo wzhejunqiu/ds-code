@@ -102,7 +102,7 @@ func (e *Engine) check(tool string, args map[string]any) error {
 		}
 	}
 
-	if path, _ := args["path"].(string); path != "" {
+	if path := pathArgForCheck(tool, args); path != "" {
 		if err := e.checkPath(path); err != nil {
 			return err
 		}
@@ -266,6 +266,19 @@ func (e *Engine) CheckReadablePath(rel string) (string, error) {
 		return abs, nil
 	}
 	return e.ResolveAccessPath(rel, PathRead)
+}
+
+func pathArgForCheck(tool string, args map[string]any) string {
+	if tool == "read_file" {
+		if fp, _ := args["filepath"].(string); fp != "" {
+			return fp
+		}
+		return ""
+	}
+	if p, _ := args["path"].(string); p != "" {
+		return p
+	}
+	return ""
 }
 
 // ResolvePath resolves a path under workspace and blocks escape (S2: symlinks evaluated).

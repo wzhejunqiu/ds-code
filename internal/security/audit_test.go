@@ -38,7 +38,7 @@ func TestS3_sensitiveEnvDenied(t *testing.T) {
 		t.Fatal(err)
 	}
 	perm := permission.NewEngine("readonly", dir, false)
-	err := perm.Check("read_file", map[string]any{"path": ".env"})
+	err := perm.Check("read_file", map[string]any{"filepath": ".env"})
 	if err == nil {
 		t.Fatal("expected sensitive deny")
 	}

@@ -28,7 +28,7 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 
 | 工具 | 提示词文件（标准布局） | 状态 |
 |------|------------------------|------|
-| `read_file` | `read_file/prompt.md` + `text.go` | 待迁移至标准模式并改写 |
+| `read_file` | [`read_file/prompt.md`](../../internal/tool/builtin/read_file/prompt.md) + `text.go` | **已定稿**（FR-0；参数 `filepath`） |
 | `grep` | `grep/prompt.md` + `text.go` | 待改写 |
 | `glob` | `glob/prompt.md` + `text.go` | 待改写 |
 | `list_dir` | `list_dir/prompt.md` + `text.go` | 待改写 |

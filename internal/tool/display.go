@@ -90,7 +90,7 @@ func DisplaySummary(name string, rawArgs []byte, workspace string, disp DisplayC
 	case NameShell.String():
 		return ShellSummary(rawArgs)
 	case "read_file":
-		if p, _ := args["path"].(string); p != "" {
+		if p, _ := args["filepath"].(string); p != "" {
 			return FormatReadFileDisplay(p, 0, 0), ""
 		}
 	case "write_file":
