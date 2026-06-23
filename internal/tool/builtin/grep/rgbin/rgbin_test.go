@@ -25,6 +25,20 @@ func TestRGBin_Path(t *testing.T) {
 		}
 	})
 
+	t.Run("C6b_cached_path_skips_rehash", func(t *testing.T) {
+		path1, err := rgbin.Path()
+		if err != nil {
+			t.Fatal(err)
+		}
+		path2, err := rgbin.Path()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if path1 != path2 {
+			t.Fatalf("path changed: %q -> %q", path1, path2)
+		}
+	})
+
 	t.Run("C7_tamper_self_heal", func(t *testing.T) {
 		path, err := rgbin.Path()
 		if err != nil {

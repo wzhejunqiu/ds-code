@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/datadir"
 )
@@ -23,7 +24,16 @@ var (
 	loadErr  error
 	rgBytes  []byte
 	rgHash   [32]byte
+
+	validatedMu sync.Mutex
+	validated   *validatedRG
 )
+
+type validatedRG struct {
+	path string
+	size int64
+	mod  time.Time
+}
 
 // Path returns the bundled ripgrep executable path (~/.ds-code/bin/rg).
 func Path() (string, error) {
@@ -40,16 +50,66 @@ func Path() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if b, err := os.ReadFile(dest); err == nil {
-		gotHash := sha256.Sum256(b)
-		if bytes.Equal(gotHash[:], rgHash[:]) {
-			return dest, nil
-		}
+	if path, ok := cachedPathIfValid(dest); ok {
+		return path, nil
+	}
+	if ok, err := verifyOnDisk(dest); err != nil {
+		return "", err
+	} else if ok {
+		setValidated(dest)
+		return dest, nil
 	}
 	if err := writeAtomic(dest, rgBytes, 0o700); err != nil {
 		return "", err
 	}
+	setValidated(dest)
 	return dest, nil
+}
+
+func cachedPathIfValid(dest string) (string, bool) {
+	validatedMu.Lock()
+	v := validated
+	validatedMu.Unlock()
+	if v == nil || v.path != dest {
+		return "", false
+	}
+	info, err := os.Stat(dest)
+	if err != nil {
+		return "", false
+	}
+	if info.Size() == v.size && info.ModTime().Equal(v.mod) {
+		return dest, true
+	}
+	return "", false
+}
+
+func verifyOnDisk(dest string) (bool, error) {
+	b, err := os.ReadFile(dest)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	gotHash := sha256.Sum256(b)
+	return bytes.Equal(gotHash[:], rgHash[:]), nil
+}
+
+func setValidated(dest string) {
+	info, err := os.Stat(dest)
+	if err != nil {
+		validatedMu.Lock()
+		validated = nil
+		validatedMu.Unlock()
+		return
+	}
+	validatedMu.Lock()
+	validated = &validatedRG{
+		path: dest,
+		size: info.Size(),
+		mod:  info.ModTime(),
+	}
+	validatedMu.Unlock()
 }
 
 func extractRGFromTarGz(data []byte) ([]byte, error) {
