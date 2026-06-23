@@ -3,7 +3,7 @@
 > 版本：v0.1.4  
 > 状态：规划中  
 > 基线版本：v0.1.3  
-> 更新日期：2026-06-21
+> 更新日期：2026-06-23
 
 ## 概述
 
@@ -13,14 +13,14 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 
 系统提示词（`internal/prompt/prompt.md`）采用同一套 embed + template 机制；**文案以你为主导**，改写前须确认。
 
-本版本 **不改变** 除 `bash`（FR-5）外的工具执行语义、权限策略或 TUI 行为。
+本版本 **不改变** 除 **`bash`（FR-5）** 与 **`grep`（FR-6）** 外的工具执行语义、权限策略或 TUI 行为。
 
 ## 文档索引
 
 | 文档 | 说明 |
 |------|------|
 | [REQUIREMENTS.md](REQUIREMENTS.md) | 功能需求、工具清单、协作流程 |
-| [DESIGN.md](DESIGN.md) | 文案组织、`bash` 改名、模板注入等技术设计 |
+| [DESIGN.md](DESIGN.md) | 文案组织、`bash` 改名、`grep` ripgrep、模板注入等技术设计 |
 | [ACCEPTANCE.md](ACCEPTANCE.md) | 逐工具验收清单 |
 | [TOOL_PROMPTS.md](TOOL_PROMPTS.md) | **各工具改写状态与待确认项**（随讨论更新） |
 
@@ -29,7 +29,7 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 | 工具 | 提示词文件（标准布局） | 状态 |
 |------|------------------------|------|
 | `read_file` | [`read_file/usage.prompt`](../../internal/tool/builtin/read_file/usage.prompt) + `text.go` | **已定稿**（FR-0；参数 `filepath`） |
-| `grep` | `grep/usage.prompt` + `text.go` | 待改写 |
+| `grep` | [`grep/usage.prompt`](../../internal/tool/builtin/grep/usage.prompt) + `text.go` | **已定稿**（FR-0 + FR-6 ripgrep） |
 | `glob` | `glob/usage.prompt` + `text.go` | 待改写 |
 | `list_dir` | `list_dir/usage.prompt` + `text.go` | 待改写 |
 | `diagnostics` | `diagnostics/usage.prompt` + `text.go` | 待改写 |
@@ -58,6 +58,7 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 | 工具名注入 | `usage.prompt` 内 `{{.Bash}}` 等；`text.go` 从 `tool.Name*` 填模板 |
 | 参考实现 | [`internal/tool/builtin/shell/`](../../internal/tool/builtin/shell/)（`usage.prompt` + `RenderDesc()`） |
 | `bash` 参数改造 | `timeout_ms`、`run_in_background`；移除 `list_jobs` |
+| **`grep` ripgrep** | 后端改为 ripgrep 15.1.0；`usage.prompt` + Schema 对齐 Claude Code；见 [FR-6](REQUIREMENTS.md#fr-6-grep-工具-ripgrep-后端p0) |
 | TUI 倒计时 | sync bash Running 标题递减倒计时 |
 | 系统提示词 | [`internal/prompt/`](../../internal/prompt/)（同一 embed + template 模式） |
 
@@ -68,6 +69,7 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 | 历史会话 | SQLite 中 `name: "shell"` 的 tool_call 不做别名兼容 |
 | 历史参数 | `background` / `list_jobs` 不做别名；须用 `run_in_background` |
 | 配置迁移 | `tools.defer_builtin` 须写 `bash` 而非 `shell` |
+| `grep` breaking | 输出格式、`path`+`glob` 分离、正则方言改为 ripgrep；见 CHANGELOG |
 | MCP 工具 | 本版不改 MCP `Description()` 格式 |
 | 子代理 overlay | `agentdef.PromptOverlay` 不在本版范围 |
 
@@ -75,3 +77,4 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 
 - 上一版本：[../v0.1.3/README.md](../v0.1.3/README.md)
 - 内建工具实现说明：[../../internal/tool/builtin/README.md](../../internal/tool/builtin/README.md)
+- `grep` 实现规格：[../../internal/tool/builtin/grep/grep.md](../../internal/tool/builtin/grep/grep.md)

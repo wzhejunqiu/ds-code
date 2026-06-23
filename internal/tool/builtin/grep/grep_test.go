@@ -13,456 +13,524 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep"
 	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
-func newGrepTool(t *testing.T, dir string, headLimit int, searchSkip *searchskip.Matcher) *grep.GrepTool {
+type grepFixture struct {
+	dir string
+	g   *grep.GrepTool
+}
+
+func newGrepFixture(t *testing.T, opts ...func(*config.Config)) *grepFixture {
 	t.Helper()
-	cfg := &config.Config{Tools: config.ToolsConfig{Grep: config.GrepToolConfig{HeadLimit: headLimit}}}
-	return &grep.GrepTool{
-		Cfg:        cfg,
-		Perm:       permission.NewEngine("readonly", dir, false),
-		SearchSkip: searchSkip,
+	dir := t.TempDir()
+	cfg := &config.Config{Tools: config.ToolsConfig{
+		Grep: config.GrepToolConfig{
+			HeadLimit:        250,
+			RespectGitignore: false,
+			Binary:           "bundled",
+			Timeout:          20 * time.Second,
+		},
+		Search: config.SearchToolConfig{SkipDirs: []string{"node_modules"}},
+	}}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return &grepFixture{
+		dir: dir,
+		g: &grep.GrepTool{
+			Cfg:        cfg,
+			Perm:       permission.NewEngine("readonly", dir, false),
+			SearchSkip: searchskip.New(cfg.Tools.Search.SkipDirs),
+		},
 	}
 }
 
-func TestGrepTool_skipsSensitiveFiles(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("SECRET=needle\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "ok.txt"), []byte("needle here\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle"})
-	out, err := g.Execute(context.Background(), args)
+func (f *grepFixture) exec(t *testing.T, args map[string]any) string {
+	t.Helper()
+	raw, err := json.Marshal(args)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, ".env") || strings.Contains(out, "SECRET=") {
-		t.Fatalf("grep leaked sensitive file: %q", out)
+	out, err := f.g.Execute(context.Background(), raw)
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
 	}
-	if !strings.Contains(out, "ok.txt") {
-		t.Fatalf("expected match in ok.txt: %q", out)
+	return out
+}
+
+func (f *grepFixture) write(t *testing.T, rel, content string) {
+	t.Helper()
+	p := filepath.Join(f.dir, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
 	}
-	if strings.Contains(out, ":1:") {
-		t.Fatalf("default mode should be files_with_matches, got content: %q", out)
+	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestGrepTool_findsGitignoredPaths(t *testing.T) {
-	dir := t.TempDir()
-	pkg := filepath.Join(dir, "pkg")
-	src := filepath.Join(pkg, "src")
-	build := filepath.Join(pkg, "build")
-	for _, p := range []string{pkg, src, build} {
-		if err := os.MkdirAll(p, 0o755); err != nil {
-			t.Fatal(err)
+func (f *grepFixture) chtimes(t *testing.T, rel string, mod time.Time) {
+	t.Helper()
+	p := filepath.Join(f.dir, filepath.FromSlash(rel))
+	if err := os.Chtimes(p, mod, mod); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGrepTool_B1_files_basic(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "needle one\n")
+	f.write(t, "pkg/b.txt", "needle two\n")
+	out := f.exec(t, map[string]any{"pattern": "needle"})
+	if !strings.HasPrefix(out, "Found 2 files\n") {
+		t.Fatalf("got %q", out)
+	}
+	if strings.Contains(out, f.dir) {
+		t.Fatalf("absolute path leaked: %q", out)
+	}
+	for _, want := range []string{"a.txt", "pkg/b.txt"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in %q", want, out)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("pkg/build/\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(src, "hit.txt"), []byte("needle hit\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(build, "miss.txt"), []byte("needle miss\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, searchskip.New(nil))
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": "pkg"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "miss.txt") {
-		t.Fatalf("v0.1.2 grep should not follow .gitignore: %q", out)
-	}
-	if !strings.Contains(out, "hit.txt") {
-		t.Fatalf("expected match in pkg/src/hit.txt: %q", out)
-	}
 }
 
-func TestGrepTool_ordersMatchesByFileModTime(t *testing.T) {
-	dir := t.TempDir()
-	oldPath := filepath.Join(dir, "old.txt")
-	newPath := filepath.Join(dir, "new.txt")
-	if err := os.WriteFile(oldPath, []byte("needle old\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(newPath, []byte("needle new\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	oldTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-	newTime := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
-	if err := os.Chtimes(oldPath, oldTime, oldTime); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chtimes(newPath, newTime, newTime); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "content"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	newIdx := strings.Index(out, "new.txt")
-	oldIdx := strings.Index(out, "old.txt")
-	if newIdx < 0 || oldIdx < 0 {
-		t.Fatalf("expected both files in output: %q", out)
-	}
-	if newIdx > oldIdx {
-		t.Fatalf("newer file should appear first: %q", out)
-	}
-}
-
-func TestGrepTool_pathGlob(t *testing.T) {
-	dir := t.TempDir()
-	pkg := filepath.Join(dir, "pkg")
-	other := filepath.Join(dir, "other")
-	for _, p := range []string{pkg, other} {
-		if err := os.MkdirAll(p, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(pkg, "a.go"), []byte("needle in go\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(pkg, "b.txt"), []byte("needle in txt\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(other, "c.go"), []byte("no match\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": "pkg/*.go"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "a.go") {
-		t.Fatalf("expected a.go match: %q", out)
-	}
-	if strings.Contains(out, "b.txt") || strings.Contains(out, "other/c.go") {
-		t.Fatalf("glob path should limit to pkg/*.go: %q", out)
-	}
-}
-
-func TestGrepTool_skipsBinaryFiles(t *testing.T) {
-	dir := t.TempDir()
-	pngData := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
-	pngData = append(pngData, []byte("needle in png")...)
-	if err := os.WriteFile(filepath.Join(dir, "img.png"), pngData, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "ok.txt"), []byte("needle text\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(out, "img.png") {
-		t.Fatalf("grep should skip binary png: %q", out)
-	}
-	if !strings.Contains(out, "ok.txt") {
-		t.Fatalf("expected ok.txt match: %q", out)
-	}
-}
-
-func TestGrepTool_outputModeContent(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("needle one\nneedle two\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "content"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestGrepTool_B2_content_basic(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "needle one\nneedle two\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "content"})
 	if !strings.Contains(out, "a.txt:1:needle one") || !strings.Contains(out, "a.txt:2:needle two") {
-		t.Fatalf("expected path:line:content: %q", out)
+		t.Fatalf("got %q", out)
 	}
 }
 
-func TestGrepTool_outputModeFilesWithMatches_dedupesFile(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("needle one\nneedle two\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "files_with_matches"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out != "a.txt" {
-		t.Fatalf("expected single file path, got %q", out)
+func TestGrepTool_B3_count_basic(t *testing.T) {
+	f := newGrepFixture(t)
+	old := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	new := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	f.write(t, "a.txt", "needle one\nneedle two\n")
+	f.write(t, "b.txt", "needle three\n")
+	f.chtimes(t, "a.txt", new)
+	f.chtimes(t, "b.txt", old)
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "count"})
+	want := "a.txt:2\nb.txt:1\nFound 3 occurrences across 2 files"
+	if out != want {
+		t.Fatalf("got %q want %q", out, want)
 	}
 }
 
-func TestGrepTool_outputModeCount(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("needle one\nneedle two\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("needle three\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "count"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out != "3" {
-		t.Fatalf("expected total count 3, got %q", out)
+func TestGrepTool_B4_no_match_files(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "hello\n")
+	out := f.exec(t, map[string]any{"pattern": "zzz"})
+	if out != "Found 0 files" {
+		t.Fatalf("got %q", out)
 	}
 }
 
-func TestGrepTool_outputModeCount_noMatches(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "count"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out != "0" {
-		t.Fatalf("expected 0, got %q", out)
+func TestGrepTool_B5_no_match_content(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "hello\n")
+	out := f.exec(t, map[string]any{"pattern": "zzz", "output_mode": "content"})
+	if out != "" {
+		t.Fatalf("got %q", out)
 	}
 }
 
-func TestGrepTool_outputModeCount_ignoresHeadLimit(t *testing.T) {
-	dir := t.TempDir()
-	var b strings.Builder
-	for i := 0; i < 10; i++ {
-		b.WriteString("needle line\n")
-	}
-	if err := os.WriteFile(filepath.Join(dir, "many.txt"), []byte(b.String()), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 3, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "count"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out != "10" {
-		t.Fatalf("count mode should ignore head_limit, got %q", out)
+func TestGrepTool_B6_no_match_count(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "hello\n")
+	out := f.exec(t, map[string]any{"pattern": "zzz", "output_mode": "count"})
+	if out != "Found 0 occurrences across 0 files" {
+		t.Fatalf("got %q", out)
 	}
 }
 
-func TestGrepTool_outputModeContent_headLimit(t *testing.T) {
-	dir := t.TempDir()
+func TestGrepTool_B7_rg_exit1_not_error(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "hello\n")
+
+	cases := []struct {
+		name       string
+		outputMode string
+		want       string
+	}{
+		{"files_with_matches", "", "Found 0 files"},
+		{"content", builtin.GrepOutputContent, ""},
+		{"count", builtin.GrepOutputCount, "Found 0 occurrences across 0 files"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			args := map[string]any{"pattern": "zzz_not_found_xyz"}
+			if tc.outputMode != "" {
+				args["output_mode"] = tc.outputMode
+			}
+			raw, err := json.Marshal(args)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := f.g.Execute(context.Background(), raw)
+			if err != nil {
+				t.Fatalf("ripgrep exit 1 must not surface as error: %v", err)
+			}
+			if out != tc.want {
+				t.Fatalf("got %q want %q", out, tc.want)
+			}
+		})
+	}
+}
+
+func TestGrepTool_B8_head_limit_files(t *testing.T) {
+	f := newGrepFixture(t)
+	for i := 0; i < 5; i++ {
+		f.write(t, fmt.Sprintf("f%02d.txt", i), "needle\n")
+	}
+	out := f.exec(t, map[string]any{"pattern": "needle", "head_limit": 2})
+	if !strings.HasPrefix(out, "Found 5 files\n") {
+		t.Fatalf("got %q", out)
+	}
+	lines := strings.Split(out, "\n")
+	if len(lines) != 4 { // summary + 2 paths + footer
+		t.Fatalf("expected 4 lines, got %d: %q", len(lines), out)
+	}
+	if !strings.Contains(lines[3], "[Showing results with pagination = limit: 2, offset: 0]") {
+		t.Fatalf("missing pagination footer: %q", out)
+	}
+}
+
+func TestGrepTool_B9_head_limit_content(t *testing.T) {
+	f := newGrepFixture(t)
 	var b strings.Builder
 	for i := 0; i < 5; i++ {
 		b.WriteString("needle line\n")
 	}
-	if err := os.WriteFile(filepath.Join(dir, "many.txt"), []byte(b.String()), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 2, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "content"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
+	f.write(t, "many.txt", b.String())
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "content", "head_limit": 2})
 	lines := strings.Split(out, "\n")
 	if len(lines) != 3 {
-		t.Fatalf("expected 2 matches + truncation line, got %d lines: %q", len(lines), out)
+		t.Fatalf("expected 2 lines + footer, got %d: %q", len(lines), out)
 	}
-	if !strings.Contains(lines[2], "条匹配") {
-		t.Fatalf("expected match truncation suffix: %q", out)
+	if !strings.Contains(lines[2], "[Showing results with pagination = limit: 2, offset: 0]") {
+		t.Fatalf("missing footer: %q", out)
 	}
 }
 
-func TestGrepTool_outputModeFilesWithMatches_headLimit(t *testing.T) {
-	dir := t.TempDir()
-	for i := 0; i < 10; i++ {
-		name := fmt.Sprintf("f%02d.txt", i)
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("needle\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
+func TestGrepTool_B10_head_limit_count(t *testing.T) {
+	f := newGrepFixture(t)
+	for i := 0; i < 5; i++ {
+		f.write(t, fmt.Sprintf("f%02d.txt", i), "needle\nneedle\n")
 	}
-
-	g := newGrepTool(t, dir, 2, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "files_with_matches"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "count", "head_limit": 2})
+	if !strings.Contains(out, "Found 10 occurrences across 5 files") {
+		t.Fatalf("got %q", out)
 	}
 	lines := strings.Split(out, "\n")
-	if len(lines) != 3 {
-		t.Fatalf("expected 2 paths + truncation line, got %d lines: %q", len(lines), out)
-	}
-	if !strings.Contains(lines[2], "个文件") {
-		t.Fatalf("expected file truncation suffix: %q", out)
+	if len(lines) != 4 { // 2 count lines + summary + footer
+		t.Fatalf("expected 4 lines, got %d: %q", len(lines), out)
 	}
 }
 
-func TestGrepTool_contextCanceled(t *testing.T) {
-	dir := t.TempDir()
-	for i := 0; i < 200; i++ {
-		name := fmt.Sprintf("f%03d.txt", i)
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("needle line\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
+func TestGrepTool_B11_offset_files(t *testing.T) {
+	f := newGrepFixture(t)
+	old := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	new := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	f.write(t, "old.txt", "needle\n")
+	f.write(t, "new.txt", "needle\n")
+	f.chtimes(t, "old.txt", old)
+	f.chtimes(t, "new.txt", new)
+	out := f.exec(t, map[string]any{"pattern": "needle", "offset": 1, "head_limit": 1})
+	if !strings.Contains(out, "old.txt") {
+		t.Fatalf("expected second file (older): %q", out)
 	}
-	g := newGrepTool(t, dir, 50, nil)
+	if !strings.Contains(out, "offset: 1") {
+		t.Fatalf("missing offset footer: %q", out)
+	}
+}
 
+func TestGrepTool_B12_ignore_case(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "NEEDLE\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "-i": true})
+	if !strings.Contains(out, "a.txt") {
+		t.Fatalf("got %q", out)
+	}
+}
+
+func TestGrepTool_B13_context_lines(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "before\nneedle\nafter\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "content", "-C": 1})
+	if !strings.Contains(out, "a.txt:1-before") {
+		t.Fatalf("missing context before: %q", out)
+	}
+	if !strings.Contains(out, "a.txt:2:needle") {
+		t.Fatalf("missing match line: %q", out)
+	}
+	if !strings.Contains(out, "a.txt:3-after") {
+		t.Fatalf("missing context after: %q", out)
+	}
+}
+
+func TestGrepTool_B14_no_line_numbers(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "needle\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "content", "-n": false})
+	if out != "a.txt:needle" {
+		t.Fatalf("got %q", out)
+	}
+}
+
+func TestGrepTool_B15_glob(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "pkg/a.go", "needle go\n")
+	f.write(t, "pkg/b.txt", "needle txt\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "path": "pkg", "glob": "*.go"})
+	if !strings.Contains(out, "a.go") {
+		t.Fatalf("got %q", out)
+	}
+	if strings.Contains(out, "b.txt") {
+		t.Fatalf("glob should exclude txt: %q", out)
+	}
+}
+
+func TestGrepTool_B16_type_go(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.go", "package main\nneedle\n")
+	f.write(t, "a.txt", "needle\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "type": "go"})
+	if !strings.Contains(out, "a.go") {
+		t.Fatalf("got %q", out)
+	}
+	if strings.Contains(out, "a.txt") {
+		t.Fatalf("type filter failed: %q", out)
+	}
+}
+
+func TestGrepTool_B17_multiline(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "start\nneedle end\n")
+	out := f.exec(t, map[string]any{"pattern": "start\\nneedle", "output_mode": "content", "multiline": true})
+	if !strings.Contains(out, "a.txt") {
+		t.Fatalf("got %q", out)
+	}
+}
+
+func TestGrepTool_B18_mtime_sort(t *testing.T) {
+	f := newGrepFixture(t)
+	old := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	new := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	f.write(t, "old.txt", "needle old\n")
+	f.write(t, "new.txt", "needle new\n")
+	f.chtimes(t, "old.txt", old)
+	f.chtimes(t, "new.txt", new)
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "content"})
+	newIdx := strings.Index(out, "new.txt")
+	oldIdx := strings.Index(out, "old.txt")
+	if newIdx < 0 || oldIdx < 0 || newIdx > oldIdx {
+		t.Fatalf("newer file should appear first: %q", out)
+	}
+}
+
+func TestGrepTool_B19_sensitive_paths(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, ".env", "SECRET=needle\n")
+	f.write(t, "ok.txt", "needle ok\n")
+	out := f.exec(t, map[string]any{"pattern": "needle"})
+	if strings.Contains(out, ".env") || strings.Contains(out, "SECRET") {
+		t.Fatalf("leaked sensitive: %q", out)
+	}
+	if !strings.Contains(out, "ok.txt") {
+		t.Fatalf("got %q", out)
+	}
+}
+
+func TestGrepTool_B20_skip_dirs(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "node_modules/pkg/hit.txt", "needle hit\n")
+	f.write(t, "ok.txt", "needle ok\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "path": "."})
+	if strings.Contains(out, "node_modules") {
+		t.Fatalf("should skip node_modules: %q", out)
+	}
+	if !strings.Contains(out, "ok.txt") {
+		t.Fatalf("got %q", out)
+	}
+}
+
+func TestGrepTool_B21_explicit_skip_dir_path(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "node_modules/pkg/hit.txt", "needle hit\n")
+	f.write(t, "ok.txt", "needle ok\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "path": "node_modules"})
+	if !strings.Contains(out, "hit.txt") {
+		t.Fatalf("explicit path should search skip_dir: %q", out)
+	}
+}
+
+func TestGrepTool_B22_git_path_empty(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, ".git/HEAD", "needle in git\n")
 	modes := []struct {
-		name string
-		args map[string]any
+		mode string
+		want string
 	}{
-		{"content", map[string]any{"pattern": "needle", "output_mode": "content"}},
-		{"count", map[string]any{"pattern": "needle", "output_mode": "count"}},
+		{"", "Found 0 files"},
+		{"content", ""},
+		{"count", "Found 0 occurrences across 0 files"},
 	}
 	for _, tc := range modes {
-		t.Run(tc.name, func(t *testing.T) {
-			args, _ := json.Marshal(tc.args)
-			ctx, cancel := context.WithCancel(context.Background())
-			errCh := make(chan error, 1)
-			go func() {
-				_, err := g.Execute(ctx, args)
-				errCh <- err
-			}()
-			cancel()
-			select {
-			case err := <-errCh:
-				if !errors.Is(err, context.Canceled) {
-					t.Fatalf("expected context.Canceled, got %v", err)
-				}
-			case <-time.After(5 * time.Second):
-				t.Fatal("timeout waiting for canceled grep")
-			}
-		})
+		args := map[string]any{"pattern": "needle", "path": ".git"}
+		if tc.mode != "" {
+			args["output_mode"] = tc.mode
+		}
+		out := f.exec(t, args)
+		if out != tc.want {
+			t.Fatalf("mode %q: got %q want %q", tc.mode, out, tc.want)
+		}
 	}
+}
 
-	t.Run("pre_canceled", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		args, _ := json.Marshal(map[string]any{"pattern": "needle"})
-		out, err := g.Execute(ctx, args)
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("expected context.Canceled, got %v out=%q", err, out)
-		}
-		if out != "" {
-			t.Fatalf("expected empty output on cancel, got %q", out)
-		}
+func TestGrepTool_B22b_broad_path_skips_git(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "needle in source\n")
+	f.write(t, ".git/HEAD", "needle in git\n")
+	out := f.exec(t, map[string]any{"pattern": "needle"})
+	if strings.Contains(out, ".git") {
+		t.Fatalf("broad search must not include .git, got %q", out)
+	}
+	if !strings.Contains(out, "a.txt") {
+		t.Fatalf("expected a.txt in results, got %q", out)
+	}
+}
+
+func TestGrepTool_B23_respect_gitignore_true(t *testing.T) {
+	f := newGrepFixture(t, func(c *config.Config) {
+		c.Tools.Grep.RespectGitignore = true
 	})
+	f.write(t, ".gitignore", "ignored/\n")
+	f.write(t, "ignored/hit.txt", "needle hit\n")
+	if err := os.MkdirAll(filepath.Join(f.dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(f.dir, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := f.exec(t, map[string]any{"pattern": "needle"})
+	if strings.Contains(out, "ignored") {
+		t.Fatalf("respect_gitignore=true should skip ignored: %q", out)
+	}
+}
+
+func TestGrepTool_B24_respect_gitignore_false(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, ".gitignore", "ignored/\n")
+	f.write(t, "ignored/hit.txt", "needle hit\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "path": "ignored"})
+	if !strings.Contains(out, "hit.txt") {
+		t.Fatalf("default should search ignored when path explicit: %q", out)
+	}
+}
+
+func TestGrepTool_B25_timeout(t *testing.T) {
+	f := newGrepFixture(t, func(c *config.Config) {
+		c.Tools.Grep.Timeout = time.Millisecond
+	})
+	for i := 0; i < 50; i++ {
+		f.write(t, fmt.Sprintf("f%03d.txt", i), strings.Repeat("needle line\n", 100))
+	}
+	raw, _ := json.Marshal(map[string]any{"pattern": "needle"})
+	_, err := f.g.Execute(context.Background(), raw)
+	if err == nil {
+		t.Fatal("expected timeout error")
+	}
+	if !strings.Contains(err.Error(), "超时") {
+		t.Fatalf("expected timeout message, got %v", err)
+	}
+}
+
+func TestGrepTool_B26_context_canceled(t *testing.T) {
+	f := newGrepFixture(t)
+	for i := 0; i < 100; i++ {
+		f.write(t, fmt.Sprintf("f%03d.txt", i), "needle line\n")
+	}
+	raw, _ := json.Marshal(map[string]any{"pattern": "needle", "output_mode": "content"})
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := f.g.Execute(ctx, raw)
+		errCh <- err
+	}()
+	cancel()
+	select {
+	case err := <-errCh:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context.Canceled, got %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestGrepTool_B27_invalid_regex(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "x\n")
+	raw, _ := json.Marshal(map[string]any{"pattern": "["})
+	_, err := f.g.Execute(context.Background(), raw)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), builtin.ErrInvalidRegex) {
+		t.Fatalf("got %v", err)
+	}
 }
 
 func TestGrepTool_invalidOutputMode(t *testing.T) {
-	dir := t.TempDir()
-	g := newGrepTool(t, dir, 50, nil)
-	args, _ := json.Marshal(map[string]any{"pattern": "x", "output_mode": "invalid"})
-	_, err := g.Execute(context.Background(), args)
+	f := newGrepFixture(t)
+	raw, _ := json.Marshal(map[string]any{"pattern": "x", "output_mode": "invalid"})
+	_, err := f.g.Execute(context.Background(), raw)
 	if err == nil {
-		t.Fatal("expected error for invalid output_mode")
+		t.Fatal("expected error")
 	}
 }
 
-func TestGrepTool_explicitSkipDirPath(t *testing.T) {
-	dir := t.TempDir()
-	nm := filepath.Join(dir, "node_modules", "pkg")
-	if err := os.MkdirAll(nm, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(nm, "hit.txt"), []byte("needle hit\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "ok.txt"), []byte("needle ok\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, searchskip.New([]string{"node_modules"}))
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": "node_modules"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "hit.txt") {
-		t.Fatalf("explicit path=node_modules should search skip_dir tree: %q", out)
-	}
-
-	args, _ = json.Marshal(map[string]any{"pattern": "needle", "path": "."})
-	out, err = g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(out, "node_modules") {
-		t.Fatalf("path=. should not enter skip_dirs: %q", out)
+func TestGrepTool_files_dedupes(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, "a.txt", "needle one\nneedle two\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "output_mode": "files_with_matches"})
+	want := "Found 1 files\na.txt"
+	if out != want {
+		t.Fatalf("got %q want %q", out, want)
 	}
 }
 
-func TestGrepTool_explicitGitPathEmpty(t *testing.T) {
-	dir := t.TempDir()
-	gitDir := filepath.Join(dir, ".git")
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("needle in git\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, searchskip.New(nil))
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": ".git"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.TrimSpace(out) != "" && out != "无匹配" {
-		t.Fatalf("path=.git should yield empty result, got %q", out)
+func TestGrepTool_findsGitignoredPaths_default(t *testing.T) {
+	f := newGrepFixture(t)
+	f.write(t, ".gitignore", "pkg/build/\n")
+	f.write(t, "pkg/src/hit.txt", "needle hit\n")
+	f.write(t, "pkg/build/miss.txt", "needle miss\n")
+	out := f.exec(t, map[string]any{"pattern": "needle", "path": "pkg"})
+	if !strings.Contains(out, "miss.txt") || !strings.Contains(out, "hit.txt") {
+		t.Fatalf("default should not follow gitignore: %q", out)
 	}
 }
 
-func TestGrepTool_planModeNoGitignore(t *testing.T) {
-	dir := t.TempDir()
-	ignored := filepath.Join(dir, "ignoredpkg")
-	if err := os.MkdirAll(ignored, 0o755); err != nil {
+func TestGrepTool_skipsBinaryFiles(t *testing.T) {
+	f := newGrepFixture(t)
+	pngData := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	pngData = append(pngData, []byte("needle in png")...)
+	p := filepath.Join(f.dir, "img.png")
+	if err := os.WriteFile(p, pngData, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignoredpkg/\n"), 0o644); err != nil {
-		t.Fatal(err)
+	f.write(t, "ok.txt", "needle text\n")
+	out := f.exec(t, map[string]any{"pattern": "needle"})
+	if strings.Contains(out, "img.png") {
+		t.Fatalf("should skip binary: %q", out)
 	}
-	if err := os.WriteFile(filepath.Join(ignored, "hit.go"), []byte("package ignored\nneedle\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	g := newGrepTool(t, dir, 50, searchskip.New(nil))
-	args, _ := json.Marshal(map[string]any{"pattern": "needle", "path": "ignoredpkg"})
-	out, err := g.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "hit.go") {
-		t.Fatalf("plan/explore grep should not follow gitignore: %q", out)
-	}
-}
-
-func TestGrepTool_descNoGitignore(t *testing.T) {
-	if strings.Contains(grep.DescGrep, "gitignore") {
-		t.Fatalf("DescGrep must not mention gitignore: %q", grep.DescGrep)
+	if !strings.Contains(out, "ok.txt") {
+		t.Fatalf("got %q", out)
 	}
 }

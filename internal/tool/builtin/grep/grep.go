@@ -4,44 +4,37 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"runtime"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/filecandidate"
-	"github.com/wzhejunqiu/ds-code/internal/tool/globmatch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
 
-const (
-	maxFileBytes = 2 * 1024 * 1024
-	maxLineBytes = 64 * 1024
-	maxWorkers   = 8
-)
-
-type outputMode string
-
-const (
-	modeContent          outputMode = builtin.GrepOutputContent
-	modeFilesWithMatches outputMode = builtin.GrepOutputFilesWithMatches
-	modeCount            outputMode = builtin.GrepOutputCount
-)
-
-// GrepTool searches file contents with a regex.
+// GrepTool searches file contents via ripgrep.
 type GrepTool struct {
 	Cfg        *config.Config
 	Perm       *permission.Engine
 	SearchSkip *searchskip.Matcher
 	Strict     bool
+}
+
+type grepInput struct {
+	Pattern    string `json:"pattern"`
+	Path       string `json:"path"`
+	Glob       string `json:"glob"`
+	OutputMode string `json:"output_mode"`
+	Before     int    `json:"-B"`
+	After      int    `json:"-A"`
+	ContextC   int    `json:"-C"`
+	Context    int    `json:"context"`
+	LineNums   *bool  `json:"-n"`
+	IgnoreCase bool   `json:"-i"`
+	Type       string `json:"type"`
+	HeadLimit  *int   `json:"head_limit"`
+	Offset     int    `json:"offset"`
+	Multiline  bool   `json:"multiline"`
 }
 
 func (t *GrepTool) Name() string { return tool.NameGrep.String() }
@@ -55,12 +48,22 @@ func (t *GrepTool) WithPerm(perm *permission.Engine) tool.Tool {
 func (t *GrepTool) IsReadOnly() bool        { return true }
 func (t *GrepTool) IsConcurrencySafe() bool { return true }
 
-func (t *GrepTool) Description() string { return DescGrep }
+func (t *GrepTool) Description() string { return RenderDesc() }
 
 func (t *GrepTool) Schema() map[string]any {
 	return tool.ObjectSchema(map[string]any{
-		"pattern": map[string]any{"type": "string", "description": SchemaRegexPattern},
-		"path":    map[string]any{"type": "string", "description": SchemaGrepPath},
+		"pattern": map[string]any{
+			"type":        "string",
+			"description": SchemaPattern,
+		},
+		"path": map[string]any{
+			"type":        "string",
+			"description": SchemaPath,
+		},
+		"glob": map[string]any{
+			"type":        "string",
+			"description": SchemaGlob,
+		},
 		"output_mode": map[string]any{
 			"type": "string",
 			"enum": []string{
@@ -70,36 +73,56 @@ func (t *GrepTool) Schema() map[string]any {
 			},
 			"description": SchemaOutputMode,
 		},
+		"-B": map[string]any{
+			"type":        "number",
+			"description": SchemaBefore,
+		},
+		"-A": map[string]any{
+			"type":        "number",
+			"description": SchemaAfter,
+		},
+		"-C": map[string]any{
+			"type":        "number",
+			"description": SchemaContextC,
+		},
+		"context": map[string]any{
+			"type":        "number",
+			"description": SchemaContext,
+		},
+		"-n": map[string]any{
+			"type":        "boolean",
+			"description": SchemaLineNumbers,
+		},
+		"-i": map[string]any{
+			"type":        "boolean",
+			"description": SchemaIgnoreCase,
+		},
+		"type": map[string]any{
+			"type":        "string",
+			"description": SchemaFileType,
+		},
+		"head_limit": map[string]any{
+			"type":        "number",
+			"description": SchemaHeadLimit,
+		},
+		"offset": map[string]any{
+			"type":        "number",
+			"description": SchemaOffset,
+		},
+		"multiline": map[string]any{
+			"type":        "boolean",
+			"description": SchemaMultiline,
+		},
 	}, []string{"pattern"}, t.Strict)
 }
 
 func (t *GrepTool) PermissionLevel() permission.Level { return permission.LevelLow }
 
-type lineHit struct {
-	lineNum int
-	text    string
-}
-
-type fileHits struct {
-	rel  string
-	hits []lineHit
-}
-
-type searchResult struct {
-	lines      []string
-	totalCount int
-	truncated  bool
-}
-
 func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	var in struct {
-		Pattern    string `json:"pattern"`
-		Path       string `json:"path"`
-		OutputMode string `json:"output_mode"`
-	}
+	var in grepInput
 	if err := json.Unmarshal(args, &in); err != nil {
 		return "", err
 	}
@@ -109,254 +132,10 @@ func (t *GrepTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	if len(in.Pattern) > 512 {
 		return "", fmt.Errorf("%s", builtin.ErrPatternTooLong)
 	}
-	modeStr, err := builtin.ParseGrepOutputMode(in.OutputMode)
-	if err != nil {
+	if _, err := builtin.ParseGrepOutputMode(in.OutputMode); err != nil {
 		return "", err
 	}
-	mode := outputMode(modeStr)
-
-	re, err := regexp.Compile(in.Pattern)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", builtin.ErrInvalidRegex, err)
-	}
-	searchPath := in.Path
-	if searchPath == "" {
-		searchPath = "."
-	}
-
-	limit := t.Cfg.Tools.Grep.HeadLimit
-	if limit <= 0 {
-		limit = 200
-	}
-	searchLimit := limit
-	if mode == modeCount {
-		searchLimit = 0
-	}
-
-	candidates, err := t.collectCandidates(ctx, searchPath)
-	if err != nil {
-		return "", err
-	}
-	res := t.searchCandidates(ctx, candidates, re, mode, searchLimit)
-	if err := ctx.Err(); err != nil {
-		return "", err
-	}
-
-	switch mode {
-	case modeCount:
-		return strconv.Itoa(res.totalCount), nil
-	default:
-		if len(res.lines) == 0 {
-			return builtin.ResultGrepNoMatches, nil
-		}
-		out := strings.Join(res.lines, "\n")
-		if res.truncated {
-			truncFmt := builtin.TruncatedAtMatches
-			if mode == modeFilesWithMatches {
-				truncFmt = builtin.TruncatedAtPaths
-			}
-			out += fmt.Sprintf("\n"+truncFmt, limit)
-		}
-		return out, nil
-	}
-}
-
-func (t *GrepTool) searchIgnored(rel, scopeRoot string) bool {
-	if t.SearchSkip == nil {
-		return false
-	}
-	return t.SearchSkip.IgnoredInScope(rel, scopeRoot)
-}
-
-func (t *GrepTool) searchSkipDir(rel, walkRoot string) bool {
-	if t.SearchSkip == nil {
-		return rel == ".git" || strings.HasPrefix(rel, ".git/")
-	}
-	return t.SearchSkip.ShouldSkipWalkDir(rel, walkRoot)
-}
-
-func (t *GrepTool) collectCandidates(ctx context.Context, searchPath string) ([]filecandidate.FileCandidate, error) {
-	if globmatch.HasMeta(searchPath) {
-		return t.collectGlobPath(ctx, searchPath)
-	}
-	return t.collectExactPath(ctx, searchPath)
-}
-
-func (t *GrepTool) collectExactPath(ctx context.Context, searchPath string) ([]filecandidate.FileCandidate, error) {
-	root, err := t.Perm.CheckReadablePath(searchPath)
-	if err != nil {
-		return nil, err
-	}
-	info, err := os.Stat(root)
-	if err != nil {
-		return nil, err
-	}
-	filter := filecandidate.FileFilter{MaxFileBytes: maxFileBytes}
-	if !info.IsDir() {
-		if c := filecandidate.MakeFileCandidate(t.Perm, root, filter); c != nil {
-			return []filecandidate.FileCandidate{*c}, nil
-		}
-		return nil, nil
-	}
-
-	var out []filecandidate.FileCandidate
-	err = filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return nil
-		}
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if d.IsDir() {
-			relWalk, _ := filepath.Rel(root, path)
-			if relWalk != "." {
-				fullRel := filepath.ToSlash(filepath.Join(searchPath, relWalk))
-				if t.searchSkipDir(fullRel, searchPath) {
-					return filepath.SkipDir
-				}
-			}
-			if t.Perm.SkipSensitiveAbs(path) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if c := filecandidate.MakeFileCandidate(t.Perm, path, filter); c != nil {
-			if t.searchIgnored(c.Rel, searchPath) {
-				return nil
-			}
-			out = append(out, *c)
-		}
-		return nil
-	})
-	return out, err
-}
-
-func (t *GrepTool) collectGlobPath(ctx context.Context, searchPath string) ([]filecandidate.FileCandidate, error) {
-	base, pattern := globmatch.SplitPath(searchPath)
-	root, err := t.Perm.CheckReadablePath(base)
-	if err != nil {
-		return nil, err
-	}
-	return filecandidate.CollectGlobPattern(ctx, t.Perm, root, pattern, filecandidate.FileFilter{MaxFileBytes: maxFileBytes},
-		func(rel string) bool { return t.searchIgnored(rel, base) },
-		func(relFromRoot string) bool {
-			fullRel := filepath.ToSlash(relFromRoot)
-			if base != "" && base != "." {
-				fullRel = filepath.ToSlash(filepath.Join(base, relFromRoot))
-			}
-			return t.searchSkipDir(fullRel, base)
-		},
-	)
-}
-
-func (t *GrepTool) searchCandidates(ctx context.Context, candidates []filecandidate.FileCandidate, re *regexp.Regexp, mode outputMode, limit int) searchResult {
-	builtin.SortByModTimeDesc(candidates,
-		func(c filecandidate.FileCandidate) time.Time { return c.ModTime },
-		func(c filecandidate.FileCandidate) string { return c.Rel },
-	)
-
-	workers := maxWorkers
-	if n := runtime.NumCPU(); n < workers {
-		workers = n
-	}
-	if workers < 1 {
-		workers = 1
-	}
-
-	var res searchResult
-	stopAfter := 0
-	if mode == modeFilesWithMatches {
-		stopAfter = 1
-	}
-
-	for i := 0; i < len(candidates); {
-		if err := ctx.Err(); err != nil {
-			break
-		}
-		if mode != modeCount && limit > 0 {
-			switch mode {
-			case modeContent:
-				if len(res.lines) >= limit {
-					res.truncated = true
-					return res
-				}
-			case modeFilesWithMatches:
-				if len(res.lines) >= limit {
-					res.truncated = true
-					return res
-				}
-			}
-		}
-
-		end := i + workers
-		if end > len(candidates) {
-			end = len(candidates)
-		}
-		batch := candidates[i:end]
-		batchHits := make([]fileHits, len(batch))
-		var wg sync.WaitGroup
-		for j, c := range batch {
-			wg.Add(1)
-			go func(j int, c filecandidate.FileCandidate) {
-				defer wg.Done()
-				if ctx.Err() != nil {
-					return
-				}
-				batchHits[j] = grepFile(c.AbsPath, c.Rel, re, stopAfter)
-			}(j, c)
-		}
-		wg.Wait()
-
-		for _, fh := range batchHits {
-			if len(fh.hits) == 0 {
-				continue
-			}
-			switch mode {
-			case modeCount:
-				res.totalCount += len(fh.hits)
-			case modeFilesWithMatches:
-				res.lines = append(res.lines, fh.rel)
-				if limit > 0 && len(res.lines) >= limit {
-					res.truncated = end < len(candidates)
-					return res
-				}
-			case modeContent:
-				for hi, h := range fh.hits {
-					res.lines = append(res.lines, fmt.Sprintf("%s:%d:%s", fh.rel, h.lineNum, h.text))
-					if limit > 0 && len(res.lines) >= limit {
-						res.truncated = end < len(candidates) || hi < len(fh.hits)-1
-						return res
-					}
-				}
-			}
-		}
-		i = end
-	}
-	return res
-}
-
-func grepFile(absPath, rel string, re *regexp.Regexp, stopAfter int) fileHits {
-	b, err := os.ReadFile(absPath)
-	if err != nil {
-		return fileHits{rel: rel}
-	}
-	var hits []lineHit
-	lines := strings.Split(string(b), "\n")
-	for i, line := range lines {
-		if len(line) > maxLineBytes {
-			continue
-		}
-		if re.MatchString(line) {
-			hits = append(hits, lineHit{
-				lineNum: i + 1,
-				text:    strings.TrimSpace(line),
-			})
-			if stopAfter > 0 && len(hits) >= stopAfter {
-				break
-			}
-		}
-	}
-	return fileHits{rel: rel, hits: hits}
+	return runRipgrep(ctx, t, in)
 }
 
 var _ tool.Tool = (*GrepTool)(nil)

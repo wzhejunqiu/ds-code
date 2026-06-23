@@ -5,11 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/wzhejunqiu/ds-code/internal/patch"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+)
+
+var (
+	grepFoundFilesRe       = regexp.MustCompile(`(?m)^Found (\d+) files$`)
+	grepFoundOccurrencesRe = regexp.MustCompile(`(?m)^Found (\d+) occurrences across \d+ files$`)
 )
 
 const titleArgsMax = 80
@@ -378,14 +384,8 @@ func AppendGrepResultSuffix(argsLine string, rawArgs []byte, result string) stri
 		return argsLine + fmt.Sprintf(" · %d matches", n)
 	case builtin.GrepOutputContent:
 		n := countGrepContentLines(result)
-		if strings.Contains(result, builtin.ResultGrepNoMatches) {
-			return argsLine + " · 0 matches"
-		}
 		return argsLine + fmt.Sprintf(" · %d matches", n)
 	default:
-		if strings.Contains(result, builtin.ResultGrepNoMatches) {
-			return argsLine + " · 0 paths"
-		}
 		n := countGrepPathLines(result)
 		return argsLine + fmt.Sprintf(" · %d paths", n)
 	}
@@ -406,29 +406,34 @@ func parseGrepOutputModeArg(rawArgs []byte) string {
 }
 
 func grepCountResult(result string) int {
-	if strings.Contains(result, builtin.ResultGrepNoMatches) {
-		return 0
+	if m := grepFoundOccurrencesRe.FindStringSubmatch(result); len(m) == 2 {
+		n, err := strconv.Atoi(m[1])
+		if err == nil && n >= 0 {
+			return n
+		}
 	}
-	n, err := strconv.Atoi(strings.TrimSpace(result))
-	if err != nil || n < 0 {
-		return 0
-	}
-	return n
+	return 0
 }
 
 func countGrepContentLines(result string) int {
-	return countGrepResultLines(result)
+	return countGrepBodyLines(result)
 }
 
 func countGrepPathLines(result string) int {
-	return countGrepResultLines(result)
+	if m := grepFoundFilesRe.FindStringSubmatch(result); len(m) == 2 {
+		n, err := strconv.Atoi(m[1])
+		if err == nil && n >= 0 {
+			return n
+		}
+	}
+	return countGrepBodyLines(result)
 }
 
-func countGrepResultLines(result string) int {
+func countGrepBodyLines(result string) int {
 	n := 0
 	for _, line := range strings.Split(result, "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" || isGrepTruncationLine(line) {
+		if line == "" || isGrepMetaLine(line) {
 			continue
 		}
 		n++
@@ -436,7 +441,13 @@ func countGrepResultLines(result string) int {
 	return n
 }
 
-func isGrepTruncationLine(line string) bool {
+func isGrepMetaLine(line string) bool {
+	if strings.HasPrefix(line, "Found ") {
+		return true
+	}
+	if strings.HasPrefix(line, "[Showing results with pagination") {
+		return true
+	}
 	return strings.HasPrefix(line, "... 已截断")
 }
 

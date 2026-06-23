@@ -56,6 +56,8 @@ setDefaults（defaults.go）
 | `ContextConfig` | 上下文窗口、压缩、截断、@ 引用 |
 | `AgentConfig` | `max_turns`（单条用户消息的子轮次上限） |
 | `ToolsConfig` | 各工具限制（read、grep、shell、task 等） |
+
+`GrepToolConfig`：`head_limit`（250）、`timeout`（20s）、`binary`（bundled/system/path）、`binary_path`、`respect_gitignore`（默认 false）。
 | `PermissionConfig` | `readonly` / `ask` / `auto` |
 | `BTWConfig` | `/btw` 临时旁路 |
 | `MCPConfig` / `WebConfig` / `LSPConfig` | 可选集成 |

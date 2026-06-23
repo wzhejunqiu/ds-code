@@ -53,7 +53,11 @@ tools:
   read_file:
     max_lines: 2000
   grep:
-    head_limit: 200
+    head_limit: 250
+    timeout: 20s
+    binary: bundled   # bundled | system | path
+    # binary_path: /usr/local/bin/rg
+    respect_gitignore: false
   glob:
     max_results: 100
   search:

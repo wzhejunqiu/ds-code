@@ -66,6 +66,7 @@ internal/shelljobs/    后台 shell 任务管理（本会话跟踪；退出 Clos
 - **权限 S3 denylist 始终生效**：无论 readonly/ask/auto 模式，均拒绝敏感路径的读/写/shell
 - **MCP 工具名**：MCP server 原始裸名（如 `semantic_search_nodes`）；写操作与内置工具共享权限检查
 - **不实现 edit_file**：编辑统一用 Codex 式 `apply_patch`
+- **grep 后端**：`internal/tool/builtin/grep` 调用 ripgrep 15.1.0（`go:embed` tar.gz → `~/.ds-code/bin/rg`）；构建前 `make fetch-ripgrep`
 - **TUI 取消**：Esc 取消当前轮次（context.Context 贯穿）；Ctrl+C/Ctrl+D 空闲时双击退出
 
 ### 项目上下文

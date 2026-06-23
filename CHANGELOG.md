@@ -9,10 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `bash` tool: optional per-call `timeout_ms` (sync and `run_in_background`, max 600000ms); timeout force-kills the subprocess
+- `grep` tool: ripgrep 15.1.0 backend（bundled tar.gz embed + `~/.ds-code/bin/rg`）；Claude Code 对齐 Schema（`glob`、`-B/-A/-C`、`head_limit`/`offset` 等）
+- `scripts/fetch-ripgrep.sh` + Makefile `fetch-ripgrep` 目标
 - TUI: sync and `run_in_background` `bash` Running title shows a **countdown** via `ToolTimeoutDeadline` + live tick
 
 ### Changed
 
+- `grep` 输出格式：`Found N files` / `path:line:text` / `Found X occurrences across Y files`；弃用 `无匹配` 与中文截断行
+- `grep` `head_limit` 三模式通用；默认 **250**（原 200）
+- `grep` `path` 与 `glob` 分离（原 `path: pkg/*.go` → `path: pkg` + `glob: *.go`）
 - `read_file` tool prompt migrated to `usage.prompt` + `RenderDesc()` (FR-0); LLM parameter **`path` → `filepath`**
 - `run_in_background` blocks until job completes (same stdout/stderr format as sync); concurrent batch for multiple bg calls in one turn
 - **Removed `/kill` slash command** and TUI kill picker; no manual job management
@@ -21,6 +26,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Breaking
 
+- `grep` 无匹配：`Found 0 files` / `""` / `Found 0 occurrences across 0 files`（非 `无匹配` / 单个 `0`）
+- `grep` `count` 模式受 `head_limit`/`offset` 约束（摘要 X/Y 仍为全量）
+- `grep` 正则方言：Go `regexp` → ripgrep / Rust regex
+- `tools.grep` 新增 `timeout`、`binary`、`binary_path`、`respect_gitignore` 配置键
 - LLM tool name **`shell` → `bash`** (config key `tools.shell` unchanged)
 - `read_file` LLM parameter **`path` → `filepath`** (historical tool calls are not aliased)
 - Historical tool calls using `background` or `list_jobs` are **not** aliased; use `run_in_background` instead

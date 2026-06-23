@@ -2,7 +2,7 @@
 
 > 版本：v0.1.4  
 > 状态：规划中  
-> 更新日期：2026-06-21
+> 更新日期：2026-06-23  
 
 ## 1. 目标
 
@@ -13,7 +13,7 @@
 
 **非目标**：权限 S2/S3 变更；MCP 工具 description；子代理 `PromptOverlay`；历史 `shell` tool_call 别名；未经你确认的提示词大批量替换。
 
-**本版 P0 例外**：`bash` 工具行为变更（`timeout_ms`、`run_in_background`、移除 `list_jobs`、超时 kill、TUI 倒计时）见 [FR-5](REQUIREMENTS.md#fr-5-bash-工具行为p0)。
+**本版 P0 例外**：`bash` 工具行为变更（`timeout_ms`、`run_in_background`、移除 `list_jobs`、超时 kill、TUI 倒计时）见 [FR-5](REQUIREMENTS.md#fr-5-bash-工具行为p0)；`grep` 后端改为 ripgrep 见 [FR-6](REQUIREMENTS.md#fr-6-grep-工具-ripgrep-后端p0)。
 
 ## 2. 协作流程（必遵）
 
@@ -158,6 +158,7 @@ internal/tool/builtin/<tool>/
 | FR-4.2 | [ACCEPTANCE.md](ACCEPTANCE.md) 逐工具勾选 | P0 |
 | FR-4.3 | `CHANGELOG.md` 记录 `bash` 改名 breaking | P0 |
 | FR-4.4 | CONFIG / builtin README defer 示例更新 | P1 |
+| FR-4.5 | `grep` ripgrep：`grep.md`、`CHANGELOG`、Makefile `fetch-ripgrep` | P0 |
 
 ### FR-5 bash 工具行为（P0）
 
@@ -170,6 +171,19 @@ internal/tool/builtin/<tool>/
 | FR-5.5 | TUI：sync 与 `run_in_background` bash Running 标题 **倒计时** |
 | FR-5.6 | 退出 ds-code 时 kill 本会话 running job；不跨会话恢复（`reconcileStaleJobs`） |
 | FR-5.7 | Breaking 写入 CHANGELOG；无 `background`/`list_jobs` 别名 |
+
+### FR-6 grep 工具 ripgrep 后端（P0）
+
+| ID | 描述 |
+|----|------|
+| FR-6.1 | 后端改为 ripgrep 15.1.0；`bundled`（embed tar.gz → `~/.ds-code/bin/rg`）/ `system` / `path` |
+| FR-6.2 | Schema 对齐 Claude Code：`glob`、`-B/-A/-C`、`head_limit`/`offset`、`multiline` 等 |
+| FR-6.3 | 输出格式：`Found N files` / `path:line:text` / `Found X occurrences across Y files` + 分页脚标 |
+| FR-6.4 | `path` 与 `glob` 分离；正则方言 Rust/ripgrep |
+| FR-6.5 | `tools.grep` 新增 `timeout`、`binary`、`binary_path`、`respect_gitignore` |
+| FR-6.6 | 不搜索 `.git`（宽泛 `path` 加 `!.git/**`；`path=.git` 空结果） |
+| FR-6.7 | FR-0：`usage.prompt` + 中文 Schema + `{{.Grep}}/{{.Bash}}/{{.Agent}}` 注入 |
+| FR-6.8 | `make fetch-ripgrep`；`go test ./internal/tool/builtin/grep/...` 全绿 |
 
 ## 5. 非功能需求
 
@@ -194,7 +208,7 @@ internal/tool/builtin/<tool>/
 
 - MCP adapter `Description()`
 - `agentdef.PromptOverlay`
-- 工具行为、权限、TUI（**`bash` FR-5 除外**）
+- 工具行为、权限、TUI（**`bash` FR-5、`grep` FR-6 除外**）
 - 自动迁移用户 `defer_builtin`
 
 ## 7. 实现优先级建议

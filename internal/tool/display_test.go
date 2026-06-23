@@ -7,7 +7,6 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
 func TestDisplaySummary_shell(t *testing.T) {
@@ -155,22 +154,22 @@ func TestReadFileLineRange(t *testing.T) {
 }
 
 func TestAppendGrepResultSuffix(t *testing.T) {
-	t.Run("files_with_matches_no_match", func(t *testing.T) {
+	t.Run("D1_files_with_matches_no_match", func(t *testing.T) {
 		args := []byte(`{"pattern":"foo","path":"."}`)
-		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, builtin.ResultGrepNoMatches)
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, "Found 0 files")
 		if line != "Grepped foo in bar · 0 paths" {
 			t.Fatalf("got %q", line)
 		}
 	})
-	t.Run("files_with_matches_paths", func(t *testing.T) {
+	t.Run("D1_files_with_matches_paths", func(t *testing.T) {
 		args := []byte(`{"pattern":"foo"}`)
-		result := "a.go\nb.go\n... 已截断，共 2 个文件"
+		result := "Found 5 files\na.go\nb.go\n[Showing results with pagination = limit: 2, offset: 0]"
 		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, result)
-		if line != "Grepped foo in bar · 2 paths" {
+		if line != "Grepped foo in bar · 5 paths" {
 			t.Fatalf("got %q", line)
 		}
 	})
-	t.Run("content_matches", func(t *testing.T) {
+	t.Run("D2_content_matches", func(t *testing.T) {
 		args := []byte(`{"pattern":"foo","output_mode":"content"}`)
 		result := "a.go:1:foo\na.go:2:foo"
 		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, result)
@@ -178,16 +177,17 @@ func TestAppendGrepResultSuffix(t *testing.T) {
 			t.Fatalf("got %q", line)
 		}
 	})
-	t.Run("count", func(t *testing.T) {
+	t.Run("D3_count", func(t *testing.T) {
 		args := []byte(`{"pattern":"foo","output_mode":"count"}`)
-		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, "42")
-		if line != "Grepped foo in bar · 42 matches" {
+		result := "a.go:3\nb.go:1\nFound 4 occurrences across 2 files"
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, result)
+		if line != "Grepped foo in bar · 4 matches" {
 			t.Fatalf("got %q", line)
 		}
 	})
-	t.Run("count_zero", func(t *testing.T) {
+	t.Run("D3_count_zero", func(t *testing.T) {
 		args := []byte(`{"pattern":"foo","output_mode":"count"}`)
-		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, "0")
+		line := tool.AppendGrepResultSuffix("Grepped foo in bar", args, "Found 0 occurrences across 0 files")
 		if line != "Grepped foo in bar · 0 matches" {
 			t.Fatalf("got %q", line)
 		}

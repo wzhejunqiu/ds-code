@@ -2,7 +2,7 @@
 
 > 版本：v0.1.4  
 > 状态：规划中  
-> 更新日期：2026-06-22  
+> 更新日期：2026-06-23  
 > **维护说明**：每改一个工具，更新下表「状态」与「确认人」；草稿放在 PR/对话中，**未经你确认不得标为已定稿**。
 
 ## 已确认原则（2026-06-21）
@@ -43,7 +43,7 @@
 | 工具 | usage.prompt | Schema（text.go） | 状态 | 备注 |
 |------|--------------|-------------------|------|------|
 | `read_file` | ✅ [`usage.prompt`](../../internal/tool/builtin/read_file/usage.prompt) | ✅ `SchemaFilepath` 等 | **已定稿 + FR-0 已实现** | 参数 `filepath`（原 `path`）；`offset`/`limit` 不变 |
-| `grep` | 待建 | `SchemaRegexPattern` 等 | 待改写 | |
+| `grep` | ✅ [`usage.prompt`](../../internal/tool/builtin/grep/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + FR-6 已实现** | ripgrep 15.1.0；`{{.Grep}}/{{.Bash}}/{{.Agent}}` 注入；输出 `Found N files` 等；不搜 `.git` |
 | `glob` | 待建 | `SchemaGlobPattern` 等 | 待改写 | |
 | `list_dir` | 待建 | `SchemaPathRelDefault` 等 | 待改写 | |
 | `diagnostics` | 待建 | `SchemaSeverity` 等 | 待改写 | |
@@ -62,8 +62,9 @@
 
 - [`bash`](../../internal/tool/builtin/shell/usage.prompt)
 - [`read_file`](../../internal/tool/builtin/read_file/usage.prompt)
+- [`grep`](../../internal/tool/builtin/grep/usage.prompt)
 
-### grep / glob / list_dir / …
+### glob / list_dir / …
 
 见 git 基线或各包现有 `text.go` 中 `Desc*`。
 

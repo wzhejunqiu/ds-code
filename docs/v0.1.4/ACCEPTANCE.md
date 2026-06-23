@@ -2,7 +2,7 @@
 
 > 版本：v0.1.4  
 > 状态：规划中  
-> 更新日期：2026-06-21  
+> 更新日期：2026-06-23  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md) · 台账：[TOOL_PROMPTS.md](TOOL_PROMPTS.md)
 
 ## 1. 总体验收
@@ -37,7 +37,7 @@
 | 工具 | 检查 | 通过 |
 |------|------|------|
 | `read_file` | FR-0 + 目录/二进制/分段读取等要点 | [ ] |
-| `grep` | FR-0 + pattern/path/output_mode schema | [ ] |
+| `grep` | FR-0 + FR-6 + §4.2 自动化 | [x] |
 | `glob` | FR-0 + pattern schema | [ ] |
 | `list_dir` | FR-0 + path schema | [ ] |
 | `diagnostics` | FR-0 + paths/severity schema | [ ] |
@@ -80,6 +80,18 @@
 | TUI Running | sync 与 `run_in_background` bash 标题末尾 **递减**倒计时 |
 | 退出 ds-code | 本会话 running shell job 被 kill；**无** `/kill` slash |
 | [`shell.md`](../../internal/tool/builtin/shell/shell.md) | 与代码、prompt 一致 |
+
+## 4.2 grep 工具行为验收（FR-6）
+
+| 检查 | 预期 |
+|------|------|
+| 后端 | ripgrep 15.1.0（`bundled` / `system` / `path`） |
+| Schema | `glob`、`-B/-A/-C`、`head_limit`/`offset`、`multiline` 等 |
+| 输出 | `Found N files` / `path:line:text` / `Found X occurrences across Y files` + 分页脚标 |
+| `.git` | 宽泛 `path` 排除；`path=.git` 空结果 |
+| 构建 | `make fetch-ripgrep` + `make test ./internal/tool/builtin/grep/...` 绿 |
+
+**自动化**：`go test ./internal/tool/builtin/grep/...`（含 A1–A20、B1–B27、C、D 组）
 
 ## 5. 非目标（不阻塞发布）
 

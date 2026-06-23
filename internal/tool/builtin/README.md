@@ -10,10 +10,16 @@ internal/tool/builtin/
 ├── doc.go
 ├── text.go                # 共享 Schema 描述、校验错误、截断后缀
 ├── filecandidate.go       # grep / glob 共用：候选文件收集与 workspace 校验
-├── grep_output.go         # grep 各 output_mode 的格式化
+├── grep_output.go         # ParseGrepOutputMode 等共用；grep 输出格式化在 grep/format_output.go
 ├── sort.go                # 按 ModTime 降序排序
 ├── read_file/             # 工具实现 + text.go（LLM 文案）+ *.md
 ├── grep/
+│   ├── grep.go            # GrepTool、Schema、Execute
+│   ├── ripgrep.go         # rg 参数、exec、JSON 解析、postProcess
+│   ├── format_output.go   # §3.4 LLM 可见纯文本格式化
+│   ├── text.go            # RenderDesc、Schema 常量
+│   ├── usage.prompt       # LLM 工具说明模板
+│   └── rgbin/             # embed rg.tar.gz → ~/.ds-code/bin/rg
 ├── glob/
 ├── list_dir/
 ├── diagnostics/
@@ -28,32 +34,32 @@ internal/tool/builtin/
 
 每个工具子包通常包含：
 
-| 文件 | 职责 |
-|------|------|
-| `<tool>.go` | 实现 `tool.Tool`（及可选的 `ReadOnlyTool` / `ConcurrencySafeTool`） |
-| `usage.prompt` | LLM 可见 `Description` 正文（`//go:embed` + `RenderDesc()`） |
-| `text.go` | `RenderDesc()`、`Schema*` 字段说明、错误文案 |
-| `<tool>.md` | 设计文档（部分工具尚未单独成文，见下表） |
-| `*_test.go` | 单元 / 集成测试 |
+| 文件           | 职责                                                                |
+| -------------- | ------------------------------------------------------------------- |
+| `<tool>.go`    | 实现 `tool.Tool`（及可选的 `ReadOnlyTool` / `ConcurrencySafeTool`） |
+| `usage.prompt` | LLM 可见 `Description` 正文（`//go:embed` + `RenderDesc()`）        |
+| `text.go`      | `RenderDesc()`、`Schema*` 字段说明、错误文案                        |
+| `<tool>.md`    | 设计文档（部分工具尚未单独成文，见下表）                            |
+| `*_test.go`    | 单元 / 集成测试                                                     |
 
 工具名常量统一定义于 [`name.go`](../name.go)（如 `NameReadFile = "read_file"`），各工具 `Name()` 返回对应常量。
 
 ## 文档索引
 
-| 工具 | 文档 | 权限级别 | 典型运行模式 |
-|------|------|----------|--------------|
-| `read_file` | [read_file/read_file.md](read_file/read_file.md) | Low | plan / agent / subagent |
-| `grep` | [grep/grep.md](grep/grep.md) | Low | plan / agent / subagent |
-| `glob` | [glob/glob.md](glob/glob.md) | Low | plan / agent / subagent |
-| `list_dir` | [list_dir/list_dir.md](list_dir/list_dir.md) | Low | plan / agent / subagent |
-| `diagnostics` | [diagnostics/diagnostics.md](diagnostics/diagnostics.md) | Low | plan / agent（需 LSP） |
-| `web_fetch` | [web_fetch/web_fetch.md](web_fetch/web_fetch.md) | Medium | plan / agent（需配置） |
-| `web_search` | [web_search/web_search.md](web_search/web_search.md) | Medium | 占位，未注册 |
-| `bash` | [shell/shell.md](shell/shell.md) | Highest | agent only |
-| `apply_patch` | [apply_patch/apply_patch.md](apply_patch/apply_patch.md) | High | agent only |
-| `write_file` | [write_file/write_file.md](write_file/write_file.md) | High | agent only |
-| `tool_search` | [tool_search/tool_search.md](tool_search/tool_search.md) | Low | agent only（有 defer 时） |
-| `agent` | [agent/agent.md](agent/agent.md) | Low | agent only（需 LLM） |
+| 工具          | 文档                                                     | 权限级别 | 典型运行模式                            |
+| ------------- | -------------------------------------------------------- | -------- | --------------------------------------- |
+| `read_file`   | [read_file/read_file.md](read_file/read_file.md)         | Low      | plan / agent / subagent                 |
+| `grep`        | [grep/grep.md](grep/grep.md)                             | Low      | plan / agent / subagent（ripgrep 后端） |
+| `glob`        | [glob/glob.md](glob/glob.md)                             | Low      | plan / agent / subagent                 |
+| `list_dir`    | [list_dir/list_dir.md](list_dir/list_dir.md)             | Low      | plan / agent / subagent                 |
+| `diagnostics` | [diagnostics/diagnostics.md](diagnostics/diagnostics.md) | Low      | plan / agent（需 LSP）                  |
+| `web_fetch`   | [web_fetch/web_fetch.md](web_fetch/web_fetch.md)         | Medium   | plan / agent（需配置）                  |
+| `web_search`  | [web_search/web_search.md](web_search/web_search.md)     | Medium   | 占位，未注册                            |
+| `bash`        | [shell/shell.md](shell/shell.md)                         | Highest  | agent only                              |
+| `apply_patch` | [apply_patch/apply_patch.md](apply_patch/apply_patch.md) | High     | agent only                              |
+| `write_file`  | [write_file/write_file.md](write_file/write_file.md)     | High     | agent only                              |
+| `tool_search` | [tool_search/tool_search.md](tool_search/tool_search.md) | Low      | agent only（有 defer 时）               |
+| `agent`       | [agent/agent.md](agent/agent.md)                         | Low      | agent only（需 LLM）                    |
 
 子代理完整生命周期见 [`internal/agent/spawn/README.md`](../../agent/spawn/README.md)。
 
@@ -86,10 +92,10 @@ BuildRegistry(runMode, deps)
 
 为缩小发给 LLM 的工具 schema 体积，写工具可通过 `tools.defer_builtin` 延迟暴露完整参数：
 
-| 配置 | 说明 |
-|------|------|
+| 配置                  | 说明                                                                   |
+| --------------------- | ---------------------------------------------------------------------- |
 | `tools.defer_builtin` | 工具名列表，如 `["bash", "apply_patch"]`；命中项经 `WrapDeferred` 注册 |
-| `tool_search` | agent 模式下始终注册；LLM 用其按名称拉取完整 schema 后再调用目标工具 |
+| `tool_search`         | agent 模式下始终注册；LLM 用其按名称拉取完整 schema 后再调用目标工具   |
 
 机制：
 
@@ -115,25 +121,25 @@ type Tool interface {
 
 ### 可选接口
 
-| 接口 | 作用 |
-|------|------|
-| `ReadOnlyTool` | `IsReadOnly() bool` — 探索类工具返回 `true` |
-| `ConcurrencySafeTool` | `IsConcurrencySafe() bool` — 可与其它只读工具并行执行 |
-| `DeferredTool` | `StubSchema` / `ShouldDefer` — 由 `WrapDeferred` 包装写工具 |
+| 接口                  | 作用                                                        |
+| --------------------- | ----------------------------------------------------------- |
+| `ReadOnlyTool`        | `IsReadOnly() bool` — 探索类工具返回 `true`                 |
+| `ConcurrencySafeTool` | `IsConcurrencySafe() bool` — 可与其它只读工具并行执行       |
+| `DeferredTool`        | `StubSchema` / `ShouldDefer` — 由 `WrapDeferred` 包装写工具 |
 
 Runner 在 [`tool_orchestration.go`](../../agent/tool_orchestration.go) 中将**相邻**且同时满足 `IsToolReadOnly` + `IsToolConcurrencySafe` 的调用合并为并发批次（上限 10）；写工具、`agent` 等无上述接口的实现始终串行。
 
 ### 其它约定
 
-| 约定 | 说明 |
-|------|------|
-| `Strict` | 来自 `cfg.LLM.StrictTools`；为 true 时 JSON Schema 禁止 `additionalProperties` |
-| 路径 | 读工具用 `Perm.CheckReadablePath`；写工具用 `Perm.CheckWritablePath` / `ResolveAccessPath` |
-| 取消 | `Execute` 开头检查 `ctx.Err()`，长遍历中周期性检查 |
-| 敏感路径 | `permission.SkipSensitiveAbs` 跳过 `.env`、密钥等（`@` 引用例外，见 SECURITY §S3-S） |
+| 约定     | 说明                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `Strict` | 来自 `cfg.LLM.StrictTools`；为 true 时 JSON Schema 禁止 `additionalProperties`                                                       |
+| 路径     | 读工具用 `Perm.CheckReadablePath`；写工具用 `Perm.CheckWritablePath` / `ResolveAccessPath`                                           |
+| 取消     | `Execute` 开头检查 `ctx.Err()`，长遍历中周期性检查                                                                                   |
+| 敏感路径 | `permission.SkipSensitiveAbs` 跳过 `.env`、密钥等（`@` 引用例外，见 SECURITY §S3-S）                                                 |
 | 搜索跳过 | `grep` / `glob` / `list_dir` / `diagnostics` 使用 `searchskip.Matcher`（`.git` + `tools.search.skip_dirs`）；**不**读取 `.gitignore` |
-| 结果截断 | 部分工具调用 `context.TruncateToolResult`；全局见 `context.tool_result_max_chars` |
-| LLM 文案 | 共享常量见 [`text.go`](text.go)；各工具专有字符串见子包 `text.go` |
+| 结果截断 | 部分工具调用 `context.TruncateToolResult`；全局见 `context.tool_result_max_chars`                                                    |
+| LLM 文案 | 共享常量见 [`text.go`](text.go)；各工具专有字符串见子包 `text.go`                                                                    |
 
 ## 权限级别
 

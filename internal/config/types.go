@@ -107,7 +107,11 @@ type SearchToolConfig struct {
 }
 
 type GrepToolConfig struct {
-	HeadLimit int `mapstructure:"head_limit"`
+	HeadLimit        int           `mapstructure:"head_limit"`
+	RespectGitignore bool          `mapstructure:"respect_gitignore"`
+	Binary           string        `mapstructure:"binary"`
+	BinaryPath       string        `mapstructure:"binary_path"`
+	Timeout          time.Duration `mapstructure:"timeout"`
 }
 
 type GlobToolConfig struct {

@@ -359,7 +359,11 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.defer_mcp` | bool | **true** | `true` 时全部 MCP 裸名工具以 stub schema 注册；完整参数同样经 `tool_search` |
 | `tools.read_file.max_lines` | int | **2000** | 未指定 `limit` 时读取整个文件的上限；显式 `limit` 亦受此限 |
 | `tools.read_file.max_bytes` | int | **2097152** (2MiB) | 文件总大小上限；超限拒绝整次读取 |
-| `tools.grep.head_limit` | int | **200** | `grep` 在 `content`（匹配行）与 `files_with_matches`（文件数）模式下的上限；`count` 模式忽略 |
+| `tools.grep.head_limit` | int | **250** | `grep` 三模式通用输出上限（per-call 未传 `head_limit` 时回退） |
+| `tools.grep.timeout` | duration | **20s** | ripgrep 子进程超时 |
+| `tools.grep.binary` | string | **bundled** | `bundled`（embed tar.gz → `~/.ds-code/bin/rg`）\| `system`（PATH 中 `rg`）\| `path` |
+| `tools.grep.binary_path` | string | — | `binary=path` 时 ripgrep 可执行文件路径 |
+| `tools.grep.respect_gitignore` | bool | **false** | `true` 时遵循 `.gitignore`；默认 Agent 搜索**不**遵循 |
 | `tools.glob.max_results` | int | **100** | `glob` / `list_dir` 结果条数上限 |
 | `tools.search.skip_dirs` | []string | **`[]`** | Agent 枚举（`grep`/`glob`/`list_dir`/`diagnostics` walk）额外跳过的目录名（相对 `perm.Workspace`）；`.git` 硬编码 SkipDir；**不**影响 `@dir/`；v0.1.2 起 Agent **不**读取 `.gitignore` |
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |

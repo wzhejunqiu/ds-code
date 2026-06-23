@@ -195,3 +195,25 @@ func EnsureUserConfigDir() error {
 	}
 	return os.MkdirAll(filepath.Join(root, "config"), 0o700)
 }
+
+// BundledBinDir returns ~/.ds-code/bin/ (mode 0700 when created).
+func BundledBinDir() (string, error) {
+	root, err := UserDataHome()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(root, "bin")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("datadir: create bin dir: %w", err)
+	}
+	return dir, nil
+}
+
+// RipgrepBinPath returns ~/.ds-code/bin/rg.
+func RipgrepBinPath() (string, error) {
+	dir, err := BundledBinDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "rg"), nil
+}

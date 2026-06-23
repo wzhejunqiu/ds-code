@@ -1,0 +1,11 @@
+基于 ripgrep 的内容搜索工具。
+
+使用说明：
+- 内容搜索**必须**调用 {{.Grep}} 工具，**禁止**通过 {{.Bash}} 执行 `grep` 或 `rg`；本工具已针对权限与工作区访问优化。
+- 支持完整正则语法（例如 `log.*Error`、`function\s+\w+`）。
+- 用 `glob` 过滤文件（例如 `*.js`、`**/*.tsx`），或用 `type` 按语言类型过滤（例如 `js`、`py`、`rust`）；**不要**在 `path` 内嵌 glob，应使用 `path` + `glob` 分离。
+- 输出模式：`content` 显示匹配行；`files_with_matches` 仅显示文件路径（默认）；`count` 显示匹配计数。
+- 开放、需多轮探索的搜索任务，请使用 {{.Agent}} 工具。
+- 正则语法为 ripgrep（非 GNU grep）；字面花括号须转义（例如用 `interface\{\}` 匹配 Go 代码中的 `interface{}`）。
+- 默认仅匹配单行；跨行模式（例如 `struct \{[\s\S]*?field`）须设 `multiline: true`。
+- 优先收窄 `path` 再搜全树；不搜索 `.git`（含 `path=.git`），避免大仓库无谓遍历；`path` 较宽时可能受 `skip_dirs` 影响。

@@ -1,13 +1,19 @@
-.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release verify-charm-v2 lint vet staticcheck vuln install fetch-tokenizers check-commit check-push install-hooks
+.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release verify-charm-v2 lint vet staticcheck vuln install fetch-tokenizers fetch-ripgrep check-commit check-push install-hooks
 
 COVERPROFILE ?= coverage.out
 
 TOKENIZERS_LIB := third_party/tokenizers/libtokenizers.a
+RIPGREP_TAR := internal/tool/builtin/grep/rgbin/rg.tar.gz
 
 $(TOKENIZERS_LIB): scripts/fetch-tokenizers-lib.sh
 	./scripts/fetch-tokenizers-lib.sh
 
+$(RIPGREP_TAR): scripts/fetch-ripgrep.sh
+	./scripts/fetch-ripgrep.sh
+
 fetch-tokenizers: $(TOKENIZERS_LIB)
+
+fetch-ripgrep: $(RIPGREP_TAR)
 
 GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null)
 _VERSION_FILE := $(shell sed -n 's/^var Version = "\(.*\)"/\1/p' internal/version/version.go)
@@ -19,17 +25,17 @@ ifneq ($(GIT_COMMIT),)
 LDFLAGS += -X main.gitCommit=$(GIT_COMMIT)
 endif
 
-build: $(TOKENIZERS_LIB)
+build: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go build -ldflags "$(LDFLAGS)" -o bin/ds-code ./cmd/ds-code
 
 # Debug binary: /debug-panic and other dev-only hooks (see debug_panic_debug.go).
-build-debug: $(TOKENIZERS_LIB)
+build-debug: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go build -tags debug -ldflags "$(LDFLAGS)" -o bin/ds-code ./cmd/ds-code
 
-install: $(TOKENIZERS_LIB)
+install: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go install -ldflags "$(LDFLAGS)" ./cmd/ds-code
 
-test: $(TOKENIZERS_LIB)
+test: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go test -race -count=1 ./...
 
 cover: $(TOKENIZERS_LIB)

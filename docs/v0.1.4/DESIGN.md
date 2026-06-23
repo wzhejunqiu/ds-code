@@ -2,7 +2,7 @@
 
 > 版本：v0.1.4  
 > 状态：规划中  
-> 更新日期：2026-06-21  
+> 更新日期：2026-06-23  
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md)
 
 ## 1. 设计目标
@@ -196,3 +196,34 @@ flowchart TD
   bg --> tui
   exit[ds-code 退出] --> closeJobs["Manager.Close → Cancel running"]
 ```
+
+## 10. grep 工具 ripgrep 设计（FR-6）
+
+### 10.1 模块划分
+
+```text
+internal/tool/builtin/grep/
+├── grep.go           # GrepTool、Schema、Execute → runRipgrep
+├── ripgrep.go        # 参数构建、exec、JSON 解析、postProcess
+├── format_output.go  # §3.4 纯文本格式化
+├── rgbin/rgbin.go    # go:embed rg.tar.gz → ~/.ds-code/bin/rg（SHA256）
+├── usage.prompt      # FR-0 Description
+└── text.go           # RenderDesc + Schema*（中文）
+```
+
+### 10.2 二进制与构建
+
+| 阶段 | 行为 |
+|------|------|
+| `scripts/fetch-ripgrep.sh` | 下载 ripgrep 15.1.0 tar.gz 至 `rgbin/rg.tar.gz`（不解压） |
+| `make build` / `make test` | 依赖 `fetch-ripgrep` |
+| 运行期 `rgbin.Path()` | 解压至 `~/.ds-code/bin/rg`，哈希校验与自愈 |
+
+### 10.3 策略要点
+
+- `.git`：宽泛 `path` 加 `!.git/**`；`path=.git` 早退空结果（避免大仓库无谓遍历）
+- 敏感路径：`--glob '!...'` 否定规则
+- `skip_dirs`：宽泛 `path` 时 `--glob '!dir/**'`；显式 `path` 可进入
+- TUI：`display.go` 解析 `Found N files` / `Found X occurrences`
+
+实现规格详见 [`grep/grep.md`](../../internal/tool/builtin/grep/grep.md)。
