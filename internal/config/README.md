@@ -58,6 +58,8 @@ setDefaults（defaults.go）
 | `ToolsConfig` | 各工具限制（read、grep、shell、task 等） |
 
 `GrepToolConfig`：`head_limit`（250）、`timeout`（20s）、`binary`（bundled/system/path）、`binary_path`、`respect_gitignore`（默认 false）。
+
+`GlobToolConfig`：`max_results`（100）、`respect_gitignore`（默认 false）、`include_hidden`（默认 true）；binary/timeout 复用 `tools.grep.*`。
 | `PermissionConfig` | `readonly` / `ask` / `auto` |
 | `BTWConfig` | `/btw` 临时旁路 |
 | `MCPConfig` / `WebConfig` / `LSPConfig` | 可选集成 |

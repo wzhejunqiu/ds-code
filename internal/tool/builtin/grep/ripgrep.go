@@ -2,14 +2,10 @@ package grep
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -17,12 +13,12 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep/rgbin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/rgutil"
 	"github.com/wzhejunqiu/ds-code/internal/tool/textfile"
 )
 
 // ErrRipgrepTimeout is returned when the ripgrep subprocess exceeds tools.grep.timeout.
-var ErrRipgrepTimeout = errors.New("ripgrep: search timed out")
+var ErrRipgrepTimeout = rgutil.ErrTimeout
 
 type recordKind int
 
@@ -46,7 +42,7 @@ func runRipgrep(ctx context.Context, t *GrepTool, in grepInput) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	if isGitOnlyPath(in.Path) {
+	if rgutil.IsGitOnlyPath(in.Path) {
 		return emptyOutputForMode(mode), nil
 	}
 
@@ -64,7 +60,7 @@ func runRipgrep(ctx context.Context, t *GrepTool, in grepInput) (string, error) 
 		return "", fmt.Errorf("offset must be non-negative")
 	}
 
-	rgPath, err := resolveRipgrepBinary(t.Cfg.Tools.Grep)
+	rgPath, err := rgutil.ResolveBinary(t.Cfg.Tools.Grep)
 	if err != nil {
 		return "", err
 	}
@@ -77,9 +73,9 @@ func runRipgrep(ctx context.Context, t *GrepTool, in grepInput) (string, error) 
 	if timeout <= 0 {
 		timeout = 20 * time.Second
 	}
-	stdout, _, err := execRipgrep(ctx, rgPath, args, t.Perm.Workspace, timeout)
+	stdout, _, err := rgutil.Exec(ctx, rgPath, args, t.Perm.Workspace, timeout)
 	if err != nil {
-		if errors.Is(err, ErrRipgrepTimeout) {
+		if errors.Is(err, rgutil.ErrTimeout) {
 			return "", fmt.Errorf("%s", MsgRipgrepTimeout)
 		}
 		return "", err
@@ -96,11 +92,6 @@ func runRipgrep(ctx context.Context, t *GrepTool, in grepInput) (string, error) 
 	return postProcess(ctx, records, mode, limit, offset, showLineNums, t.Perm)
 }
 
-func isGitOnlyPath(path string) bool {
-	path = filepath.ToSlash(strings.Trim(path, "/"))
-	return path == ".git" || strings.HasPrefix(path, ".git/")
-}
-
 func resolveHeadLimit(in grepInput, cfg *config.Config) int {
 	if in.HeadLimit != nil {
 		return *in.HeadLimit
@@ -112,48 +103,12 @@ func resolveHeadLimit(in grepInput, cfg *config.Config) int {
 	return limit
 }
 
-func resolveRipgrepBinary(cfg config.GrepToolConfig) (string, error) {
-	switch cfg.Binary {
-	case "", "bundled":
-		return rgbin.Path()
-	case "system":
-		path, err := exec.LookPath("rg")
-		if err != nil {
-			return "", fmt.Errorf("ripgrep: rg not found in PATH")
-		}
-		return path, nil
-	case "path":
-		if cfg.BinaryPath == "" {
-			return "", fmt.Errorf("tools.grep.binary_path required when binary=path")
-		}
-		return validateExecutable(cfg.BinaryPath)
-	default:
-		return "", fmt.Errorf("unknown tools.grep.binary: %q", cfg.Binary)
-	}
-}
-
-func validateExecutable(path string) (string, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return "", fmt.Errorf("ripgrep: binary_path: %w", err)
-	}
-	if info.IsDir() {
-		return "", fmt.Errorf("ripgrep: binary_path is a directory")
-	}
-	if info.Mode()&0o111 == 0 {
-		return "", fmt.Errorf("ripgrep: binary_path is not executable")
-	}
-	return path, nil
-}
-
 func buildRipgrepArgs(t *GrepTool, in grepInput, mode string) ([]string, error) {
 	args := []string{
 		"--json",
 		"--max-filesize", "2M",
 	}
-	if !t.Cfg.Tools.Grep.RespectGitignore {
-		args = append(args, "--no-ignore", "--no-ignore-vcs", "--no-ignore-global")
-	}
+	args = append(args, rgutil.IgnoreFlags(t.Cfg.Tools.Grep.RespectGitignore, false)...)
 	if in.IgnoreCase {
 		args = append(args, "--ignore-case")
 	}
@@ -166,13 +121,13 @@ func buildRipgrepArgs(t *GrepTool, in grepInput, mode string) ([]string, error) 
 	if in.Glob != "" {
 		args = append(args, "--glob", in.Glob)
 	}
-	for _, g := range sensitiveExcludeGlobs() {
+	for _, g := range rgutil.SensitiveExcludeGlobs() {
 		args = append(args, "--glob", g)
 	}
-	for _, g := range t.ripgrepSkipGlobs(in.Path) {
+	for _, g := range rgutil.SkipGlobs(in.Path, t.Cfg.Tools.Search.SkipDirs) {
 		args = append(args, "--glob", g)
 	}
-	if !isGitOnlyPath(in.Path) {
+	if !rgutil.IsGitOnlyPath(in.Path) {
 		args = append(args, "--glob", "!.git/**")
 	}
 
@@ -208,82 +163,6 @@ func buildRipgrepArgs(t *GrepTool, in grepInput, mode string) ([]string, error) 
 	return args, nil
 }
 
-func sensitiveExcludeGlobs() []string {
-	return []string{
-		"!**/.env", "!**/.env.*", "!**/.envrc",
-		"!**/.netrc", "!**/.npmrc", "!**/.pypirc",
-		"!**/id_rsa*", "!**/id_ed25519*", "!**/id_ecdsa*", "!**/id_dsa*",
-		"!**/*.pem", "!**/*.key",
-		"!**/.ssh/**", "!**/.aws/**", "!**/.docker/**", "!**/.kube/**",
-		"!**/.gnupg/**", "!**/credentials/**", "!**/secrets/**",
-		"!**/token.json", "!**/secrets.json", "!**/credentials.json",
-		"!**/service-account.json", "!**/kubeconfig",
-	}
-}
-
-func (t *GrepTool) ripgrepSkipGlobs(scopeRoot string) []string {
-	scope := filepath.ToSlash(strings.Trim(scopeRoot, "/"))
-	if scope == "" {
-		scope = "."
-	}
-	var globs []string
-	for _, skip := range t.Cfg.Tools.Search.SkipDirs {
-		skip = filepath.ToSlash(strings.Trim(skip, "/"))
-		if skip == "" {
-			continue
-		}
-		if scope != "." && (scope == skip || strings.HasPrefix(scope, skip+"/")) {
-			continue
-		}
-		globs = append(globs, "!"+skip+"/**")
-	}
-	return globs
-}
-
-func execRipgrep(ctx context.Context, rgPath string, args []string, workspace string, timeout time.Duration) (stdout, stderr string, err error) {
-	runCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(runCtx, rgPath, args...)
-	cmd.Dir = workspace
-	var outBuf, errBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
-
-	runErr := cmd.Run()
-	if runCtx.Err() == context.DeadlineExceeded {
-		return outBuf.String(), errBuf.String(), ErrRipgrepTimeout
-	}
-	if errors.Is(ctx.Err(), context.Canceled) {
-		return "", "", ctx.Err()
-	}
-	if runErr != nil {
-		var exitErr *exec.ExitError
-		if errors.As(runErr, &exitErr) {
-			if exitErr.ExitCode() == 1 {
-				return outBuf.String(), errBuf.String(), nil
-			}
-			return outBuf.String(), errBuf.String(), mapRipgrepStderr(errBuf.String(), exitErr.ExitCode())
-		}
-		return outBuf.String(), errBuf.String(), runErr
-	}
-	return outBuf.String(), errBuf.String(), nil
-}
-
-func mapRipgrepStderr(stderr string, code int) error {
-	stderr = strings.TrimSpace(stderr)
-	if strings.Contains(stderr, "regex parse error") || strings.Contains(stderr, "error parsing regex") {
-		if stderr != "" {
-			return fmt.Errorf("%s: %s", builtin.ErrInvalidRegex, stderr)
-		}
-		return fmt.Errorf("%s", builtin.ErrInvalidRegex)
-	}
-	if stderr != "" {
-		return fmt.Errorf("ripgrep exited with code %d: %s", code, stderr)
-	}
-	return fmt.Errorf("ripgrep exited with code %d", code)
-}
-
 type rgJSONLine struct {
 	Type string `json:"type"`
 	Data struct {
@@ -317,7 +196,7 @@ func parseRipgrepJSON(stdout string, perm *permission.Engine) ([]grepRecord, err
 		}
 		switch msg.Type {
 		case "match":
-			rel, ok := relPathFromWorkspace(perm, msg.Data.Path.Text)
+			rel, ok := rgutil.RelPathFromWorkspace(perm, msg.Data.Path.Text)
 			if !ok {
 				continue
 			}
@@ -343,7 +222,7 @@ func parseRipgrepJSON(stdout string, perm *permission.Engine) ([]grepRecord, err
 				Text: text,
 			})
 		case "context":
-			rel, ok := relPathFromWorkspace(perm, msg.Data.Path.Text)
+			rel, ok := rgutil.RelPathFromWorkspace(perm, msg.Data.Path.Text)
 			if !ok {
 				continue
 			}
@@ -372,29 +251,6 @@ func parseRipgrepJSON(stdout string, perm *permission.Engine) ([]grepRecord, err
 	return records, nil
 }
 
-func relPathFromWorkspace(perm *permission.Engine, raw string) (string, bool) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", false
-	}
-	abs := raw
-	if !filepath.IsAbs(abs) {
-		abs = filepath.Join(perm.Workspace, abs)
-	}
-	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-		abs = resolved
-	}
-	ws := perm.Workspace
-	if resolved, err := filepath.EvalSymlinks(ws); err == nil {
-		ws = resolved
-	}
-	rel, err := filepath.Rel(ws, abs)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", false
-	}
-	return filepath.ToSlash(rel), true
-}
-
 func postProcess(ctx context.Context, records []grepRecord, mode string, limit, offset int, showLineNums bool, perm *permission.Engine) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -407,26 +263,6 @@ func postProcess(ctx context.Context, records []grepRecord, mode string, limit, 
 	default:
 		return postProcessFiles(records, limit, offset, perm)
 	}
-}
-
-func fileModTime(perm *permission.Engine, rel string) time.Time {
-	abs := filepath.Join(perm.Workspace, filepath.FromSlash(rel))
-	info, err := os.Stat(abs)
-	if err != nil {
-		return time.Time{}
-	}
-	return info.ModTime()
-}
-
-func sortFilesByMtime(files []string, perm *permission.Engine) {
-	sort.Slice(files, func(i, j int) bool {
-		ti := fileModTime(perm, files[i])
-		tj := fileModTime(perm, files[j])
-		if !ti.Equal(tj) {
-			return ti.After(tj)
-		}
-		return files[i] < files[j]
-	})
 }
 
 func postProcessFiles(records []grepRecord, limit, offset int, perm *permission.Engine) (string, error) {
@@ -442,14 +278,14 @@ func postProcessFiles(records []grepRecord, limit, offset int, perm *permission.
 		seen[r.Rel] = true
 		files = append(files, r.Rel)
 	}
-	sortFilesByMtime(files, perm)
+	rgutil.SortFilesByMtime(files, perm)
 	meta := grepPageMeta{
 		Limit:        limit,
 		Offset:       offset,
 		TotalEntries: len(files),
 		TotalFiles:   len(files),
 	}
-	files = paginateStrings(files, offset, limit)
+	files = rgutil.PaginateStrings(files, offset, limit)
 	return formatGrepOutput(builtin.GrepOutputFilesWithMatches, files, meta), nil
 }
 
@@ -464,7 +300,7 @@ func postProcessContent(records []grepRecord, limit, offset int, showLineNums bo
 		Offset:       offset,
 		TotalEntries: len(lines),
 	}
-	lines = paginateStrings(lines, offset, limit)
+	lines = rgutil.PaginateStrings(lines, offset, limit)
 	return formatGrepOutput(builtin.GrepOutputContent, lines, meta), nil
 }
 
@@ -479,7 +315,7 @@ func sortContentRecords(records []grepRecord, perm *permission.Engine) []grepRec
 	for i, r := range records {
 		if _, ok := fileIndex[r.Rel]; !ok {
 			fileIndex[r.Rel] = len(order)
-			order = append(order, fileOrder{rel: r.Rel, modTime: fileModTime(perm, r.Rel), first: i})
+			order = append(order, fileOrder{rel: r.Rel, modTime: rgutil.FileModTime(perm, r.Rel), first: i})
 		}
 	}
 	sort.Slice(order, func(i, j int) bool {
@@ -520,7 +356,7 @@ func postProcessCount(records []grepRecord, limit, offset int, perm *permission.
 	for rel := range counts {
 		files = append(files, rel)
 	}
-	sortFilesByMtime(files, perm)
+	rgutil.SortFilesByMtime(files, perm)
 	var countLines []string
 	for _, rel := range files {
 		countLines = append(countLines, fmt.Sprintf("%s:%d", rel, counts[rel]))
@@ -532,19 +368,16 @@ func postProcessCount(records []grepRecord, limit, offset int, perm *permission.
 		TotalFiles:   len(files),
 		TotalMatches: totalMatches,
 	}
-	countLines = paginateStrings(countLines, offset, limit)
+	countLines = rgutil.PaginateStrings(countLines, offset, limit)
 	return formatGrepOutput(builtin.GrepOutputCount, countLines, meta), nil
 }
 
-func paginateStrings(items []string, offset, limit int) []string {
-	if offset > 0 {
-		if offset >= len(items) {
-			return nil
-		}
-		items = items[offset:]
-	}
-	if limit > 0 && len(items) > limit {
-		items = items[:limit]
-	}
-	return items
+// relPathFromWorkspace is a test helper alias for rgutil.RelPathFromWorkspace.
+func relPathFromWorkspace(perm *permission.Engine, raw string) (string, bool) {
+	return rgutil.RelPathFromWorkspace(perm, raw)
+}
+
+// resolveRipgrepBinary is a test helper alias for rgutil.ResolveBinary.
+func resolveRipgrepBinary(cfg config.GrepToolConfig) (string, error) {
+	return rgutil.ResolveBinary(cfg)
 }

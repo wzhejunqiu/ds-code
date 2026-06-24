@@ -44,7 +44,7 @@
 |------|--------------|-------------------|------|------|
 | `read_file` | ✅ [`usage.prompt`](../../internal/tool/builtin/read_file/usage.prompt) | ✅ `SchemaFilepath` 等 | **已定稿 + FR-0 已实现** | 参数 `filepath`（原 `path`）；`offset`/`limit` 不变 |
 | `grep` | ✅ [`usage.prompt`](../../internal/tool/builtin/grep/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + FR-6 已实现** | ripgrep 15.1.0；`{{.Grep}}/{{.Bash}}/{{.Agent}}` 注入；输出 `Found N files` 等；不搜 `.git` |
-| `glob` | 待建 | `SchemaGlobPattern` 等 | 待改写 | |
+| `glob` | ✅ [`usage.prompt`](../../internal/tool/builtin/glob/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + ripgrep 已实现** | ripgrep `--files`；`Found N files` 输出；默认不遵循 gitignore、含隐藏文件 |
 | `list_dir` | 待建 | `SchemaPathRelDefault` 等 | 待改写 | |
 | `diagnostics` | 待建 | `SchemaSeverity` 等 | 待改写 | |
 | `web_fetch` | 待建 | `SchemaHTTPURL` 等 | 待改写 | |

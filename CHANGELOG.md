@@ -10,12 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `bash` tool: optional per-call `timeout_ms` (sync and `run_in_background`, max 600000ms); timeout force-kills the subprocess
 - `grep` tool: ripgrep 15.1.0 backend（bundled tar.gz embed + `~/.ds-code/bin/rg`）；Claude Code 对齐 Schema（`glob`、`-B/-A/-C`、`head_limit`/`offset` 等）
+- `glob` tool: ripgrep 15.1.0 `--files` backend（复用 bundled rg）；输出 `Found N files`；共享 `internal/tool/builtin/rgutil`
 - `scripts/fetch-ripgrep.sh` + Makefile `fetch-ripgrep` 目标
 - TUI: sync and `run_in_background` `bash` Running title shows a **countdown** via `ToolTimeoutDeadline` + live tick
 
 ### Changed
 
 - `grep` 输出格式：`Found N files` / `path:line:text` / `Found X occurrences across Y files`；弃用 `无匹配` 与中文截断行
+- `glob` 输出格式：`Found N files` + 相对项目根路径 + 分页脚标；弃用 `无匹配文件` 与 `... 已截断`
+- `glob` 后端：`globmatch` Walk → ripgrep `--files`（与 grep 共享 `rgutil`）
 - `grep` `head_limit` 三模式通用；默认 **250**（原 200）
 - `grep` `path` 与 `glob` 分离（原 `path: pkg/*.go` → `path: pkg` + `glob: *.go`）
 - `read_file` tool prompt migrated to `usage.prompt` + `RenderDesc()` (FR-0); LLM parameter **`path` → `filepath`**
@@ -27,6 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Breaking
 
 - `grep` 无匹配：`Found 0 files` / `""` / `Found 0 occurrences across 0 files`（非 `无匹配` / 单个 `0`）
+- `glob` 无匹配：`Found 0 files`（非 `无匹配文件`）
+- `glob` 显式 `path` 为文件时返回错误（非静默误搜）
+- `tools.glob` 新增 `respect_gitignore`、`include_hidden` 配置键
 - `grep` `count` 模式受 `head_limit`/`offset` 约束（摘要 X/Y 仍为全量）
 - `grep` 正则方言：Go `regexp` → ripgrep / Rust regex
 - `tools.grep` 新增 `timeout`、`binary`、`binary_path`、`respect_gitignore` 配置键
@@ -142,14 +148,14 @@ First public release of **ds-code** — a Go-native CLI coding agent powered by 
 
 Pre-built binaries (6 `.tar.gz` on GitHub Releases):
 
-| Platform | Artifact |
-|----------|----------|
-| Linux x86_64 (glibc) | `ds-code-linux-amd64` |
-| Linux ARM64 (glibc) | `ds-code-linux-arm64` |
+| Platform                   | Artifact                   |
+| -------------------------- | -------------------------- |
+| Linux x86_64 (glibc)       | `ds-code-linux-amd64`      |
+| Linux ARM64 (glibc)        | `ds-code-linux-arm64`      |
 | Linux x86_64 (Alpine/musl) | `ds-code-linux-musl-amd64` |
-| Linux ARM64 (Alpine/musl) | `ds-code-linux-musl-arm64` |
-| macOS Apple Silicon | `ds-code-darwin-arm64` |
-| macOS Intel | `ds-code-darwin-x86_64` |
+| Linux ARM64 (Alpine/musl)  | `ds-code-linux-musl-arm64` |
+| macOS Apple Silicon        | `ds-code-darwin-arm64`     |
+| macOS Intel                | `ds-code-darwin-x86_64`    |
 
 Windows is not supported in this release.
 

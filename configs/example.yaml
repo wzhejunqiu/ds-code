@@ -60,6 +60,8 @@ tools:
     respect_gitignore: false
   glob:
     max_results: 100
+    respect_gitignore: false
+    include_hidden: true
   search:
     skip_dirs: [] # 遍历时额外跳过的目录名（不含 .git，已硬编码）
   apply_patch:

@@ -41,6 +41,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("tools.grep.binary", "bundled")
 	v.SetDefault("tools.grep.timeout", "20s")
 	v.SetDefault("tools.glob.max_results", 100)
+	v.SetDefault("tools.glob.respect_gitignore", false)
+	v.SetDefault("tools.glob.include_hidden", true)
 	v.SetDefault("tools.apply_patch.max_changed_lines", 2000)
 	v.SetDefault("tools.shell.timeout", "120s")
 	v.SetDefault("tools.shell.max_background", 5)

@@ -115,7 +115,9 @@ type GrepToolConfig struct {
 }
 
 type GlobToolConfig struct {
-	MaxResults int `mapstructure:"max_results"`
+	MaxResults       int  `mapstructure:"max_results"`
+	RespectGitignore bool `mapstructure:"respect_gitignore"`
+	IncludeHidden    bool `mapstructure:"include_hidden"`
 }
 
 type ApplyPatchConfig struct {

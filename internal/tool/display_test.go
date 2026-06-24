@@ -193,3 +193,20 @@ func TestAppendGrepResultSuffix(t *testing.T) {
 		}
 	})
 }
+
+func TestAppendPathResultSuffix_globFoundFiles(t *testing.T) {
+	argsLine := "Searched files **/*.go in bar"
+	result := "Found 2 files\na.go\nb.go\n（结果已截断，请使用更具体的 path 或 pattern）"
+	line := tool.AppendPathResultSuffix(argsLine, result)
+	if line != "Searched files **/*.go in bar · 2 paths" {
+		t.Fatalf("got %q", line)
+	}
+}
+
+func TestAppendPathResultSuffix_globZeroFiles(t *testing.T) {
+	argsLine := "Searched files *.go in bar"
+	line := tool.AppendPathResultSuffix(argsLine, "Found 0 files")
+	if line != "Searched files *.go in bar · 0 paths" {
+		t.Fatalf("got %q", line)
+	}
+}

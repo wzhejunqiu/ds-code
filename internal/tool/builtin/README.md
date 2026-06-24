@@ -9,7 +9,8 @@ internal/tool/builtin/
 ├── README.md              # 本文件：总览与注册约定
 ├── doc.go
 ├── text.go                # 共享 Schema 描述、校验错误、截断后缀
-├── filecandidate.go       # grep / glob 共用：候选文件收集与 workspace 校验
+├── filecandidate.go       # grep 等共用：候选文件收集与 workspace 校验（glob 已改 ripgrep --files）
+├── rgutil/                # grep / glob 共用：ripgrep 路径、exec、format、globs
 ├── grep_output.go         # ParseGrepOutputMode 等共用；grep 输出格式化在 grep/format_output.go
 ├── sort.go                # 按 ModTime 降序排序
 ├── read_file/             # 工具实现 + text.go（LLM 文案）+ *.md
@@ -21,6 +22,10 @@ internal/tool/builtin/
 │   ├── usage.prompt       # LLM 工具说明模板
 │   └── rgbin/             # embed rg.tar.gz → ~/.ds-code/bin/rg
 ├── glob/
+│   ├── glob.go            # GlobTool、Schema、Execute
+│   ├── ripgrep.go         # rg --files 参数、解析、postProcess
+│   ├── text.go / usage.prompt
+│   └── *_test.go          # G/H/I/O 测试组（见 glob.md）
 ├── list_dir/
 ├── diagnostics/
 ├── web_fetch/
@@ -50,7 +55,7 @@ internal/tool/builtin/
 | ------------- | -------------------------------------------------------- | -------- | --------------------------------------- |
 | `read_file`   | [read_file/read_file.md](read_file/read_file.md)         | Low      | plan / agent / subagent                 |
 | `grep`        | [grep/grep.md](grep/grep.md)                             | Low      | plan / agent / subagent（ripgrep 后端） |
-| `glob`        | [glob/glob.md](glob/glob.md)                             | Low      | plan / agent / subagent                 |
+| `glob`        | [glob/glob.md](glob/glob.md)                             | Low      | plan / agent / subagent（ripgrep `--files` 后端） |
 | `list_dir`    | [list_dir/list_dir.md](list_dir/list_dir.md)             | Low      | plan / agent / subagent                 |
 | `diagnostics` | [diagnostics/diagnostics.md](diagnostics/diagnostics.md) | Low      | plan / agent（需 LSP）                  |
 | `web_fetch`   | [web_fetch/web_fetch.md](web_fetch/web_fetch.md)         | Medium   | plan / agent（需配置）                  |

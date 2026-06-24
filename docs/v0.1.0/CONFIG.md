@@ -365,6 +365,8 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.grep.binary_path` | string | — | `binary=path` 时 ripgrep 可执行文件路径 |
 | `tools.grep.respect_gitignore` | bool | **false** | `true` 时遵循 `.gitignore`；默认 Agent 搜索**不**遵循 |
 | `tools.glob.max_results` | int | **100** | `glob` / `list_dir` 结果条数上限 |
+| `tools.glob.respect_gitignore` | bool | **false** | `true` 时 `glob` 遵循 `.gitignore`；默认 Agent **不**遵循 |
+| `tools.glob.include_hidden` | bool | **true** | `false` 时不返回隐藏路径段（`.` 前缀）；默认包含隐藏文件 |
 | `tools.search.skip_dirs` | []string | **`[]`** | Agent 枚举（`grep`/`glob`/`list_dir`/`diagnostics` walk）额外跳过的目录名（相对 `perm.Workspace`）；`.git` 硬编码 SkipDir；**不**影响 `@dir/`；v0.1.2 起 Agent **不**读取 `.gitignore` |
 | `tools.apply_patch.max_changed_lines` | int | **2000** | 单 patch 允许变更行数 |
 | `tools.shell.timeout` | duration | **120s** | `bash` 命令默认超时（sync 与 `run_in_background` 均适用）；可被单次 `timeout_ms` 覆盖 |

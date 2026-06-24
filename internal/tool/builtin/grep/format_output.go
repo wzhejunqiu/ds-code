@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/rgutil"
 )
 
 type grepPageMeta struct {
@@ -15,12 +16,12 @@ type grepPageMeta struct {
 	TotalMatches int
 }
 
-func formatPaginationFooter(limit, offset int) string {
-	return fmt.Sprintf("[Showing results with pagination = limit: %d, offset: %d]", limit, offset)
+func formatFilesSummary(totalFiles int) string {
+	return rgutil.FormatFilesSummary(totalFiles)
 }
 
-func formatFilesSummary(totalFiles int) string {
-	return fmt.Sprintf("Found %d files", totalFiles)
+func formatPaginationFooter(limit, offset int) string {
+	return rgutil.FormatPaginationFooter(limit, offset)
 }
 
 func formatCountSummary(totalMatches, totalFiles int) string {
@@ -49,20 +50,12 @@ func formatGrepOutput(mode string, body []string, meta grepPageMeta) string {
 }
 
 func formatFilesOutput(paths []string, meta grepPageMeta) string {
-	if meta.TotalFiles == 0 {
-		return formatFilesSummary(0)
-	}
-	var b strings.Builder
-	b.WriteString(formatFilesSummary(meta.TotalFiles))
-	for _, p := range paths {
-		b.WriteByte('\n')
-		b.WriteString(p)
-	}
-	if needsPaginationFooter(meta, len(paths)) {
-		b.WriteByte('\n')
-		b.WriteString(formatPaginationFooter(meta.Limit, meta.Offset))
-	}
-	return b.String()
+	return rgutil.FormatFilesOutput(paths, rgutil.FilesPageMeta{
+		Limit:        meta.Limit,
+		Offset:       meta.Offset,
+		TotalEntries: meta.TotalEntries,
+		TotalFiles:   meta.TotalFiles,
+	})
 }
 
 func formatContentOutput(lines []string, meta grepPageMeta) string {

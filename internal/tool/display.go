@@ -448,11 +448,17 @@ func isGrepMetaLine(line string) bool {
 	if strings.HasPrefix(line, "[Showing results with pagination") {
 		return true
 	}
+	if strings.HasPrefix(line, "（结果已截断") {
+		return true
+	}
 	return strings.HasPrefix(line, "... 已截断")
 }
 
 // AppendPathResultSuffix appends path count for glob/list_dir.
 func AppendPathResultSuffix(argsLine, result string) string {
+	if n := countGrepPathLines(result); strings.HasPrefix(strings.TrimSpace(result), "Found ") {
+		return argsLine + fmt.Sprintf(" · %d paths", n)
+	}
 	n := countNonEmptyLines(result)
 	if n > 0 {
 		return argsLine + fmt.Sprintf(" · %d paths", n)
