@@ -50,23 +50,26 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 	subStore := a.subStore
 	_, _ = a.openShellJobs()
 	var backgroundAgents func() int
+	var hasPendingNotifications func() bool
 	if at, ok := runner.Tools.Get("agent"); ok {
 		if agt, ok := at.(*agenttool.AgentTool); ok {
 			svc := agt.SpawnService()
 			backgroundAgents = svc.BackgroundManager.RunningCount
+			hasPendingNotifications = svc.HasPendingNotifications
 		}
 	}
 	deps := tui.Deps{
-		Cfg:              a.Cfg,
-		Runner:           runner,
-		Store:            store,
-		Subagent:         subStore,
-		Context:          ctxSvc,
-		SessionID:        sessionID,
-		Version:          version.Version,
-		PromptCh:         promptCh,
-		BackgroundAgents: backgroundAgents,
-		StartupNotices:   buildStartupNotices(a),
+		Cfg:                     a.Cfg,
+		Runner:                  runner,
+		Store:                   store,
+		Subagent:                subStore,
+		Context:                 ctxSvc,
+		SessionID:               sessionID,
+		Version:                 version.Version,
+		PromptCh:                promptCh,
+		BackgroundAgents:        backgroundAgents,
+		HasPendingNotifications: hasPendingNotifications,
+		StartupNotices:          buildStartupNotices(a),
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line, activeAgentType string) (bool, error) {
 			env := &slashcmd.Env{
 				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,

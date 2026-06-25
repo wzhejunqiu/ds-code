@@ -21,6 +21,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/markdown"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	subagentui "github.com/wzhejunqiu/ds-code/internal/ui/tui/model/subagent"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
 )
@@ -235,12 +236,31 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 		innerW = 10
 	}
 
+	chatH := chatVP.Height()
+	if chatH < 1 {
+		chatH = 1
+	}
+
+	rawY := 0
+	wasAtBottom := false
+	if caches != nil && caches.ChatScrollY != nil {
+		rawY = *caches.ChatScrollY
+	}
+	oldTotal := 0
+	if caches != nil && caches.Catalog != nil {
+		oldTotal = caches.Catalog.TotalLines()
+	}
+	oldMaxY := oldTotal - chatH
+	if oldMaxY < 0 {
+		oldMaxY = 0
+	}
+	wasAtBottom = scroll.IsPinnedBottom(rawY)
+	if !wasAtBottom && oldTotal > 0 {
+		wasAtBottom = scroll.EffectiveChatY(rawY, oldMaxY) >= oldMaxY
+	}
+
 	catalogIn := rebuildCatalog(s, innerW, caches)
 
-	globalY := 0
-	if caches != nil && caches.ChatScrollY != nil {
-		globalY = *caches.ChatScrollY
-	}
 	totalLines := 0
 	if caches != nil && caches.Catalog != nil {
 		totalLines = caches.Catalog.TotalLines()
@@ -250,7 +270,7 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 
 	Layout(s, chatVP, toolVP, input, totalLines)
 
-	chatH := chatVP.Height()
+	chatH = chatVP.Height()
 	if chatH < 1 {
 		chatH = 1
 	}
@@ -258,12 +278,12 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 	if maxY < 0 {
 		maxY = 0
 	}
-	atBottom := globalY >= maxY
-	if atBottom {
+
+	var globalY int
+	if wasAtBottom {
 		globalY = maxY
-	}
-	if globalY < 0 {
-		globalY = 0
+	} else {
+		globalY = scroll.EffectiveChatY(rawY, maxY)
 	}
 
 	var content string
@@ -277,7 +297,11 @@ func SyncChat(s *state.State, chatVP, toolVP *viewport.Model, input *textinput.M
 	chatVP.SetContent(content)
 	chatVP.SetYOffset(0)
 	if caches != nil && caches.ChatScrollY != nil {
-		*caches.ChatScrollY = globalY
+		if wasAtBottom {
+			*caches.ChatScrollY = scroll.ChatBottomSentinel
+		} else {
+			*caches.ChatScrollY = globalY
+		}
 	}
 }
 

@@ -3,12 +3,14 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"go.uber.org/zap"
-	"time"
 )
 
 type runTurnOptions struct {
@@ -59,12 +61,14 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 		if err != nil {
 			return nil, fmt.Errorf("expand @ references: %w", err)
 		}
-		if err := r.Sessions.AppendMessage(ctx, session.Message{
-			SessionID: sessionID,
-			Role:      role.User,
-			Content:   expanded,
-		}); err != nil {
-			return nil, err
+		if strings.TrimSpace(expanded) != "" {
+			if err := r.Sessions.AppendMessage(ctx, session.Message{
+				SessionID: sessionID,
+				Role:      role.User,
+				Content:   expanded,
+			}); err != nil {
+				return nil, err
+			}
 		}
 		if r.Hooks != nil && isFirstUser {
 			if r.sessionStarted == nil {

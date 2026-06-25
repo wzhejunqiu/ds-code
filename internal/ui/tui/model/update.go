@@ -127,6 +127,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.SubagentToolEndMsg:
 		subagentui.UpdateToolEnd(&m.State, msg, m.syncChatView)
 		return m, m.scheduleSyncChatView()
+	case tuimsg.BackgroundAgentCompleteMsg:
+		cmd := input.TryAutoResumeTurn(&m.State, m.syncChatView, m.syncToolView)
+		return m, tea.Batch(cmd, m.scheduleSyncChatView())
 	case tuimsg.TurnStartedMsg:
 		turn.UpdateTurnStarted(&m.State, msg, m.syncChatView)
 		return m, m.scheduleSyncChatView()
@@ -139,7 +142,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tuimsg.TurnDoneMsg:
 		m.mdSegmentCache.Reset()
 		turn.UpdateTurnDone(&m.State, msg, m.syncChatView, m.refreshStatus, m.listenPrompt)
-		return m, m.scheduleSyncChatView()
+		resumeCmd := input.TryAutoResumeTurn(&m.State, m.syncChatView, m.syncToolView)
+		return m, tea.Batch(m.scheduleSyncChatView(), resumeCmd)
 	case tuimsg.UsageUpdateMsg:
 		m.refreshStatus()
 		return m, m.scheduleSyncChatView()

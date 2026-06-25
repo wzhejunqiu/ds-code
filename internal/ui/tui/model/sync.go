@@ -5,18 +5,44 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/view"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/selection"
 )
 
-const (
-	chatSyncInterval         = 33 * time.Millisecond
-	chatScrollBottomSentinel = 1 << 30
-)
+const chatSyncInterval = 33 * time.Millisecond
 
 func (m *Model) scrollChatToBottom() {
-	m.chatScrollY = chatScrollBottomSentinel
+	m.chatScrollY = scroll.ChatBottomSentinel
 	m.selDragging = false
 	m.selRange = selection.Range{}
+}
+
+func (m *Model) chatMaxY() int {
+	maxY := m.lineCatalog.TotalLines() - m.chatVP.Height()
+	if maxY < 0 {
+		return 0
+	}
+	return maxY
+}
+
+func (m *Model) effectiveChatScrollY() int {
+	if m.lineCatalog.TotalLines() == 0 {
+		if scroll.IsPinnedBottom(m.chatScrollY) {
+			return 0
+		}
+		return m.chatScrollY
+	}
+	return scroll.EffectiveChatY(m.chatScrollY, m.chatMaxY())
+}
+
+func (m *Model) setChatScrollY(y int) {
+	maxY := m.chatMaxY()
+	y = scroll.EffectiveChatY(y, maxY)
+	if y >= maxY {
+		m.chatScrollY = scroll.ChatBottomSentinel
+	} else {
+		m.chatScrollY = y
+	}
 }
 
 func (m *Model) syncCaches() *view.SyncCaches {

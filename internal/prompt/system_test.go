@@ -18,9 +18,6 @@ func TestFormatRuntimeEnv_pathsAndTime(t *testing.T) {
 	if !strings.Contains(body, "操作系统：darwin") {
 		t.Fatalf("missing platform line: %q", body)
 	}
-	if !strings.Contains(body, "当前时间：2026-05-23 15:04:05 CST") {
-		t.Fatalf("missing time: %q", body)
-	}
 	if !strings.Contains(body, "今日日期：Saturday, 2026-05-23") {
 		t.Fatalf("missing date: %q", body)
 	}
@@ -31,8 +28,8 @@ func TestFormatRuntimeEnv_emptyCwdAndZeroTime(t *testing.T) {
 	if strings.Contains(body, "当前目录") {
 		t.Fatalf("unexpected cwd line: %q", body)
 	}
-	if strings.Contains(body, "当前时间") {
-		t.Fatalf("unexpected time line: %q", body)
+	if strings.Contains(body, "今日日期") {
+		t.Fatalf("unexpected date line: %q", body)
 	}
 	if !strings.Contains(body, "工作区（project_root）：/proj") {
 		t.Fatalf("missing project_root: %q", body)

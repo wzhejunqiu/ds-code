@@ -20,7 +20,6 @@ func FormatRuntimeEnv(projectRoot, cwd string, now time.Time, platformLines []st
 		}
 	}
 	if !now.IsZero() {
-		lines = append(lines, "当前时间："+now.Format("2006-01-02 15:04:05 MST"))
 		lines = append(lines, "今日日期："+now.Format("Monday, 2006-01-02"))
 	}
 	if len(lines) == 0 {

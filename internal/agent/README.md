@@ -238,7 +238,7 @@ finishMaxTurnsExceeded（soft landing 摘要）
 | Rate limit | 指数退避重试（最多 3 次） | `rate_limit_retry` |
 | Server 5xx | 指数退避 → 切换 fallback model（子代理用 `llm.subagent.fallback_model`） | `model_fallback` |
 
-compact/snip 后通过 [`mergePreparedMessages`](./recovery.go)(view.Messages, state.EphemeralTail) 重建请求，保留 API-only 尾部消息。
+compact/snip 后通过 [`mergePreparedMessages`](./recovery.go)(view.Messages, state.EphemeralTail) 重建请求，保留 API-only 尾部消息。L1 Snip 仅在 context-too-long recovery（`ForceAggressiveSnip`）时启用，且不会裁剪当前 user turn 内的 tool 结果。
 
 ## 工具执行
 

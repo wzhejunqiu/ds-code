@@ -76,6 +76,41 @@ func TestFinishTerminalRound_writesOutWhenNoCallback(t *testing.T) {
 	}
 }
 
+func TestFinishTerminalRound_drainsNotificationsLater(t *testing.T) {
+	store := session.NewMemoryStore()
+	sess, err := store.NewSession("m", "max", "enabled", "auto", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	drained := false
+	r := &Runner{
+		Sessions: store,
+		DrainNotificationsLater: func(_ context.Context, sessionID string) {
+			drained = true
+			if sessionID != sess.ID {
+				t.Fatalf("sessionID = %q", sessionID)
+			}
+		},
+	}
+	_, err = r.finishTerminalRound(
+		context.Background(),
+		sess.ID,
+		sess.Model,
+		&llm.Response{Content: "final"},
+		&subRoundStream{},
+		time.Now(),
+		&TurnResult{},
+		nil,
+		HookInput{SessionID: sess.ID},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !drained {
+		t.Fatal("expected DrainNotificationsLater at terminal round end")
+	}
+}
+
 func TestAppendAssistantWithTools_persistsToolCallsJSON(t *testing.T) {
 	store := session.NewMemoryStore()
 	sess, err := store.NewSession("m", "max", "enabled", "auto", "agent")

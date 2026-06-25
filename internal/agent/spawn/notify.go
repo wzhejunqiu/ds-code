@@ -115,6 +115,16 @@ const (
 	spillHintPrefix       = "... [完整结果已保存至"
 )
 
+// SessionAwaitingNotificationResume reports whether the last persisted message is a
+// task-notification user row with no following assistant reply yet.
+func SessionAwaitingNotificationResume(content, msgRole string) bool {
+	if msgRole != string(role.User) {
+		return false
+	}
+	s := strings.TrimLeft(content, " \t\r\n")
+	return strings.HasPrefix(s, taskNotificationOpen)
+}
+
 // ContentForDisplay strips leading task-notification XML blocks (and spill hints)
 // from persisted user messages for TUI rendering. LLM history in the DB is unchanged.
 func ContentForDisplay(userContent string) string {

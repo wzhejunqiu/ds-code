@@ -44,7 +44,7 @@ type Service struct {
 	// AgentOverlay is injected into the dynamic system section for sub-agents.
 	AgentOverlay string
 
-	// ForceAggressiveSnip sets keepRounds=0 during PrepareRequest (recovery snip retry).
+	// ForceAggressiveSnip enables L1 Snip during PrepareRequest (context-too-long recovery only).
 	ForceAggressiveSnip bool
 
 	// VerificationMode appends a per-round verification reminder (view layer only).
@@ -121,12 +121,10 @@ func (s *Service) PrepareRequest(ctx context.Context, sessionID string) (*APICon
 		s.applyCollapseIfNeeded(ctx, sessionID, view)
 	}
 
-	// L1 Snip: replace old tool results with placeholders (View layer, non-persisted).
-	snipRounds := s.snipKeepRounds()
+	// L1 Snip: only during context-too-long recovery (ForceAggressiveSnip).
 	if s.ForceAggressiveSnip {
-		snipRounds = 0
+		view.Messages = SnipToolResults(view.Messages, 0)
 	}
-	view.Messages = SnipToolResults(view.Messages, snipRounds)
 	// L2 Micro: replace oversized tool results with SHA256 digests.
 	view.Messages = MicroCompress(view.Messages)
 

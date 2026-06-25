@@ -46,7 +46,8 @@ func (m *Model) clampYOffset(vp *viewport.Model, y int) int {
 
 func (m *Model) scrollViewportBy(vp *viewport.Model, delta int) {
 	if vp == &m.chatVP {
-		m.chatScrollY = m.clampYOffset(vp, m.chatScrollY+delta)
+		base := m.effectiveChatScrollY()
+		m.setChatScrollY(m.clampYOffset(vp, base+delta))
 		return
 	}
 	y := m.clampYOffset(vp, vp.YOffset()+delta)
@@ -108,9 +109,10 @@ func (m *Model) jumpViewport(vp *viewport.Model, delta int) tea.Cmd {
 		pending = m.scroll.ToolPending
 	}
 	if vp == &m.chatVP {
-		y := m.chatScrollY + pending + delta
+		base := m.effectiveChatScrollY()
+		y := base + pending + delta
 		m.scroll.ClearAll()
-		m.chatScrollY = m.clampYOffset(vp, y)
+		m.setChatScrollY(m.clampYOffset(vp, y))
 	} else {
 		y := vp.YOffset() + pending + delta
 		m.scroll.ClearAll()

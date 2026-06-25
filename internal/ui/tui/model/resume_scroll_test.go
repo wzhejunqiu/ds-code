@@ -22,15 +22,8 @@ func TestSessionResumed_scrollsToBottom(t *testing.T) {
 		Chat:      longChat,
 	}, &m.resumePicker, m.syncChatAfterLoad, m.syncToolView, nil)
 
-	if m.chatScrollY <= 0 {
+	if !chatScrollAtBottom(m) {
 		t.Fatalf("chatScrollY = %d, want scrolled to bottom", m.chatScrollY)
-	}
-	maxY := m.lineCatalog.TotalLines() - m.chatVP.Height()
-	if maxY < 0 {
-		maxY = 0
-	}
-	if m.chatScrollY != maxY {
-		t.Fatalf("chatScrollY = %d, want %d", m.chatScrollY, maxY)
 	}
 }
 
@@ -43,11 +36,7 @@ func TestHistoryLoaded_scrollsToBottom(t *testing.T) {
 	longChat := []chat.Block{{Role: chat.RoleUser, Content: strings.Repeat("history\n", 80)}}
 	session.UpdateHistoryLoaded(&m.State, msg.HistoryLoadedMsg{Chat: longChat}, m.syncChatAfterLoad, nil)
 
-	maxY := m.lineCatalog.TotalLines() - m.chatVP.Height()
-	if maxY < 0 {
-		maxY = 0
-	}
-	if m.chatScrollY != maxY {
-		t.Fatalf("chatScrollY = %d, want %d", m.chatScrollY, maxY)
+	if !chatScrollAtBottom(m) {
+		t.Fatalf("chatScrollY = %d, want scrolled to bottom", m.chatScrollY)
 	}
 }

@@ -120,6 +120,9 @@ func (r *Runner) finishTerminalRound(
 		}
 		r.Hooks.Run(ctx, HookStop, marshalHookInput(in))
 	}
+	if r.DrainNotificationsLater != nil {
+		r.DrainNotificationsLater(ctx, sessionID)
+	}
 	return result, nil
 }
 

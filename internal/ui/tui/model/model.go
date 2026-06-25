@@ -138,7 +138,7 @@ func (m *Model) View() tea.View {
 			ToolRange:   m.selRange,
 			ChatActive:  m.selTarget == selTargetChat,
 			ToolActive:  m.selTarget == selTargetTool,
-			ChatScrollY: m.chatScrollY,
+			ChatScrollY: m.effectiveChatScrollY(),
 		}
 	}
 	v := tea.NewView(view.Render(&m.State, &m.chatVP, &m.toolVP, &m.input, sel))

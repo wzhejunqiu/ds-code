@@ -141,12 +141,8 @@ func TestJumpViewport_clampsTotalLines(t *testing.T) {
 	m.chatVP.SetHeight(10)
 
 	m.jumpViewport(&m.chatVP, 9999)
-	maxY := m.lineCatalog.TotalLines() - m.chatVP.Height()
-	if maxY < 0 {
-		maxY = 0
-	}
-	if m.chatScrollY != maxY {
-		t.Fatalf("chatScrollY = %d, want clamped max %d", m.chatScrollY, maxY)
+	if !scroll.IsPinnedBottom(m.chatScrollY) {
+		t.Fatalf("chatScrollY = %d, want pinned bottom at max", m.chatScrollY)
 	}
 
 	m.jumpViewport(&m.chatVP, -9999)

@@ -21,7 +21,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("context.compact_threshold_ratio", 0.80)
 	v.SetDefault("context.collapse_threshold_ratio", 0.85)
 	v.SetDefault("context.keep_recent_turns", 6)
-	v.SetDefault("context.snip_keep_rounds", 3)
+	v.SetDefault("context.snip_keep_rounds", 0)
 	v.SetDefault("context.truncate_by", "chars")
 	v.SetDefault("context.tool_result_max_chars", 100_000)
 	v.SetDefault("context.at_reference_max_chars", 128_000)

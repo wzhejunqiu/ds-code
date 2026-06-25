@@ -59,7 +59,7 @@ func (m *Model) mapMousePoint(mouse tea.Mouse) (selection.Point, bool) {
 	chatH := m.chatVP.Height()
 	if mouse.Y < chatH {
 		m.selTarget = selTargetChat
-		line := mouse.Y + m.chatScrollY
+		line := mouse.Y + m.effectiveChatScrollY()
 		if line < 0 {
 			line = 0
 		}
@@ -237,10 +237,11 @@ func (m *Model) handleSelectionKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 		return nil, true
 	}
 	m.selRange.End = selection.Point{Line: newLine, Col: end.Col}
-	if delta < 0 && newLine < m.chatScrollY {
+	scrollY := m.effectiveChatScrollY()
+	if delta < 0 && newLine < scrollY {
 		return m.jumpViewport(&m.chatVP, delta), true
 	}
-	if delta > 0 && newLine >= m.chatScrollY+m.chatVP.Height() {
+	if delta > 0 && newLine >= scrollY+m.chatVP.Height() {
 		return m.jumpViewport(&m.chatVP, delta), true
 	}
 	return nil, true

@@ -25,6 +25,8 @@ type TurnCallbacks struct {
 	OnSubagentEnd       func(id, summary string, err error)
 	OnSubagentToolStart func(id, name, args, command string)
 	OnSubagentToolEnd   func(id, name, args, command, result string, isError bool)
+	// OnBackgroundAgentComplete: async subagent finished and notification was enqueued.
+	OnBackgroundAgentComplete func(agentID string)
 	// OnUsageUpdate: after each LLM sub-round AddUsage (prompt or completion tokens).
 	OnUsageUpdate func(u llm.Usage)
 }

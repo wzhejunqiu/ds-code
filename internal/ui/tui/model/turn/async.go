@@ -109,7 +109,25 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 
 	var buf streamBuffer
 
-	cb := &agent.TurnCallbacks{
+	cb := turnCallbacks(events, &buf)
+
+	result, err := d.Runner.RunTurn(ctx, d.SessionID, line, cb)
+	buf.flush(events)
+	sendAgentEvent(events, msg.TurnDoneMsg{Result: result, Err: err}, true)
+	subRounds := 0
+	if result != nil {
+		subRounds = result.SubRounds
+	}
+	logging.L().Debug("tui turn async done",
+		zap.String("session_id", d.SessionID),
+		zap.Int64("duration_ms", time.Since(start).Milliseconds()),
+		zap.Int("sub_rounds", subRounds),
+		zap.Bool("ok", err == nil),
+	)
+}
+
+func turnCallbacks(events chan<- tea.Msg, buf *streamBuffer) *agent.TurnCallbacks {
+	return &agent.TurnCallbacks{
 		OnContentDelta: func(s string) {
 			buf.appendContent(s)
 			buf.trySendContent(events)
@@ -151,24 +169,13 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 				SubagentID: id, Name: name, Args: args, Command: command, Result: result, IsError: isError,
 			}, true)
 		},
+		OnBackgroundAgentComplete: func(agentID string) {
+			sendAgentEvent(events, msg.BackgroundAgentCompleteMsg{AgentID: agentID}, true)
+		},
 		OnUsageUpdate: func(_ llm.Usage) {
 			sendAgentEvent(events, msg.UsageUpdateMsg{}, true)
 		},
 	}
-
-	result, err := d.Runner.RunTurn(ctx, d.SessionID, line, cb)
-	buf.flush(events)
-	sendAgentEvent(events, msg.TurnDoneMsg{Result: result, Err: err}, true)
-	subRounds := 0
-	if result != nil {
-		subRounds = result.SubRounds
-	}
-	logging.L().Debug("tui turn async done",
-		zap.String("session_id", d.SessionID),
-		zap.Int64("duration_ms", time.Since(start).Milliseconds()),
-		zap.Int("sub_rounds", subRounds),
-		zap.Bool("ok", err == nil),
-	)
 }
 
 func sendAgentEvent(events chan<- tea.Msg, m tea.Msg, critical bool) {

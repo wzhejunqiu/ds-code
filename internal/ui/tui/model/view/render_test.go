@@ -8,6 +8,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
+	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
 )
 
 func TestFooterLeft_backgroundAgentsBadge(t *testing.T) {
@@ -84,20 +85,96 @@ func TestSyncChat_sentinelScrollsToBottom(t *testing.T) {
 		},
 	}
 	var catalog chat.LineCatalog
-	scrollY := 1 << 30
+	scrollY := scroll.ChatBottomSentinel
 	caches := &SyncCaches{Catalog: &catalog, ChatScrollY: &scrollY}
 	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
 	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
 
 	SyncChat(s, &chatVP, &toolVP, nil, caches)
 
+	if !scroll.IsPinnedBottom(scrollY) {
+		t.Fatalf("scrollY = %d, want pinned bottom sentinel", scrollY)
+	}
 	total := catalog.TotalLines()
 	maxY := total - chatVP.Height()
 	if maxY < 0 {
 		maxY = 0
 	}
-	if scrollY != maxY {
-		t.Fatalf("scrollY = %d, want bottom %d (total %d)", scrollY, maxY, total)
+	if scroll.EffectiveChatY(scrollY, maxY) != maxY {
+		t.Fatalf("effective scrollY = %d, want bottom %d (total %d)", scroll.EffectiveChatY(scrollY, maxY), maxY, total)
+	}
+}
+
+func TestSyncChat_followsBottomOnContentGrowth(t *testing.T) {
+	s := &state.State{
+		Width:  80,
+		Height: 24,
+		Deps: &deps.Deps{
+			Version: "test",
+		},
+		Chat: []chat.Block{
+			{Role: chat.RoleUser, Content: strings.Repeat("line\n", 60)},
+		},
+	}
+	var catalog chat.LineCatalog
+	scrollY := 0
+	caches := &SyncCaches{Catalog: &catalog, ChatScrollY: &scrollY}
+	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
+	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
+
+	SyncChat(s, &chatVP, &toolVP, nil, caches)
+	maxY := catalog.TotalLines() - chatVP.Height()
+	if maxY < 0 {
+		maxY = 0
+	}
+	scrollY = maxY
+
+	s.Chat = append(s.Chat, chat.Block{Role: chat.RoleAssistant, Content: strings.Repeat("new\n", 40)})
+	SyncChat(s, &chatVP, &toolVP, nil, caches)
+
+	newMaxY := catalog.TotalLines() - chatVP.Height()
+	if newMaxY < 0 {
+		newMaxY = 0
+	}
+	if !scroll.IsPinnedBottom(scrollY) {
+		t.Fatalf("scrollY = %d, want pinned bottom after content growth", scrollY)
+	}
+	if scroll.EffectiveChatY(scrollY, newMaxY) != newMaxY {
+		t.Fatalf("effective scrollY = %d, want %d", scroll.EffectiveChatY(scrollY, newMaxY), newMaxY)
+	}
+	if !strings.Contains(chatVP.View(), "new") {
+		t.Fatalf("viewport should show new content:\n%s", chatVP.View())
+	}
+}
+
+func TestSyncChat_scrolledUpDoesNotJump(t *testing.T) {
+	s := &state.State{
+		Width:  80,
+		Height: 24,
+		Deps: &deps.Deps{
+			Version: "test",
+		},
+		Chat: []chat.Block{
+			{Role: chat.RoleUser, Content: strings.Repeat("line\n", 60)},
+		},
+	}
+	var catalog chat.LineCatalog
+	scrollY := 0
+	caches := &SyncCaches{Catalog: &catalog, ChatScrollY: &scrollY}
+	chatVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(10))
+	toolVP := viewport.New(viewport.WithWidth(60), viewport.WithHeight(4))
+
+	SyncChat(s, &chatVP, &toolVP, nil, caches)
+	scrollY = 10
+
+	s.Chat = append(s.Chat, chat.Block{Role: chat.RoleAssistant, Content: strings.Repeat("new\n", 40)})
+	SyncChat(s, &chatVP, &toolVP, nil, caches)
+
+	if scrollY != 10 {
+		t.Fatalf("scrollY = %d, want 10 (no jump when scrolled up)", scrollY)
+	}
+	if strings.Contains(chatVP.View(), "new") {
+		t.Fatalf("viewport should not show new content when scrolled up:\n%s", chatVP.View())
 	}
 }
 

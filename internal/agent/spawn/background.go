@@ -116,6 +116,13 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 
 		bm.notify.Enqueue(n, notificationPriority(parentCtx))
 
+		if parentCallbacks != nil && parentCallbacks.OnSubagentEnd != nil {
+			parentCallbacks.OnSubagentEnd(run.ID, summary, runErr)
+		}
+		if parentCallbacks != nil && parentCallbacks.OnBackgroundAgentComplete != nil {
+			parentCallbacks.OnBackgroundAgentComplete(run.ID)
+		}
+
 		bm.mu.Lock()
 		delete(bm.tasks, run.ID)
 		bm.mu.Unlock()

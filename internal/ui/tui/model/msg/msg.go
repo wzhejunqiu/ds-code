@@ -32,6 +32,9 @@ type SubagentEndMsg struct {
 	Summary string
 	Err     error
 }
+type BackgroundAgentCompleteMsg struct {
+	AgentID string
+}
 type SubagentToolStartMsg struct {
 	SubagentID          string
 	Name, Args, Command string

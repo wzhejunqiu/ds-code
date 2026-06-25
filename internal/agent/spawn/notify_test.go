@@ -178,6 +178,20 @@ func TestContentForDisplay_plainUser(t *testing.T) {
 	}
 }
 
+func TestSessionAwaitingNotificationResume(t *testing.T) {
+	n := Notification{AgentID: "a1", ToolUseID: "tc1", Status: ResultCompleted, Summary: "done"}
+	xml := n.Format()
+	if !SessionAwaitingNotificationResume(xml, string(role.User)) {
+		t.Fatal("expected task-notification user tail to need resume")
+	}
+	if SessionAwaitingNotificationResume("hello", string(role.User)) {
+		t.Fatal("plain user should not need resume")
+	}
+	if SessionAwaitingNotificationResume(xml, string(role.Assistant)) {
+		t.Fatal("assistant should not need resume")
+	}
+}
+
 func TestContentForDisplay_stripsAtRefExpansion(t *testing.T) {
 	n := Notification{
 		AgentID:   "a1",

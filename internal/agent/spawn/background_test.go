@@ -208,8 +208,18 @@ func TestBackgroundManager_enqueuePrioNowAfterTurnEnds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var endedID string
+	var completeID string
+	parentCallbacks := &agent.TurnCallbacks{
+		OnSubagentEnd: func(id, _ string, _ error) {
+			endedID = id
+		},
+		OnBackgroundAgentComplete: func(id string) {
+			completeID = id
+		},
+	}
 	parentCtx := agent.WithActiveTurn(context.Background())
-	bm.Start(parentCtx, cfg, mockLLM, run, def, perm, reg, sub, nil, nil, nil, nil)
+	bm.Start(parentCtx, cfg, mockLLM, run, def, perm, reg, sub, parentCallbacks, nil, nil, nil)
 	agent.WithoutActiveTurn(parentCtx)
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -229,5 +239,11 @@ func TestBackgroundManager_enqueuePrioNowAfterTurnEnds(t *testing.T) {
 	}
 	if later := q.Drain(spawn.PrioLater); len(later) != 0 {
 		t.Fatalf("expected no PrioLater, got %d", len(later))
+	}
+	if endedID != run.ID {
+		t.Fatalf("OnSubagentEnd id = %q, want %q", endedID, run.ID)
+	}
+	if completeID != run.ID {
+		t.Fatalf("OnBackgroundAgentComplete id = %q, want %q", completeID, run.ID)
 	}
 }
