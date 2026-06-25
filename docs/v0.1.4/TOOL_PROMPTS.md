@@ -51,7 +51,7 @@
 | `web_search` | 待建 | `SchemaQuery` 等 | 待改写 | 默认未注册 |
 | `bash` | ✅ [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) | ✅ `text.go` | **已定稿 + FR-5 已实现** | `timeout_ms`、`run_in_background`；无 `list_jobs`；退出 kill job |
 | `apply_patch` | ✅ [`usage.prompt`](../../internal/tool/builtin/apply_patch/usage.prompt) | ✅ `SchemaPatchBody` 等 | **已定稿 + FR-0 已实现** | |
-| `write_file` | 待建 | `SchemaFullFileContent` 等 | 待改写 | |
+| `write_file` | ✅ [`usage.prompt`](../../internal/tool/builtin/write_file/usage.prompt) | ✅ `SchemaFullFileContent` 等 | **已定稿 + FR-0 已实现** | 覆盖已有文件须先 read；*.md/README/emoji 仅 prompt |
 | `tool_search` | 待建 | `tool_name` | 待改写 | 去掉 `.go` 内联 Desc |
 | `agent` | 待建 | `SchemaAgent*` | 待改写 | |
 | 共享 | — | `builtin/text.go` | 待审定 | 无 usage.prompt |

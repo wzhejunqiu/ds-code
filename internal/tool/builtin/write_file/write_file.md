@@ -40,10 +40,30 @@ wrote path/to/file (N bytes)
 源文件：[`write_file.go`](write_file.go)
 
 1. `Perm.ResolvePath` 解析目标路径。
-2. `os.MkdirAll` 创建父目录（权限 `0755`）。
-3. `os.WriteFile` 写入，模式 `0644`。
+2. 若目标文件已存在，经 [`readgate`](../../readgate/gate.go) 校验须先 `read_file`（新建文件豁免）。
+3. `os.MkdirAll` 创建父目录（权限 `0755`）。
+4. `os.WriteFile` 写入，模式 `0644`。
 
 无内置 diff、无备份逻辑（checkpoint 由 Runner 层负责）。
+
+## 先读后写（read guard）
+
+覆盖已有文件前，Runner 强制校验（与 `apply_patch` 共用 [`readgate`](../../readgate/gate.go)）：
+
+1. **跨 sub-round**：目标文件须在本 session **更早的 sub-round** 内已成功 `read_file`（新建文件豁免）。
+2. **同 sub-round**：同一条 assistant 回复中不能对**同一文件**既 `read_file` 又 `write_file`。
+3. **子代理**：已读集合按 `session_id` 隔离；Fork 子 session 可从 seed 消息水合历史 read。
+4. **实现**：[`readgate`](../../readgate/gate.go) + [`agent/readfile_gate.go`](../../../agent/readfile_gate.go)；`runToolCalls` 注入 sub-round 快照与同批 read 集合。
+
+错误文案见 [`text.go`](text.go) 中 `ErrMustReadFirstFmt`、`ErrSameBatchReadWriteFmt`。
+
+## LLM 描述（FR-0）
+
+| 文件 | 职责 |
+|------|------|
+| [`usage.prompt`](usage.prompt) | Description 正文 |
+| [`text.go`](text.go) | embed、`RenderDesc()`、`Err*`、`Result*` |
+| [`write_file.go`](write_file.go) | `Description() { return RenderDesc() }` |
 
 ## 配置项
 
@@ -63,4 +83,5 @@ wrote path/to/file (N bytes)
 ## 相关代码
 
 - [`write_file.go`](write_file.go)
+- [`usage.prompt`](usage.prompt)、[`text.go`](text.go)
 - [`display.go`](../../display.go) — `FormatWriteFileDisplay`

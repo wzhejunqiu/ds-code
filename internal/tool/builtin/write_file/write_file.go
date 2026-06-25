@@ -11,6 +11,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
+	"github.com/wzhejunqiu/ds-code/internal/tool/readgate"
 )
 
 // WriteFileTool creates or overwrites a whole file.
@@ -28,7 +29,7 @@ func (t *WriteFileTool) WithPerm(perm *permission.Engine) tool.Tool {
 	return &cp
 }
 
-func (t *WriteFileTool) Description() string { return DescWriteFile }
+func (t *WriteFileTool) Description() string { return RenderDesc() }
 
 func (t *WriteFileTool) Schema() map[string]any {
 	return tool.ObjectSchema(map[string]any{
@@ -61,6 +62,19 @@ func (t *WriteFileTool) Execute(ctx context.Context, args json.RawMessage) (stri
 	}
 	abs, err := t.Perm.ResolvePath(in.Path)
 	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(abs); err == nil {
+		if gate, ok := readgate.FromContext(ctx); ok {
+			if err := gate.CheckApplyPatch(
+				[]string{in.Path},
+				ErrSameBatchReadWriteFmt,
+				ErrMustReadFirstFmt,
+			); err != nil {
+				return "", err
+			}
+		}
+	} else if !os.IsNotExist(err) {
 		return "", err
 	}
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
