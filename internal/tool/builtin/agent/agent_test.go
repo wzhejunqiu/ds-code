@@ -14,6 +14,7 @@ func TestAgentTool_schema(t *testing.T) {
 	cfg := &config.Config{
 		ProjectRoot: t.TempDir(),
 		LLM:         config.LLMConfig{Model: "deepseek-v4-pro"},
+		Tools:       config.ToolsConfig{Agent: config.AgentToolConfig{MaxParallel: 3}},
 	}
 	perm := permission.NewEngine("readonly", cfg.ProjectRoot, false)
 	reg := tool.NewRegistry()
@@ -47,13 +48,28 @@ func TestAgentTool_schema(t *testing.T) {
 		t.Fatalf("expected required fields, got %v", reqSlice)
 	}
 	enum, ok := props["subagent_type"].(map[string]any)["enum"].([]any)
-	if !ok || len(enum) < 4 {
-		t.Fatalf("expected subagent_type enum, got %v", props["subagent_type"])
+	if !ok || len(enum) != 2 {
+		t.Fatalf("expected 2 subagent_type enum values, got %v", props["subagent_type"])
 	}
 	for _, v := range enum {
-		if v == "fork" {
-			t.Fatal("fork should not appear in schema enum")
+		switch v {
+		case "general-purpose", "Explore":
+		default:
+			t.Fatalf("unexpected subagent_type enum value %v", v)
 		}
+	}
+	for _, forbidden := range []string{"fork", "Plan", "verification"} {
+		for _, v := range enum {
+			if v == forbidden {
+				t.Fatalf("%s should not appear in schema enum", forbidden)
+			}
+		}
+	}
+	if _, ok := props["model"]; ok {
+		t.Fatal("model should not appear in agent tool schema")
+	}
+	if _, ok := props["isolation"]; ok {
+		t.Fatal("isolation should not appear in agent tool schema")
 	}
 }
 

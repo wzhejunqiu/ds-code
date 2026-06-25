@@ -104,16 +104,12 @@ type Service struct {
 ```
 1. Registry.Resolve(subagent_type)   // 空 → general-purpose
 
-2. subagent_type 省略 && fork_enabled && interactive?
-   ├─ QuerySource 已是 Fork → 错误
-   ├─ 父消息已是 Fork 子 agent → 错误（递归）
-   ├─ run_in_background → 错误
-   └─ SpawnFork
-
-3. def.ForceBackground || params.run_in_background?
+2. def.ForceBackground || params.run_in_background?
    ├─ 是 → SpawnAsync
-   └─ 否 → SpawnSync
+   └─ 否 → SpawnSync（阻塞至完成或 sync_timeout）
 ```
+
+Fork 不经 `Route` 省略 type 触发；用户 skill fork 走 [`FromSkill`](./skill.go)。
 
 ### Params（LLM 工具参数）
 
@@ -123,24 +119,23 @@ type Service struct {
 type Params struct {
     Description     string // 短标签，UI 与 tool 返回用
     Prompt          string // 子 agent 任务正文
-    SubagentType    string // general-purpose | Explore | Plan | verification
-    Model           string // 可选覆盖
+    SubagentType    string // LLM enum: general-purpose | Explore
     RunInBackground bool
-    Isolation       string // "worktree"（仅 general-purpose）
+    Isolation       string // 非 LLM 暴露；worktree 等用户入口用
 }
 ```
 
 ## 内置 Agent 类型（[`registry.go`](./registry.go)）
 
-| Type | ReadOnly | ForceBackground | 工具池 | System |
-|------|----------|-----------------|--------|--------|
-| `general-purpose` | 否 | 否 | `*` − agent | 父 overlay + memory |
-| `Explore` | 是 | 否 | 禁 write/patch/agent | exploreOverlay |
-| `Plan` | 是 | 否 | 禁 write/patch/agent | planOverlay |
-| `verification` | 是 | **是** | 禁 write/patch/agent | verificationOverlay + VERDICT |
-| `fork`（合成） | 否 | 否 | 继承父池 − agent | 父 rendered system + memory |
+| Type | ReadOnly | ForceBackground | 工具池 | System | LLM enum |
+|------|----------|-----------------|--------|--------|----------|
+| `general-purpose` | 否 | 否 | `*` − agent | 父 overlay + memory | 是 |
+| `Explore` | 是 | 否 | 禁 write/patch/agent | exploreOverlay | 是 |
+| `Plan` | 是 | 否 | 禁 write/patch/agent | planOverlay | 否 |
+| `verification` | 是 | **是** | 禁 write/patch/agent | verificationOverlay + VERDICT | 否 |
+| `fork`（合成） | 否 | 否 | 继承父池 − agent | 父 rendered system + memory | 否 |
 
-[`ListTypes`](./registry.go)() 供 [`AgentTool.Schema`](../../tool/builtin/agent/agent.go) 生成 enum，**不含**合成类型 `fork`。
+[`ListToolTypes`](./registry.go)() 供 [`AgentTool.Schema`](../../tool/builtin/agent/agent.go) 生成 enum（仅 general-purpose、Explore）。[`ListTypes`](./registry.go)() 仍含全部内置类型（不含 fork）。
 
 ## Handle 主流程（[`service.go`](./service.go)）
 
@@ -154,17 +149,11 @@ Route → ResolveModel
      → [Sync] runSync
 ```
 
-### runSync 与 Sync→Async promote
+### runSync
 
-实现：[`service.go`](./service.go)（`runSync`、`waitPromoted`）。
+实现：[`service.go`](./service.go)（`runSync`）。
 
-`auto_background_after > 0`（默认 120s）时：
-
-1. goroutine 内跑 `ExecuteRun`
-2. `select`：完成 → `finishSync`；超时 → `SetRunBackground` + `RegisterPromoted` + 返回 `async_launched`
-3. 超时后 `waitPromoted` 在后台等完成 → `finishAsync` 入队通知
-
-`auto_background_after <= 0` 时纯阻塞 Sync，无 promote。
+同步路径在 `sync_timeout`（默认 2h）内阻塞至 `ExecuteRun` 完成；超时返回错误，**不** promote 为 Async。
 
 ### finishSync vs finishAsync
 
@@ -313,7 +302,7 @@ Spill 文件含 `status:`、`error:`（如有）、summary 正文。异步通知
 
 - [`Start`](./background.go)：[DetachSpawnContext](./context.go)(parent) 启动 goroutine，父 ctx 取消不 kill 已启动的后台 agent
 - [`Kill`](./background.go)(runID)：取消 context
-- [`RegisterPromoted`](./background.go) / [`CompletePromoted`](./background.go)：Sync→Async promote 路径追踪 in-flight 任务
+- [`BackgroundManager`](./background.go)：`Start` / `Kill` / `RunningCount` 追踪后台 async 任务
 - [`RunningCount`](./background.go) / [`List`](./background.go)：TUI 状态展示
 
 ## Worktree 隔离
@@ -354,7 +343,7 @@ Slot 文件：`user.md`, `feedback.md`, `project.md`, `reference.md`
 
 ## Model 与 MaxTurns（[`model.go`](./model.go)）
 
-**Model 优先级**：[`ResolveModel`](./model.go) — 工具参数 → 类型定义（非 `inherit`）→ `llm.subagent.model` → `llm.model`
+**Model 优先级**：[`ResolveModel`](./model.go) — 类型定义（非 `inherit`）→ `llm.subagent.model`（含内置默认 flash）→ 父会话 `session.Model` → `llm.model`（仅 parent 也为空时）
 
 **MaxTurns**：[`resolveSubagentMaxTurns`](./model.go)（默认 8），与主 Runner 的 `agent.max_turns`（25）独立。
 
@@ -392,7 +381,7 @@ svc.ParentContext = ctxSvc
 | 键 | 默认 | 说明 |
 |----|------|------|
 | `tools.agent.fork_enabled` | true | 省略 type 时走 Fork |
-| `tools.agent.auto_background_after` | 120 | Sync 超时 promote（秒）；0=禁用 |
+| `tools.agent.sync_timeout` | 2h | 同步子代理最长等待 |
 | `tools.agent.max_parallel` | 3 | 并发 agent 工具数 |
 | `tools.agent.summary_max_chars` | 16000 | inline 摘要上限 |
 | `tools.agent.worktree_ttl` | 24h | 过期 worktree 清理 |

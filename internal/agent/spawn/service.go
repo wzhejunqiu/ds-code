@@ -12,13 +12,11 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
-	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/worktree"
-	"go.uber.org/zap"
 )
 
 // Service is the single entry point for all agent spawns.
@@ -76,8 +74,8 @@ func (s *Service) Handle(ctx context.Context, inv agent.ToolInvocation, params P
 		return "", err
 	}
 
-	// Caller override → type default → global subagent model.
-	model := ResolveModel(decision.Model, decision.Definition.Model, s.Cfg)
+	// Type default → subagent config → parent session model.
+	model := ResolveModel(decision.Definition.Model, s.Cfg, inv.ParentModel)
 
 	if decision.Isolation == "worktree" {
 		if decision.Definition.Type != AgentTypeGeneralPurpose {
@@ -154,61 +152,23 @@ func (s *Service) Handle(ctx context.Context, inv agent.ToolInvocation, params P
 	return s.runSync(ctx, inv, run, decision, parent)
 }
 
-// executeResult carries the outcome of a goroutine-started agent run.
-type executeResult struct {
-	summary string
-	err     error
+func resolveSyncTimeout(cfg *config.Config) time.Duration {
+	if cfg == nil {
+		return 2 * time.Hour
+	}
+	if cfg.Tools.Agent.SyncTimeout > 0 {
+		return cfg.Tools.Agent.SyncTimeout
+	}
+	return 2 * time.Hour
 }
 
-// runSync executes an agent run in the foreground. When auto_background_after is
-// configured, it may promote a long-running sync run to async and return early.
+// runSync executes an agent run in the foreground, blocking until completion or sync_timeout.
 func (s *Service) runSync(ctx context.Context, inv agent.ToolInvocation, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks) (string, error) {
 	cb := agent.SubagentToolCallbacks(parent, run.ID)
-	timeoutSec := s.Cfg.Tools.Agent.AutoBackgroundAfter
-	if timeoutSec <= 0 {
-		// No promote threshold: block until ExecuteRun completes.
-		summary, runErr := ExecuteRun(ctx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0, s.MCPResults)
-		return s.finishSync(ctx, run, decision, parent, summary, runErr)
-	}
-
-	// Run in goroutine so we can race completion against auto_background_after.
-	done := make(chan executeResult, 1)
-	runCtx, cancel := context.WithCancel(ctx)
-	promoted := false
-	defer func() {
-		// Cancel the goroutine unless we handed ownership to waitPromoted.
-		if !promoted {
-			cancel()
-		}
-	}()
-	go func() {
-		summary, err := ExecuteRun(runCtx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0, s.MCPResults)
-		done <- executeResult{summary: summary, err: err}
-	}()
-
-	select {
-	case res := <-done:
-		return s.finishSync(ctx, run, decision, parent, res.summary, res.err)
-	case <-time.After(time.Duration(timeoutSec) * time.Second):
-		// Promote to async: parent tool returns immediately; result arrives via NotifyQueue.
-		promoted = true
-		_ = s.Store.SetRunBackground(ctx, run.ID, true)
-		run.Background = true
-		s.BackgroundManager.RegisterPromoted(run.ID, decision.Definition.Type, run.Label)
-		go s.waitPromoted(ctx, run, decision, parent, done, cancel)
-		return fmt.Sprintf(`{"status":"async_launched","agent_id":"%s","description":"%s"}`, run.ID, decision.Description), nil
-	case <-ctx.Done():
-		return "", ctx.Err()
-	}
-}
-
-// waitPromoted blocks until a promoted sync run finishes and delivers the result asynchronously.
-func (s *Service) waitPromoted(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, done <-chan executeResult, cancel context.CancelFunc) {
+	runCtx, cancel := context.WithTimeout(ctx, resolveSyncTimeout(s.Cfg))
 	defer cancel()
-	defer s.BackgroundManager.CompletePromoted(run.ID)
-	res := <-done
-	// Promoted runs use the async finish path (NotifyQueue, not inline tool return).
-	s.finishAsync(ctx, run, decision, parent, res.summary, res.err)
+	summary, runErr := ExecuteRun(runCtx, s.Cfg, s.LLM, run, decision.Definition, s.Perm, s.ParentReg, s.Store, cb, s.Hooks, 0, s.MCPResults)
+	return s.finishSync(ctx, run, decision, parent, summary, runErr)
 }
 
 // finishSync persists run status, fires hooks, and returns the inline tool result for sync execution.
@@ -243,66 +203,6 @@ func (s *Service) finishSync(ctx context.Context, run subagentstore.Run, decisio
 	}
 	delivered := DeliverResult(s.Cfg.ProjectDataDir, run.ParentSessionID, run.ParentToolCallID, summary, resultStatus, nil, s.Cfg)
 	return formatSyncToolReturn(decision.Description, delivered), nil
-}
-
-// finishAsync persists run status for background or promoted runs and enqueues a completion notification.
-func (s *Service) finishAsync(ctx context.Context, run subagentstore.Run, decision RouteDecision, parent *agent.TurnCallbacks, summary string, runErr error) {
-	startTime := run.CreatedAt
-	status := subagentstore.StatusCompleted
-	errMsg := ""
-	if runErr != nil {
-		// Context cancellation means parent turn was aborted, not an agent logic error.
-		if ctx.Err() != nil {
-			status = subagentstore.StatusKilled
-		} else {
-			status = subagentstore.StatusError
-		}
-		errMsg = runErr.Error()
-	}
-	durationMS := time.Since(startTime).Milliseconds()
-	_ = s.Store.FinishRun(ctx, run.ID, status, errMsg)
-	if runErr != nil || status == subagentstore.StatusKilled {
-		s.cleanupWorktreeImmediate(ctx, run)
-	}
-	if s.Hooks != nil {
-		in := agent.HookInput{AgentID: run.ID, AgentType: decision.Definition.Type.String()}
-		if runErr != nil {
-			in.Error = runErr.Error()
-		}
-		s.Hooks.Run(ctx, agent.HookSubagentStop, agent.MarshalHookInput(in))
-	}
-
-	resultStatus, err := resultStatusFromStore(status)
-	if err != nil {
-		logging.L().Error("map subagent result status", zap.String("run_id", run.ID), zap.Error(err))
-		return
-	}
-	summaryText := agentSummaryText(run.Label, resultStatus, runErr)
-	delivered := DeliverResult(s.Cfg.ProjectDataDir, run.ParentSessionID, run.ParentToolCallID, summary, resultStatus, runErr, s.Cfg)
-	n := Notification{
-		AgentID:        run.ID,
-		ToolUseID:      run.ParentToolCallID,
-		Status:         resultStatus,
-		Summary:        summaryText,
-		DurationMS:     durationMS,
-		ToolUseCount:   countToolUses(ctx, s.Store, run.ID),
-		WorktreePath:   run.WorktreePath,
-		WorktreeBranch: run.WorktreeBranch,
-	}
-	if delivered.Inline {
-		n.Result = delivered.Body
-	} else {
-		n.OutputFile = delivered.OutputPath
-	}
-	// Parent Runner drains this queue and injects XML into the next turn.
-	s.NotifyQueue.Enqueue(n, notificationPriority(ctx))
-	if parent != nil && parent.OnSubagentEnd != nil {
-		parent.OnSubagentEnd(run.ID, summary, runErr)
-	}
-	logging.L().Info("promoted agent finished",
-		zap.String("run_id", run.ID),
-		zap.String("status", resultStatus.String()),
-	)
 }
 
 // agentSummaryText builds a short human-readable summary for completion notifications.

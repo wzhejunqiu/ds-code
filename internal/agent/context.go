@@ -19,8 +19,9 @@ type toolInvocationKey struct{}
 
 // ToolInvocation identifies the parent session and tool_call for a running tool.
 type ToolInvocation struct {
-	SessionID  string
-	ToolCallID string
+	SessionID   string
+	ToolCallID  string
+	ParentModel string // parent session.Model for sub-agent model resolution
 }
 
 // WithActiveTurn marks ctx as inside an active RunTurn (used for notification priority).
@@ -59,14 +60,15 @@ func InActiveTurn(ctx context.Context) bool {
 	return ok && h.count.Load() > 0
 }
 
-// WithToolInvocation stores parent session and tool call id for tools (e.g. task).
-func WithToolInvocation(ctx context.Context, sessionID, toolCallID string) context.Context {
+// WithToolInvocation stores parent session, tool call id, and optional parent model for tools (e.g. agent).
+func WithToolInvocation(ctx context.Context, sessionID, toolCallID, parentModel string) context.Context {
 	if sessionID == "" && toolCallID == "" {
 		return ctx
 	}
 	return context.WithValue(ctx, toolInvocationKey{}, ToolInvocation{
-		SessionID:  sessionID,
-		ToolCallID: toolCallID,
+		SessionID:   sessionID,
+		ToolCallID:  toolCallID,
+		ParentModel: parentModel,
 	})
 }
 

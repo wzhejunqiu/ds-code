@@ -45,6 +45,11 @@ func Skill(env *Env, args string) error {
 			SessionID:  *env.SessionID,
 			ToolCallID: "skill:" + name,
 		}
+		if env.Store != nil {
+			if sess, err := env.Store.Get(env.Ctx, *env.SessionID); err == nil {
+				inv.ParentModel = sess.Model
+			}
+		}
 		out, err := env.Spawn.FromSkill(env.Ctx, inv, name, true)
 		if err != nil {
 			return err

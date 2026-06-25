@@ -53,7 +53,7 @@
 | `apply_patch` | ✅ [`usage.prompt`](../../internal/tool/builtin/apply_patch/usage.prompt) | ✅ `SchemaPatchBody` 等 | **已定稿 + FR-0 已实现** | |
 | `write_file` | ✅ [`usage.prompt`](../../internal/tool/builtin/write_file/usage.prompt) | ✅ `SchemaFullFileContent` 等 | **已定稿 + FR-0 已实现** | 覆盖已有文件须先 read；*.md/README/emoji 仅 prompt |
 | `tool_search` | 待建 | `tool_name` | 待改写 | 去掉 `.go` 内联 Desc |
-| `agent` | 待建 | `SchemaAgent*` | 待改写 | |
+| `agent` | ✅ [`usage.prompt`](../../internal/tool/builtin/agent/usage.prompt) | ✅ `SchemaAgent*`（中文） | **已定稿 + FR-0 已实现** | LLM 仅见 GP/Explore；无 model/isolation；sync_timeout 默认 2h |
 | 共享 | — | `builtin/text.go` | 待审定 | 无 usage.prompt |
 
 ## 当前文案快照（基线）

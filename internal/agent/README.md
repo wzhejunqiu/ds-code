@@ -423,7 +423,7 @@ Fork 防护：禁止从 Fork 子代理再 Fork；Fork 子消息含 `fork-boilerp
 
 ### 子代理 Model 与 MaxTurns（[`model.go`](./spawn/model.go)）
 
-Model 优先级：`agent` 工具参数 → 类型定义（非 `inherit`）→ `llm.subagent.model` → 主模型。
+Model 优先级：类型定义（非 `inherit`）→ `llm.subagent.model` → 父会话 model → 主模型（parent 为空时）。
 
 子代理 `MaxTurns` 默认 8（`llm.subagent.max_turns`），主 Runner 默认 25（`agent.max_turns`）。
 
@@ -449,7 +449,7 @@ Worktree 子 agent 通过 `tool.RebindRegistryPerm` 将 workspace 切到 worktre
 ### 后台 Agent 与通知
 
 - **[BackgroundManager](./spawn/background.go)**：管理 in-flight 异步 agent，支持 Kill
-- **Sync → Async promote**：[`runSync`](./spawn/service.go) 超过 `auto_background_after` 秒未完成则转为后台，立即返回 `async_launched`
+- **同步子代理**：[`runSync`](./spawn/service.go) 阻塞至完成或 `sync_timeout`（默认 2h），超时返回错误
 - **[NotificationQueue](./spawn/notify.go)**：三级优先级
   - `PrioNow`：空闲时立即注入
   - `PrioNext`：下次 RunTurn 开头
@@ -480,7 +480,7 @@ Worktree 子 agent 通过 `tool.RebindRegistryPerm` 将 workspace 切到 worktre
 | `llm.subagent.max_turns` | 子代理子轮次上限（默认 8） |
 | `llm.subagent.model` / `fallback_model` | 子代理模型与 5xx 降级 |
 | `tools.agent.fork_enabled` | 省略 subagent_type 时走 Fork |
-| `tools.agent.auto_background_after` | Sync 超时 promote 为 Async（秒，默认 120） |
+| `tools.agent.sync_timeout` | 同步子代理最长等待（默认 2h） |
 | `tools.agent.max_parallel` | 并发 agent 工具上限（默认 3） |
 | `tools.agent.summary_max_chars` | 摘要 inline 字符上限 |
 | `tools.agent.worktree_*` | worktree TTL、sparse paths、symlink dirs |

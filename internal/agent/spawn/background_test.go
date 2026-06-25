@@ -18,15 +18,18 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool/register"
 )
 
-func TestSyncPromote_returnsBeforeCompletion(t *testing.T) {
+func TestSyncTimeout_returnsError(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &config.Config{
 		ProjectRoot:    dir,
 		ProjectDataDir: dir,
 		LLM:            config.LLMConfig{Model: "m", MaxTokens: 4096},
 		Context:        config.ContextConfig{ToolResultMaxChars: 50_000},
-		Tools:          config.ToolsConfig{Agent: config.AgentToolConfig{AutoBackgroundAfter: 1, SummaryMaxChars: 8000}},
-		Agent:          config.AgentConfig{MaxTurns: 5},
+		Tools: config.ToolsConfig{Agent: config.AgentToolConfig{
+			SyncTimeout:     50 * time.Millisecond,
+			SummaryMaxChars: 8000,
+		}},
+		Agent: config.AgentConfig{MaxTurns: 5},
 	}
 	mockLLM := &mock.Client{
 		Responses: []*llm.Response{{Content: "done", FinishReason: "stop"}},
@@ -40,20 +43,15 @@ func TestSyncPromote_returnsBeforeCompletion(t *testing.T) {
 	register.ExploreTools(reg, cfg, perm, nil, false)
 
 	svc := spawn.NewService(cfg, perm, reg, mockLLM, sub)
-	before, _ := main.ListMessages(context.Background(), parent.ID)
 
 	out, err := svc.Handle(context.Background(), agent.ToolInvocation{
-		SessionID: parent.ID, ToolCallID: "call-promote",
+		SessionID: parent.ID, ToolCallID: "call-timeout",
 	}, spawn.Params{SubagentType: "Explore", Description: "slow", Prompt: "work"}, true)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		t.Fatalf("expected sync timeout error, got output %q", out)
 	}
-	if !strings.Contains(out, "async_launched") {
-		t.Fatalf("expected promote response, got %q", out)
-	}
-	after, _ := main.ListMessages(context.Background(), parent.ID)
-	if len(after) != len(before) {
-		t.Fatalf("main session should not gain messages on promote, before=%d after=%d", len(before), len(after))
+	if strings.Contains(out, "async_launched") {
+		t.Fatalf("sync timeout must not promote to async, got %q", out)
 	}
 }
 

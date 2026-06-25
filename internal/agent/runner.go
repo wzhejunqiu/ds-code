@@ -98,7 +98,11 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 	if r.Audit != nil && !tool.NameShell.Matches(tc.Name) {
 		_ = r.Audit.Log(tc.Name, rawArgs)
 	}
-	out, err := r.Tools.Execute(WithToolInvocation(ctx, sessionID, tc.ID), tc.Name, rawArgs)
+	parentModel := ""
+	if sess, err := r.Sessions.Get(ctx, sessionID); err == nil {
+		parentModel = sess.Model
+	}
+	out, err := r.Tools.Execute(WithToolInvocation(ctx, sessionID, tc.ID, parentModel), tc.Name, rawArgs)
 	if r.Hooks != nil {
 		r.Hooks.Run(ctx, HookPostToolUse, hookInputForTool(sessionID, tc, rawArgs, err))
 	}

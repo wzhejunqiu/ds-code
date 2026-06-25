@@ -1,9 +1,13 @@
 package config
 
 // ResolveSubagentModel returns the model for subagent runs.
-func (c LLMConfig) ResolveSubagentModel() string {
+// When llm.subagent.model is unset, parentModel is used before falling back to llm.model.
+func (c LLMConfig) ResolveSubagentModel(parentModel string) string {
 	if c.Subagent.Model != "" {
 		return c.Subagent.Model
+	}
+	if parentModel != "" {
+		return parentModel
 	}
 	return c.Model
 }

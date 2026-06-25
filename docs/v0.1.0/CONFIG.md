@@ -375,8 +375,8 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `tools.shell.env_blacklist` | []string | `[]` | 子进程环境变量名正则黑名单（与内置 secret 键名过滤为 OR）；作用于 `shell`、后台 job、MCP stdio |
 | `tools.agent.max_parallel` | int | **3** | 子代理 `agent` 并发上限 |
 | `tools.agent.summary_max_chars` | int | **16000** | 子代理摘要字符上限（超长结果写入 output-file） |
-| `tools.agent.fork_enabled` | bool | **true** | 交互模式下省略 `subagent_type` 时启用 Fork |
-| `tools.agent.auto_background_after` | int | **120** | 同步子代理超过该秒数后提升为后台 |
+| `tools.agent.fork_enabled` | bool | **true** | 启用 skill fork 等用户发起路径（**不**再用于 agent 工具省略 type 时自动 Fork） |
+| `tools.agent.sync_timeout` | duration | **2h** | 同步子代理最长等待（超时返回错误，不 promote 为后台） |
 | `tools.agent.worktree_ttl` | duration | **24h** | `isolation: worktree` 子代理 worktree 保留时长 |
 | `tools.agent.worktree_sparse_paths` | []string | **`["/*"]`** | worktree sparse checkout 路径模式 |
 | `tools.agent.worktree_symlink_dirs` | []string | **`["node_modules", ".venv", "vendor"]`** | 从父工作区 symlink 到 worktree 的目录名 |

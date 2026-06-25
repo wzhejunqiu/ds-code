@@ -26,7 +26,7 @@ func TestService_Handle_syncExplore(t *testing.T) {
 		ProjectDataDir: dir,
 		LLM:            config.LLMConfig{Model: "m", MaxTokens: 4096},
 		Context:        config.ContextConfig{ToolResultMaxChars: 50_000},
-		Tools:          config.ToolsConfig{Agent: config.AgentToolConfig{AutoBackgroundAfter: 0}},
+		Tools:          config.ToolsConfig{Agent: config.AgentToolConfig{SummaryMaxChars: 8000}},
 		Agent:          config.AgentConfig{MaxTurns: 5},
 	}
 	mockLLM := &mock.Client{

@@ -56,6 +56,18 @@ func (r *Registry) ListTypes() []string {
 	return names
 }
 
+// ListToolTypes returns agent types exposed in the LLM agent tool JSON schema.
+func (r *Registry) ListToolTypes() []string {
+	names := make([]string, 0, 2)
+	for _, t := range []AgentType{AgentTypeGeneralPurpose, AgentTypeExplore} {
+		if _, ok := r.types[t]; ok {
+			names = append(names, t.String())
+		}
+	}
+	sort.Strings(names)
+	return names
+}
+
 // IsReadOnly returns true if the agent type is fully read-only.
 func IsReadOnly(def AgentTypeDefinition) bool {
 	return def.ReadOnly || def.PermissionMode == AgentPermModeReadonly

@@ -2,7 +2,7 @@
 
 ## 概述
 
-LLM 可见的**子代理**入口，替代旧版 `task` 工具。接收自然语言任务与 `subagent_type`，委托 [`internal/agent/spawn`](../../../agent/spawn) 完成路由、工具池过滤、执行与结果回传。支持同步、后台（async）与 Fork（共享父会话 cache 前缀）三种形态。
+LLM 可见的**子代理**入口，替代旧版 `task` 工具。接收自然语言任务与 `subagent_type`，委托 [`internal/agent/spawn`](../../../agent/spawn) 完成路由、工具池过滤、执行与结果回传。LLM 可见类型为 `general-purpose` 与 `Explore`；同步阻塞至完成或 `sync_timeout`，亦可显式 `run_in_background`。
 
 ## 注册与可见性
 
@@ -13,18 +13,16 @@ LLM 可见的**子代理**入口，替代旧版 `task` 工具。接收自然语�
 
 子代理工具池**不包含** `agent` 自身（禁止嵌套 spawn）。
 
-## 参数 Schema
+## 参数 Schema（LLM 可见）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `description` | string | 是 | 短标题（TUI / 日志） |
 | `prompt` | string | 是 | 交给子代理的任务说明 |
-| `subagent_type` | string | 否 | 内置类型 enum（由 `spawn.Registry` 提供，如 explore、general-purpose） |
-| `model` | string | 否 | `deepseek-v4-pro` / `deepseek-v4-flash` |
+| `subagent_type` | string | 否 | `general-purpose` 或 `Explore`（[`ListToolTypes`](../../../agent/spawn/registry.go)）；省略时默认 general-purpose |
 | `run_in_background` | boolean | 否 | 后台执行，父工具立即返回 async 句柄 |
-| `isolation` | string | 否 | 目前支持 `worktree`（独立 git worktree） |
 
-省略 `subagent_type` 且在交互模式下可能走 **Fork** 路径（见 spawn 文档）。
+Prompt 正文见 [`usage.prompt`](usage.prompt)；并行上限以渲染后的具体数字告知 LLM，不暴露 config 键名。
 
 ## 用法示例
 
@@ -54,7 +52,7 @@ LLM 可见的**子代理**入口，替代旧版 `task` 工具。接收自然语�
 源文件：[`agent.go`](agent.go)
 
 1. `NewAgentTool` 构造 `spawn.Service`（传入父 `Registry` 用于工具池过滤）。
-2. `Execute` 从 context 读取父 `ToolInvocation`（session_id、tool_call_id）。
+2. `Execute` 从 context 读取父 `ToolInvocation`（session_id、tool_call_id、parent_model）。
 3. 信号量 `cfg.Tools.Agent.MaxParallel`（默认 3）限制并行子代理数。
 4. 业务逻辑全部在 `Spawn.Handle`；本包仅做参数校验与并发控制。
 
@@ -62,16 +60,24 @@ LLM 可见的**子代理**入口，替代旧版 `task` 工具。接收自然语�
 
 | 键 | 默认 | 说明 |
 |----|------|------|
-| `tools.agent.max_parallel` | 3 | 同时运行的子代理上限 |
-| `tools.agent.max_turns` | （见 defaults） | 子代理 Runner 最大轮次 |
-| `tools.agent.summary_max_chars` | — | 同步结果摘要长度 |
-| spawn 相关 | — | fork、worktree、verification 等见 spawn 文档 |
+| `tools.agent.max_parallel` | 3 | 同时运行的子代理上限（注入 prompt 为具体数字） |
+| `tools.agent.sync_timeout` | 2h | 同步子代理最长等待 |
+| `tools.agent.summary_max_chars` | 16000 | 同步结果摘要长度 |
+| spawn 相关 | — | 见 spawn 文档 |
+
+## 后续 TODO（非 LLM 面）
+
+| 能力 | 状态 |
+|------|------|
+| Plan 子代理 | spawn 已注册；**待**用户主动发起入口 |
+| verification 子代理 | 同上 |
+| Fork（agent 工具路径） | skill fork（`/skill` + `context:fork`）已有；**待**完整用户发起 UX |
+| worktree isolation | spawn 已实现；**待**完善后暴露给 LLM |
 
 ## 权限与安全
 
 - **PermissionLevel**：`Low`（工具本身不直接写盘；子代理内写操作仍受权限引擎约束）
 - 子代理权限模式由类型定义 + `permission.mode` 决定（readonly 类型仅探索工具）
-- Fork 权限询问冒泡到父 TUI
 
 ## 设计思想
 
@@ -81,7 +87,7 @@ LLM 可见的**子代理**入口，替代旧版 `task` 工具。接收自然语�
 
 ## 相关代码
 
-- [`agent.go`](agent.go)、[`agent_test.go`](agent_test.go)
+- [`agent.go`](agent.go)、[`agent_test.go`](agent_test.go)、[`usage.prompt`](usage.prompt)、[`text.go`](text.go)
 - [`spawn/`](../../../agent/spawn/) — 完整设计与 API
 - [`setup/setup.go`](../../setup/setup.go) — `RegisterAgentExtras`
 - [`subagentstore/`](../../../session/subagentstore/) — 子代理会话持久化

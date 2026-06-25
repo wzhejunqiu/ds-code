@@ -55,7 +55,7 @@ func testRegistry() *tool.Registry {
 
 // --- Route tests ---
 
-func TestRoute_ForkPath(t *testing.T) {
+func TestRoute_OmittedTypeDefaultsGeneralPurpose(t *testing.T) {
 	cfg := testConfig()
 	cfg.Tools.Agent.ForkEnabled = true
 	reg := spawn.NewRegistry()
@@ -67,26 +67,35 @@ func TestRoute_ForkPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !decision.IsFork {
-		t.Error("expected fork when subagent_type omitted and fork enabled + interactive")
+	if decision.IsFork {
+		t.Error("omitted subagent_type should not fork via agent tool route")
+	}
+	if decision.Definition.Type != spawn.AgentTypeGeneralPurpose {
+		t.Errorf("expected general-purpose, got %s", decision.Definition.Type)
+	}
+	if decision.Background {
+		t.Error("expected sync path by default")
 	}
 }
 
-func TestRoute_ForkRejectsBackground(t *testing.T) {
+func TestRoute_OmittedTypeBackgroundAsync(t *testing.T) {
 	cfg := testConfig()
 	cfg.Tools.Agent.ForkEnabled = true
 	reg := spawn.NewRegistry()
 	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
 
-	_, err := spawn.Route(context.Background(), spawn.Params{
+	decision, err := spawn.Route(context.Background(), spawn.Params{
 		Prompt:          "do something",
 		RunInBackground: true,
 	}, inv, reg, cfg, true)
-	if err == nil {
-		t.Fatal("expected error for fork with run_in_background")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(err.Error(), "run_in_background") {
-		t.Fatalf("unexpected error: %v", err)
+	if decision.IsFork {
+		t.Error("expected non-fork")
+	}
+	if !decision.Background {
+		t.Error("expected async when run_in_background is true")
 	}
 }
 
@@ -178,25 +187,7 @@ func TestRoute_DefaultType(t *testing.T) {
 	}
 }
 
-func TestRoute_RecursiveForkFromForkChild(t *testing.T) {
-	cfg := testConfig()
-	cfg.Tools.Agent.ForkEnabled = true
-	reg := spawn.NewRegistry()
-	inv := agent.ToolInvocation{SessionID: "s1", ToolCallID: "tc1"}
-	msgs := []llm.Message{{Role: role.User, Content: spawn.ForkBoilerplate}}
-	ctx := spawn.WithQuerySource(context.Background(), spawn.QuerySourceFork)
-	ctx = agent.WithForkContext(ctx, agent.ForkContext{ParentMessages: msgs})
-
-	_, err := spawn.Route(ctx, spawn.Params{Prompt: "nested"}, inv, reg, cfg, true)
-	if err == nil {
-		t.Fatal("expected error when forking from fork child")
-	}
-	if !strings.Contains(err.Error(), "fork") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestRoute_NonInteractiveNoFork(t *testing.T) {
+func TestRoute_NonInteractiveOmittedType(t *testing.T) {
 	cfg := testConfig()
 	cfg.Tools.Agent.ForkEnabled = true
 	reg := spawn.NewRegistry()
@@ -209,7 +200,21 @@ func TestRoute_NonInteractiveNoFork(t *testing.T) {
 		t.Fatal(err)
 	}
 	if decision.IsFork {
-		t.Error("fork should not be used in non-interactive mode")
+		t.Error("fork should not be used when subagent_type is omitted")
+	}
+}
+
+func TestRegistry_ListToolTypes(t *testing.T) {
+	reg := spawn.NewRegistry()
+	types := reg.ListToolTypes()
+	if len(types) != 2 {
+		t.Fatalf("expected 2 tool types, got %v", types)
+	}
+	want := map[string]bool{"Explore": true, "general-purpose": true}
+	for _, typ := range types {
+		if !want[typ] {
+			t.Fatalf("unexpected tool type %q", typ)
+		}
 	}
 }
 
@@ -413,17 +418,9 @@ func TestNotificationQueue_FormatXML_WithWorktree(t *testing.T) {
 
 // --- ResolveModel tests ---
 
-func TestResolveModel_ParamsOverride(t *testing.T) {
-	cfg := testConfig()
-	result := spawn.ResolveModel("sonnet", spawn.ModelInherit, cfg)
-	if result != cfg.LLM.Model {
-		t.Errorf("params model alias should resolve to main model, got %s", result)
-	}
-}
-
 func TestResolveModel_DefOverride(t *testing.T) {
 	cfg := testConfig()
-	result := spawn.ResolveModel("", spawn.ModelSelection("specific-model-v2"), cfg)
+	result := spawn.ResolveModel(spawn.ModelSelection("specific-model-v2"), cfg, "")
 	if result != "specific-model-v2" {
 		t.Errorf("definition model should take priority, got %s", result)
 	}
@@ -432,18 +429,27 @@ func TestResolveModel_DefOverride(t *testing.T) {
 func TestResolveModel_SubagentConfig(t *testing.T) {
 	cfg := testConfig()
 	cfg.LLM.Subagent.Model = "sub-model"
-	result := spawn.ResolveModel("", spawn.ModelSelection(""), cfg)
+	result := spawn.ResolveModel(spawn.ModelSelection(""), cfg, "parent-model")
 	if result != "sub-model" {
 		t.Errorf("expected sub-model from config, got %s", result)
 	}
 }
 
-func TestResolveModel_FallbackToMain(t *testing.T) {
+func TestResolveModel_FallbackToParent(t *testing.T) {
 	cfg := testConfig()
 	cfg.LLM.Subagent.Model = ""
-	result := spawn.ResolveModel("", spawn.ModelSelection(""), cfg)
+	result := spawn.ResolveModel(spawn.ModelSelection(""), cfg, "parent-model")
+	if result != "parent-model" {
+		t.Errorf("expected fallback to parent model, got %s", result)
+	}
+}
+
+func TestResolveModel_FallbackToMainWhenParentEmpty(t *testing.T) {
+	cfg := testConfig()
+	cfg.LLM.Subagent.Model = ""
+	result := spawn.ResolveModel(spawn.ModelSelection(""), cfg, "")
 	if result != cfg.LLM.Model {
-		t.Errorf("expected fallback to main model, got %s", result)
+		t.Errorf("expected fallback to main model when parent empty, got %s", result)
 	}
 }
 

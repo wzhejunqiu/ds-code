@@ -61,10 +61,12 @@ func NewAgentTool(cfg *config.Config, perm *permission.Engine, llmClient llm.Cli
 
 func (t *AgentTool) Name() string { return tool.NameAgent.String() }
 
-func (t *AgentTool) Description() string { return DescAgent }
+func (t *AgentTool) Description() string {
+	return RenderDesc(t.Cfg.Tools.Agent.MaxParallel)
+}
 
 func (t *AgentTool) Schema() map[string]any {
-	types := t.Spawn.Registry.ListTypes()
+	types := t.Spawn.Registry.ListToolTypes()
 	enum := make([]any, len(types))
 	for i, typ := range types {
 		enum[i] = typ
@@ -74,9 +76,7 @@ func (t *AgentTool) Schema() map[string]any {
 		"description":       map[string]any{"type": "string", "description": SchemaAgentDescription},
 		"prompt":            map[string]any{"type": "string", "description": SchemaAgentPrompt},
 		"subagent_type":     map[string]any{"type": "string", "description": SchemaAgentType, "enum": enum},
-		"model":             map[string]any{"type": "string", "description": SchemaAgentModel, "enum": []any{"deepseek-v4-pro", "deepseek-v4-flash"}},
 		"run_in_background": map[string]any{"type": "boolean", "description": SchemaAgentBackground},
-		"isolation":         map[string]any{"type": "string", "description": SchemaAgentIsolation, "enum": []any{"worktree"}},
 	}, []string{"description", "prompt"}, t.Strict)
 }
 

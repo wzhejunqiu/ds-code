@@ -138,30 +138,6 @@ func (bm *BackgroundManager) Kill(runID string) {
 	}
 }
 
-// RegisterPromoted records a sync agent that was promoted to background without starting a new goroutine.
-func (bm *BackgroundManager) RegisterPromoted(runID string, agentType AgentType, label string) {
-	bm.mu.Lock()
-	defer bm.mu.Unlock()
-	bm.tasks[runID] = &BackgroundTask{
-		RunID:     runID,
-		AgentType: agentType,
-		Label:     label,
-		StartTime: time.Now(),
-		Done:      make(chan struct{}),
-	}
-}
-
-// CompletePromoted marks a promoted agent finished and removes it from the running set.
-func (bm *BackgroundManager) CompletePromoted(runID string) {
-	bm.mu.Lock()
-	task, ok := bm.tasks[runID]
-	if ok {
-		close(task.Done)
-		delete(bm.tasks, runID)
-	}
-	bm.mu.Unlock()
-}
-
 // RunningCount returns the number of in-flight agents.
 func (bm *BackgroundManager) RunningCount() int {
 	bm.mu.Lock()

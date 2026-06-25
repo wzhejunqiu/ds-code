@@ -50,7 +50,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("tools.agent.max_parallel", 3)
 	v.SetDefault("tools.agent.summary_max_chars", 16_000)
 	v.SetDefault("tools.agent.fork_enabled", true)
-	v.SetDefault("tools.agent.auto_background_after", 120)
+	v.SetDefault("tools.agent.sync_timeout", "2h")
 	v.SetDefault("tools.agent.worktree_ttl", "24h")
 	v.SetDefault("tools.agent.worktree_sparse_paths", []string{"/*"})
 	v.SetDefault("tools.agent.worktree_symlink_dirs", []string{"node_modules", ".venv", "vendor"})

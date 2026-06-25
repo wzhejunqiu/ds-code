@@ -135,7 +135,7 @@ type ShellToolConfig struct {
 type AgentToolConfig struct {
 	MaxParallel         int           `mapstructure:"max_parallel"`
 	SummaryMaxChars     int           `mapstructure:"summary_max_chars"`
-	AutoBackgroundAfter int           `mapstructure:"auto_background_after"`
+	SyncTimeout         time.Duration `mapstructure:"sync_timeout"`
 	ForkEnabled         bool          `mapstructure:"fork_enabled"`
 	WorktreeTTL         time.Duration `mapstructure:"worktree_ttl"`
 	WorktreeSparsePaths []string      `mapstructure:"worktree_sparse_paths"`

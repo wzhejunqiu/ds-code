@@ -42,7 +42,7 @@ func (s *Service) FromSkill(ctx context.Context, inv agent.ToolInvocation, skill
 		Description: "skill:" + skillName,
 		Prompt:      body,
 	}
-	model := ResolveModel("", def.Model, s.Cfg)
+	model := ResolveModel(def.Model, s.Cfg, inv.ParentModel)
 	run, err := s.Store.CreateRun(ctx, subagentstore.CreateRunParams{
 		ParentSessionID:  inv.SessionID,
 		ParentToolCallID: inv.ToolCallID,

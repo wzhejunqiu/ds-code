@@ -2,7 +2,6 @@ package spawn
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/config"
@@ -15,13 +14,11 @@ type Params struct {
 	Description string `json:"description"`
 	// Prompt is the sub-agent task directive.
 	Prompt string `json:"prompt"`
-	// SubagentType selects a built-in agent definition; empty triggers fork when enabled.
+	// SubagentType selects a built-in agent definition; empty defaults to general-purpose.
 	SubagentType string `json:"subagent_type,omitempty"`
-	// Model optionally overrides the agent type or global subagent model.
-	Model string `json:"model,omitempty"`
-	// RunInBackground requests async execution (not supported on fork path).
+	// RunInBackground requests async execution.
 	RunInBackground bool `json:"run_in_background,omitempty"`
-	// Isolation selects workspace isolation; "worktree" is limited to general-purpose.
+	// Isolation selects workspace isolation; "worktree" is limited to general-purpose (not LLM-exposed).
 	Isolation string `json:"isolation,omitempty"`
 }
 
@@ -37,47 +34,25 @@ type RouteDecision struct {
 	Definition  AgentTypeDefinition
 	Description string
 	Prompt      string
-	Model       string
 	Isolation   string
 }
 
 // Route resolves the spawn path based on params, type definition, and config.
 //
 // Decision tree:
-//  1. subagent_type omitted + fork_enabled + interactive → Fork
-//  2. force_background (verification) → Async
-//  3. run_in_background → Async
-//  4. Default → Sync
+//  1. force_background (verification) → Async
+//  2. run_in_background → Async
+//  3. Default → Sync
 func Route(ctx context.Context, params Params, inv agent.ToolInvocation, reg *Registry, cfg *config.Config, interactive bool) (RouteDecision, error) {
+	_ = ctx
+	_ = inv
+	_ = cfg
+	_ = interactive
+
 	// Empty subagent_type falls back to general-purpose for tool pool and overlays.
 	def, err := reg.Resolve(params.SubagentType)
 	if err != nil {
 		return RouteDecision{}, err
-	}
-
-	// Fork path: type omitted + fork enabled + interactive session.
-	if params.SubagentType == "" && cfg.Tools.Agent.ForkEnabled && interactive {
-		// Fork children inherit QuerySourceFork and must not spawn another fork.
-		if QuerySourceFromContext(ctx) == QuerySourceFork {
-			return RouteDecision{}, fmt.Errorf("fork: cannot fork from fork child")
-		}
-		// Detect recursive fork via fork-boilerplate tag in parent messages.
-		if fc, ok := agent.ForkContextFromContext(ctx); ok && IsInForkChild(fc.ParentMessages) {
-			return RouteDecision{}, fmt.Errorf("fork: recursive fork detected — fork children cannot spawn fork sub-agents")
-		}
-		if params.RunInBackground {
-			return RouteDecision{}, fmt.Errorf("fork: run_in_background is not supported")
-		}
-		return RouteDecision{
-			SpawnKind:   subagentstore.SpawnFork,
-			IsFork:      true,
-			Background:  params.RunInBackground,
-			Definition:  def,
-			Description: params.Description,
-			Prompt:      params.Prompt,
-			Model:       params.Model,
-			Isolation:   params.Isolation,
-		}, nil
 	}
 
 	// Async path: verification types force background, or caller opts in explicitly.
@@ -94,7 +69,6 @@ func Route(ctx context.Context, params Params, inv agent.ToolInvocation, reg *Re
 		Definition:  def,
 		Description: params.Description,
 		Prompt:      params.Prompt,
-		Model:       params.Model,
 		Isolation:   params.Isolation,
 	}, nil
 }
