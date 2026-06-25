@@ -1,122 +1,317 @@
-# ds-code 配置示例（全量键）
-# 用户级：复制到 ~/.ds-code/config/config.yaml（路径固定，不可改）
-# 项目级：复制到 <git-root>/.ds-code/config.yaml
-# 权威说明：docs/v0.1.0/CONFIG.md
+# ds-code 配置示例（全量键 + 字段说明）
 #
-# billing 段仅允许写在用户级 ~/.ds-code/config/config.yaml（勿写入项目级 config.yaml）：
+# 放置位置（路径固定，不可改）：
+#   用户级：~/.ds-code/config/config.yaml（全项目共享）
+#   项目级：<git-root>/.ds-code/config.yaml（仅当前仓库）
+#
+# 合并优先级（叶子键，后读覆盖先读）：
+#   内置默认值 → 用户级 YAML → 项目级 YAML → CLI flags
+#
+# 权威文档：docs/v0.1.0/CONFIG.md
+# API Key 禁止写入 YAML，仅环境变量 DS_CODE_DEEPSEEK_API_KEY 或 DEEPSEEK_API_KEY
 
+# ---------------------------------------------------------------------------
+# billing — 模型单价（仅用户级 ~/.ds-code/config/config.yaml，禁止写入项目级）
+# 作用：覆盖内置默认价目表，用于 /context 与状态栏的 token 费用估算（人民币）。
+# 影响：不影响 API 调用本身；仅影响 messages 表 pricing_snapshot 与 UI 展示。
+# ---------------------------------------------------------------------------
 # billing:
+#   # 可选版本标签，写入价格快照便于区分改价前后记录
 #   price_table_version: my-prices-2025-06
 #   model_prices:
 #     deepseek-v4-pro:
-#       input_per_million: 12.0
-#       output_per_million: 24.0
-#       cache_hit_per_million: 0.1
+#       input_per_million: 12.0      # 输入 token 单价（元 / 1M tokens，缓存未命中）
+#       output_per_million: 24.0     # 输出 token 单价（元 / 1M tokens）
+#       cache_hit_per_million: 0.1   # 缓存命中输入单价（元 / 1M tokens）
 #     deepseek-v4-flash:
 #       input_per_million: 1.0
 #       output_per_million: 2.0
 #       cache_hit_per_million: 0.02
 
+# ---------------------------------------------------------------------------
+# llm — DeepSeek HTTP 客户端与主/子代理模型参数
+# ---------------------------------------------------------------------------
 llm:
   # api_key: 禁止写在此处；仅 DS_CODE_DEEPSEEK_API_KEY 或 DEEPSEEK_API_KEY 环境变量
+
+  # API 根地址。strict_tools=true 时实现自动改为 .../beta
   base_url: https://api.deepseek.com
+
+  # 主 agent 模型。可选：deepseek-v4-pro | deepseek-v4-flash
+  # 影响：主对话质量/速度/费用；TUI /mode 可 per-session 覆盖
   model: deepseek-v4-pro
+
+  # 主 agent API 5xx 时的降级模型（可选，空则仅重试不切换）
+  # fallback_model: deepseek-v4-flash
+
+  # 单次 completion 输出 token 上限（1 ~ context.max_output_tokens）
+  # 影响：回复长度上限；过大可能增加 latency 与费用
+  max_tokens: 16384
+
+  # HTTP 请求超时（含流式读取）
+  timeout: 120s
+
+  # true → 全部请求走 Beta base_url，启用 strict JSON schema 校验
+  # 影响：工具参数校验更严，部分边缘 schema 可能失败
+  strict_tools: false
+
+  # 主 agent 思考模式：enabled | disabled
+  # 影响：enabled 时模型可输出 reasoning；TUI /thinking 可 per-session 覆盖
+  thinking:
+    type: enabled
+
+  # 主 agent 推理强度：high | max
+  # 影响：推理深度与 token 消耗；TUI /effort 可 per-session 覆盖
+  reasoning_effort: max
+
+  # 子代理（agent 工具 / Task）专用 LLM 设置，与主 agent 分离以控费
   subagent:
+    # 子代理默认模型（Task 工具、标题生成等）
     model: deepseek-v4-flash
+
+    # 子代理 5xx 降级模型（可选）
+    # fallback_model: deepseek-v4-pro
+
+    # 子代理思考模式（默认 disabled 以节省 token）
     thinking:
       type: disabled
+
+    # 子代理推理强度
     reasoning_effort: high
-  max_tokens: 16384
-  timeout: 120s
-  strict_tools: false
-  thinking:
-    type: enabled # enabled | disabled
-  reasoning_effort: max # high | max
 
+    # 单个子代理 run 内子轮次上限（LLM ↔ tool 循环次数）
+    # 默认 500；独立于 agent.max_turns（主 Runner 上限）
+    max_turns: 500
+
+# ---------------------------------------------------------------------------
+# context — 上下文窗口、compact、截断与 @ 引用限额
+# ---------------------------------------------------------------------------
 context:
+  # 模型上下文窗口 token 数（与 DeepSeek V4 1Mi 对齐）
   window_tokens: 1048576
+
+  # 单次输出 token 硬顶（384Ki）；llm.max_tokens 不得超过此值
   max_output_tokens: 393216
+
+  # compact 触发阈值比例：阈值 = ratio × window_tokens
+  # 触发 A：CountBreakdown 超阈值；B：累计 prompt_tokens 超比例；C：API 返回 context-too-long
+  # 影响：越低越早 compact（摘要旧对话），越高越晚触发
   compact_threshold_ratio: 0.80
+
+  # L3 视图层 collapse 阈值比例（TUI 展示用，与 compact 独立）
+  # 超阈值时将早期用户轮替换为摘要，减少 UI/API 视图 token
+  collapse_threshold_ratio: 0.85
+
+  # compact 后保留最近 N 个用户轮全文（不摘要）
+  # 影响：越大保留越多近期细节，但 compact 后上下文仍更长
   keep_recent_turns: 6
-  truncate_by: chars # chars | tokenizer
+
+  # 工具结果 snip 时保留最近 N 个用户轮不裁剪（0 = 仅保护当前用户轮）
+  # 影响：>0 时更保守地保留 tool 输出；API context-too-long 恢复路径会用 0
+  snip_keep_rounds: 0
+
+  # 截断计量方式：chars（字符）| tokenizer（精确 token，需 CGO）
+  truncate_by: chars
+
+  # 单次 tool 返回字符上限（内建工具与 MCP 共用）
+  # 超限截断；MCP 超长时 spill 到 mcp-result/ 目录
   tool_result_max_chars: 100000
+
+  # @file / @dir 引用展开总字符上限
   at_reference_max_chars: 128000
+
+  # Git 快照（分支、status、最近提交等）注入 system 的总字符上限
   git_snapshot_max_chars: 16000
-  at_dir_max_files: 50   # @dir/ 目录列表最多条目数
-  at_dir_max_depth: 4    # @dir/ 最大遍历深度
 
+  # @dir/ 目录列表最多条目数
+  at_dir_max_files: 50
+
+  # @dir/ 最大遍历深度
+  at_dir_max_depth: 4
+
+# ---------------------------------------------------------------------------
+# agent — 主 Runner 循环
+# ---------------------------------------------------------------------------
 agent:
-  max_turns: 25
+  # 单条用户消息内的子轮次上限（PrepareRequest → LLM → tool_calls 循环）
+  # 默认 500；耗尽后写入 system 事件并结束当前轮
+  max_turns: 500
 
+# ---------------------------------------------------------------------------
+# tools — 内置工具约束与并发
+# ---------------------------------------------------------------------------
 tools:
+  # 预留：是否允许同一 assistant 多条 tool_calls 并行
+  # 当前 Runner 未读取；相邻只读工具已由 tool_orchestration 自动并发
   parallel_tool_calls: false
+
+  # true → 全部 MCP 工具以 stub schema 注册，完整参数经 tool_search 查询
+  # 影响：缩小发给 LLM 的工具 schema 体积
+  defer_mcp: true
+
+  # 内建写工具名列表，命中项同样 defer（如 shell、apply_patch）
+  # defer_builtin:
+  #   - shell
+  #   - apply_patch
+
   read_file:
+    # 未指定 limit 时最多读取行数；显式 limit 亦受此限
     max_lines: 2000
+    # 文件总大小上限（字节，默认 2MiB）；超限拒绝整次读取
+    max_bytes: 2097152
+
   grep:
+    # 输出条数上限（per-call 未传 head_limit 时回退）
     head_limit: 250
+    # ripgrep 子进程超时
     timeout: 20s
-    binary: bundled   # bundled | system | path
+    # ripgrep 来源：bundled（embed → ~/.ds-code/bin/rg）| system（PATH）| path
+    binary: bundled
+    # binary=path 时的可执行文件路径
     # binary_path: /usr/local/bin/rg
+    # true → 遵循 .gitignore；默认 Agent 搜索不遵循
     respect_gitignore: false
+
   glob:
+    # glob / list_dir 结果条数上限
     max_results: 100
+    # true → glob 遵循 .gitignore
     respect_gitignore: false
+    # false → 不返回隐藏路径段（. 前缀）
     include_hidden: true
+
   search:
-    skip_dirs: [] # 遍历时额外跳过的目录名（不含 .git，已硬编码）
+    # Agent 枚举（grep/glob/list_dir/diagnostics walk）额外跳过的目录名
+    # .git 已硬编码跳过；不影响 @dir/；不读取 .gitignore
+    skip_dirs: []
+
   apply_patch:
+    # 单 patch 允许变更的最大行数
     max_changed_lines: 2000
+
   shell:
+    # bash 命令默认超时（sync 与 run_in_background 均适用；可被单次 timeout_ms 覆盖）
     timeout: 120s
+    # 后台 shell 任务数量上限
     max_background: 5
+    # 单次读取后台 job 输出的最大字节
     background_output_max_bytes: 262144
-    # Regex patterns matched against subprocess env var names (OR with built-in secret key filter).
+    # 子进程环境变量名正则黑名单（与内置 secret 键名过滤为 OR）
+    # 作用于 shell、后台 job、MCP stdio 子进程
     env_blacklist:
       - "^AWS_"
-  task:
+
+  agent:
+    # 子代理 agent 工具并发上限
     max_parallel: 3
+    # 子代理返回摘要字符上限（超长写入 output-file）
     summary_max_chars: 16000
+    # 同步子代理最长等待（超时返回错误，不 promote 为后台）
+    sync_timeout: 2h
+    # 启用 skill fork 等用户发起路径
+    fork_enabled: true
+    # isolation: worktree 子代理 worktree 保留时长
+    worktree_ttl: 24h
+    # worktree sparse checkout 路径模式
+    worktree_sparse_paths:
+      - "/*"
+    # 从父工作区 symlink 到 worktree 的目录名
+    worktree_symlink_dirs:
+      - node_modules
+      - .venv
+      - vendor
 
+# ---------------------------------------------------------------------------
+# permission — 工具权限沙箱（内置工具与 MCP 写操作均走 permission.Engine）
+# ---------------------------------------------------------------------------
 permission:
-  mode: ask # readonly | ask | auto
+  # readonly | ask | auto
+  # readonly：拒绝写/shell/网络写类 tool
+  # ask：TUI 弹窗确认；非 TTY 无法弹窗时拒绝
+  # auto：自动批准（YAML 禁止设为 auto；仅 CLI --permission-mode auto 或 --dangerously-auto）
+  # 注意：S3 denylist 敏感路径无论何种 mode 始终拒绝
+  mode: ask
 
+# ---------------------------------------------------------------------------
+# tui — 交互终端 UI（非交互 -p 不适用）
+# ---------------------------------------------------------------------------
 tui:
-  copy_on_select: true # 鼠标拖拽选中文本后自动复制到剪贴板
+  # 聊天 viewport 鼠标拖拽选区后自动写入系统剪贴板
+  # false 时仍可选中，需终端原生复制
+  copy_on_select: true
 
-# session / sessions.db：无配置项，固定 ~/.ds-code/projects/<project_id>/sessions.db
+# session / sessions.db：无配置项
+# 固定路径 ~/.ds-code/projects/<project_id>/sessions.db
 
+# ---------------------------------------------------------------------------
+# btw — /btw 旁路快速提问（不进入主对话持久化，默认无 tools）
+# ---------------------------------------------------------------------------
 btw:
+  # 带入主对话最近 N 轮上下文；0 = 不带
   include_recent_turns: 0
+  # btw 单次 max_tokens
   max_tokens: 4096
+  # 是否计入 session token 累计与费用展示
   count_toward_session: false
 
+# ---------------------------------------------------------------------------
+# non_interactive — ds-code -p / --json 非交互模式
+# ---------------------------------------------------------------------------
 non_interactive:
+  # true → 每次 -p 使用新 session_id，不污染交互 session
   ephemeral_session: true
 
+# ---------------------------------------------------------------------------
+# audit — 审计日志开关（路径固定，不可配）
+# ---------------------------------------------------------------------------
 audit:
-  enabled: false # true 或 CLI --audit-log；写入 ~/.ds-code/projects/<id>/audit.jsonl（路径不可配）
+  # true 或 CLI --audit-log → 向 ~/.ds-code/projects/<id>/audit.jsonl 追加 JSONL
+  # 记录 tool 名 + 参数哈希，不含完整参数内容
+  enabled: false
 
+# ---------------------------------------------------------------------------
+# mcp — MCP 子进程服务器
+# MCP 工具以 server 原始裸名注册（与 AGENTS.md / Cursor 一致）
+# ---------------------------------------------------------------------------
 mcp:
   servers: []
-  # MCP tools use bare names from the MCP server (same as AGENTS.md / Cursor).
   # - name: fs
   #   command: npx
   #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/absolute/path/to/workspace"]
   #   env: {}
 
+# ---------------------------------------------------------------------------
+# web — 网络工具（默认关闭，防 SSRF）
+# ---------------------------------------------------------------------------
 web:
+  # 启用 web_fetch 工具
   fetch_enabled: false
+  # 启用 web_search 工具
   search_enabled: false
+  # 允许访问的主机名白名单；空 = 全部拒绝（fetch/search 均须显式开启）
   allowlist: []
 
-# Phase 6：Language Server（用户本机安装，ds-code 不捆绑）
+# ---------------------------------------------------------------------------
+# run_mode — agent | plan（Plan 模式仅只读工具子集；CLI --plan 亦可设置）
+# ---------------------------------------------------------------------------
+run_mode: agent
+
+# ---------------------------------------------------------------------------
+# lsp — Language Server（依赖用户本机安装，ds-code 不捆绑）
+# ---------------------------------------------------------------------------
 lsp:
+  # false → diagnostics 工具返回「LSP 已禁用」
   enabled: true
+  # 无 LSP 请求后关闭子进程的空闲时长
   idle_shutdown: 120s
+  # 单次 diagnostics 工具调用等待诊断的上限
   diagnostics_timeout: 20s
+  # 单次工具调用最多 didOpen 文件数
   max_files_per_call: 10
+  # 每文件最多输出的诊断条数
   max_issues_per_file: 20
-  warmup_on_start: [] # 例: ["go"]
+  # 启动 TUI 时仅 initialize 的 server ID（不拉取诊断）
+  warmup_on_start: []
   servers:
     go:
       command: gopls
@@ -127,7 +322,11 @@ lsp:
     cpp:
       command: clangd
       args: []
-    # java: 须自填 jdtls 启动命令，例如：
+    # java 无内置默认 command，须自填，例如：
     # java:
     #   command: /opt/jdtls/bin/jdtls
     #   args: []
+    #   env:
+    #     JAVA_HOME: /usr/lib/jvm/java-21
+    #   extensions: [".java"]   # 可选，覆盖扩展名映射
+    #   disabled: false           # true → 跳过该 server
