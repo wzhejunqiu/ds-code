@@ -12,7 +12,7 @@
 - [x] [TOOL_PROMPTS.md](TOOL_PROMPTS.md) 中 **8 项** FR-0 工具已定稿；`diagnostics` / `tool_search` / `web_search` **延后**（不阻塞）
 - [x] `CHANGELOG.md` 含 `bash` 改名 breaking、`run_in_background` breaking 及 Known limitations
 
-**说明**：系统提示词 `prompt.md` 未全部审定时，不阻塞发布；CHANGELOG 已标明「部分 system 章节待后续」。
+**说明**：系统提示词 [`internal/prompt/prompt.md`](../../internal/prompt/prompt.md) 已审定定稿（2026-06-29）。
 
 ## 2. 协作流程验收
 
@@ -113,7 +113,6 @@
 - 历史会话 `shell` tool_call 可 replay
 - MCP description 格式变更
 - 子代理 `PromptOverlay` 改写
-- 系统 `prompt.md` 全部章节审定
 - **`diagnostics` / `tool_search` / `web_search` prompt 改写**（延后后续版本）
 
 ## 6. 建议的手动 smoke

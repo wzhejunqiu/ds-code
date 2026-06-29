@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	appver "github.com/wzhejunqiu/ds-code/internal/version"
 )
 
 func TestFormatRuntimeEnv_pathsAndTime(t *testing.T) {
@@ -52,6 +54,12 @@ func TestDefaultSystemBase_injectsBuiltinToolNames(t *testing.T) {
 	}
 	if strings.Contains(base, "使用 Read") || strings.Contains(base, "使用 Edit") {
 		t.Fatalf("DefaultSystemBase should not contain generic tool names: %q", base)
+	}
+	if !strings.Contains(base, "`"+appver.Name+"`") {
+		t.Fatalf("DefaultSystemBase should inject app name %q: %q", appver.Name, base)
+	}
+	if strings.Contains(base, "{{.") {
+		t.Fatalf("unexpanded template placeholder in DefaultSystemBase: %q", base)
 	}
 	if !strings.Contains(base, "`methodName`") || !strings.Contains(base, "`method_name`") {
 		t.Fatalf("DefaultSystemBase should preserve markdown inline code from prompt.md: %q", base)

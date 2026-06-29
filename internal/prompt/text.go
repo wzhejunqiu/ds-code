@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	"github.com/wzhejunqiu/ds-code/internal/tool"
+	appver "github.com/wzhejunqiu/ds-code/internal/version"
 )
 
 //go:embed prompt.md
@@ -13,6 +14,7 @@ var defaultSystemBaseTemplate string
 
 // systemBaseVars holds named values injected into the default system prompt template.
 type systemBaseVars struct {
+	AppName    string
 	Bash       string
 	ReadFile   string
 	ApplyPatch string
@@ -30,6 +32,7 @@ func DefaultSystemBase() string {
 
 func defaultSystemBaseVars() systemBaseVars {
 	return systemBaseVars{
+		AppName:    appver.Name,
 		Bash:       tool.NameShell.String(),
 		ReadFile:   tool.NameReadFile.String(),
 		ApplyPatch: tool.NameApplyPatch.String(),

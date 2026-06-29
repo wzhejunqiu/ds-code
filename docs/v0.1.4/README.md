@@ -52,13 +52,13 @@ v0.1.4 的 **核心目标** 是：**逐一把内建工具的 LLM 提示词改写
 | **`glob` ripgrep** | 后端改为 ripgrep `--files`；见 [`glob/glob.md`](../../internal/tool/builtin/glob/glob.md) |
 | TUI 倒计时 | sync bash Running 标题递减倒计时 |
 | read guard | `apply_patch` / `write_file` 编辑前须先 `read_file` |
+| 系统提示词 | [`internal/prompt/prompt.md`](../../internal/prompt/prompt.md) + embed/template；已定稿 |
 
 ## 已知限制
 
 | 限制 | 说明 |
 |------|------|
 | 延后 prompt | `diagnostics`、`tool_search`、`web_search` 未迁至 FR-0 `usage.prompt` |
-| 系统提示词 | `internal/prompt/prompt.md` 部分章节待后续审定 |
 | 历史会话 | SQLite 中 `name: "shell"` 的 tool_call 不做别名兼容 |
 | 历史参数 | `background` / `list_jobs` 不做别名；须用 `run_in_background` |
 | 配置迁移 | `tools.defer_builtin` 须写 `bash` 而非 `shell` |

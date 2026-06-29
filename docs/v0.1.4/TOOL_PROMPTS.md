@@ -12,7 +12,7 @@
 | 改写范围 | **8 项**内建工具本版定稿；`diagnostics` / `tool_search` / `web_search` **延后** |
 | **实现模式** | **`usage.prompt` + `text.go`（embed + template）**；参照 [`shell/`](../../internal/tool/builtin/shell/) |
 | 「禁止 bash 绕行」 | **每个工具改时再定** |
-| 系统提示词 | [`internal/prompt/prompt.md`](../../internal/prompt/prompt.md)，同模式；**逐段审定**（不阻塞 v0.1.4） |
+| 系统提示词 | [`internal/prompt/prompt.md`](../../internal/prompt/prompt.md)，同模式；**已定稿**（2026-06-29 确认） |
 
 ## 标准模式（FR-0）
 

@@ -54,7 +54,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Known limitations
 
 - `diagnostics`、`tool_search`、`web_search` 的 Description/Schema **未**迁至 FR-0 `usage.prompt`（延后后续版本）
-- 系统 `prompt.md` 部分章节待后续审定
 
 ## [0.1.3] - 2026-06-20
 
