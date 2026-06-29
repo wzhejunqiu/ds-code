@@ -44,6 +44,9 @@ func TestRGBin_Path(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if err := os.Remove(path); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(path, []byte("tampered"), 0o700); err != nil {
 			t.Fatal(err)
 		}

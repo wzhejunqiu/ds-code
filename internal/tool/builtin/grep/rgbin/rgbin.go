@@ -160,5 +160,9 @@ func writeAtomic(dest string, data []byte, perm os.FileMode) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
+	// Unlink first so rename succeeds even when an older rg is still executing (Linux ETXTBSY).
+	if err := os.Remove(dest); err != nil && !os.IsNotExist(err) {
+		return err
+	}
 	return os.Rename(tmpPath, dest)
 }
