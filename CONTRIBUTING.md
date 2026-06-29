@@ -34,6 +34,22 @@ make install
 
 `make build` / `make test` 会自动运行 `./scripts/fetch-tokenizers-lib.sh` 下载 `third_party/tokenizers/libtokenizers.a`（按 OS/arch，不入库）。
 
+## Ripgrep bundled
+
+`grep` / `glob` 的 bundled 后端在编译时 `//go:embed` `internal/tool/builtin/grep/rgbin/rg.tar.gz`（gitignore，不入库）。
+
+`make build` / `make test` / `make vet` / `make verify-release` 等会自动运行 `./scripts/fetch-ripgrep.sh` 下载当前构建机 OS/arch 对应的 ripgrep 15.1.0 包。Linux x86_64 使用 musl 包（与 upstream 发布一致）。
+
+手动拉取：
+
+```bash
+make fetch-ripgrep
+```
+
+正式发布时 GitHub Release workflow 在各 matrix runner 上分别 fetch 后再 `go build`。
+
+`make verify-charm-v2`（`make check-commit` / git hooks）使用系统 `rg` 命令扫描 import，**需本机 PATH 有 ripgrep**（如 `brew install ripgrep`）；CI 不跑此检查。
+
 ### count-tokens 调试
 
 ```bash

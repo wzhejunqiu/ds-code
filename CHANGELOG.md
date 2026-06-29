@@ -6,13 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-06-29
+
 ### Added
 
 - `bash` tool: optional per-call `timeout_ms` (sync and `run_in_background`, max 600000ms); timeout force-kills the subprocess
 - `grep` tool: ripgrep 15.1.0 backend（bundled tar.gz embed + `~/.ds-code/bin/rg`）；Claude Code 对齐 Schema（`glob`、`-B/-A/-C`、`head_limit`/`offset` 等）
 - `glob` tool: ripgrep 15.1.0 `--files` backend（复用 bundled rg）；输出 `Found N files`；共享 `internal/tool/builtin/rgutil`
 - `scripts/fetch-ripgrep.sh` + Makefile `fetch-ripgrep` 目标
+- `apply_patch` / `write_file` read-before-edit guard
+- `web_fetch` analyze pipeline（HTML→Markdown + 可选 LLM 分析）；install-scoped `user_id`
+- `agent` tool: FR-0 中文 `usage.prompt`；收窄 LLM 可见 spawn 类型
+- Built-in tool FR-0 prompts: `read_file`、`apply_patch`、`write_file`、`web_fetch`、`agent` 迁至 `usage.prompt` + `RenderDesc()`
 - TUI: sync and `run_in_background` `bash` Running title shows a **countdown** via `ToolTimeoutDeadline` + live tick
+- TUI: sticky chat scroll；后台 shell 任务完成时自动恢复通知
 
 ### Changed
 
@@ -22,13 +29,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `grep` `head_limit` 三模式通用；默认 **250**（原 200）
 - `grep` `path` 与 `glob` 分离（原 `path: pkg/*.go` → `path: pkg` + `glob: *.go`）
 - `read_file` tool prompt migrated to `usage.prompt` + `RenderDesc()` (FR-0); LLM parameter **`path` → `filepath`**
+- **Removed `list_dir` tool**；目录列举合并入 `glob`（`pattern="*"` 等）
 - `run_in_background` blocks until job completes (same stdout/stderr format as sync); concurrent batch for multiple bg calls in one turn
 - **Removed `/kill` slash command** and TUI kill picker; no manual job management
 - **Exit ds-code** now force-kills running shell jobs for the current session (`Manager.Close`)
 - **Removed cross-session job recovery** (`loadExisting`); `Open` reconciles stale disk meta only
+- `configs/example.yaml` 字段含义与影响注释
 
 ### Breaking
 
+- **Removed `list_dir`**；原 `list_dir` 场景改用 `glob`
 - `grep` 无匹配：`Found 0 files` / `""` / `Found 0 occurrences across 0 files`（非 `无匹配` / 单个 `0`）
 - `glob` 无匹配：`Found 0 files`（非 `无匹配文件`）
 - `glob` 显式 `path` 为文件时返回错误（非静默误搜）
@@ -40,6 +50,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `read_file` LLM parameter **`path` → `filepath`** (historical tool calls are not aliased)
 - Historical tool calls using `background` or `list_jobs` are **not** aliased; use `run_in_background` instead
 - LLM **`job_id` / `cancel`** removed from bash schema; use Esc to cancel turn or exit ds-code to kill jobs
+
+### Known limitations
+
+- `diagnostics`、`tool_search`、`web_search` 的 Description/Schema **未**迁至 FR-0 `usage.prompt`（延后后续版本）
+- 系统 `prompt.md` 部分章节待后续审定
 
 ## [0.1.3] - 2026-06-20
 

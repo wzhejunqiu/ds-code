@@ -61,28 +61,28 @@ verify-charm-v2:
 	@rg -q 'charm.land/lipgloss/v2' go.mod || (echo "missing charm.land/lipgloss/v2"; exit 1)
 	@rg -q 'charm.land/glamour/v2' go.mod || (echo "missing charm.land/glamour/v2"; exit 1)
 
-verify-release: $(TOKENIZERS_LIB) verify-charm-v2
+verify-release: $(TOKENIZERS_LIB) $(RIPGREP_TAR) verify-charm-v2
 	go build -ldflags "$(LDFLAGS)" -o bin/ds-code ./cmd/ds-code
 	@! strings bin/ds-code | grep -qE '/tcase|tuitest|__tcase__' || (echo "release binary contains tuitest strings"; exit 1)
 
-test-integration: $(TOKENIZERS_LIB)
+test-integration: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go test -tags=integration -race -count=1 ./internal/lsp/... ./internal/tool/builtin/...
 
-vet: $(TOKENIZERS_LIB)
+vet: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go vet -copylocks ./...
 
 GOLANGCI_LINT_VERSION := $(shell cat .golangci-lint-version)
 GOPATH_BIN := $(shell go env GOPATH)/bin
 
-lint: $(TOKENIZERS_LIB)
+lint: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	$(GOPATH_BIN)/golangci-lint run ./...
 
-staticcheck: $(TOKENIZERS_LIB)
+staticcheck: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	@command -v staticcheck >/dev/null 2>&1 || go install honnef.co/go/tools/cmd/staticcheck@latest
 	staticcheck ./...
 
-vuln: $(TOKENIZERS_LIB)
+vuln: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 check-commit: $(TOKENIZERS_LIB)
