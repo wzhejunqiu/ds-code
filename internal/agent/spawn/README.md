@@ -185,7 +185,7 @@ FilterToolRegistry  →  toolpool.go
   Layer 2.5: background 时仅 asyncAllowed 白名单
 ```
 
-后台白名单：`read_file`, `glob`, `grep`, `list_dir`, `diagnostics`, `web_fetch`, `web_search`, `shell`, `write_file`, `apply_patch`。
+后台白名单：`read_file`, `glob`, `grep`, `diagnostics`, `web_fetch`, `web_search`, `shell`, `write_file`, `apply_patch`。
 
 Worktree 子 agent：[`tool.RebindRegistryPerm`](../../tool/registry.go)(childReg, perm) 绑定新 workspace。
 

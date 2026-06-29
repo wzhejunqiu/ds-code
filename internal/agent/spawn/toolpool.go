@@ -51,7 +51,6 @@ var asyncAllowed = map[tool.Name]bool{
 	tool.NameReadFile:    true,
 	tool.NameGlob:        true,
 	tool.NameGrep:        true,
-	tool.NameListDir:     true,
 	tool.NameDiagnostics: true,
 	tool.NameWebFetch:    true,
 	tool.NameWebSearch:   true,

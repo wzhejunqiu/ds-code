@@ -19,7 +19,7 @@ func TestBuildRegistry_planOmitsWriteTools(t *testing.T) {
 	plan := setup.BuildRegistry(runmode.Plan, deps)
 	agent := setup.BuildRegistry(runmode.Agent, deps)
 
-	for _, name := range []string{"read_file", "grep", "glob", "list_dir"} {
+	for _, name := range []string{"read_file", "grep", "glob"} {
 		if _, ok := plan.Get(name); !ok {
 			t.Fatalf("plan missing %s", name)
 		}

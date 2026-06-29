@@ -7,7 +7,6 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/glob"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/list_dir"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/read_file"
 	"github.com/wzhejunqiu/ds-code/internal/tool/searchskip"
 )
@@ -17,5 +16,4 @@ func ExploreTools(reg *tool.Registry, cfg *config.Config, perm *permission.Engin
 	reg.Register(&read_file.ReadFileTool{Cfg: cfg, Perm: perm, Strict: strict})
 	reg.Register(&grep.GrepTool{Cfg: cfg, Perm: perm, SearchSkip: searchSkip, Strict: strict})
 	reg.Register(&glob.GlobTool{Cfg: cfg, Perm: perm, SearchSkip: searchSkip, Strict: strict})
-	reg.Register(&list_dir.ListDirTool{Cfg: cfg, Perm: perm, SearchSkip: searchSkip, Strict: strict})
 }

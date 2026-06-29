@@ -173,7 +173,7 @@ tools:
     respect_gitignore: false
 
   glob:
-    # glob / list_dir 结果条数上限
+    # glob 结果条数上限
     max_results: 100
     # true → glob 遵循 .gitignore
     respect_gitignore: false
@@ -181,7 +181,7 @@ tools:
     include_hidden: true
 
   search:
-    # Agent 枚举（grep/glob/list_dir/diagnostics walk）额外跳过的目录名
+    # Agent 枚举（grep/glob/diagnostics walk）额外跳过的目录名
     # .git 已硬编码跳过；不影响 @dir/；不读取 .gitignore
     skip_dirs: []
 

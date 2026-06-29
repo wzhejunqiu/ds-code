@@ -20,7 +20,6 @@ type descVars struct {
 	ReadFile   string
 	Grep       string
 	Glob       string
-	ListDir    string
 	ApplyPatch string
 	WriteFile  string
 }
@@ -38,7 +37,6 @@ func defaultDescVars() descVars {
 		ReadFile:   tool.NameReadFile.String(),
 		Grep:       tool.NameGrep.String(),
 		Glob:       tool.NameGlob.String(),
-		ListDir:    tool.NameListDir.String(),
 		ApplyPatch: tool.NameApplyPatch.String(),
 		WriteFile:  tool.NameWriteFile.String(),
 	}

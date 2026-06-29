@@ -10,7 +10,7 @@
 | 项 | 你的决定 |
 |----|----------|
 | Description 风格 | **偏长**：像 `read_file` / `bash` 那样分点写清用法与边界 |
-| 改写范围 | **全部 12 项**内建工具 + 共享 `builtin/text.go` Schema |
+| 改写范围 | **全部 11 项**内建工具 + 共享 `builtin/text.go` Schema |
 | **实现模式** | **`usage.prompt` + `text.go`（embed + template）**；参照 [`shell/`](../../internal/tool/builtin/shell/) |
 | 「禁止 bash 绕行」 | **每个工具改时再定** |
 | 系统提示词 | [`internal/prompt/prompt.md`](../../internal/prompt/prompt.md)，同模式；**逐段审定** |
@@ -44,8 +44,7 @@
 |------|--------------|-------------------|------|------|
 | `read_file` | ✅ [`usage.prompt`](../../internal/tool/builtin/read_file/usage.prompt) | ✅ `SchemaFilepath` 等 | **已定稿 + FR-0 已实现** | 参数 `filepath`（原 `path`）；`offset`/`limit` 不变 |
 | `grep` | ✅ [`usage.prompt`](../../internal/tool/builtin/grep/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + FR-6 已实现** | ripgrep 15.1.0；`{{.Grep}}/{{.Bash}}/{{.Agent}}` 注入；输出 `Found N files` 等；不搜 `.git` |
-| `glob` | ✅ [`usage.prompt`](../../internal/tool/builtin/glob/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + ripgrep 已实现** | ripgrep `--files`；`Found N files` 输出；默认不遵循 gitignore、含隐藏文件 |
-| `list_dir` | 待建 | `SchemaPathRelDefault` 等 | 待改写 | |
+| `glob` | ✅ [`usage.prompt`](../../internal/tool/builtin/glob/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + ripgrep 已实现** | ripgrep `--files`；`Found N files` 输出；目录列举合并入 glob（`pattern="*"`）；已移除 `list_dir` |
 | `diagnostics` | 待建 | `SchemaSeverity` 等 | 待改写 | |
 | `web_fetch` | 待建 | `SchemaHTTPURL` 等 | 待改写 | |
 | `web_search` | 待建 | `SchemaQuery` 等 | 待改写 | 默认未注册 |
@@ -64,7 +63,7 @@
 - [`read_file`](../../internal/tool/builtin/read_file/usage.prompt)
 - [`grep`](../../internal/tool/builtin/grep/usage.prompt)
 
-### glob / list_dir / …
+### glob / diagnostics / …
 
 见 git 基线或各包现有 `text.go` 中 `Desc*`。
 

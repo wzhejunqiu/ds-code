@@ -56,7 +56,7 @@ internal/shelljobs/    后台 shell 任务管理（本会话跟踪；退出 Clos
 2. 交互 TUI 走 `ui/tui.Run(agent.Deps)`；非交互走 `agent.Runner.RunTurn` 单轮
 3. `Runner.RunTurn` 循环：`context.Service.PrepareRequest` → `llm.Client.Chat` (stream) → `tool.Registry.Execute` → 持久化到 SQLite `messages` 表
 4. `/btw` 走 `RunEphemeral`：独立消息切片，不写 DB，默认无 tools
-5. Plan 模式（`--plan`）：工具仅 read/grep/glob/list_dir/diagnostics + 可选 web_fetch
+5. Plan 模式（`--plan`）：工具仅 read/grep/glob/diagnostics + 可选 web_fetch
 
 ### 关键设计约束
 

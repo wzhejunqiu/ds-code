@@ -13,7 +13,6 @@ func TestRenderDesc_injectsBuiltinToolNames(t *testing.T) {
 		tool.NameReadFile.String(),
 		tool.NameGrep.String(),
 		tool.NameGlob.String(),
-		tool.NameListDir.String(),
 		tool.NameApplyPatch.String(),
 		tool.NameWriteFile.String(),
 		tool.NameShell.String(),

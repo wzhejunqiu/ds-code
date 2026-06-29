@@ -8,8 +8,7 @@
 除非用户明确要求，或已确认专用工具无法完成需求，否则禁止用本工具执行 find、grep、rg、cat、head、tail、sed、awk、echo 等可由内建工具完成的操作。优先使用专用工具，便于用户复核调用记录与权限审计。分工如下：
 - 读取文件：{{.ReadFile}}（禁止 cat/head/tail）
 - 检索文件内容：{{.Grep}}（禁止 grep/rg）
-- 按模式找文件路径：{{.Glob}}（禁止 find）
-- 列举目录：{{.ListDir}}（禁止 ls 作主要探索手段）
+- 按模式找文件路径或列举目录内文件：{{.Glob}}（`pattern="*"` 列举单层文件；禁止 find/ls）
 - 编辑已有文件：{{.ApplyPatch}}（禁止 sed/awk）
 - 创建或整文件覆盖：{{.WriteFile}}（禁止 echo 重定向、heredoc 写文件）
 - 向用户输出说明文字：直接在回复中输出（禁止用 echo/printf 代替正文）

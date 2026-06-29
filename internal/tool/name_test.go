@@ -23,7 +23,6 @@ func TestName_builtinsMatchRegistry(t *testing.T) {
 		tool.NameShell,
 		tool.NameGlob,
 		tool.NameGrep,
-		tool.NameListDir,
 		tool.NameAgent,
 		tool.NameToolSearch,
 	} {

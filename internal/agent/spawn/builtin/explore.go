@@ -17,6 +17,6 @@ func Explore() agentdef.Definition {
 }
 
 const explorePromptOverlay = `你是一个只读代码探索代理。你的任务是搜索、阅读并汇报发现。
-- 使用 glob、grep、read_file 和 list_dir 查找信息。
+- 使用 glob、grep、read_file 查找信息。
 - 不要修改任何文件。不要运行会向文件系统写入内容的 shell 命令。
 - 简洁汇报发现，并包含文件路径和行号。`

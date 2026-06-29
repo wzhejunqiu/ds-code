@@ -45,7 +45,7 @@ flowchart LR
 **我希望** 每个内建工具的 description 明确用途、边界与和其它工具的分工，  
 **以便** 模型少绕行 `bash`、少误用 `write_file` 代替 `apply_patch`。
 
-**验收**：[TOOL_PROMPTS.md](TOOL_PROMPTS.md) 12 项均为「已定稿」；ACCEPTANCE §3 逐工具通过。
+**验收**：[TOOL_PROMPTS.md](TOOL_PROMPTS.md) 11 项均为「已定稿」；ACCEPTANCE §3 逐工具通过。
 
 ### US-2：改写过程可控
 
@@ -100,7 +100,7 @@ internal/tool/builtin/<tool>/
 
 #### 模板变量约定
 
-- 字段名 PascalCase，与 `internal/prompt/text.go` 的 `systemBaseVars` 对齐（如 `Bash`、`ReadFile`、`Grep`、`Glob`、`ListDir`、`ApplyPatch`、`WriteFile`）。
+- 字段名 PascalCase，与 `internal/prompt/text.go` 的 `systemBaseVars` 对齐（如 `Bash`、`ReadFile`、`Grep`、`Glob`、`ApplyPatch`、`WriteFile`）。
 - 各工具 `descVars` **只声明本工具 `usage.prompt` 用到的字段**；未用到的不必注入。
 - 新增占位符时同步更新 `defaultDescVars()`（或等价函数）与单测。
 
@@ -108,14 +108,14 @@ internal/tool/builtin/<tool>/
 
 覆盖工具（与 [TOOL_PROMPTS.md](TOOL_PROMPTS.md) 一致）：
 
-`read_file`、`grep`、`glob`、`list_dir`、`diagnostics`、`web_fetch`、`web_search`、`bash`、`apply_patch`、`write_file`、`tool_search`、`agent`，以及共享 `builtin/text.go` 中的 `Schema*` 常量。
+`read_file`、`grep`、`glob`、`diagnostics`、`web_fetch`、`web_search`、`bash`、`apply_patch`、`write_file`、`tool_search`、`agent`，以及共享 `builtin/text.go` 中的 `Schema*` 常量。
 
 | ID | 描述 | 优先级 |
 |----|------|--------|
 | FR-1.1 | 每个已注册工具的 `Description()` 文案完成审定并合入 | P0 |
 | FR-1.2 | 每个工具 JSON Schema 的 `properties.*.description` 完成审定并合入 | P0 |
 | FR-1.3 | `tool_search` 迁至 `usage.prompt` + `text.go`（FR-0），不再在 `.go` 内联 Description | P1 |
-| FR-1.4 | 探索类工具（grep/glob/list_dir/diagnostics）对 `.git`、`skip_dirs`、先收窄 `path` 的说明风格与你确认后统一 | P1 |
+| FR-1.4 | 探索类工具（grep/glob/diagnostics）对 `.git`、`skip_dirs`、先收窄 `path` 的说明风格与你确认后统一 | P1 |
 | FR-1.5 | 写工具（apply_patch/write_file/bash）对分工、高危操作的说明与你确认后统一 | P1 |
 | FR-1.6 | `agent` 对四种类型的说明与你确认；是否与 spawn overlay 去重由你决定 | P1 |
 | FR-1.7 | `web_search` 占位描述可与实现状态一致（未注册时仍维护文案供后续启用） | P2 |

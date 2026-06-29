@@ -13,7 +13,6 @@ const (
 	NameShell       Name = toolname.Bash
 	NameGlob        Name = "glob"
 	NameGrep        Name = "grep"
-	NameListDir     Name = "list_dir"
 	NameDiagnostics Name = "diagnostics"
 	NameWebFetch    Name = "web_fetch"
 	NameWebSearch   Name = "web_search"
@@ -36,7 +35,7 @@ func (n Name) Matches(name string) bool {
 func ReservedNames() map[string]struct{} {
 	names := []Name{
 		NameReadFile, NameWriteFile, NameApplyPatch, NameShell, NameGlob, NameGrep,
-		NameListDir, NameDiagnostics, NameWebFetch, NameWebSearch, NameAgent, NameToolSearch,
+		NameDiagnostics, NameWebFetch, NameWebSearch, NameAgent, NameToolSearch,
 	}
 	out := make(map[string]struct{}, len(names))
 	for _, n := range names {

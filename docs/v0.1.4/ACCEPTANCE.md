@@ -9,7 +9,7 @@
 
 - [ ] 版本号 v0.1.4
 - [ ] `make test` / `make lint` / `make vet` 通过
-- [ ] [TOOL_PROMPTS.md](TOOL_PROMPTS.md) 中 **12 项工具 + 共享 Schema** 均为「已定稿」且有你确认记录
+- [ ] [TOOL_PROMPTS.md](TOOL_PROMPTS.md) 中 **11 项工具 + 共享 Schema** 均为「已定稿」且有你确认记录
 - [ ] `CHANGELOG.md` 含 `bash` 改名 breaking 及 `run_in_background` breaking（若本版合入）
 
 **说明**：系统提示词 `prompt.md` 未全部审定时，可不阻塞发布，但须在 CHANGELOG 标明「部分 system 章节待后续」——除非你决定将 system 纳入本版 P0。
@@ -38,8 +38,7 @@
 | ---------------------- | -------------------------------------------------------------------------------------------- | ---- |
 | `read_file`            | FR-0 + 目录/二进制/分段读取等要点                                                            | [ ]  |
 | `grep`                 | FR-0 + FR-6 + §4.2 自动化                                                                    | [x]  |
-| `glob`                 | FR-0 + ripgrep + §4.3 自动化                                                                 | [x]  |
-| `list_dir`             | FR-0 + path schema                                                                           | [ ]  |
+| `glob`                 | FR-0 + ripgrep + §4.3 自动化；目录列举合并入 glob                                              | [x]  |
 | `diagnostics`          | FR-0 + paths/severity schema                                                                 | [ ]  |
 | `web_fetch`            | FR-0 + url schema                                                                            | [ ]  |
 | `web_search`           | FR-0 + query schema                                                                          | [ ]  |
@@ -124,7 +123,7 @@
 | ------------------------------------------- | ---------------------------------------- |
 | 「读 README 前 20 行」                      | `read_file`                              |
 | 「在 internal/prompt 搜 DefaultSystemBase」 | `grep`                                   |
-| 「列出 docs/v0.1.4 下文件」                 | `glob` 或 `list_dir`（符合你 Desc 分工） |
+| 「列出 docs/v0.1.4 下文件」                 | `glob`（如 `pattern="*"` 或 `**/*`） |
 | 「跑 prompt 包测试」                        | `bash`                                   |
 
 ## 3.1 apply_patch read-guard（AC-RG）

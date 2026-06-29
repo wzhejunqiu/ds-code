@@ -24,14 +24,13 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 | [ACCEPTANCE.md](ACCEPTANCE.md) | 逐工具验收清单 |
 | [TOOL_PROMPTS.md](TOOL_PROMPTS.md) | **各工具改写状态与待确认项**（随讨论更新） |
 
-## 内建工具改写范围（12 项）
+## 内建工具改写范围（11 项）
 
 | 工具 | 提示词文件（标准布局） | 状态 |
 |------|------------------------|------|
 | `read_file` | [`read_file/usage.prompt`](../../internal/tool/builtin/read_file/usage.prompt) + `text.go` | **已定稿**（FR-0；参数 `filepath`） |
 | `grep` | [`grep/usage.prompt`](../../internal/tool/builtin/grep/usage.prompt) + `text.go` | **已定稿**（FR-0 + FR-6 ripgrep） |
-| `glob` | [`glob/usage.prompt`](../../internal/tool/builtin/glob/usage.prompt) + `text.go` | **已定稿**（FR-0 + ripgrep `--files`） |
-| `list_dir` | `list_dir/usage.prompt` + `text.go` | 待改写 |
+| `glob` | [`glob/usage.prompt`](../../internal/tool/builtin/glob/usage.prompt) + `text.go` | **已定稿**（FR-0 + ripgrep `--files`；已移除 `list_dir`） |
 | `diagnostics` | `diagnostics/usage.prompt` + `text.go` | 待改写 |
 | `web_fetch` | `web_fetch/usage.prompt` + `text.go` | 待改写 |
 | `web_search` | `web_search/usage.prompt` + `text.go` | 待改写（占位，默认未注册） |

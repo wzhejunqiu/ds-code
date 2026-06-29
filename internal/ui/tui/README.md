@@ -163,13 +163,13 @@ TUI 工具块标题由 `internal/tool.DisplaySummary` 生成人类可读单行�
 |------|------|
 | `read_file` | `Read sample.go L1-3` |
 | `write_file` | `Write sample.go` |
-| `grep` / `glob` / `list_dir` | `Grepped … in ds-code` / `Searched files …` / `List tuitest` |
+| `grep` / `glob` | `Grepped … in ds-code` / `Searched files …` |
 | `bash` | `{description}` + 浅色命令名片段（`cd, 2+`）；Running 时 sync 命令显示**递减倒计时**（如 `1:23`）；展开显示完整 `command` |
 | `apply_patch` | 每文件一行 `Edit file.go` + 绿色 `+N` + 红色 `-N` |
 | `task` / `web_fetch` | `Task: …` / `Fetch https://…` |
 | `mcp__*` | `MCP server · tool` |
 
-`grep` 结束时按 `output_mode` 追加：`files_with_matches`（默认）为 `· N paths`（从 `Found N files` 解析），`content` 为正文行数 `· N matches`，`count` 为 `Found X occurrences` 中的 X。`glob` / `list_dir` 为 `· N paths`。持久化会话中的 `ToolCallsJSON` 仍为原始 JSON；仅展示层变化。
+`grep` 结束时按 `output_mode` 追加：`files_with_matches`（默认）为 `· N paths`（从 `Found N files` 解析），`content` 为正文行数 `· N matches`，`count` 为 `Found X occurrences` 中的 X。`glob` 为 `· N paths`。历史会话中的 `list_dir` 调用仍按 `List …` 展示。持久化会话中的 `ToolCallsJSON` 仍为原始 JSON；仅展示层变化。
 
 ## 不可复制类型（传参与遍历）
 
