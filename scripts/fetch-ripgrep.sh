@@ -23,7 +23,14 @@ fi
 
 case "$os" in
 darwin) target="${arch}-apple-darwin" ;;
-linux) target="${arch}-unknown-linux-gnu" ;;
+linux)
+  # ripgrep 15.1.0 ships x86_64 Linux as musl-only; arm64 still has gnu.
+  if [ "$arch" = "x86_64" ]; then
+    target="x86_64-unknown-linux-musl"
+  else
+    target="${arch}-unknown-linux-gnu"
+  fi
+  ;;
 *)
   echo "unsupported OS: $os" >&2
   exit 1
