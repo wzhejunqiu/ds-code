@@ -16,7 +16,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
 )
 
-const testFetchHost = "web-fetch-test.example"
+const testFetchHost = "example.com"
 
 func testStartURL(path string) *url.URL {
 	u, _ := url.Parse("http://" + testFetchHost + path)

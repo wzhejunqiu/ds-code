@@ -87,6 +87,7 @@ vuln: $(TOKENIZERS_LIB)
 
 check-commit: $(TOKENIZERS_LIB)
 	./scripts/pre-commit-check.sh
+	$(MAKE) verify-charm-v2
 	$(MAKE) vuln
 
 check-push: $(TOKENIZERS_LIB)
@@ -97,4 +98,4 @@ install-hooks:
 	git config --local core.hooksPath .githooks
 	chmod +x .githooks/pre-commit .githooks/pre-push \
 		scripts/check-gofmt.sh scripts/pre-commit-check.sh scripts/lint-packages.sh
-	@echo "git hooks installed (.githooks → check-commit / check-push, includes vuln)"
+	@echo "git hooks installed (.githooks → check-commit / check-push, includes verify-charm-v2 + vuln)"

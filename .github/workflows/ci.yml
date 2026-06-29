@@ -30,9 +30,6 @@ jobs:
       - name: go vet
         run: go vet -copylocks ./...
 
-      - name: verify charm v2
-        run: make verify-charm-v2
-
       - name: go test
         run: go test -race -count=1 ./...
 
