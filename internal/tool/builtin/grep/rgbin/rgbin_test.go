@@ -1,11 +1,26 @@
 package rgbin_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/grep/rgbin"
 )
+
+func TestMain(m *testing.M) {
+	home, err := os.MkdirTemp("", "rgbin-home-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "rgbin TestMain: %v\n", err)
+		os.Exit(1)
+	}
+	defer os.RemoveAll(home)
+	if err := os.Setenv("HOME", home); err != nil {
+		fmt.Fprintf(os.Stderr, "rgbin TestMain: %v\n", err)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 func TestRGBin_Path(t *testing.T) {
 	t.Run("C6_first_extract_executable", func(t *testing.T) {
