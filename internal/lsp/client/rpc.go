@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/lsp/transport"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 )
 
 func (c *Client) readLoop() {
@@ -101,8 +102,8 @@ func (c *Client) initialize(ctx context.Context) error {
 			"rootUri":      pathToURI(c.root),
 			"capabilities": map[string]any{},
 			"clientInfo": map[string]any{
-				"name":    "ds-code",
-				"version": "0.1",
+				"name":    version.Name,
+				"version": version.Version,
 			},
 		},
 	}

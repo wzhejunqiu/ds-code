@@ -475,7 +475,7 @@ func (r *Runner) RunEphemeral(ctx context.Context, prompt string, opts Ephemeral
 |----|-----|
 | messages | 独立切片，不写 DB |
 | tools | 默认 nil |
-| cache_scope | `btw-{uuid}`（→ API `user_id`） |
+| user_id | `datadir.Identifier()`（→ API `user_id`；安装级，见 [llm-deepseek.md](llm-deepseek.md)） |
 | usage | 默认不计入 session（`btw.count_toward_session`） |
 | compact | **不**触发 |
 

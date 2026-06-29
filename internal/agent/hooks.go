@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"go.uber.org/zap"
 )
@@ -46,7 +47,7 @@ type HookManager struct {
 
 // LoadHooks reads hooks.json from the project root if present.
 func LoadHooks(projectRoot string) *HookManager {
-	path := filepath.Join(projectRoot, ".ds-code", "hooks.json")
+	path := filepath.Join(datadir.ProjectMetadataDir(projectRoot), "hooks.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return &HookManager{}

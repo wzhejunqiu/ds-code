@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/style"
+	appver "github.com/wzhejunqiu/ds-code/internal/version"
 )
 
 const narrowWidth = 72
@@ -37,7 +38,7 @@ func Render(width int, version string, cfg *config.Config, sess *session.Session
 		cfg = &config.Config{}
 	}
 
-	title := fmt.Sprintf("ds-code v%s", version)
+	title := fmt.Sprintf("%s v%s", appver.Name, version)
 	titleLine := style.HeaderTitle.Render(title)
 
 	var metaLine string

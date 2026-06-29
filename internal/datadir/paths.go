@@ -10,9 +10,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/wzhejunqiu/ds-code/internal/version"
 )
 
-const userDataDirName = ".ds-code"
+// ProjectMetadataDir returns <projectRoot>/.ds-code.
+func ProjectMetadataDir(projectRoot string) string {
+	return filepath.Join(projectRoot, version.UserDataDirName)
+}
 
 // UserDataHome returns ~/.ds-code (fixed; not configurable).
 func UserDataHome() (string, error) {
@@ -20,7 +25,7 @@ func UserDataHome() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("datadir: user home: %w", err)
 	}
-	return filepath.Join(home, userDataDirName), nil
+	return filepath.Join(home, version.UserDataDirName), nil
 }
 
 // UserConfigPath returns ~/.ds-code/config/config.yaml.

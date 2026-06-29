@@ -1,0 +1,19 @@
+重要：{{.WebFetch}} 对需要认证或私有的 URL 会失败。使用前请检查 URL 是否指向需登录的服务（例如 Google Docs、Confluence、Jira、GitHub 私有资源）。若是，请查找能提供已认证访问的专用 MCP 工具。
+
+- 获取指定 URL 内容，将 HTML 转为 Markdown，并使用轻量高速模型结合 `prompt` 分析页面
+- 需要 `url` 与 `prompt` 两个参数
+- 获取网页内容后，将 HTML 格式转换为 Markdown
+- 调用轻量高速模型，结合提示词对页面内容进行解析处理
+- 返回模型针对页面内容生成的分析结果
+- 适用场景：需要获取并分析网页内容时调用本工具
+
+使用说明：
+- 重要：若 MCP 提供了网页抓取工具，优先使用该工具，限制可能更少。
+- 传入的网址必须是完整、合法的标准链接。
+- `url` 须为完整合法的 http 或 https URL；http 将自动升级为 https
+- `prompt` 应描述要从页面提取的信息
+- 本工具只读，不修改任何文件
+- 页面过大时分析结果可能被截断
+- 内置 15 分钟自动清理缓存，重复访问同一网址时可提升响应速度
+- 当 URL 跨域名重定向时，工具返回 `REDIRECT: <url>` 专属格式；须用该 URL 重新发起 {{.WebFetch}} 请求
+- 对 GitHub URL，优先通过 {{.Bash}} 使用 gh CLI（例如 `gh pr view`、`gh issue view`、`gh api`）

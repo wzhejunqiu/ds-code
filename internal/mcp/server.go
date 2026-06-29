@@ -56,7 +56,7 @@ func ConnectServer(ctx context.Context, cfg config.MCPServerConfig, envBlacklist
 	initReq := mcpsdk.InitializeRequest{}
 	initReq.Params.ProtocolVersion = mcpsdk.LATEST_PROTOCOL_VERSION
 	initReq.Params.ClientInfo = mcpsdk.Implementation{
-		Name:    "ds-code",
+		Name:    version.Name,
 		Version: version.Version,
 	}
 	if _, err := c.Initialize(ctx, initReq); err != nil {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 	"gopkg.in/yaml.v3"
 )
 
@@ -29,7 +30,7 @@ func rejectAutoFromConfigYAML(projectRoot string) error {
 		return err
 	}
 	if found && mode == "auto" {
-		return fmt.Errorf("config: project .ds-code/config.yaml cannot set permission.mode to auto; use --dangerously-auto or --permission-mode auto")
+		return fmt.Errorf("config: project %s/config.yaml cannot set permission.mode to auto; use --dangerously-auto or --permission-mode auto", version.UserDataDirName)
 	}
 	return nil
 }

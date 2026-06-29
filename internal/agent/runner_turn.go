@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/role"
@@ -128,7 +129,7 @@ func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *Tu
 			Stream:          true,
 			ThinkingType:    sess.ThinkingType,
 			ReasoningEffort: sess.ReasoningEffort,
-			UserID:          cacheScope(sessionID),
+			UserID:          datadir.Identifier(),
 			StrictTools:     r.Cfg.LLM.StrictTools,
 		}
 		stream := &subRoundStream{}

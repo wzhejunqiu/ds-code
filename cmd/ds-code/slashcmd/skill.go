@@ -8,6 +8,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 )
 
 func Skill(env *Env, args string) error {
@@ -18,7 +19,7 @@ func Skill(env *Env, args string) error {
 			return err
 		}
 		if len(names) == 0 {
-			fmt.Fprintln(env.Out, "No skills found under .ds-code/skills/ or ~/.ds-code/skills/")
+			fmt.Fprintf(env.Out, "No skills found under %s/skills/ or ~/%s/skills/\n", version.UserDataDirName, version.UserDataDirName)
 			return nil
 		}
 		fmt.Fprintln(env.Out, "Available skills:")

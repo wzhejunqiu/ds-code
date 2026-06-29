@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 )
 
 const (
@@ -18,12 +20,12 @@ var memorySlots = []string{"user.md", "feedback.md", "project.md", "reference.md
 
 // AgentMemoryDir returns ~/.ds-code/agent-memory/{agentType}/.
 func AgentMemoryDir(agentType string) (string, error) {
-	home, err := os.UserHomeDir()
+	root, err := datadir.UserDataHome()
 	if err != nil {
 		return "", err
 	}
 	agentType = sanitizeAgentType(agentType)
-	return filepath.Join(home, ".ds-code", "agent-memory", agentType), nil
+	return filepath.Join(root, "agent-memory", agentType), nil
 }
 
 func sanitizeAgentType(agentType string) string {

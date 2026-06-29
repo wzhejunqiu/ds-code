@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 )
 
 // LoadSkill reads SKILL.md for the named skill from project or user dirs.
@@ -19,10 +22,10 @@ func LoadSkill(projectRoot, skillName string) (string, error) {
 	}
 
 	candidates := []string{
-		filepath.Join(projectRoot, ".ds-code", "skills", skillName, "SKILL.md"),
+		filepath.Join(datadir.ProjectMetadataDir(projectRoot), "skills", skillName, "SKILL.md"),
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, ".ds-code", "skills", skillName, "SKILL.md"))
+	if homeRoot, err := datadir.UserDataHome(); err == nil {
+		candidates = append(candidates, filepath.Join(homeRoot, "skills", skillName, "SKILL.md"))
 	}
 
 	for _, path := range candidates {
@@ -34,7 +37,7 @@ func LoadSkill(projectRoot, skillName string) (string, error) {
 			return "", err
 		}
 	}
-	return "", fmt.Errorf("skill %q not found in .ds-code/skills/ or ~/.ds-code/skills/", skillName)
+	return "", fmt.Errorf("skill %q not found in %s/skills/ or ~/%s/skills/", skillName, version.UserDataDirName, version.UserDataDirName)
 }
 
 // ListSkillNames returns available skill directory names.
@@ -62,9 +65,9 @@ func ListSkillNames(projectRoot string) ([]string, error) {
 			names = append(names, e.Name())
 		}
 	}
-	add(filepath.Join(projectRoot, ".ds-code"))
-	if home, err := os.UserHomeDir(); err == nil {
-		add(filepath.Join(home, ".ds-code"))
+	add(datadir.ProjectMetadataDir(projectRoot))
+	if homeRoot, err := datadir.UserDataHome(); err == nil {
+		add(homeRoot)
 	}
 	sort.Strings(names)
 	return names, nil

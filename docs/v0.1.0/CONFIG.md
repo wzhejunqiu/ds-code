@@ -320,7 +320,7 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 | `btw.max_tokens` | int | **4096** | btw 单次 `max_tokens` |
 | `btw.count_toward_session` | bool | **false** | 是否计入 session Token 累计 |
 
-`cache_scope` 每次 `btw-{uuid}` → API `user_id`（见 [PLAN.md · /btw](PLAN.md#btw-快速提问不进入主对话)）。
+API `user_id` 统一为 [`datadir.Identifier()`](../../internal/datadir/identifier.go)（`~/.ds-code/identifier`；见 [llm-deepseek.md](llm-deepseek.md)）。`/btw` 亦使用同一安装级 ID（见 [PLAN.md · /btw](PLAN.md#btw-快速提问不进入主对话)）。
 
 ### 5.7 `non_interactive` — `-p` / `--json`
 
@@ -340,9 +340,12 @@ compact 触发：**A** `CountBreakdown.Total`、**B** `prompt_tokens_total`、**
 
 | 键 | 类型 | 默认 | 说明 |
 |----|------|------|------|
-| `web.fetch_enabled` | bool | **false** | `web_fetch` 默认关 |
+| `web.fetch_enabled` | bool | **true** | `web_fetch` 默认开；须在 `web.allowlist` 中允许目标主机才可访问外网 |
 | `web.search_enabled` | bool | **false** | `web_search` 默认关 |
 | `web.allowlist` | []string | `[]` | 允许的主机名；防 SSRF |
+| `web.fetch_model` | string | `deepseek-v4-flash` | `web_fetch` 页面分析模型 |
+| `web.fetch_cache_ttl` | duration | `15m` | 原始正文 LRU 缓存单条 TTL |
+| `web.fetch_cache_max_bytes` | int | `52428800`（50MiB） | LRU 总容量（gzip 压缩后） |
 
 ### 5.10 `agent` — Runner
 

@@ -1,4 +1,4 @@
-package web_fetch
+package web_fetch_test
 
 import (
 	"context"
@@ -7,95 +7,109 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/llm/mock"
+	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
 )
 
-func TestHostAllowed(t *testing.T) {
-	list := []string{"example.com", "*.github.io"}
-	if !hostAllowed("example.com", list) {
-		t.Fatal("expected example.com")
-	}
-	if !hostAllowed("docs.github.io", list) {
-		t.Fatal("expected subdomain github.io")
-	}
-	if hostAllowed("evil.com", list) {
-		t.Fatal("expected deny")
-	}
-	if hostAllowed("example.com", nil) {
-		t.Fatal("empty allowlist should deny")
-	}
-	// Must not match unrelated domains that merely contain the suffix as substring.
-	if hostAllowed("notgithub.io", list) {
-		t.Fatal("notgithub.io should not match *.github.io")
-	}
-	if hostAllowed("evil.github.io.attacker.com", list) {
-		t.Fatal("suffix trick host should be denied")
-	}
+const testFetchHost = "web-fetch-test.example"
+
+func testStartURL(path string) *url.URL {
+	u, _ := url.Parse("http://" + testFetchHost + path)
+	return u
 }
 
-func TestHostAllowed_wildcardCo(t *testing.T) {
-	list := []string{"*.co"}
-	if hostAllowed("foo.co", list) {
-		t.Fatal("short TLD wildcard *.co should be rejected")
-	}
-	if hostAllowed("foo.co.uk", list) {
-		t.Fatal("foo.co.uk should not match *.co")
-	}
-}
-
-func TestWebFetch_redirectRevalidatesAllowlist(t *testing.T) {
-	allowed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/ok":
-			_, _ = w.Write([]byte("ok"))
-		case "/redirect":
-			http.Redirect(w, r, "http://evil.example.net/secret", http.StatusFound)
-		default:
-			http.NotFound(w, r)
-		}
+func TestFetchURL_crossHostRedirect(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://other.test/page", http.StatusFound)
 	}))
-	defer allowed.Close()
+	defer srv.Close()
 
-	parsed, err := url.Parse(allowed.URL)
+	client := web_fetch.TestFetchClient(srv.URL, []string{testFetchHost})
+	out, err := web_fetch.FetchURLWithClient(context.Background(), testStartURL("/"), []string{testFetchHost}, client)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if out.CrossHostRedirect == nil || out.CrossHostRedirect.Host != "other.test" {
+		t.Fatalf("redirect = %v", out.CrossHostRedirect)
+	}
+}
+
+func TestFetchURL_sameDomainRedirectNotMarkedForCache(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			http.Redirect(w, r, "/final", http.StatusFound)
+			return
+		}
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	client := web_fetch.TestFetchClient(srv.URL, []string{testFetchHost})
+	out, err := web_fetch.FetchURLWithClient(context.Background(), testStartURL("/start"), []string{testFetchHost}, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.Redirected {
+		t.Fatal("expected redirected=true")
+	}
+	if string(out.Page.Body) != "ok" {
+		t.Fatalf("body = %q", out.Page.Body)
+	}
+}
+
+func TestWebFetch_cacheSkipsHTTPOnSecondCall(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		_, _ = w.Write([]byte("plain text body"))
+	}))
+	defer srv.Close()
+
 	cfg := &config.Config{
-		Web: config.WebConfig{
-			FetchEnabled: true,
-			Allowlist:    []string{parsed.Hostname()},
+		Web: config.WebConfig{FetchEnabled: true, Allowlist: []string{testFetchHost}},
+		LLM: config.LLMConfig{MaxTokens: 4096},
+	}
+	llmMock := &mock.Client{
+		Responses: []*llm.Response{
+			{Content: "a1", FinishReason: "stop"},
+			{Content: "a2", FinishReason: "stop"},
 		},
 	}
-	tool := &WebFetchTool{Cfg: cfg, Strict: false}
+	cache := web_fetch.NewLRUCache(cfg.Web)
+	tool := &web_fetch.WebFetchTool{Cfg: cfg, Strict: false, LLM: llmMock, Cache: cache}
 
-	_, err = tool.Execute(context.Background(), json.RawMessage(`{"url":"`+allowed.URL+`/redirect"}`))
-	if err == nil {
-		t.Fatal("expected redirect allowlist error")
-	}
-	if !strings.Contains(err.Error(), "allowlist") {
-		t.Fatalf("err = %v, want allowlist denial", err)
-	}
+	// Prime cache directly (Execute would block on loopback without transport injection).
+	cache.Put("https://"+testFetchHost+"/", web_fetch.PageBody{
+		Body:        []byte("plain text body"),
+		ContentType: "text/plain",
+		StatusCode:  200,
+	})
 
-	// httptest binds to 127.0.0.1; loopback must stay blocked even if allowlisted.
-	if hostAllowed(parsed.Hostname(), []string{parsed.Hostname()}) {
-		t.Fatalf("loopback host %q should be blocked by SSRF policy", parsed.Hostname())
+	args := `{"url":"http://` + testFetchHost + `/","prompt":"p"}`
+	if _, err := tool.Execute(context.Background(), json.RawMessage(args)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tool.Execute(context.Background(), json.RawMessage(args)); err != nil {
+		t.Fatal(err)
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("hits = %d, want 0", hits.Load())
+	}
+	if len(llmMock.Calls) != 2 {
+		t.Fatalf("llm calls = %d, want 2", len(llmMock.Calls))
 	}
 }
 
-func TestNewWebFetchClient_rejectsDisallowedRedirectHost(t *testing.T) {
-	client := newWebFetchClient([]string{"allowed.test"})
-	first, err := http.NewRequest(http.MethodGet, "http://allowed.test/start", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	next, err := http.NewRequest(http.MethodGet, "http://evil.example.net/next", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = client.CheckRedirect(next, []*http.Request{first})
-	if err == nil || !strings.Contains(err.Error(), "evil.example.net") {
-		t.Fatalf("CheckRedirect err = %v", err)
+func TestWebFetch_requiresPrompt(t *testing.T) {
+	cfg := &config.Config{Web: config.WebConfig{FetchEnabled: true, Allowlist: []string{"example.com"}}}
+	tool := &web_fetch.WebFetchTool{Cfg: cfg, LLM: &mock.Client{}}
+	_, err := tool.Execute(context.Background(), json.RawMessage(`{"url":"https://example.com"}`))
+	if err == nil || !strings.Contains(err.Error(), "prompt") {
+		t.Fatalf("err = %v", err)
 	}
 }

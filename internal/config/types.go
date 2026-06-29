@@ -172,9 +172,12 @@ type MCPServerConfig struct {
 }
 
 type WebConfig struct {
-	FetchEnabled  bool     `mapstructure:"fetch_enabled"`
-	SearchEnabled bool     `mapstructure:"search_enabled"`
-	Allowlist     []string `mapstructure:"allowlist"`
+	FetchEnabled       bool          `mapstructure:"fetch_enabled"`
+	SearchEnabled      bool          `mapstructure:"search_enabled"`
+	Allowlist          []string      `mapstructure:"allowlist"`
+	FetchModel         string        `mapstructure:"fetch_model"`
+	FetchCacheTTL      time.Duration `mapstructure:"fetch_cache_ttl"`
+	FetchCacheMaxBytes int           `mapstructure:"fetch_cache_max_bytes"`
 }
 
 type LSPConfig struct {

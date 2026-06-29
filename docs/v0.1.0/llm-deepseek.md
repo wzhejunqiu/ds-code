@@ -237,7 +237,7 @@ YAML 键、CLI、环境变量及合并优先级见 **[CONFIG.md](CONFIG.md)**；
   "max_tokens": 16384,
   "thinking": { "type": "enabled" },
   "reasoning_effort": "max",
-  "user_id": "<optional: cache_scope，见下表>"
+  "user_id": "<optional: datadir.Identifier()，见下表>"
 }
 ```
 
@@ -251,7 +251,7 @@ YAML 键、CLI、环境变量及合并优先级见 **[CONFIG.md](CONFIG.md)**；
 | `reasoning_effort` | `high` \| `max`，默认 `max` |
 | `temperature` / `top_p` | 思考模式 **enabled** 时不传或忽略（官方不生效） |
 | `frequency_penalty` / `presence_penalty` | **deprecated**，不传 |
-| `user_id` | 可选；ds-code 称 **cache_scope**：主会话为 `hex(session_id)`，`/btw` 为 `btw-{uuid}`；用于 KV cache 隔离（[API 说明](https://api-docs.deepseek.com/zh-cn/api/create-chat-completion)） |
+| `user_id` | 可选；ds-code 使用 **`datadir.Identifier()`**：`hex(sha256(UUIDv4 + whoami + "ds-code"))`，持久化于 `~/.ds-code/identifier`；主会话、`/btw`、compact、web_fetch 等全部共用，利于跨会话 prompt cache 命中（[API 说明](https://api-docs.deepseek.com/zh-cn/api/create-chat-completion)） |
 
 **`finish_reason: length`**：达到 `max_tokens` 或上下文上限；Runner 应提示用户缩小任务或 `/compact`。
 
@@ -392,7 +392,7 @@ Go SDK：`thinking` 放请求体顶层或 `extra_body`（与 [官方 Python 样�
 
 `messages` 表建议包含：`id`, `session_id`, `role`, `content`, `reasoning_content`, `tool_calls_json`, `tool_call_id`, `prompt_tokens`, `completion_tokens`, `prompt_cache_hit_tokens`, `created_at`。
 
-`/btw`：**不**写入 `messages`；`cache_scope` 为 `btw-{uuid}`（写入 API `user_id`），与主 session 的 `cache_scope` 隔离（见 [PLAN.md · /btw](PLAN.md#btw-快速提问不进入主对话)）。
+`/btw`：**不**写入 `messages`；`user_id` 与主会话相同（`datadir.Identifier()`，见 [PLAN.md · /btw](PLAN.md#btw-快速提问不进入主对话)）。
 
 ---
 

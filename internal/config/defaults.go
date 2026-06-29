@@ -67,9 +67,12 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("mcp.servers", []any{})
 
-	v.SetDefault("web.fetch_enabled", false)
+	v.SetDefault("web.fetch_enabled", true)
 	v.SetDefault("web.search_enabled", false)
 	v.SetDefault("web.allowlist", []string{})
+	v.SetDefault("web.fetch_model", "deepseek-v4-flash")
+	v.SetDefault("web.fetch_cache_ttl", "15m")
+	v.SetDefault("web.fetch_cache_max_bytes", 52_428_800)
 
 	v.SetDefault("lsp.enabled", true)
 	v.SetDefault("lsp.idle_shutdown", "120s")

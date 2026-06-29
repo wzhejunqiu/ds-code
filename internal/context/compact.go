@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/llm/deepseek"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
@@ -107,7 +108,7 @@ func (s *Service) summarize(ctx context.Context, sess session.Session, transcrip
 		Stream:       false,
 		ThinkingType: "disabled",
 		StrictTools:  s.Cfg.LLM.StrictTools,
-		UserID:       "compact-" + sess.ID,
+		UserID:       datadir.Identifier(),
 	})
 	if err != nil {
 		return "", llm.Usage{}, err

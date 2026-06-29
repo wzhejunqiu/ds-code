@@ -220,7 +220,7 @@ finishMaxTurnsExceeded（soft landing 摘要）
 | `Model` / `ThinkingType` / `ReasoningEffort` | 当前 `session.Session` |
 | `Tools` | `Tools.Definitions()`（MaxTurns 摘要请求无 tools） |
 | `MaxTokens` | PrepareRequest 返回值 |
-| `UserID` | [`cacheScope`](./runner.go)(sessionID) = sha256(sessionID) hex，用于 prompt cache 分桶 |
+| `UserID` | [`datadir.Identifier()`](../datadir/identifier.go)：`hex(sha256(UUIDv4 + whoami + "ds-code"))`，持久化于 `~/.ds-code/identifier`，本机安装共享 |
 | `StrictTools` | `cfg.llm.strict_tools` |
 
 [`Context.BeginUserTurn` / `EndUserTurn`](../context/service.go) 包裹整次用户回合，重置 per-turn token breakdown 缓存（compact 条件 A 用）。

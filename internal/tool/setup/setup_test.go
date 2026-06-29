@@ -42,8 +42,22 @@ func TestBuildRegistry_planWithWebFetch(t *testing.T) {
 		LSP:         config.LSPConfig{Enabled: false},
 	}
 	perm := permission.NewEngine("readonly", dir, false)
-	reg := setup.BuildRegistry(runmode.Plan, setup.Deps{Cfg: cfg, Perm: perm, Strict: false})
+	reg := setup.BuildRegistry(runmode.Plan, setup.Deps{Cfg: cfg, Perm: perm, Strict: false, LLM: &mock.Client{}})
 	if _, ok := reg.Get("web_fetch"); !ok {
-		t.Fatal("plan with fetch_enabled should register web_fetch")
+		t.Fatal("plan with fetch_enabled and LLM should register web_fetch")
+	}
+}
+
+func TestBuildRegistry_planWithoutLLMOmitsWebFetch(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &config.Config{
+		ProjectRoot: dir,
+		Web:         config.WebConfig{FetchEnabled: true, Allowlist: []string{"example.com"}},
+		LSP:         config.LSPConfig{Enabled: false},
+	}
+	perm := permission.NewEngine("readonly", dir, false)
+	reg := setup.BuildRegistry(runmode.Plan, setup.Deps{Cfg: cfg, Perm: perm, Strict: false})
+	if _, ok := reg.Get("web_fetch"); ok {
+		t.Fatal("web_fetch should not register without LLM")
 	}
 }

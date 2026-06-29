@@ -281,15 +281,20 @@ mcp:
   #   env: {}
 
 # ---------------------------------------------------------------------------
-# web — 网络工具（默认关闭，防 SSRF）
+# web — 网络工具（allowlist 防 SSRF；fetch_enabled 默认开）
 # ---------------------------------------------------------------------------
 web:
-  # 启用 web_fetch 工具
-  fetch_enabled: false
+  # 启用 web_fetch 工具（须在 allowlist 中配置允许的主机）
+  fetch_enabled: true
   # 启用 web_search 工具
   search_enabled: false
   # 允许访问的主机名白名单；空 = 全部拒绝（fetch/search 均须显式开启）
   allowlist: []
+  # web_fetch 页面分析模型
+  # fetch_model: deepseek-v4-flash
+  # 原始正文 LRU 缓存 TTL / 总容量（gzip 压缩后计容）
+  # fetch_cache_ttl: 15m
+  # fetch_cache_max_bytes: 52428800
 
 # ---------------------------------------------------------------------------
 # run_mode — agent | plan（Plan 模式仅只读工具子集；CLI --plan 亦可设置）

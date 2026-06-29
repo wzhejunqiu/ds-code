@@ -5,11 +5,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 )
 
 // LoadRules reads all .md files from .ds-code/rules/ under projectRoot.
 func LoadRules(projectRoot string) (string, error) {
-	dir := filepath.Join(projectRoot, ".ds-code", "rules")
+	dir := filepath.Join(datadir.ProjectMetadataDir(projectRoot), "rules")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {

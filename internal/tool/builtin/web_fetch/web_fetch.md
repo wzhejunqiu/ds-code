@@ -2,78 +2,61 @@
 
 ## 概述
 
-在配置允许时，通过 HTTP(S) GET 获取 URL 正文，供 Agent 阅读文档、API 说明等外部资源。
+在配置允许时，通过 HTTP(S) GET 获取 URL 正文，将 HTML 转为 Markdown，并使用轻量模型（默认 `deepseek-v4-flash`）按 `prompt` 分析页面内容。
 
 ## 注册与可见性
 
 | 模式 | 注册条件 |
 |------|----------|
-| plan / agent | `web.fetch_enabled: true` |
+| plan / agent | `web.fetch_enabled: true`（默认）且目标主机在 `web.allowlist` 中 |
 
 ## 参数 Schema
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `url` | string | 是 | `http://` 或 `https://` URL |
-
-## 用法示例
-
-```json
-{"url": "https://example.com/docs/page"}
-```
-
-需在 `web.allowlist` 中允许主机，例如 `example.com` 或 `*.example.com`。
+| `url` | string | 是 | `http://` 或 `https://` URL（默认 80 端口 http 自动升级 https） |
+| `prompt` | string | 是 | 要从页面提取或分析的信息 |
 
 ## 返回格式
 
-```text
-HTTP {status_code}
-{body}
-```
-
-响应体读取上限 **512 KiB**；整体可能再经 `context.TruncateToolResult` 截断。
+- **成功**：模型分析结果（纯文本）
+- **跨域重定向**：`REDIRECT: <url>` + 说明文字；须用该 URL 重新请求
+- **错误**：`Err*` 文案
 
 ## 实现细节
 
-源文件：[`web_fetch.go`](web_fetch.go)、[`web_fetch_policy.go`](web_fetch_policy.go)
+源文件：[`web_fetch.go`](web_fetch.go)、[`fetch.go`](fetch.go)、[`analyze.go`](analyze.go)、[`cache.go`](cache.go)、[`convert.go`](convert.go)
+
+### 流水线
+
+1. `normalizeURL`（http 默认端口 → https、去 fragment、host 小写）
+2. 内存 LRU 缓存查找（key=url，gzip 压缩正文，15min TTL，总容量 50MiB）
+3. 未命中则 HTTP GET（手动处理重定向；跨域返回 REDIRECT；同域跟随最多 10 次）
+4. **无重定向**的响应写入 LRU；发生过重定向的不缓存
+5. HTML → Markdown（`html-to-markdown`）
+6. LLM 分析（`web.fetch_model`）
 
 ### 多层校验
 
-| 阶段 | 检查 |
-|------|------|
-| 请求前 | `validateFetchURLHost`：主机须在 allowlist；禁止 localhost、metadata 等 |
-| 重定向 | 最多 10 次；每次检查新 host 仍在 allowlist |
-| 拨号时 | `validateResolvedFetchHost`：DNS 解析后拒绝私有 IP、链路本地、169.254.169.254 |
-
-`isBlockedFetchHost` 对主机名做 DNS 查找，私有 IP 直接拒绝。
-
-### HTTP 客户端
-
-- 超时 30s
-- 自定义 `Transport.DialContext` 在连接建立前再次校验解析后的 IP
+与 [`web_fetch_policy.go`](web_fetch_policy.go) 相同：allowlist、私有 IP 阻断、DNS rebinding 防护。
 
 ## 配置项
 
 | 键 | 默认 | 说明 |
 |----|------|------|
-| `web.fetch_enabled` | false | 是否注册并允许调用 |
-| `web.allowlist` | [] | 允许的主机列表；支持 `*.domain.com`；**空列表表示全部拒绝** |
+| `web.fetch_enabled` | true | 是否注册并允许调用（默认开；`allowlist` 为空时仍拒绝所有主机） |
+| `web.allowlist` | [] | 允许的主机列表；**空列表表示全部拒绝** |
+| `web.fetch_model` | `deepseek-v4-flash` | 页面分析模型 |
+| `web.fetch_cache_ttl` | `15m` | LRU 单条 TTL |
+| `web.fetch_cache_max_bytes` | `52428800` | LRU 总容量（压缩后） |
 
 ## 权限与安全
 
 - **PermissionLevel**：`Medium`
-- 防 SSRF：allowlist + 私有 IP 阻断 + localhost 阻断
-- Plan 模式可用，但仍受 `permission.mode` 约束（与 agent 相同 ask 策略）
-
-## 设计思想
-
-- **默认关闭**：外网访问需显式开启并配置白名单。
-- **双重主机检查**：URL 解析阶段与 TCP 拨号阶段各验一次，缓解 DNS rebinding。
-- **只读 GET**：不支持 POST/自定义头，降低数据外泄面。
+- 防 SSRF：allowlist + 私有 IP 阻断
+- 认证/私有页面无法抓取；跨域重定向不自动跟随
 
 ## 相关代码
 
-- [`web_fetch.go`](web_fetch.go)
-- [`web_fetch_policy.go`](web_fetch_policy.go)
-- [`web_fetch_test.go`](web_fetch_test.go)、[`web_fetch_policy_test.go`](web_fetch_policy_test.go)
+- [`web_fetch.go`](web_fetch.go)、[`usage.prompt`](usage.prompt)
 - [`display.go`](../../display.go) — `FormatWebFetchDisplay`

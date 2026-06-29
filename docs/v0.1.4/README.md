@@ -32,7 +32,7 @@ v0.1.4 的 **核心目标** 是：**逐一把所有内建工具的 LLM 提示词
 | `grep` | [`grep/usage.prompt`](../../internal/tool/builtin/grep/usage.prompt) + `text.go` | **已定稿**（FR-0 + FR-6 ripgrep） |
 | `glob` | [`glob/usage.prompt`](../../internal/tool/builtin/glob/usage.prompt) + `text.go` | **已定稿**（FR-0 + ripgrep `--files`；已移除 `list_dir`） |
 | `diagnostics` | `diagnostics/usage.prompt` + `text.go` | 待改写 |
-| `web_fetch` | `web_fetch/usage.prompt` + `text.go` | 待改写 |
+| `web_fetch` | `web_fetch/usage.prompt` + `text.go` | **已定稿** |
 | `web_search` | `web_search/usage.prompt` + `text.go` | 待改写（占位，默认未注册） |
 | `bash` | [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) + `text.go` | **参考实现** |
 | `apply_patch` | `apply_patch/usage.prompt` + `text.go` | **已定稿** |

@@ -1,5 +1,7 @@
 package chat
 
+import "github.com/wzhejunqiu/ds-code/internal/version"
+
 import "time"
 
 // Block is one row in the in-memory transcript (rendered by Render).
@@ -65,7 +67,7 @@ const (
 
 // InterruptSessionMarker is stored as a system row so /resume restores the marker.
 func InterruptSessionMarker() string {
-	return "[ds-code] " + interruptLabel
+	return version.SystemPrefix + interruptLabel
 }
 
 // InterruptLabel is the human-readable interrupt line shown in the transcript.

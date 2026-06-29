@@ -107,7 +107,7 @@ flowchart TB
 1. 解析 **`@path` 引用**；将 user 消息**追加到历史层**（`messages` 表，只增；Phase 1–2 见 [会话存储分期](#会话存储分期)）
 2. 进入**子轮次循环**（直至无 `tool_calls` 或达到 `MaxTurns` / 取消）：
    - **`PrepareRequest`**：按 [compact 触发](#会话-token计费累计-vs-compact-触发) 决定是否 `CompactAPIContext`（**同一 `PrepareRequest` 最多 compact 一次**）；`view := BuildAPIContext(session)`
-   - 调用 DeepSeek（`stream` + `tools` + 思考模式；`max_tokens` 取自配置；主会话 `user_id` = `cache_scope`，见 [llm-deepseek.md](llm-deepseek.md)）
+   - 调用 DeepSeek（`stream` + `tools` + 思考模式；`max_tokens` 取自配置；`user_id` = `datadir.Identifier()`，见 [llm-deepseek.md](llm-deepseek.md)）
    - `tool_calls` → **permission.Engine** → [并行/顺序执行工具](#同一-assistant-多条-tool_calls) → `role=tool` 回注；保留 `reasoning_content`；**assistant/tool 回写历史层**
 3. 每次响应后累加 API `usage` 到 session（**含 compact 摘要调用**）；可选 **checkpoint**（Phase 7）
 
@@ -333,7 +333,7 @@ func SessionBilledTokens(s session.Session) int {
 |----|------|
 | 检查时机 | 每次 `PrepareRequest`（含 tool 子轮次）；条件 A 的 Count 仅在用户轮首个子轮次计算 |
 | compact 后 | 计费累计 **不清零**；压缩 **API 上下文层**；若仍满足 B 但 A 已低于阈值，**本 Prepare 不再二次 compact**（依赖后续请求实际 prompt 下降） |
-| `cache_scope` | 主会话：`hex(session_id)` → API `user_id`（与 `/btw` 的 `btw-{uuid}` 隔离） |
+| `user_id` | `datadir.Identifier()` → API `user_id`（`hex(sha256(UUIDv4 + whoami + "ds-code"))`，持久化于 `~/.ds-code/identifier`，本机安装共享） |
 
 #### 自动 compact（`PrepareRequest` 内）
 
@@ -371,7 +371,7 @@ func SessionBilledTokens(s session.Session) int {
 | 工具 | **默认关闭** `tools`（纯问答）；不执行 shell/write |
 | 持久化 | **不**追加 `messages`；**不**改变 `compact_summary` / 水位线 |
 | Token 统计 | 默认 **不计入** session 累计；单独显示「btw 本次」 |
-| `cache_scope` | 每次请求生成 `btw-{uuid}`，映射到 API `user_id`；**不与**主 session 的 `cache_scope` 共用（避免 KV cache 串扰） |
+| `user_id` | 与主会话相同：`datadir.Identifier()`（安装级，见 [llm-deepseek.md](llm-deepseek.md)） |
 | TUI | 流式显示在**旁路面板**或折叠块（样式与主对话区分，如 `[btw]` 前缀）；关闭后面板消失，主对话滚动区不变 |
 | 实现 | `Runner.RunEphemeral(ctx, prompt, EphemeralOpts)`，独立 `messages[]`，单次 `chat/completions` |
 

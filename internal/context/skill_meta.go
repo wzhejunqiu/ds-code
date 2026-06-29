@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 )
 
 // SkillMeta is parsed frontmatter from SKILL.md.
@@ -26,10 +28,10 @@ func LoadSkillWithMeta(projectRoot, skillName string) (SkillMeta, string, error)
 func SkillPath(projectRoot, skillName string) (string, error) {
 	skillName = strings.TrimSpace(skillName)
 	candidates := []string{
-		filepath.Join(projectRoot, ".ds-code", "skills", skillName, "SKILL.md"),
+		filepath.Join(datadir.ProjectMetadataDir(projectRoot), "skills", skillName, "SKILL.md"),
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, ".ds-code", "skills", skillName, "SKILL.md"))
+	if homeRoot, err := datadir.UserDataHome(); err == nil {
+		candidates = append(candidates, filepath.Join(homeRoot, "skills", skillName, "SKILL.md"))
 	}
 	for _, path := range candidates {
 		if _, err := os.Stat(path); err == nil {

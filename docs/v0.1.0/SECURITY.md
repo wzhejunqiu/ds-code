@@ -12,7 +12,7 @@
 | 用户 `@` 显式绕过 S3 / compact 外发敏感内容 | 仅主会话 user message 中 `@file` / `@dir/` 可越过 S3（§S3-S）；Agent 工具、`read_file`、shell 仍 S3；`@` 展开受 `context.at_reference_max_chars` / `at_dir_max_*` 预算约束；compact 时 `sanitizeCompactInput`（S12）行级 redact **不**对 `@` 块专用剥离；用户显式点名视为知情承担风险；TUI 复制可见 MCP 参数 / spill hint |
 | TUI 应用内复制泄露敏感可见内容 | 剪贴板写入 viewport **已渲染** plain text（剥离 ANSI）；**可能含** MCP 参数摘要（≤400 字符）、spill hint 绝对路径、shell 命令行；与 `--allow-log-sensitive-data` 独立；失败降级提示、不 panic |
 | API Key 进入仓库或配置 | 仅 `DS_CODE_DEEPSEEK_API_KEY` / `DEEPSEEK_API_KEY`；YAML 禁止 `api_key` |
-| SSRF（Web 工具） | `web.fetch_enabled` 默认关；`web.allowlist` 必填；通配符 `*.example.com` 仅匹配 `example.com` 及其子域 |
+| SSRF（Web 工具） | `web.fetch_enabled` 默认开；`web.allowlist` 必填（空列表拒绝全部）；通配符 `*.example.com` 仅匹配 `example.com` 及其子域 |
 | MCP 写操作绕过权限 | MCP 工具走同一 `permission.Engine`；写工具检测器 |
 | 子代理提权写盘 | `task` 子 Runner 仅只读工具集（S14） |
 | 会话数据跨项目泄露 | `project_id = sha256(project_root)` 分库；DB/checkpoint/audit 按项目目录隔离 |

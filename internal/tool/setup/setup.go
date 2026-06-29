@@ -40,8 +40,13 @@ func RegisterReadOnly(reg *tool.Registry, d Deps) {
 	if d.LSP != nil && d.Cfg.LSP.Enabled {
 		reg.Register(&diagnostics.DiagnosticsTool{Cfg: d.Cfg, Perm: d.Perm, SearchSkip: d.SearchSkip, LSP: d.LSP, Strict: d.Strict})
 	}
-	if d.Cfg.Web.FetchEnabled {
-		reg.Register(&web_fetch.WebFetchTool{Cfg: d.Cfg, Strict: d.Strict})
+	if d.Cfg.Web.FetchEnabled && d.LLM != nil {
+		reg.Register(&web_fetch.WebFetchTool{
+			Cfg:    d.Cfg,
+			Strict: d.Strict,
+			LLM:    d.LLM,
+			Cache:  web_fetch.SharedCache(d.Cfg.Web),
+		})
 	}
 }
 

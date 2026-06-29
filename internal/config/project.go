@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 )
 
 // ResolveProjectRoot walks from startDir upward for a git root; otherwise returns
@@ -52,5 +54,5 @@ func isGitRoot(dir string) bool {
 
 // ProjectConfigPath returns <git-root>/.ds-code/config.yaml if the file exists.
 func ProjectConfigPath(projectRoot string) string {
-	return filepath.Join(projectRoot, ".ds-code", "config.yaml")
+	return filepath.Join(datadir.ProjectMetadataDir(projectRoot), "config.yaml")
 }

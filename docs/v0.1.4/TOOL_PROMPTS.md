@@ -46,7 +46,7 @@
 | `grep` | ✅ [`usage.prompt`](../../internal/tool/builtin/grep/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + FR-6 已实现** | ripgrep 15.1.0；`{{.Grep}}/{{.Bash}}/{{.Agent}}` 注入；输出 `Found N files` 等；不搜 `.git` |
 | `glob` | ✅ [`usage.prompt`](../../internal/tool/builtin/glob/usage.prompt) | ✅ `SchemaPattern` 等（中文） | **已定稿 + ripgrep 已实现** | ripgrep `--files`；`Found N files` 输出；目录列举合并入 glob（`pattern="*"`）；已移除 `list_dir` |
 | `diagnostics` | 待建 | `SchemaSeverity` 等 | 待改写 | |
-| `web_fetch` | 待建 | `SchemaHTTPURL` 等 | 待改写 | |
+| `web_fetch` | ✅ [`usage.prompt`](../../internal/tool/builtin/web_fetch/usage.prompt) | ✅ `SchemaURL`/`SchemaPrompt` | **已定稿 + 能力已实现** | prompt+LLM 分析；LRU 缓存；跨域 REDIRECT |
 | `web_search` | 待建 | `SchemaQuery` 等 | 待改写 | 默认未注册 |
 | `bash` | ✅ [`shell/usage.prompt`](../../internal/tool/builtin/shell/usage.prompt) | ✅ `text.go` | **已定稿 + FR-5 已实现** | `timeout_ms`、`run_in_background`；无 `list_jobs`；退出 kill job |
 | `apply_patch` | ✅ [`usage.prompt`](../../internal/tool/builtin/apply_patch/usage.prompt) | ✅ `SchemaPatchBody` 等 | **已定稿 + FR-0 已实现** | |

@@ -4,24 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
+	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
-	"github.com/wzhejunqiu/ds-code/internal/tool/builtin"
 )
 
-// WebFetchTool fetches a URL when enabled and allowlisted.
+var (
+	sharedCache   *LRUCache
+	sharedCacheMu sync.Mutex
+)
+
+// WebFetchTool fetches a URL, converts HTML to Markdown, and analyzes with a lightweight model.
 type WebFetchTool struct {
 	Cfg    *config.Config
 	Strict bool
+	LLM    llm.Client
+	Cache  *LRUCache
 }
 
 func (t *WebFetchTool) Name() string { return tool.NameWebFetch.String() }
@@ -29,12 +35,13 @@ func (t *WebFetchTool) Name() string { return tool.NameWebFetch.String() }
 func (t *WebFetchTool) IsReadOnly() bool        { return true }
 func (t *WebFetchTool) IsConcurrencySafe() bool { return true }
 
-func (t *WebFetchTool) Description() string { return DescWebFetch }
+func (t *WebFetchTool) Description() string { return RenderDesc() }
 
 func (t *WebFetchTool) Schema() map[string]any {
 	return tool.ObjectSchema(map[string]any{
-		"url": map[string]any{"type": "string", "description": builtin.SchemaHTTPURL},
-	}, []string{"url"}, t.Strict)
+		"url":    map[string]any{"type": "string", "description": SchemaURL},
+		"prompt": map[string]any{"type": "string", "description": SchemaPrompt},
+	}, []string{"url", "prompt"}, t.Strict)
 }
 
 func (t *WebFetchTool) PermissionLevel() permission.Level { return permission.LevelMedium }
@@ -44,41 +51,71 @@ func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", fmt.Errorf("%s", ErrDisabled)
 	}
 	var in struct {
-		URL string `json:"url"`
+		URL    string `json:"url"`
+		Prompt string `json:"prompt"`
 	}
 	if err := json.Unmarshal(args, &in); err != nil {
 		return "", err
 	}
-	u, err := url.Parse(strings.TrimSpace(in.URL))
-	if err != nil || u.Scheme == "" || u.Host == "" {
+	if strings.TrimSpace(in.Prompt) == "" {
+		return "", fmt.Errorf("%s", ErrPromptRequired)
+	}
+
+	u, err := normalizeURL(in.URL)
+	if err != nil {
 		return "", fmt.Errorf("%s", ErrInvalidURL)
 	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", fmt.Errorf("%s", ErrSchemeNotHTTP)
-	}
-	if err := validateFetchURLHost(u.Hostname(), t.Cfg.Web.Allowlist); err != nil {
-		return "", err
+	key := cacheKey(u)
+	cache := t.cache()
+
+	var page PageBody
+	if cached := cache.Get(key); cached != nil {
+		page = *cached
+	} else {
+		outcome, err := fetchURL(ctx, u, t.Cfg.Web.Allowlist)
+		if err != nil {
+			return "", err
+		}
+		if outcome.CrossHostRedirect != nil {
+			return formatCrossHostRedirect(outcome.CrossHostRedirect), nil
+		}
+		page = outcome.Page
+		if !outcome.Redirected {
+			cache.Put(key, page)
+		}
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	markdown := PageToMarkdown(page)
+	result, err := AnalyzePage(ctx, t.LLM, t.Cfg, in.Prompt, markdown)
 	if err != nil {
 		return "", err
 	}
-	client := newWebFetchClient(t.Cfg.Web.Allowlist)
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 512*1024))
-	if err != nil {
-		return "", err
-	}
-	out := fmt.Sprintf(ResultHTTPPrefix, resp.StatusCode, string(body))
-	return ctxpkg.TruncateToolResult(out, t.Cfg), nil
+	return ctxpkg.TruncateToolResult(result, t.Cfg), nil
 }
 
-func newWebFetchClient(allowlist []string) *http.Client {
+func (t *WebFetchTool) cache() *LRUCache {
+	if t.Cache != nil {
+		return t.Cache
+	}
+	sharedCacheMu.Lock()
+	defer sharedCacheMu.Unlock()
+	if sharedCache == nil {
+		sharedCache = NewLRUCache(t.Cfg.Web)
+	}
+	return sharedCache
+}
+
+// SharedCache returns a process-wide LRU cache for web_fetch (used by setup).
+func SharedCache(web config.WebConfig) *LRUCache {
+	sharedCacheMu.Lock()
+	defer sharedCacheMu.Unlock()
+	if sharedCache == nil {
+		sharedCache = NewLRUCache(web)
+	}
+	return sharedCache
+}
+
+func newWebFetchClient() *http.Client {
 	dialer := &net.Dialer{Timeout: 30 * time.Second}
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -96,14 +133,7 @@ func newWebFetchClient(allowlist []string) *http.Client {
 		Timeout:   30 * time.Second,
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 10 {
-				return fmt.Errorf("%s", ErrTooManyRedirects)
-			}
-			host := req.URL.Hostname()
-			if err := validateFetchURLHost(host, allowlist); err != nil {
-				return fmt.Errorf(ErrRedirectBlocked, err)
-			}
-			return nil
+			return http.ErrUseLastResponse
 		},
 	}
 }

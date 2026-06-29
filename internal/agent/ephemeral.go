@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
+	"github.com/wzhejunqiu/ds-code/internal/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/role"
@@ -64,7 +64,7 @@ func (r *Runner) RunEphemeral(ctx context.Context, prompt string, opts Ephemeral
 		return nil, err
 	}
 
-	userID := "btw-" + uuid.NewString()
+	userID := datadir.Identifier()
 	logging.L().Debug("ephemeral request",
 		zap.String("session_id", opts.SessionID),
 		zap.Int("messages", len(messages)),

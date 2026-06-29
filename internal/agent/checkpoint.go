@@ -8,6 +8,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 	"go.uber.org/zap"
 )
 
@@ -72,6 +73,6 @@ func (r *Runner) RewindCheckpoint(ctx context.Context, sessionID string, id int)
 	return r.Sessions.AppendMessage(ctx, session.Message{
 		SessionID: sessionID,
 		Role:      role.System,
-		Content:   fmt.Sprintf("[ds-code] Rewound workspace to checkpoint #%d (%s)", id, rec.Tool),
+		Content:   fmt.Sprintf("%sRewound workspace to checkpoint #%d (%s)", version.SystemPrefix, id, rec.Tool),
 	})
 }

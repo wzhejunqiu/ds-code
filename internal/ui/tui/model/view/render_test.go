@@ -9,6 +9,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/deps"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/scroll"
+	"github.com/wzhejunqiu/ds-code/internal/version"
 )
 
 func TestFooterLeft_backgroundAgentsBadge(t *testing.T) {
@@ -44,7 +45,7 @@ func TestBuildHeaderCached(t *testing.T) {
 	if first != second {
 		t.Fatal("expected header cache hit")
 	}
-	if !strings.Contains(first, "ds-code") {
+	if !strings.Contains(first, version.Name) {
 		t.Fatalf("missing title in header: %q", first)
 	}
 }
@@ -65,7 +66,7 @@ func TestSyncChatIncludesHeader(t *testing.T) {
 
 	SyncChat(s, &chatVP, &toolVP, nil, nil)
 	body := chatVP.View()
-	if !strings.Contains(body, "ds-code") {
+	if !strings.Contains(body, version.Name) {
 		t.Fatalf("viewport should contain header:\n%s", body)
 	}
 	if !strings.Contains(body, "hello") {

@@ -11,7 +11,6 @@ const (
 	SchemaPathsRelRoot     = "相对项目根目录的文件或目录列表"
 	SchemaPattern          = "Glob 模式"
 	SchemaGlobPattern      = "Glob 模式"
-	SchemaHTTPURL          = "HTTP 或 HTTPS URL"
 	SchemaFullFileContent  = "完整文件内容"
 )
 

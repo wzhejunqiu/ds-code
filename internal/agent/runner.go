@@ -3,8 +3,6 @@ package agent
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"sync"
@@ -67,7 +65,7 @@ type TurnResult struct {
 }
 
 func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolCall) string {
-	if tc.Name == "agent" && r.Cfg.Tools.Agent.ForkEnabled {
+	if tool.NameAgent.Matches(tc.Name) && r.Cfg.Tools.Agent.ForkEnabled {
 		ctx = r.enrichAgentForkContext(ctx, sessionID, tc)
 	}
 	rawArgs := []byte(tc.Arguments)
@@ -112,11 +110,6 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 	}
 	logging.L().Debug("tool ok", zap.String("session_id", sessionID), zap.String("tool", tc.Name), zap.Int("result_chars", len(out)))
 	return ctxpkg.FormatToolResult(tc.Name, tc.ID, out)
-}
-
-func cacheScope(sessionID string) string {
-	sum := sha256.Sum256([]byte(sessionID))
-	return hex.EncodeToString(sum[:])
 }
 
 func (r *Runner) enrichAgentForkContext(ctx context.Context, sessionID string, tc llm.ToolCall) context.Context {

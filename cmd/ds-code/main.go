@@ -25,7 +25,7 @@ func main() {
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "ds-code",
+		Use:   version.Name,
 		Short: "DeepSeek-native coding agent CLI",
 		Long:  "ds-code: Agent/Plan modes, Codex-style apply_patch, and project context (AGENTS.md, rules, skills).",
 	}
