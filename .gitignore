@@ -1,6 +1,7 @@
 third_party/tokenizers/*.tar.gz
 third_party/tokenizers/libtokenizers.a
 internal/tool/builtin/grep/rgbin/rg.tar.gz
+internal/tool/builtin/grep/rgbin/.ripgrep-target
 
 .DS_Store
 **/.DS_Store

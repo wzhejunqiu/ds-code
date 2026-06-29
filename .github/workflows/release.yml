@@ -102,7 +102,7 @@ jobs:
         if: matrix.musl != true
         env:
           RIPGREP_OS: ${{ matrix.goos }}
-          RIPGREP_ARCH: ${{ matrix.goarch == 'arm64' && 'aarch64' || 'x86_64' }}
+          RIPGREP_ARCH: ${{ matrix.goarch }}
         run: ./scripts/fetch-ripgrep.sh
 
       - name: Build (musl)
@@ -128,7 +128,7 @@ jobs:
             sh -ec '
               apk add --no-cache gcc g++ musl-dev curl tar file
               sh ./scripts/fetch-tokenizers-lib.sh
-              RIPGREP_OS=linux RIPGREP_ARCH="${{ matrix.goarch == 'arm64' && 'aarch64' || 'x86_64' }}" sh ./scripts/fetch-ripgrep.sh
+              sh ./scripts/fetch-ripgrep.sh
               LDFLAGS="-X github.com/wzhejunqiu/ds-code/internal/version.Version=${RELEASE_VERSION} -X main.gitCommit=${GIT_COMMIT}"
               go build -ldflags "$LDFLAGS" -o dist/ds-code ./cmd/ds-code
               file dist/ds-code | grep -q "statically linked"
