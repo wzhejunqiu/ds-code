@@ -12,11 +12,14 @@
 - [ ] `CHANGELOG.md` 含 allowlist 语义 **breaking** 说明
 - [ ] `configs/example.yaml` `web.allowlist` 注释已更新
 - [ ] `internal/tool/builtin/web_fetch/web_fetch_policy.go` 已删除
+- [ ] `configs/example.yaml` 含 `tracing` 段说明
+- [ ] `CHANGELOG.md` 含 tracing 能力说明（默认关闭；支持 CLI 与 YAML）
 
 **自动化冒烟**：
 
 ```bash
 go test -race -count=1 ./internal/permission/... ./internal/config/... ./internal/tool/builtin/web_fetch/... ./internal/ui/tui/...
+go test -race -count=1 ./internal/trace/... ./internal/logging/... ./internal/agent/... -run 'Trace|Logctx|TraceCore|Web'
 make test
 ```
 
@@ -156,7 +159,128 @@ make test
 
 `go test ./internal/ui/tui/... -run WebFetch` 绿。
 
-## 9. 手动验证清单（可选）
+## 9. OpenTelemetry 日志关联验收（FR-8）
+
+> 设计：[DESIGN.md §13](DESIGN.md#13-opentelemetry-日志关联fr-8)
+
+### AC-8.1 默认关闭（NFR-5）
+
+| 检查 | 预期 |
+|------|------|
+| 默认（无 YAML `tracing`、未传 `--trace`） | `trace.Enabled()` 为 `false` |
+| `trace.Start` | 返回原 `ctx`；`SpanFromContext` 无效 |
+| agent 热路径日志 | **无** `trace_id` / `span_id` 字段 |
+
+### AC-8.2 配置入口（CLI + YAML）
+
+| 检查 | 预期 |
+|------|------|
+| YAML 键 | `tracing.enabled`、`tracing.exporter`、`tracing.otlp_endpoint` |
+| CLI | `--trace`、`--trace-exporter`、`--trace-otlp-endpoint` |
+| 合并 | 用户级 → 项目级 YAML；与现有 config 一致 |
+| 优先级 | 显式 CLI flag（`Changed`）**覆盖** YAML |
+| YAML `enabled: true` | 无 `--trace` 时也启用 span |
+| `--trace=false`（显式） | 覆盖 YAML `enabled: true`，关闭 trace |
+| [`configs/example.yaml`](../../configs/example.yaml) | 含 `tracing` 段及注释 |
+| 桌面端预留 | 直接设置 `config.Config.Tracing` 生效（无需 cobra） |
+
+**自动化**：`go test ./internal/config/... -run 'Tracing|Trace|CLIDerived'` 绿。
+
+### AC-8.3 全局 `logging.L()` 自动注入（FR-8.3）
+
+| 检查 | 预期 |
+|------|------|
+| 机制 | `traceCore` 包装 + `logctx` goroutine 栈 |
+| active span 内任意 `logging.L()` | 自动含 `trace_id`、`span_id` |
+| 无 span（启动、idle） | 日志**无** trace 字段；行为等同 v0.1.4 |
+| **不要求**改调用点 | agent、permission、mcp、context、llm、TUI 等包保持 `logging.L()` |
+| 嵌套 span | `span_id` 随栈顶变化；`trace_id` 同 turn 内不变 |
+
+**自动化**：`go test ./internal/logging/... -run 'TraceCore|Logctx'` 绿。
+
+### AC-8.4 `logctx` 与 goroutine（FR-8.8b）
+
+| 检查 | 预期 |
+|------|------|
+| `trace.Start` | 自动 `logctx.Push` / defer `Pop` |
+| `runConcurrentBatch` | 每 goroutine `defer logctx.Bind(ctx)()` |
+| spawn 异步 / TUI async | 入口 `Bind` |
+| 漏 Bind 的 goroutine | 该 goroutine 内 `L()` 无 trace 字段（单测防回归） |
+
+**自动化**：`go test ./internal/agent/... -run 'Concurrent|Logctx'` 绿。
+
+### AC-8.5 初始化与降级（NFR-6）
+
+| 检查 | 预期 |
+|------|------|
+| `main` 启动顺序 | `logging.Setup` 后调用 `trace.Setup`；`defer` cleanup |
+| `enabled: true` | `otel.SetTracerProvider` 安装非 noop Provider |
+| exporter 初始化失败 | 降级 noop；打 `Warn`；**进程继续启动** |
+| 进程退出 | `TracerProvider.Shutdown` 被调用（无 panic） |
+
+**自动化**：`go test ./internal/trace/... -run Setup` 绿。
+
+### AC-8.6 Span 埋点边界
+
+| Span 名 | 埋点位置 | 预期 |
+|---------|----------|------|
+| `run_turn` | `runTurn` 入口 | 每次用户 turn / seeded turn 创建；`defer End` |
+| `llm.chat` | `chatWithRecovery` | 每个 sub-round 一次；compact 重试在同一 span 内 |
+| `tool.<name>` | `executeTool` | 工具名与 span 后缀一致（如 `tool.read`） |
+| `subagent.<type>` | `spawn.ExecuteRun` | 含 `explore` / `shell` 等类型后缀 |
+
+| 检查 | 预期 |
+|------|------|
+| 父子 span | 同一 turn 内共享 `trace_id` |
+| 兄弟 span | `llm.chat` 与 `tool.*` 的 `span_id` **不同** |
+| 子代理 | 子 `run_turn` 的 `trace_id` 与父 turn **相同** |
+| 并发 tool batch | 各 goroutine 各自 `tool.*` span；无 data race |
+
+**自动化**：`go test ./internal/trace/... -run 'Span|Parent'` 绿。
+
+### AC-8.7 日志串联（端到端 + 跨包）
+
+| 检查 | 预期 |
+|------|------|
+| YAML `tracing.enabled: true` 或 `ds-code --trace` 下完成一轮含 tool 的 turn | `ds-code.log` 中相关行含**相同** `trace_id` |
+| 同一 turn 内 LLM 与 tool 日志 | `trace_id` 相同；`span_id` 按操作不同 |
+| `permission` deny（仅 `logging.L()`） | 在 `executeTool` span 内含**相同** `trace_id` |
+| `mcp` / `context` 包日志 | turn 内 `logging.L()` 含 trace 字段 |
+| `session_id` | 各日志行**仍显式出现** |
+
+| 子代理 `run_id` | spawn 相关日志仍含 `run_id`（与 `trace_id` 并存） |
+
+**自动化**：`go test ./internal/agent/... -run 'Trace|logsTraceID|PermissionDeny'` 绿。
+
+### AC-8.8 业务字段与范围边界
+
+| 检查 | 预期 |
+|------|------|
+| DeepSeek HTTP | 请求头**无** `traceparent`（v0.1.5 out of scope） |
+| MCP 子进程 | 无 trace 传播 |
+| 无 span 时 `logging.L()` | 无 trace 字段（非「必须每行都有」） |
+| `RunEphemeral`（`/btw`） | 不强制埋点；若实现 `btw` span，不得破坏 ephemeral 语义 |
+
+### AC-8.9 Span 导出（P2，可选）
+
+| 检查 | 预期 |
+|------|------|
+| `--trace-exporter=stdout` | span 输出到 stderr；不影响 `ds-code.log` |
+| `--trace --trace-exporter=otlp` + 有效 endpoint | span 可到达 collector（手动或集成环境验证） |
+| `--trace-exporter=otlp` 且无 endpoint | 启动失败，明确错误信息 |
+
+> P2：无本地 collector 时，CI 可仅测配置解析与 stdout exporter，otlp 进手动清单 MV-4。
+
+### AC-8.10 依赖与结构
+
+| 检查 | 预期 |
+|------|------|
+| 新增 | `internal/logging/logctx.go`、`trace_core.go` |
+| 新增 | `internal/trace/` |
+| `logging.L()` 调用点 | **无需**批量替换为 `FromContext` |
+| 全局 logger | `traceCore` 包装；非 otelzap 全量替换 |
+
+## 10. 手动验证清单（可选）
 
 ### MV-1 readonly + 空 allowlist
 
@@ -177,9 +301,32 @@ make test
 1. `ds-code -p "fetch https://example.com" --permission-mode ask`
 2. 未列入主机时命令失败，错误含 TTY 提示
 
-## 10. 非目标确认
+### MV-4 tracing 日志串联（CLI）
+
+1. 运行 `ds-code --trace`（TUI 或 `-p`），触发一轮含 tool 的对话
+2. 检查 `ds-code.log`：同一 turn 共享 `trace_id`，LLM 与 tool 的 `span_id` 不同
+3. 不带 `--trace` 且 YAML 未启用时重启，新日志无 trace 字段
+
+### MV-4b tracing 日志串联（YAML）
+
+1. 项目 `.ds-code/config.yaml` 设置 `tracing.enabled: true`（**不传** `--trace`）
+2. 启动 ds-code，触发一轮含 tool 的对话
+3. 确认 `ds-code.log` 含 `trace_id`/`span_id`
+4. 将 `enabled` 改回 `false`，重启后新日志无 trace 字段
+
+### MV-5 tracing stdout 导出（可选）
+
+1. `ds-code --trace --trace-exporter=stdout`
+2. 运行一轮短对话
+3. 确认 stderr 出现 span JSON；`ds-code.log` 仍含 `trace_id`/`span_id`
+
+## 11. 非目标确认
 
 - [ ] `web_search` 未改动
 - [ ] MCP 工具权限未改动
 - [ ] write/shell `Prompter` 仍为二选一
 - [ ] 跨域重定向未改为自动多域跟随
+- [ ] DeepSeek API 未注入 W3C `traceparent`
+- [ ] `session_id` 未被 `trace_id` 替代
+- [ ] OTel 默认未连接外部 collector（须 YAML 或 `--trace` 显式开启）
+- [ ] CLI `--trace` 可覆盖 YAML `tracing.enabled`

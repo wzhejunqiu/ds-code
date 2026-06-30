@@ -11,7 +11,7 @@
 | [v0.1.2/](v0.1.2/) | v0.1.2：路径权限、MCP spill、MCP 参数、搜索不读 gitignore（`.git`+`skip_dirs`） |
 | [v0.1.3/](v0.1.3/) | v0.1.3：Bubble Tea v2（`charm.land`）迁移、虚拟列表、选区增强、FR-3/4 延期项 |
 | [v0.1.4/](v0.1.4/) | v0.1.4：`shell`→`bash`、grep/glob ripgrep、8 工具 FR-0 prompt；`diagnostics`/`tool_search`/`web_search` prompt 延后 |
-| [v0.1.5/](v0.1.5/) | v0.1.5：`web_fetch` allowlist 迁入 permission、三选一审批、「始终允许」写项目 config |
+| [v0.1.5/](v0.1.5/) | v0.1.5：`web_fetch` allowlist 迁入 permission、三选一审批、「始终允许」写项目 config；OTel 日志 `trace_id`/`span_id` |
 
 ## 演进方向
 

@@ -13,6 +13,7 @@ v0.1.5 聚焦 **`web_fetch` 主机访问策略迁入 `internal/permission`**，�
 2. **未列入主机** → readonly/ask 下弹出**三选一**审批（允许一次 / 始终允许 / 拒绝）；「始终允许」写入项目 `.ds-code/config.yaml`。
 3. **`auto` 模式**不参考 allowlist，仅 SSRF 硬规则放行。
 4. **消除 allowlist 参数传递**：`WebFetchTool` 注入 `*permission.Engine`，逐跳校验统一走 `CheckFetchHost`。
+5. **日志 trace 关联（P1）**：`traceCore` + `logctx` 使全项目 `logging.L()` 在 span 内自动带 `trace_id`/`span_id`；CLI 或 YAML 开启（见 [DESIGN.md §13.7](DESIGN.md#137-全局日志注入logctx--tracecore)）。
 
 本版本 **不改变** `web.fetch_enabled`、LRU cache、`normalizeURL`、跨域重定向语义；write/shell 的二选一 `Prompter` 不变。
 
@@ -21,8 +22,8 @@ v0.1.5 聚焦 **`web_fetch` 主机访问策略迁入 `internal/permission`**，�
 | 文档 | 说明 |
 |------|------|
 | [REQUIREMENTS.md](REQUIREMENTS.md) | 功能与非功能需求、用户故事、行为变更对照 |
-| [DESIGN.md](DESIGN.md) | permission/web、三选一 Prompter、config 持久化、TUI overlay |
-| [ACCEPTANCE.md](ACCEPTANCE.md) | 验收标准、手动验证步骤、测试清单 |
+| [DESIGN.md](DESIGN.md) | permission/web、三选一 Prompter、config 持久化、TUI overlay、**OTel trace/span（§13）** |
+| [ACCEPTANCE.md](ACCEPTANCE.md) | 验收标准、手动验证步骤、测试清单（含 AC-8 tracing） |
 
 ## 背景与动机
 
@@ -71,6 +72,7 @@ flowchart LR
 | T5 | `engine.Check` | `web_fetch` 分支；runner/spawn 注入 |
 | T6 | `web_fetch` 重构 | 注入 `Perm`；删除 `web_fetch_policy.go` |
 | T7 | 测试 | permission / config / web_fetch / TUI 覆盖 |
+| T8 | `internal/logging` + OTel | `logctx`、`traceCore`、全项目 `L()` 自动注入 |
 
 ## 已知限制
 

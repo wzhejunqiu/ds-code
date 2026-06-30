@@ -12,8 +12,9 @@
 3. **三选一交互审批（P0）**：readonly/ask 下未列入主机须弹出「允许一次 / 始终允许 / 拒绝」；与 write/shell 的二选一 `Prompter` **分离**。
 4. **「始终允许」持久化（P0）**：用户选择后追加 hostname 到运行时 `Engine.WebAllowlist`，并原子写入项目 `.ds-code/config.yaml`。
 5. **消除 allowlist 参数传递（P1）**：`WebFetchTool` 注入 `*permission.Engine`；删除 `web_fetch_policy.go`。
+6. **日志引入 trace_id / span_id（P1）**：基于 **OpenTelemetry** + **`traceCore`/`logctx`**，使项目内**所有** `logging.L()` 在 active span 内自动关联 trace；可通过 CLI 或 config YAML 开启。
 
-**非目标**：`web.fetch_enabled` / cache / `normalizeURL` / 跨域重定向语义变更；`web_search`；MCP 工具权限；用户级 config 写入；S2/S3 路径 denylist 变更。
+**非目标**：`web.fetch_enabled` / cache / `normalizeURL` / 跨域重定向语义变更；`web_search`；MCP 工具权限；用户级 config 写入；S2/S3 路径 denylist 变更；OTel 导出到外部 APM 的默认开启（本版仅本地日志关联，导出器可配置但默认关闭）。
 
 ## 2. 用户故事
 
@@ -56,6 +57,14 @@
 **以便** 子代理 `web_fetch` 行为与主会话一致。
 
 **验收**：FR-5；AC-5。
+
+### US-6：日志可串联 trace / span
+
+**作为** 排查 agent 行为或性能问题的开发者，  
+**我希望** 日志行自动包含 `trace_id` 与 `span_id`，且同一用户 turn 内子操作共享同一 `trace_id`，  
+**以便** 在 `ds-code.log` 中按 trace 过滤、关联 LLM 调用、工具执行与子代理。
+
+**验收**：FR-8；AC-8。
 
 ## 3. 功能需求
 
@@ -181,6 +190,50 @@ flowchart TD
 | FR-7.5 | `CHANGELOG.md` 记录 allowlist 语义 **breaking** | P0 |
 | FR-7.6 | `configs/example.yaml` 注释更新 | P1 |
 
+### FR-8 OpenTelemetry 日志关联（方案 B）
+
+| ID | 描述 | 优先级 |
+|----|------|--------|
+| FR-8.1 | 引入 `go.opentelemetry.io/otel` 及 `otel/sdk`、`otel/trace`；不替换现有 `zap` 全局 logger 架构 | P1 |
+| FR-8.2 | 进程启动时初始化 `TracerProvider`（默认 **noop** 或仅内存；不强制外连 collector） | P1 |
+| FR-8.3 | **`logging.L()` 全局自动注入**：通过 `traceCore` + goroutine 上下文栈（`logctx`），**所有**现有 `logging.L()` 调用在 active span 内自动带上 `trace_id`、`span_id`；**不要求**逐文件改调用点 | P0 |
+| FR-8.3b | `logging.FromContext(ctx)`（可选）：显式 ctx 与 goroutine 栈不一致时使用；非必须迁移路径 | P2 |
+| FR-8.4 | 用户 turn 根 span：`runTurn` 入口创建（`run_turn`），`defer span.End()`；贯穿该 turn 全链路 | P1 |
+| FR-8.5 | 子 span 边界：每轮 LLM `Chat`（`llm.chat`）、每次 `executeTool`（`tool.<name>`）、`spawn.ExecuteRun`（`subagent.<type>`） | P1 |
+| FR-8.6 | 子代理继承父 `context` 的 trace 上下文；`trace_id` 不变，各子操作生成新 `span_id` | P1 |
+| FR-8.7 | 现有业务字段（`session_id`、`run_id`、`tool` 等）**保留**；trace 字段为补充维度 | P1 |
+| FR-8.8 | `logging.Setup` 在 tracing 启用时装配 `traceCore`（包装 `zapcore.Core`），从 `logctx.Current()` 读取 `SpanContext`；与现有 `ConsoleEncoder` 兼容 | P1 |
+| FR-8.8b | `trace.Start` 进入时 `logctx.Push(ctx)`、退出时 `Pop`；新建 goroutine 须在入口 `defer logctx.Bind(ctx)()` | P0 |
+| FR-8.9 | **双入口**：① CLI `--trace` / `--trace-exporter` / `--trace-otlp-endpoint`；② YAML `tracing.enabled` / `tracing.exporter` / `tracing.otlp_endpoint`（用户级 + 项目级合并）。**优先级**：显式 CLI flag > 项目 YAML > 用户 YAML。默认均关闭 | P1 |
+| FR-8.10 | 单测：`logctx` 栈、`traceCore` 注入；agent turn 内 **permission / MCP / context** 等仅调用 `logging.L()` 的包也断言含 `trace_id` | P1 |
+
+#### Span 层级（目标）
+
+```mermaid
+flowchart TD
+    A["run_turn (root span)"] --> B["llm.chat sub-round N"]
+    B --> C["tool.read / grep / ..."]
+    B --> D["subagent.task"]
+    D --> E["child run_turn"]
+    E --> F["child tool / llm.chat"]
+```
+
+| 层级 | 建议 span 名 | trace_id | span_id |
+|------|--------------|----------|---------|
+| 用户 turn | `run_turn` | 新建 | root |
+| LLM 调用 | `llm.chat` | 继承 | 新建 |
+| 工具执行 | `tool.<name>` | 继承 | 新建 |
+| 子 agent | `subagent.<type>` | 继承 | 新建 |
+
+#### 依赖（预期）
+
+```
+go.opentelemetry.io/otel
+go.opentelemetry.io/otel/sdk
+go.opentelemetry.io/otel/trace
+go.opentelemetry.io/contrib/bridges/otelzap  # 或等价桥接
+```
+
 ## 4. 行为变更对照（相对 v0.1.4）
 
 | 场景 | v0.1.4 | v0.1.5 |
@@ -199,6 +252,8 @@ flowchart TD
 | NFR-2 | config 写入须原子（tmp + rename）；权限 `0600` |
 | NFR-3 | hostname 规范化：小写、去端口 |
 | NFR-4 | 不引入 `web_fetch` 对 `config.Config` 的直接 allowlist 依赖（统一走 `Engine`） |
+| NFR-5 | `tracing.enabled: false` 且未传 `--trace`（默认）时零开销：不创建 span、不改变现有日志字段 |
+| NFR-6 | OTel 初始化失败时降级为 noop，不阻塞 CLI 启动 |
 
 ## 6. 范围边界
 
@@ -212,6 +267,13 @@ flowchart TD
 - `internal/agent/spawn/execute.go`
 - `configs/example.yaml`、`CHANGELOG.md`
 - `docs/v0.1.5/**`
+- `internal/logging/`（`logctx`、`traceCore`、`FromContext`）
+- `internal/agent/runner_turn.go`、`runner_loop.go`、`runner.go`（span 埋点）
+- `internal/agent/spawn/execute.go`（子 agent span）
+- `internal/llm/deepseek/client/`（可选 LLM 子 span）
+- `internal/config/flags.go`、`load.go`、`validate.go`、`types.go`（tracing YAML + CLI）
+- `configs/example.yaml`（`tracing` 段）
+- `go.mod`（OTel 依赖）
 
 **Out of scope**
 
@@ -220,6 +282,10 @@ flowchart TD
 - 用户级 `~/.ds-code/config` allowlist 写入
 - write/shell `Prompter` 改为三选一
 - 跨域重定向改为自动跟随多域
+- OTel 默认连接 Jaeger / Tempo / Datadog（仅预留 `--trace-exporter`）
+- 将 `session_id` 替换为 `trace_id`（二者并存）
+- HTTP 请求 W3C `traceparent` 注入 DeepSeek API（后续版本）
+- 桌面端 UI 本身（v0.1.5 仅预留 config schema；嵌入调用走同一 `config.Config`）
 
 ## 7. 实现优先级
 
@@ -231,3 +297,4 @@ flowchart TD
 | **D** | `web_fetch` 重构 + 删除 policy | FR-6 |
 | **E** | TUI overlay + Stdin 降级 | FR-4 |
 | **F** | CHANGELOG、example.yaml、ACCEPTANCE 勾选 | FR-7 |
+| **G** | OTel + `logctx`/`traceCore` + span 埋点 + 全项目 `L()` 自动注入验收 | FR-8 |
