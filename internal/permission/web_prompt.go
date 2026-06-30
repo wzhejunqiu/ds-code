@@ -77,6 +77,12 @@ func hostFromURL(raw string) (host string, err error) {
 	return u.Hostname(), nil
 }
 
+// CheckWebFetch validates URL/host policy for Engine.Check (no ctx approval propagation).
+func (e *Engine) CheckWebFetch(rawURL string) error {
+	_, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": rawURL})
+	return err
+}
+
 // PrepareWebFetch validates URL/host policy and prompts when needed (readonly/ask).
 func (e *Engine) PrepareWebFetch(ctx context.Context, args map[string]any) (context.Context, error) {
 	rawURL, _ := args["url"].(string)

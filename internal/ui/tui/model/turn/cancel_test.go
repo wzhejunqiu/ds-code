@@ -3,6 +3,8 @@ package turn
 import (
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/model/state"
 )
@@ -45,5 +47,50 @@ func TestAppendInterruptBlock_idempotentWhileViewingSubagent(t *testing.T) {
 	AppendInterruptBlock(s, func() {})
 	if len(s.MainChat) != before {
 		t.Fatalf("duplicate interrupt on MainChat: len %d -> %d", before, len(s.MainChat))
+	}
+}
+
+func TestHandleWebFetchPromptKey(t *testing.T) {
+	noListen := func() tea.Cmd { return nil }
+
+	tests := []struct {
+		key  string
+		want permission.WebFetchChoice
+	}{
+		{"1", permission.WebFetchAllowOnce},
+		{"a", permission.WebFetchAllowOnce},
+		{"2", permission.WebFetchAllowAlways},
+		{"s", permission.WebFetchAllowAlways},
+		{"3", permission.WebFetchDeny},
+		{"d", permission.WebFetchDeny},
+		{"esc", permission.WebFetchDeny},
+	}
+	for _, tc := range tests {
+		t.Run(tc.key, func(t *testing.T) {
+			reply := make(chan permission.WebFetchChoice, 1)
+			s := &state.State{
+				Overlay: state.OverlayWebFetchPrompt,
+				WebFetchPrompt: &permission.WebFetchPromptRequest{
+					Host:  "example.com",
+					URL:   "https://example.com/",
+					Reply: reply,
+				},
+			}
+			HandleWebFetchPromptKey(s, tc.key, noListen)
+			select {
+			case got := <-reply:
+				if got != tc.want {
+					t.Fatalf("choice = %v, want %v", got, tc.want)
+				}
+			default:
+				t.Fatal("expected reply on channel")
+			}
+			if s.Overlay != state.OverlayNone {
+				t.Fatalf("overlay = %v, want OverlayNone", s.Overlay)
+			}
+			if s.WebFetchPrompt != nil {
+				t.Fatal("expected WebFetchPrompt cleared")
+			}
+		})
 	}
 }

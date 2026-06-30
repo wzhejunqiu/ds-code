@@ -3,9 +3,11 @@ package permission
 import (
 	"context"
 	"net"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 )
 
@@ -127,5 +129,74 @@ func TestNormalizeFetchHost(t *testing.T) {
 	}
 	if strings.Contains(normalizeFetchHost("x"), "/") {
 		t.Fatal("unexpected")
+	}
+}
+
+func TestEngine_CheckWebFetch_routesFromCheck(t *testing.T) {
+	auto := NewEngine(permissionmode.Auto, t.TempDir(), false)
+	if err := auto.Check("web_fetch", map[string]any{"url": "https://example.com/"}); err != nil {
+		t.Fatalf("auto Check: %v", err)
+	}
+	if err := auto.CheckWebFetch("https://example.com/"); err != nil {
+		t.Fatalf("auto CheckWebFetch: %v", err)
+	}
+
+	readonly := NewEngine(permissionmode.Readonly, t.TempDir(), false)
+	if err := readonly.Check("web_fetch", map[string]any{"url": "https://example.com/"}); err != ErrNeedTTY {
+		t.Fatalf("readonly Check: err = %v, want ErrNeedTTY", err)
+	}
+	if err := readonly.CheckWebFetch("https://example.com/"); err != ErrNeedTTY {
+		t.Fatalf("readonly CheckWebFetch: err = %v, want ErrNeedTTY", err)
+	}
+}
+
+func TestEngine_allowAlways_updatesMemoryAndSkipsReprompt(t *testing.T) {
+	root := t.TempDir()
+	e := NewEngine(permissionmode.Readonly, root, true)
+	e.ProjectRoot = root
+	prompts := 0
+	e.WebFetchPrompter = func(host, rawURL string) (WebFetchChoice, error) {
+		prompts++
+		return WebFetchAllowAlways, nil
+	}
+
+	ctx, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": "https://new.test/"})
+	if err != nil {
+		t.Fatalf("first fetch: %v", err)
+	}
+	if !hostAllowed("new.test", e.WebAllowlist) {
+		t.Fatalf("WebAllowlist = %v, want new.test", e.WebAllowlist)
+	}
+	b, err := os.ReadFile(config.ProjectConfigPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), "new.test") {
+		t.Fatalf("config missing new.test: %s", b)
+	}
+
+	_, err = e.PrepareWebFetch(ctx, map[string]any{"url": "https://new.test/page"})
+	if err != nil {
+		t.Fatalf("second fetch: %v", err)
+	}
+	if prompts != 1 {
+		t.Fatalf("prompts = %d, want 1", prompts)
+	}
+}
+
+func TestEngine_allowOnce_sameHostRedirect(t *testing.T) {
+	e := NewEngine(permissionmode.Readonly, t.TempDir(), true)
+	e.WebFetchPrompter = func(host, rawURL string) (WebFetchChoice, error) {
+		return WebFetchAllowOnce, nil
+	}
+	ctx, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": "https://example.com/start"})
+	if err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	if err := e.CheckFetchHost(ctx, "example.com"); err != nil {
+		t.Fatalf("first hop: %v", err)
+	}
+	if err := e.CheckFetchHost(ctx, "example.com"); err != nil {
+		t.Fatalf("redirect hop: %v", err)
 	}
 }

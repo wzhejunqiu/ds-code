@@ -86,6 +86,7 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 		parentModel = sess.Model
 	}
 	execCtx := WithToolInvocation(ctx, sessionID, tc.ID, parentModel)
+	// web_fetch uses PrepareWebFetch (not Check) so AllowOnce approval propagates via execCtx.
 	if tool.NameWebFetch.Matches(tc.Name) {
 		var err error
 		execCtx, err = r.Perm.PrepareWebFetch(execCtx, args)

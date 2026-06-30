@@ -127,3 +127,35 @@ func TestWebFetch_requiresPrompt(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestFetchURL_sameHostRedirectWithOnceApproval(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			http.Redirect(w, r, "/final", http.StatusFound)
+			return
+		}
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	perm := permission.NewEngine(permissionmode.Readonly, t.TempDir(), true)
+	perm.WebFetchPrompter = func(host, rawURL string) (permission.WebFetchChoice, error) {
+		return permission.WebFetchAllowOnce, nil
+	}
+	ctx, err := perm.PrepareWebFetch(context.Background(), map[string]any{"url": "http://" + testFetchHost + "/start"})
+	if err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+
+	client := web_fetch.TestFetchClient(srv.URL)
+	out, err := web_fetch.FetchURLWithClient(ctx, testStartURL("/start"), perm, client)
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if !out.Redirected {
+		t.Fatal("expected redirected=true")
+	}
+	if string(out.Page.Body) != "ok" {
+		t.Fatalf("body = %q", out.Page.Body)
+	}
+}

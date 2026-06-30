@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `web_fetch` 主机访问策略迁入 `internal/permission`（SSRF + allowlist + mode 分支；三选一审批）
+
+### Breaking
+
+- `web.allowlist` 语义变更：空列表不再全部拒绝；readonly/ask 访问未列入主机会弹出「允许本次 / 始终允许 / 拒绝」；auto 模式忽略 allowlist（仅 SSRF 硬规则）
+
 ## [0.1.4] - 2026-06-29
 
 ### Added

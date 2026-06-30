@@ -1,6 +1,9 @@
 package permission
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestClassifyDeny(t *testing.T) {
 	tests := []struct {
@@ -10,6 +13,7 @@ func TestClassifyDeny(t *testing.T) {
 		{ErrRejected, "user_rejected"},
 		{ErrNeedTTY, "ask_no_tty"},
 		{ErrDenied, "denied"},
+		{fmt.Errorf("%w: web_fetch blocked", ErrDenied), "web_fetch"},
 	}
 	for _, tc := range tests {
 		if got := classifyDeny(tc.err); got != tc.want {

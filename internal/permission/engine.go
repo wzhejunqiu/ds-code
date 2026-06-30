@@ -126,6 +126,14 @@ func (e *Engine) check(tool string, args map[string]any) error {
 		}
 	}
 
+	if tool == "web_fetch" {
+		url, _ := args["url"].(string)
+		if url == "" {
+			return nil // schema layer validates required url
+		}
+		return e.CheckWebFetch(url)
+	}
+
 	if e.isWriteTool(tool) && e.Mode == permissionmode.Ask && e.Interactive {
 		if tool == toolname.Bash {
 			if cmd, _ := args["command"].(string); cmd != "" {
