@@ -25,6 +25,8 @@ func classifyDeny(err error) string {
 			return "ask_no_prompter"
 		case strings.Contains(msg, "invalid patch"):
 			return "invalid_patch"
+		case strings.Contains(msg, "allowlist"):
+			return "allowlist"
 		default:
 			return "denied"
 		}

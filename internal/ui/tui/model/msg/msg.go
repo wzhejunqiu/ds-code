@@ -56,6 +56,9 @@ type ThinkingTickMsg struct{}
 type NoticeScrollTickMsg struct{}
 type WheelScrollTickMsg struct{}
 type PromptRequestMsg struct{ Req permission.PromptRequest }
+type WebFetchPromptRequestMsg struct {
+	Req permission.WebFetchPromptRequest
+}
 type OverlayCloseMsg struct{}
 type ContextOverlayMsg struct{ Text string }
 type HelpOverlayMsg struct{ Text string }

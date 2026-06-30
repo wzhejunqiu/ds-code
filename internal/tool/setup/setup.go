@@ -43,6 +43,7 @@ func RegisterReadOnly(reg *tool.Registry, d Deps) {
 	if d.Cfg.Web.FetchEnabled && d.LLM != nil {
 		reg.Register(&web_fetch.WebFetchTool{
 			Cfg:    d.Cfg,
+			Perm:   d.Perm,
 			Strict: d.Strict,
 			LLM:    d.LLM,
 			Cache:  web_fetch.SharedCache(d.Cfg.Web),

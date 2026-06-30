@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 // TestFetchClient returns an HTTP client that dials a test server (test-only; skips SSRF dial checks).
-func TestFetchClient(testServerURL string, allowlist []string) *http.Client {
-	_ = allowlist
+func TestFetchClient(testServerURL string) *http.Client {
 	target, err := url.Parse(testServerURL)
 	if err != nil {
 		panic(err)
@@ -29,7 +30,7 @@ func TestFetchClient(testServerURL string, allowlist []string) *http.Client {
 	}
 }
 
-// FetchURLWithClient exposes fetchURLWithClient for tests.
-func FetchURLWithClient(ctx context.Context, start *url.URL, allowlist []string, client *http.Client) (*FetchOutcome, error) {
-	return fetchURLWithClient(ctx, start, allowlist, client)
+// FetchURLWithClient exposes fetchURL for tests.
+func FetchURLWithClient(ctx context.Context, start *url.URL, perm *permission.Engine, client *http.Client) (*FetchOutcome, error) {
+	return fetchURL(ctx, start, perm, client)
 }

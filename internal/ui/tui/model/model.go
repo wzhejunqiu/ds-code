@@ -89,6 +89,7 @@ func New(d *deps.Deps) *Model {
 func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.listenPrompt(),
+		m.listenWebFetchPrompt(),
 		session.LoadInitialHistory(&m.State),
 		m.scheduleNoticeScroll(),
 		func() tea.Msg { return tea.RequestWindowSize() },
@@ -106,6 +107,20 @@ func (m *Model) listenPrompt() tea.Cmd {
 			return nil
 		}
 		return msg.PromptRequestMsg{Req: req}
+	}
+}
+
+func (m *Model) listenWebFetchPrompt() tea.Cmd {
+	if m.Deps == nil || m.Deps.WebFetchPromptCh == nil {
+		return nil
+	}
+	ch := m.Deps.WebFetchPromptCh
+	return func() tea.Msg {
+		req, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return msg.WebFetchPromptRequestMsg{Req: req}
 	}
 }
 

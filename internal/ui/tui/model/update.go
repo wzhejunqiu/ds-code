@@ -155,6 +155,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, overlay.UpdateExitConfirmTimeout(&m.State)
 	case tuimsg.PromptRequestMsg:
 		return m, overlay.UpdatePromptRequest(&m.State, msg, m.listenPrompt)
+	case tuimsg.WebFetchPromptRequestMsg:
+		return m, overlay.UpdateWebFetchPromptRequest(&m.State, msg, m.listenWebFetchPrompt)
 	case tuimsg.OverlayCloseMsg:
 		overlay.UpdateClose(&m.State, m.syncChatView, m.refreshStatus)
 		return m, m.scheduleSyncChatView()
@@ -216,7 +218,11 @@ func (m *Model) updateKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 		HandlePromptKey: func(k tea.KeyPressMsg) tea.Cmd {
 			return turn.HandlePromptKey(&m.State, k.String(), m.listenPrompt)
 		},
-		ListenPrompt: m.listenPrompt,
+		HandleWebFetchPromptKey: func(k tea.KeyPressMsg) tea.Cmd {
+			return turn.HandleWebFetchPromptKey(&m.State, k.String(), m.listenWebFetchPrompt)
+		},
+		ListenPrompt:         m.listenPrompt,
+		ListenWebFetchPrompt: m.listenWebFetchPrompt,
 		RequestCancelTurn: func() {
 			turn.RequestCancel(&m.State, m.syncChatView)
 		},

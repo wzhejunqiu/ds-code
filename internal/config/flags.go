@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/runmode"
 )
 
@@ -44,7 +45,11 @@ func applyChangedFlags(cfg *Config, cmd *cobra.Command) error {
 		cfg.LLM.StrictTools = v
 	}
 	if f := fs.Lookup("permission-mode"); f != nil && f.Changed {
-		cfg.Permission.Mode = f.Value.String()
+		m, err := permissionmode.Parse(f.Value.String())
+		if err != nil {
+			return fmt.Errorf("config: permission-mode: %w", err)
+		}
+		cfg.Permission.Mode = m
 	}
 	if f := fs.Lookup("dangerously-auto"); f != nil && f.Changed {
 		v, err := fs.GetBool("dangerously-auto")
@@ -52,7 +57,7 @@ func applyChangedFlags(cfg *Config, cmd *cobra.Command) error {
 			return err
 		}
 		if v {
-			cfg.Permission.Mode = "auto"
+			cfg.Permission.Mode = permissionmode.Auto
 		}
 	}
 	if f := fs.Lookup("audit-log"); f != nil && f.Changed {

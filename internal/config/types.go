@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/runmode"
 )
 
@@ -143,7 +144,7 @@ type AgentToolConfig struct {
 }
 
 type PermissionConfig struct {
-	Mode string `mapstructure:"mode"`
+	Mode permissionmode.Mode `mapstructure:"mode"`
 }
 
 type BTWConfig struct {

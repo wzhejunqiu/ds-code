@@ -16,6 +16,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	agenttool "github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
@@ -27,7 +28,7 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	logging.L().Info("building agent runner",
 		zap.String("project_root", a.Cfg.ProjectRoot),
 		zap.String("run_mode", a.Cfg.RunMode.String()),
-		zap.String("permission", a.Cfg.Permission.Mode),
+		zap.String("permission", a.Cfg.Permission.Mode.String()),
 	)
 	store, err := a.openStore()
 	if err != nil {
@@ -36,7 +37,11 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 	interactive := permission.IsInteractiveTTY()
 	perm := permission.NewEngine(a.Cfg.Permission.Mode, a.Cfg.ProjectRoot, interactive)
 	perm.ProjectRoot = a.Cfg.ProjectRoot
-	if interactive && a.Cfg.Permission.Mode == "ask" {
+	perm.WebAllowlist = append([]string(nil), a.Cfg.Web.Allowlist...)
+	if interactive {
+		perm.WebFetchPrompter = permission.StdinWebFetchPrompter(os.Stderr)
+	}
+	if interactive && a.Cfg.Permission.Mode == permissionmode.Ask {
 		perm.Prompter = permission.StdinPrompter(os.Stderr)
 	}
 

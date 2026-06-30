@@ -16,6 +16,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/mcp/resultstore"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
@@ -55,8 +56,9 @@ func ExecuteRun(
 	var perm *permission.Engine
 	switch {
 	case IsReadOnly(def) || permMode == AgentPermModeReadonly:
-		perm = permission.NewEngine("readonly", workspace, false)
+		perm = permission.NewEngine(permissionmode.Readonly, workspace, false)
 		perm.ProjectRoot = cfg.ProjectRoot
+		copyWebPermFields(perm, parentPerm, cfg)
 	case permMode == AgentPermModeBubble, permMode == AgentPermModeInherit:
 		// bubble: permission ask uses the parent's Prompter (TUI TUIPrompter when configured).
 		if run.WorktreePath != "" {
@@ -64,6 +66,7 @@ func ExecuteRun(
 			perm = permission.NewEngine(parentPerm.Mode, workspace, parentPerm.Interactive)
 			perm.Prompter = parentPerm.Prompter
 			perm.ProjectRoot = cfg.ProjectRoot
+			copyWebPermFields(perm, parentPerm, cfg)
 		} else {
 			perm = parentPerm
 		}
@@ -359,6 +362,17 @@ func subagentMessageToSession(m subagentstore.Message) session.Message {
 		PricingSnapshotJSON:  m.PricingSnapshotJSON,
 		EstimatedCostCNY:     m.EstimatedCostCNY,
 		CreatedAt:            m.CreatedAt,
+	}
+}
+
+func copyWebPermFields(dst, parent *permission.Engine, cfg *config.Config) {
+	if parent != nil && len(parent.WebAllowlist) > 0 {
+		dst.WebAllowlist = append([]string(nil), parent.WebAllowlist...)
+	} else {
+		dst.WebAllowlist = append([]string(nil), cfg.Web.Allowlist...)
+	}
+	if parent != nil {
+		dst.WebFetchPrompter = parent.WebFetchPrompter
 	}
 }
 

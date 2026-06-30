@@ -110,6 +110,9 @@ func TestLoad_rejectsAPIKeyInYAML(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for llm.api_key in yaml")
 	}
+	if !strings.Contains(err.Error(), "DS_CODE_DEEPSEEK_API_KEY") || !strings.Contains(err.Error(), "DEEPSEEK_API_KEY") {
+		t.Fatalf("error should mention env vars, got: %v", err)
+	}
 }
 
 func TestApplyCLIDerived_verboseCount(t *testing.T) {

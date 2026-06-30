@@ -1,6 +1,7 @@
 package security_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/session/sqlite"
 )
 
@@ -105,6 +107,23 @@ func TestS11_readonlyBlocksWriteFile(t *testing.T) {
 	err := perm.Check("write_file", map[string]any{"path": "out.txt", "content": "x"})
 	if err == nil {
 		t.Fatal("expected readonly deny")
+	}
+}
+
+func TestS11_webFetchAutoIgnoresEmptyAllowlist(t *testing.T) {
+	perm := permission.NewEngine(permissionmode.Auto, t.TempDir(), false)
+	ctx, err := perm.PrepareWebFetch(context.Background(), map[string]any{"url": "https://example.com/"})
+	if err != nil {
+		t.Fatalf("auto should allow public host without allowlist: %v", err)
+	}
+	_ = ctx
+}
+
+func TestS11_webFetchReadonlyEmptyAllowlistNeedsTTY(t *testing.T) {
+	perm := permission.NewEngine(permissionmode.Readonly, t.TempDir(), false)
+	_, err := perm.PrepareWebFetch(context.Background(), map[string]any{"url": "https://example.com/"})
+	if err != permission.ErrNeedTTY {
+		t.Fatalf("err = %v, want ErrNeedTTY", err)
 	}
 }
 

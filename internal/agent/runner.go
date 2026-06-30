@@ -81,7 +81,19 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 			_ = r.Audit.LogWithReason(tc.Name, rawArgs, string(dec), reason)
 		}
 	}
-	if err := r.Perm.Check(tc.Name, args); err != nil {
+	parentModel := ""
+	if sess, err := r.Sessions.Get(ctx, sessionID); err == nil {
+		parentModel = sess.Model
+	}
+	execCtx := WithToolInvocation(ctx, sessionID, tc.ID, parentModel)
+	if tool.NameWebFetch.Matches(tc.Name) {
+		var err error
+		execCtx, err = r.Perm.PrepareWebFetch(execCtx, args)
+		if err != nil {
+			logging.L().Info("tool denied", zap.String("session_id", sessionID), zap.String("tool", tc.Name), zap.Error(err))
+			return ctxpkg.FormatToolError(tc.Name, tc.ID, err)
+		}
+	} else if err := r.Perm.Check(tc.Name, args); err != nil {
 		logging.L().Info("tool denied", zap.String("session_id", sessionID), zap.String("tool", tc.Name), zap.Error(err))
 		return ctxpkg.FormatToolError(tc.Name, tc.ID, err)
 	}
@@ -96,11 +108,7 @@ func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolC
 	if r.Audit != nil && !tool.NameShell.Matches(tc.Name) {
 		_ = r.Audit.Log(tc.Name, rawArgs)
 	}
-	parentModel := ""
-	if sess, err := r.Sessions.Get(ctx, sessionID); err == nil {
-		parentModel = sess.Model
-	}
-	out, err := r.Tools.Execute(WithToolInvocation(ctx, sessionID, tc.ID, parentModel), tc.Name, rawArgs)
+	out, err := r.Tools.Execute(execCtx, tc.Name, rawArgs)
 	if r.Hooks != nil {
 		r.Hooks.Run(ctx, HookPostToolUse, hookInputForTool(sessionID, tc, rawArgs, err))
 	}

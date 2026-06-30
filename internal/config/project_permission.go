@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/version"
 	"gopkg.in/yaml.v3"
 )
@@ -22,21 +23,21 @@ func rejectAutoFromConfigYAML(projectRoot string) error {
 	if err != nil {
 		return err
 	}
-	if found && mode == "auto" {
+	if found && mode == string(permissionmode.Auto) {
 		return fmt.Errorf("config: user config.yaml cannot set permission.mode to auto; use --dangerously-auto or --permission-mode auto")
 	}
 	mode, found, err = readProjectYAMLPermissionMode(projectRoot)
 	if err != nil {
 		return err
 	}
-	if found && mode == "auto" {
+	if found && mode == string(permissionmode.Auto) {
 		return fmt.Errorf("config: project %s/config.yaml cannot set permission.mode to auto; use --dangerously-auto or --permission-mode auto", version.UserDataDirName)
 	}
 	return nil
 }
 
 func rejectAutoWithoutCLI(cmd *cobra.Command, cfg *Config) error {
-	if cfg.Permission.Mode == "auto" && !cliAllowsAuto(cmd) {
+	if cfg.Permission.Mode == permissionmode.Auto && !cliAllowsAuto(cmd) {
 		return fmt.Errorf("permission.mode auto requires --dangerously-auto or --permission-mode auto")
 	}
 	return nil

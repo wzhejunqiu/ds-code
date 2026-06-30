@@ -8,6 +8,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	agenttool "github.com/wzhejunqiu/ds-code/internal/tool/builtin/agent"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui"
 	"github.com/wzhejunqiu/ds-code/internal/version"
@@ -42,7 +43,9 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 	}
 
 	promptCh := make(chan permission.PromptRequest, 1)
-	if a.Cfg.Permission.Mode == "ask" {
+	webFetchCh := make(chan permission.WebFetchPromptRequest, 1)
+	runner.Perm.WebFetchPrompter = permission.TUIWebFetchPrompter(webFetchCh)
+	if a.Cfg.Permission.Mode == permissionmode.Ask {
 		runner.Perm.Interactive = true
 		runner.Perm.Prompter = permission.TUIPrompter(promptCh)
 	}
@@ -67,6 +70,7 @@ func (a *App) RunTUI(cmd *cobra.Command, sessionID string) error {
 		SessionID:               sessionID,
 		Version:                 version.Version,
 		PromptCh:                promptCh,
+		WebFetchPromptCh:        webFetchCh,
 		BackgroundAgents:        backgroundAgents,
 		HasPendingNotifications: hasPendingNotifications,
 		StartupNotices:          buildStartupNotices(a),

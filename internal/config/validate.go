@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 )
 
 var forbiddenYAMLKeys = []string{
@@ -20,17 +21,31 @@ var forbiddenYAMLKeys = []string{
 var allowedModels = []string{"deepseek-v4-pro", "deepseek-v4-flash"}
 var allowedThinking = []string{"enabled", "disabled"}
 var allowedEffort = []string{"high", "max"}
-var allowedPermission = []string{"readonly", "ask", "auto"}
 var allowedTruncateBy = []string{"chars", "tokenizer"}
 
-// rejectForbiddenKeys blocks secrets and fixed paths from YAML (see docs/v0.1.0/CONFIG.md).
+// rejectForbiddenKeys blocks secrets and fixed paths from YAML.
 func rejectForbiddenKeys(v *viper.Viper) error {
 	for _, key := range forbiddenYAMLKeys {
 		if v.IsSet(key) {
-			return fmt.Errorf("config: forbidden key %q in YAML (see docs/v0.1.0/CONFIG.md)", key)
+			return fmt.Errorf("config: %q must not be set in config.yaml: %s", key, forbiddenKeyHint(key))
 		}
 	}
 	return nil
+}
+
+func forbiddenKeyHint(key string) string {
+	switch key {
+	case "llm.api_key":
+		return fmt.Sprintf("set %s or %s environment variable instead", envDSCodeDeepSeek, envDeepSeek)
+	case "session", "session.db_path":
+		return "session storage paths are assigned automatically under ~/.ds-code/projects/"
+	case "audit.log_path":
+		return "audit log path is assigned automatically; use audit.enabled to toggle auditing"
+	case "checkpoint":
+		return "checkpoint storage is assigned automatically under ~/.ds-code/projects/"
+	default:
+		return "remove this key from config.yaml"
+	}
 }
 
 // validate checks enums and numeric bounds after merge.
@@ -60,8 +75,8 @@ func validate(cfg *Config) error {
 	if cfg.LLM.Subagent.ReasoningEffort != "" && !slices.Contains(allowedEffort, cfg.LLM.Subagent.ReasoningEffort) {
 		return fmt.Errorf("config: llm.subagent.reasoning_effort must be high or max, got %q", cfg.LLM.Subagent.ReasoningEffort)
 	}
-	if !slices.Contains(allowedPermission, cfg.Permission.Mode) {
-		return fmt.Errorf("config: permission.mode must be readonly, ask, or auto, got %q", cfg.Permission.Mode)
+	if !cfg.Permission.Mode.Configured() {
+		return fmt.Errorf("config: permission.mode must be one of %v, got %q", permissionmode.ConfiguredStrings(), cfg.Permission.Mode)
 	}
 	if !slices.Contains(allowedTruncateBy, cfg.Context.TruncateBy) {
 		return fmt.Errorf("config: context.truncate_by must be chars or tokenizer, got %q", cfg.Context.TruncateBy)

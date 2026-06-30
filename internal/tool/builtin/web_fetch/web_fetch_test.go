@@ -13,10 +13,17 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/llm/mock"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/web_fetch"
 )
 
 const testFetchHost = "example.com"
+
+func testPermAuto() *permission.Engine {
+	e := permission.NewEngine(permissionmode.Auto, "/tmp", false)
+	return e
+}
 
 func testStartURL(path string) *url.URL {
 	u, _ := url.Parse("http://" + testFetchHost + path)
@@ -29,8 +36,9 @@ func TestFetchURL_crossHostRedirect(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := web_fetch.TestFetchClient(srv.URL, []string{testFetchHost})
-	out, err := web_fetch.FetchURLWithClient(context.Background(), testStartURL("/"), []string{testFetchHost}, client)
+	client := web_fetch.TestFetchClient(srv.URL)
+	ctx := permission.WithWebFetchApproval(context.Background())
+	out, err := web_fetch.FetchURLWithClient(ctx, testStartURL("/"), testPermAuto(), client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,8 +57,9 @@ func TestFetchURL_sameDomainRedirectNotMarkedForCache(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := web_fetch.TestFetchClient(srv.URL, []string{testFetchHost})
-	out, err := web_fetch.FetchURLWithClient(context.Background(), testStartURL("/start"), []string{testFetchHost}, client)
+	client := web_fetch.TestFetchClient(srv.URL)
+	ctx := permission.WithWebFetchApproval(context.Background())
+	out, err := web_fetch.FetchURLWithClient(ctx, testStartURL("/start"), testPermAuto(), client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,9 +90,14 @@ func TestWebFetch_cacheSkipsHTTPOnSecondCall(t *testing.T) {
 		},
 	}
 	cache := web_fetch.NewLRUCache(cfg.Web)
-	tool := &web_fetch.WebFetchTool{Cfg: cfg, Strict: false, LLM: llmMock, Cache: cache}
+	tool := &web_fetch.WebFetchTool{
+		Cfg:    cfg,
+		Perm:   testPermAuto(),
+		Strict: false,
+		LLM:    llmMock,
+		Cache:  cache,
+	}
 
-	// Prime cache directly (Execute would block on loopback without transport injection).
 	cache.Put("https://"+testFetchHost+"/", web_fetch.PageBody{
 		Body:        []byte("plain text body"),
 		ContentType: "text/plain",
@@ -107,7 +121,7 @@ func TestWebFetch_cacheSkipsHTTPOnSecondCall(t *testing.T) {
 
 func TestWebFetch_requiresPrompt(t *testing.T) {
 	cfg := &config.Config{Web: config.WebConfig{FetchEnabled: true, Allowlist: []string{"example.com"}}}
-	tool := &web_fetch.WebFetchTool{Cfg: cfg, LLM: &mock.Client{}}
+	tool := &web_fetch.WebFetchTool{Cfg: cfg, Perm: testPermAuto(), LLM: &mock.Client{}}
 	_, err := tool.Execute(context.Background(), json.RawMessage(`{"url":"https://example.com"}`))
 	if err == nil || !strings.Contains(err.Error(), "prompt") {
 		t.Fatalf("err = %v", err)
