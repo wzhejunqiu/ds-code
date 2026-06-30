@@ -20,5 +20,8 @@ func LogConfigResolved(cfg *config.Config) {
 		zap.Bool("allow_log_sensitive_data", cfg.AllowLogSensitiveData),
 		zap.Int("mcp_servers", len(cfg.MCP.Servers)),
 		zap.Bool("json_output", cfg.JSONOutput),
+		zap.Bool("tracing_enabled", cfg.Tracing.Enabled),
+		zap.String("tracing_exporter", cfg.Tracing.Exporter),
+		zap.String("tracing_otlp_endpoint", cfg.Tracing.OTLPEndpoint),
 	)
 }

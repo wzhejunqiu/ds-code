@@ -441,7 +441,7 @@ go.opentelemetry.io/otel
 go.opentelemetry.io/otel/sdk
 go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/sdk/trace          // TracerProvider、BatchSpanProcessor
-go.opentelemetry.io/otel/exporters/stdout/stdouttrace  // exporter=stdout
+// internal/trace/log_exporter.go          // exporter=log
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp  // exporter=otlp（P2，可选）
 ```
 
@@ -456,7 +456,7 @@ tracing 支持 **YAML config** 与 **CLI flag** 两路开启，优先级与现�
 ```go
 type TracingConfig struct {
     Enabled      bool   `mapstructure:"enabled"`        // 默认 false
-    Exporter     string `mapstructure:"exporter"`        // "" | "stdout" | "otlp"
+    Exporter     string `mapstructure:"exporter"`        // "" | "log" | "otlp"
     OTLPEndpoint string `mapstructure:"otlp_endpoint"`  // exporter=otlp 时
 }
 
@@ -468,7 +468,7 @@ type TracingConfig struct {
 ```yaml
 tracing:
   # enabled: 开启后在日志中输出 trace_id / span_id，并在 agent 链路创建 span
-  # exporter: 可选 stdout（调试）或 otlp（需 collector）；默认不导出
+  # exporter: 可选 log（DEBUG 写入 ds-code.log）或 otlp（需 collector）；默认不导出
   enabled: false
   exporter: ""
   # otlp_endpoint: http://localhost:4318
@@ -482,7 +482,7 @@ tracing:
 
 ```go
 fs.Bool("trace", false, "Enable OpenTelemetry spans and trace_id/span_id in logs")
-fs.String("trace-exporter", "", "Span exporter when tracing on: stdout|otlp")
+fs.String("trace-exporter", "", "Span exporter when tracing on: log|otlp")
 fs.String("trace-otlp-endpoint", "", "OTLP HTTP endpoint when --trace-exporter=otlp")
 ```
 
@@ -524,7 +524,7 @@ CLI 示例：
 
 ```bash
 ds-code -p "fix the bug" --trace
-ds-code --trace --trace-exporter=stdout
+ds-code --trace --trace-exporter=log -vv
 # YAML 已 enabled: true 时，无需 --trace
 ds-code --trace-exporter=otlp --trace-otlp-endpoint=http://localhost:4318
 ```
@@ -569,7 +569,7 @@ func Setup(cfg config.TracingConfig) (cleanup func()) {
         otel.SetTracerProvider(noop.NewTracerProvider())
         return func() {}
     }
-    exp, err := newExporter(cfg) // stdout | otlp | nil（仅日志、不导出）
+    exp, err := newExporter(cfg) // log | otlp | nil（仅日志、不导出）
     if err != nil {
         logging.L().Warn("tracing exporter init failed, using noop", zap.Error(err))
         otel.SetTracerProvider(noop.NewTracerProvider())
@@ -592,7 +592,7 @@ func Setup(cfg config.TracingConfig) (cleanup func()) {
 | `enabled: false` 且未传 `--trace` | noop TracerProvider；`trace.Start` 快速返回原 ctx |
 | YAML `enabled: true` 或 `--trace` | 真实 TracerProvider；日志含 trace 字段 |
 | exporter 未设 | **无** span 导出器；span 驻内存；`traceCore` 从 `logctx` 读 ID |
-| `exporter: stdout` / `--trace-exporter=stdout` | 额外将 span 打印到 stderr |
+| `exporter: log` / `--trace-exporter=log` | 额外将 span 以 DEBUG 写入 `ds-code.log`（需 `-vv`） |
 | `exporter: otlp` + endpoint | 批量导出到 collector |
 
 > **仅日志关联**：YAML `tracing.enabled: true` 或 `ds-code --trace` 即可；无需 exporter。
@@ -861,6 +861,82 @@ flowchart LR
 | `span_id` | 单个 span（llm.chat、tool.read、…） | OTel `SpanID` |
 
 **不**用 `trace_id` 替代 `session_id`；排查时先按 `session_id` 缩小会话，再按 `trace_id` 过滤单次 turn。
+
+#### 13.9.1 trace_id / span_id 更新时机
+
+业务代码**不手动赋值** `trace_id`/`span_id`。由 `traceCore` 在每次 `logging.L()` 写日志时，从当前 goroutine 的 `logctx` 栈顶读取 active span 的 `SpanContext` 并注入字段。日志中的 ID 反映的是**写日志那一刻**栈顶 span 的上下文，不是进程级全局变量。
+
+```mermaid
+sequenceDiagram
+  participant Start as trace.Start
+  participant Stack as logctx栈
+  participant Log as logging.L
+  participant Core as traceCore
+
+  Start->>Stack: Push(ctx含新span)
+  Note over Stack: 栈顶=当前active span
+  Log->>Core: Write()
+  Core->>Stack: Current()
+  Core->>Core: SpanFromContext注入trace_id/span_id
+  Start->>Stack: defer Pop()
+```
+
+**`trace.Start` 联动**：创建 OTel 子 span 时 `logctx.Push(ctx)`；`defer end()` 时 `span.End()` + `logctx.Pop()`，栈回退到父 span。
+
+##### trace_id 何时变
+
+| 时机 | 行为 |
+|------|------|
+| 每次用户 turn 进入 `runTurn` | 新建 root span `run_turn`，生成**新** `trace_id` |
+| 同一 turn 内（多轮 LLM、多个 tool、子代理） | **不变**，子 span 继承父 trace |
+| 子代理 `RunTurnSeeded` | 仍在父 turn 的 trace 下，**不变** |
+| 下一次用户消息（新 turn） | **新** `trace_id` |
+| tracing 未开启 | 日志**无** trace 字段 |
+| 无 active span（启动、idle、漏 `logctx.Bind` 的 goroutine） | 日志**无** trace 字段 |
+
+粒度：**一次用户 turn = 一个 `trace_id`**（含其下所有 sub-round、tool、子代理）。见 §13.8.1。
+
+##### span_id 何时变
+
+每次 `trace.Start` 创建子 span 时 OTel 分配**新** `span_id`；`logctx.Push` 后，该 goroutine 内后续 `logging.L()` 使用此 `span_id`，直到 `defer end()` 弹出。
+
+| Span 边界 | 埋点位置（§13.8） | span_id |
+|-----------|-------------------|---------|
+| `run_turn` | `runTurn` 入口 | root（S0） |
+| `llm.chat` | 每个 sub-round 的 `chatWithRecovery` | 每轮 LLM 一次 |
+| `tool.<name>` | 每次 `executeTool` | 每个工具一次 |
+| `subagent.<type>` | `ExecuteRun` 入口 | 每个子代理一次 |
+| 子 `run_turn` | 子 Runner 的 `runTurn` | 每个子 turn 一次 |
+
+**不变的情况**：
+
+- 同一 `llm.chat` span 内的 compact / 重试 → **同一** `span_id`（§13.8.2）
+- 并发 tool batch：各 goroutine `logctx.Bind(ctx)` + 各自 `trace.Start` → **同一** `trace_id`，**不同** `span_id`（§13.8.3）
+
+##### 一次 turn 时序示例
+
+```
+用户按回车 → run_turn           trace_id=T1  span_id=S0
+  → llm.chat (round 1)          trace_id=T1  span_id=S1
+    → tool.read                 trace_id=T1  span_id=S2
+    → tool.grep                 trace_id=T1  span_id=S3
+  → llm.chat (round 2)          trace_id=T1  span_id=S4
+    → subagent.explore          trace_id=T1  span_id=S5
+      → run_turn (child)        trace_id=T1  span_id=S6
+        → llm.chat              trace_id=T1  span_id=S7
+turn 结束 → 下次用户消息         trace_id=T2  span_id=S8（新 root）
+```
+
+`permission` / `mcp` / `context` 等仅调用 `logging.L()` 的包：在 `executeTool` 等 span 内执行时自动带上当时的 ID，**无需改调用点**（§13.7.3）。
+
+##### 与 session_id / run_id 的对比
+
+| 字段 | 粒度 | 何时变 |
+|------|------|--------|
+| `session_id` | 整个会话，跨多轮 | 切换 session 时 |
+| `trace_id` | 单次用户 turn | 每轮用户消息 |
+| `run_id` | 单次 subagent spawn | 每次 spawn |
+| `span_id` | 单次操作（LLM / tool / subagent） | 每次 `trace.Start` |
 
 ### 13.10 调用链时序（启用 tracing）
 

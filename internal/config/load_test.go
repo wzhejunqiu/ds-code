@@ -241,6 +241,134 @@ func TestLoad_rejectsInvalidEnvBlacklistPattern(t *testing.T) {
 	}
 }
 
+func TestLoad_tracingFromYAML(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dsCode := filepath.Join(dir, ".ds-code")
+	if err := os.Mkdir(dsCode, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := `tracing:
+  enabled: true
+  exporter: log
+`
+	if err := os.WriteFile(filepath.Join(dsCode, "config.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	cfg, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Tracing.Enabled {
+		t.Fatal("expected tracing enabled from yaml")
+	}
+	if cfg.Tracing.Exporter != "log" {
+		t.Fatalf("exporter = %q", cfg.Tracing.Exporter)
+	}
+}
+
+func TestLoad_rejectsStdoutExporter(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dsCode := filepath.Join(dir, ".ds-code")
+	if err := os.Mkdir(dsCode, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := `tracing:
+  exporter: stdout
+`
+	if err := os.WriteFile(filepath.Join(dsCode, "config.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	_, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err == nil {
+		t.Fatal("expected error for stdout exporter")
+	}
+	if !strings.Contains(err.Error(), "use log instead") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestLoad_traceCLIFlagOverridesYAML(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dsCode := filepath.Join(dir, ".ds-code")
+	if err := os.Mkdir(dsCode, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := `tracing:
+  enabled: true
+`
+	if err := os.WriteFile(filepath.Join(dsCode, "config.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	if err := cmd.ParseFlags([]string{"--trace=false"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Tracing.Enabled {
+		t.Fatal("expected --trace=false to override yaml enabled: true")
+	}
+}
+
+func TestLoad_traceCLIEnables(t *testing.T) {
+	dir := t.TempDir()
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	if err := cmd.ParseFlags([]string{"--trace"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Tracing.Enabled {
+		t.Fatal("expected --trace to enable tracing")
+	}
+}
+
+func TestLoad_rejectsOTLPEndpointMissing(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dsCode := filepath.Join(dir, ".ds-code")
+	if err := os.Mkdir(dsCode, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := `tracing:
+  exporter: otlp
+`
+	if err := os.WriteFile(filepath.Join(dsCode, "config.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := &cobra.Command{}
+	config.BindFlags(cmd)
+	_, err := config.Load(cmd, config.Options{StartDir: dir, SkipProjectDataDir: true})
+	if err == nil || !strings.Contains(err.Error(), "otlp_endpoint") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
 func TestLoadAPIKey(t *testing.T) {
 	t.Setenv("DS_CODE_DEEPSEEK_API_KEY", "")
 	t.Setenv("DEEPSEEK_API_KEY", "")

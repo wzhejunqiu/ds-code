@@ -225,6 +225,8 @@ flowchart TD
 | 工具执行 | `tool.<name>` | 继承 | 新建 |
 | 子 agent | `subagent.<type>` | 继承 | 新建 |
 
+**`trace_id` / `span_id` 更新时机**（注入机制、何时变、一次 turn 时序示例）：见 [DESIGN.md §13.9.1](DESIGN.md#1391-trace_id--span_id-更新时机)。
+
 #### 依赖（预期）
 
 ```

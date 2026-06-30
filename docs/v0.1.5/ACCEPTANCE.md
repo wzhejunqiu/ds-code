@@ -8,12 +8,12 @@
 ## 1. 总体验收
 
 - [ ] 版本号标记为 v0.1.5（发布打 `v0.1.5` tag 时由 ldflags 注入）
-- [ ] `make test` / `make lint` / `make vet` 通过
-- [ ] `CHANGELOG.md` 含 allowlist 语义 **breaking** 说明
-- [ ] `configs/example.yaml` `web.allowlist` 注释已更新
-- [ ] `internal/tool/builtin/web_fetch/web_fetch_policy.go` 已删除
-- [ ] `configs/example.yaml` 含 `tracing` 段说明
-- [ ] `CHANGELOG.md` 含 tracing 能力说明（默认关闭；支持 CLI 与 YAML）
+- [x] `make test` / `make lint` / `make vet` 通过
+- [x] `CHANGELOG.md` 含 allowlist 语义 **breaking** 说明
+- [x] `configs/example.yaml` `web.allowlist` 注释已更新
+- [x] `internal/tool/builtin/web_fetch/web_fetch_policy.go` 已删除
+- [x] `configs/example.yaml` 含 `tracing` 段说明
+- [x] `CHANGELOG.md` 含 tracing 能力说明（默认关闭；支持 CLI 与 YAML）
 
 **自动化冒烟**：
 
@@ -188,6 +188,8 @@ make test
 
 ### AC-8.3 全局 `logging.L()` 自动注入（FR-8.3）
 
+> 更新时机细则：[DESIGN.md §13.9.1](DESIGN.md#1391-trace_id--span_id-更新时机)
+
 | 检查 | 预期 |
 |------|------|
 | 机制 | `traceCore` 包装 + `logctx` goroutine 栈 |
@@ -265,11 +267,11 @@ make test
 
 | 检查 | 预期 |
 |------|------|
-| `--trace-exporter=stdout` | span 输出到 stderr；不影响 `ds-code.log` |
+| `--trace-exporter=log` | span 以 DEBUG 写入 `ds-code.log`（需 `-vv`）；TUI 安全 |
 | `--trace --trace-exporter=otlp` + 有效 endpoint | span 可到达 collector（手动或集成环境验证） |
 | `--trace-exporter=otlp` 且无 endpoint | 启动失败，明确错误信息 |
 
-> P2：无本地 collector 时，CI 可仅测配置解析与 stdout exporter，otlp 进手动清单 MV-4。
+> P2：无本地 collector 时，CI 可仅测配置解析与 log exporter，otlp 进手动清单 MV-4。
 
 ### AC-8.10 依赖与结构
 
@@ -314,9 +316,9 @@ make test
 3. 确认 `ds-code.log` 含 `trace_id`/`span_id`
 4. 将 `enabled` 改回 `false`，重启后新日志无 trace 字段
 
-### MV-5 tracing stdout 导出（可选）
+### MV-5 tracing log 导出（可选）
 
-1. `ds-code --trace --trace-exporter=stdout`
+1. `ds-code --trace --trace-exporter=log -vv`
 2. 运行一轮短对话
 3. 确认 stderr 出现 span JSON；`ds-code.log` 仍含 `trace_id`/`span_id`
 

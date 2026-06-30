@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/wzhejunqiu/ds-code/internal/llm"
+	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
 	"github.com/wzhejunqiu/ds-code/internal/tool/builtin/shell"
@@ -81,6 +82,7 @@ func (r *Runner) runConcurrentBatch(ctx context.Context, sessionID string, calls
 		wg.Add(1)
 		go func(idx int, call llm.ToolCall) {
 			defer wg.Done()
+			defer logging.Bind(ctx)()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			results[idx] = r.executeSingleTool(ctx, sessionID, call)

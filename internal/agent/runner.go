@@ -20,6 +20,8 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/security/classifier"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/trace"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -65,6 +67,12 @@ type TurnResult struct {
 }
 
 func (r *Runner) executeTool(ctx context.Context, sessionID string, tc llm.ToolCall) string {
+	ctx, end := trace.Start(ctx, trace.SpanTool(tc.Name),
+		attribute.String(trace.AttrSessionID, sessionID),
+		attribute.String(trace.AttrToolName, tc.Name),
+		attribute.String(trace.AttrToolCallID, tc.ID),
+	)
+	defer end()
 	if tool.NameAgent.Matches(tc.Name) && r.Cfg.Tools.Agent.ForkEnabled {
 		ctx = r.enrichAgentForkContext(ctx, sessionID, tc)
 	}

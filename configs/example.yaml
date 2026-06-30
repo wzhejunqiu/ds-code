@@ -305,6 +305,16 @@ web:
   # fetch_cache_max_bytes: 52428800
 
 # ---------------------------------------------------------------------------
+# tracing — OpenTelemetry span + trace_id/span_id 日志关联（默认关闭）
+# ---------------------------------------------------------------------------
+tracing:
+  # enabled: 开启后在 ds-code.log 输出 trace_id / span_id，并在 agent 链路创建 span
+  enabled: false
+  # exporter: 可选 log（写入 ds-code.log DEBUG）或 otlp（需 collector）；默认不导出
+  exporter: ""
+  # otlp_endpoint: http://localhost:4318
+
+# ---------------------------------------------------------------------------
 # run_mode — agent | plan（Plan 模式仅只读工具子集；CLI --plan 亦可设置）
 # ---------------------------------------------------------------------------
 run_mode: agent

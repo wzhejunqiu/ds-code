@@ -20,6 +20,8 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/session/subagentstore"
 	"github.com/wzhejunqiu/ds-code/internal/tool"
+	"github.com/wzhejunqiu/ds-code/internal/trace"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -42,6 +44,11 @@ func ExecuteRun(
 	if run.Prompt == "" && run.SpawnKind != subagentstore.SpawnFork {
 		return "", fmt.Errorf("spawn: empty prompt")
 	}
+	ctx, endSpan := trace.Start(ctx, trace.SpanSubagent(def.Type.String()),
+		attribute.String(trace.AttrSubagentRun, run.ID),
+		attribute.String(trace.AttrSubagentType, def.Type.String()),
+	)
+	defer endSpan()
 
 	// Worktree isolation runs tools against the detached checkout, not project root.
 	workspace := cfg.ProjectRoot

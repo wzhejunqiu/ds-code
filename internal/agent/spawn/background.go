@@ -60,6 +60,7 @@ func (bm *BackgroundManager) Start(parentCtx context.Context, cfg *config.Config
 	go func() {
 		defer close(task.Done)
 		defer cancel()
+		defer logging.Bind(ctx)()
 
 		startTime := time.Now()
 		cb := agent.SubagentToolCallbacks(parentCallbacks, run.ID)

@@ -98,6 +98,22 @@ func validate(cfg *Config) error {
 		return err
 	}
 	cfg.Tools.Shell.EnvBlacklistCompiled = compiled
+	return validateTracing(cfg)
+}
+
+var allowedTraceExporters = []string{"", "log", "otlp"}
+
+func validateTracing(cfg *Config) error {
+	exp := strings.TrimSpace(cfg.Tracing.Exporter)
+	if exp == "stdout" {
+		return fmt.Errorf("config: tracing.exporter stdout is removed; use log instead")
+	}
+	if !slices.Contains(allowedTraceExporters, exp) {
+		return fmt.Errorf("config: tracing.exporter must be empty, log, or otlp, got %q", cfg.Tracing.Exporter)
+	}
+	if exp == "otlp" && strings.TrimSpace(cfg.Tracing.OTLPEndpoint) == "" {
+		return fmt.Errorf("config: tracing.otlp_endpoint is required when tracing.exporter is otlp")
+	}
 	return nil
 }
 

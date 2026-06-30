@@ -8,7 +8,7 @@
 
 | 模式 | 注册条件 |
 |------|----------|
-| plan / agent | `web.fetch_enabled: true`（默认）且目标主机在 `web.allowlist` 中 |
+| plan / agent | `web.fetch_enabled: true`（默认）；主机策略由 `permission.Engine` + `web.allowlist` 控制 |
 
 ## 参数 Schema
 
@@ -38,14 +38,14 @@
 
 ### 多层校验
 
-与 [`web_fetch_policy.go`](web_fetch_policy.go) 相同：allowlist、私有 IP 阻断、DNS rebinding 防护。
+主机访问策略在 [`internal/permission/web.go`](../../../permission/web.go)：SSRF 硬规则、`web.allowlist` 预设集合、readonly/ask 三选一审批；逐跳重定向校验走 `Engine.CheckFetchHost`。
 
 ## 配置项
 
 | 键 | 默认 | 说明 |
 |----|------|------|
-| `web.fetch_enabled` | true | 是否注册并允许调用（默认开；`allowlist` 为空时仍拒绝所有主机） |
-| `web.allowlist` | [] | 允许的主机列表；**空列表表示全部拒绝** |
+| `web.fetch_enabled` | true | 是否注册并允许调用 |
+| `web.allowlist` | [] | **预设**可访问主机；空列表 = 无预设（readonly/ask 弹窗询问；auto 仅 SSRF） |
 | `web.fetch_model` | `deepseek-v4-flash` | 页面分析模型 |
 | `web.fetch_cache_ttl` | `15m` | LRU 单条 TTL |
 | `web.fetch_cache_max_bytes` | `52428800` | LRU 总容量（压缩后） |

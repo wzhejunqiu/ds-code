@@ -13,7 +13,7 @@ v0.1.5 聚焦 **`web_fetch` 主机访问策略迁入 `internal/permission`**，�
 2. **未列入主机** → readonly/ask 下弹出**三选一**审批（允许一次 / 始终允许 / 拒绝）；「始终允许」写入项目 `.ds-code/config.yaml`。
 3. **`auto` 模式**不参考 allowlist，仅 SSRF 硬规则放行。
 4. **消除 allowlist 参数传递**：`WebFetchTool` 注入 `*permission.Engine`，逐跳校验统一走 `CheckFetchHost`。
-5. **日志 trace 关联（P1）**：`traceCore` + `logctx` 使全项目 `logging.L()` 在 span 内自动带 `trace_id`/`span_id`；CLI 或 YAML 开启（见 [DESIGN.md §13.7](DESIGN.md#137-全局日志注入logctx--tracecore)）。
+5. **日志 trace 关联（P1）**：`traceCore` + `logctx` 使全项目 `logging.L()` 在 span 内自动带 `trace_id`/`span_id`；CLI 或 YAML 开启（见 [DESIGN.md §13.7](DESIGN.md#137-全局日志注入logctx--tracecore)、[§13.9.1 更新时机](DESIGN.md#1391-trace_id--span_id-更新时机)）。
 
 本版本 **不改变** `web.fetch_enabled`、LRU cache、`normalizeURL`、跨域重定向语义；write/shell 的二选一 `Prompter` 不变。
 

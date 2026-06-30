@@ -76,6 +76,19 @@ func applyChangedFlags(cfg *Config, cmd *cobra.Command) error {
 			cfg.RunMode = runmode.Plan
 		}
 	}
+	if f := fs.Lookup("trace"); f != nil && f.Changed {
+		v, err := fs.GetBool("trace")
+		if err != nil {
+			return err
+		}
+		cfg.Tracing.Enabled = v
+	}
+	if f := fs.Lookup("trace-exporter"); f != nil && f.Changed {
+		cfg.Tracing.Exporter = f.Value.String()
+	}
+	if f := fs.Lookup("trace-otlp-endpoint"); f != nil && f.Changed {
+		cfg.Tracing.OTLPEndpoint = f.Value.String()
+	}
 	return nil
 }
 

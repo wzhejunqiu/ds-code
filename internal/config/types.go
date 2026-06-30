@@ -23,6 +23,7 @@ type Config struct {
 	MCP                   MCPConfig            `mapstructure:"mcp"`
 	Web                   WebConfig            `mapstructure:"web"`
 	LSP                   LSPConfig            `mapstructure:"lsp"`
+	Tracing               TracingConfig        `mapstructure:"tracing"`
 	RunMode               runmode.RunMode      `mapstructure:"run_mode"`
 	TUI                   TUIConfig            `mapstructure:"tui"`
 	LogVerbosity          int                  `mapstructure:"-"`
@@ -179,6 +180,13 @@ type WebConfig struct {
 	FetchModel         string        `mapstructure:"fetch_model"`
 	FetchCacheTTL      time.Duration `mapstructure:"fetch_cache_ttl"`
 	FetchCacheMaxBytes int           `mapstructure:"fetch_cache_max_bytes"`
+}
+
+// TracingConfig controls OpenTelemetry spans and trace_id/span_id log injection.
+type TracingConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	Exporter     string `mapstructure:"exporter"`
+	OTLPEndpoint string `mapstructure:"otlp_endpoint"`
 }
 
 type LSPConfig struct {

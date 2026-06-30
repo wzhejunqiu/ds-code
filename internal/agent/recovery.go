@@ -10,6 +10,8 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/llm"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/trace"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -23,6 +25,12 @@ const (
 
 // chatWithRecovery wraps LLM.Chat with a multi-strategy recovery loop.
 func (r *Runner) chatWithRecovery(ctx context.Context, sessionID string, req llm.Request, state *LoopState) (*llm.Response, error) {
+	ctx, end := trace.Start(ctx, trace.SpanLLMChat,
+		attribute.String(trace.AttrSessionID, sessionID),
+		attribute.Int(trace.AttrSubRound, state.Round+1),
+		attribute.String(trace.AttrLLMModel, req.Model),
+	)
+	defer end()
 	attempt := 0
 	currentReq := req
 

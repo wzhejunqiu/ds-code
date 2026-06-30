@@ -133,4 +133,7 @@ func BindFlags(cmd *cobra.Command) {
 	fs.Bool("json", false, "JSON output (with -p)")
 	fs.CountP("verbose", "v", "Log level in project log file (-v INFO, -vv DEBUG)")
 	fs.Bool("allow-log-sensitive-data", false, "Log full sensitive debug data (requires -vv)")
+	fs.Bool("trace", false, "Enable OpenTelemetry spans and trace_id/span_id in logs")
+	fs.String("trace-exporter", "", "Span exporter when tracing on: log|otlp")
+	fs.String("trace-otlp-endpoint", "", "OTLP HTTP endpoint when --trace-exporter=otlp")
 }
