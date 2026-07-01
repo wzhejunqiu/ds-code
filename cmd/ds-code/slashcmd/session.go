@@ -10,6 +10,7 @@ import (
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"go.uber.org/zap"
 )
@@ -101,53 +102,47 @@ func Permissions(env *Env, args string) error {
 		fmt.Fprintf(env.Out, "permission.mode: %s (session), runner: %s\n", sess.PermissionMode.String(), env.Runner.Perm.Mode)
 		return nil
 	}
-	mode, confirmed, err := parsePermissionArgs(args)
+	pm, confirmed, err := parsePermissionArgs(args)
 	if err != nil {
 		return err
 	}
-	switch mode {
-	case "readonly", "ask", "auto":
-		if mode == "auto" && !confirmed {
-			fmt.Fprintf(env.Out, "Setting permission.mode to auto runs write/shell tools without confirmation. Re-run with: /permissions auto --yes\n")
-			return nil
-		}
-		env.Cfg.Permission.Mode = mode
-		env.Runner.Perm.Mode = mode
-		if mode == "ask" && permission.IsInteractiveTTY() {
-			env.Runner.Perm.Prompter = permission.StdinPrompter(os.Stderr)
-		} else {
-			env.Runner.Perm.Prompter = nil
-		}
-		_ = env.Store.UpdateSession(env.Ctx, *env.SessionID, func(s *session.Session) error {
-			pm := session.PermissionMode(mode)
-			if !pm.Valid() {
-				return fmt.Errorf("invalid permission mode %q", mode)
-			}
-			s.PermissionMode = pm
-			return nil
-		})
-		fmt.Fprintf(env.Out, "permission.mode set to %s\n", mode)
-	default:
-		return fmt.Errorf("invalid permission mode %q", mode)
+	if pm == permissionmode.Auto && !confirmed {
+		fmt.Fprintf(env.Out, "Setting permission.mode to auto runs write/shell tools without confirmation. Re-run with: /permissions auto --yes\n")
+		return nil
 	}
+	env.Cfg.Permission.Mode = pm
+	env.Runner.Perm.Mode = pm
+	if pm == permissionmode.Ask && permission.IsInteractiveTTY() {
+		env.Runner.Perm.Prompter = permission.StdinPrompter(os.Stderr)
+	} else {
+		env.Runner.Perm.Prompter = nil
+	}
+	_ = env.Store.UpdateSession(env.Ctx, *env.SessionID, func(s *session.Session) error {
+		s.PermissionMode = pm
+		return nil
+	})
+	fmt.Fprintf(env.Out, "permission.mode set to %s\n", pm)
 	return nil
 }
 
-func parsePermissionArgs(raw string) (mode string, confirmed bool, err error) {
+func parsePermissionArgs(raw string) (permissionmode.Mode, bool, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return "", false, fmt.Errorf("usage: /permissions [readonly|ask|auto [--yes]]")
+		return "", false, fmt.Errorf(
+			"usage: /permissions [%s [--yes]]",
+			strings.Join(permissionmode.ConfiguredStrings(), "|"),
+		)
 	}
+	confirmed := false
 	if i := strings.LastIndex(raw, " --yes"); i >= 0 && strings.TrimSpace(raw[i:]) == "--yes" {
 		confirmed = true
 		raw = strings.TrimSpace(raw[:i])
 	}
-	switch raw {
-	case "readonly", "ask", "auto":
-		return raw, confirmed, nil
-	default:
+	pm, err := permissionmode.Parse(raw)
+	if err != nil || !pm.Configured() {
 		return "", false, fmt.Errorf("invalid permission mode %q", raw)
 	}
+	return pm, confirmed, nil
 }
 
 func Resume(env *Env, args string) error {

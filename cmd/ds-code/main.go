@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/trace"
 	"github.com/wzhejunqiu/ds-code/internal/version"
 	"github.com/wzhejunqiu/ds-code/internal/versioninfo"
 )
@@ -61,6 +62,8 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	defer closeLog()
+	closeTrace := trace.Setup(cfg.Tracing)
+	defer closeTrace()
 	app.LogConfigResolved(cfg)
 	app.MaybeWarnSensitiveLog(cfg, os.Stderr)
 
@@ -83,5 +86,6 @@ func setupLogging(cfg *config.Config) (func(), error) {
 		ProjectRoot:        cfg.ProjectRoot,
 		Verbosity:          cfg.LogVerbosity,
 		AllowSensitiveData: cfg.AllowLogSensitiveData,
+		TracingEnabled:     cfg.Tracing.Enabled,
 	})
 }

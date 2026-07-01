@@ -10,6 +10,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/permission"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/tuitest/mockserver"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/header"
@@ -44,22 +45,25 @@ func (a *App) RunTUIHarness(cmd *cobra.Command, sessionID string, reg *mockserve
 	}
 
 	promptCh := make(chan permission.PromptRequest, 1)
-	if a.Cfg.Permission.Mode == "ask" {
+	webFetchCh := make(chan permission.WebFetchPromptRequest, 1)
+	runner.Perm.WebFetchPrompter = permission.TUIWebFetchPrompter(webFetchCh)
+	if a.Cfg.Permission.Mode == permissionmode.Ask {
 		runner.Perm.Interactive = true
 		runner.Perm.Prompter = permission.TUIPrompter(promptCh)
 	}
 
 	subStore := a.subStore
 	deps := tui.Deps{
-		Cfg:            a.Cfg,
-		Runner:         runner,
-		Store:          store,
-		Subagent:       subStore,
-		Context:        ctxSvc,
-		SessionID:      sessionID,
-		Version:        version.Version,
-		PromptCh:       promptCh,
-		StartupNotices: append([]header.Notice(nil), startupNotices...),
+		Cfg:              a.Cfg,
+		Runner:           runner,
+		Store:            store,
+		Subagent:         subStore,
+		Context:          ctxSvc,
+		SessionID:        sessionID,
+		Version:          version.Version,
+		PromptCh:         promptCh,
+		WebFetchPromptCh: webFetchCh,
+		StartupNotices:   append([]header.Notice(nil), startupNotices...),
 		HandleSlash: func(c context.Context, w io.Writer, sid *string, line, activeAgentType string) (bool, error) {
 			env := &slashcmd.Env{
 				Ctx: c, Out: w, Cfg: a.Cfg, Runner: runner, Store: store,

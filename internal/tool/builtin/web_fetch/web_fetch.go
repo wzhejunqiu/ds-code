@@ -25,12 +25,19 @@ var (
 // WebFetchTool fetches a URL, converts HTML to Markdown, and analyzes with a lightweight model.
 type WebFetchTool struct {
 	Cfg    *config.Config
+	Perm   *permission.Engine
 	Strict bool
 	LLM    llm.Client
 	Cache  *LRUCache
 }
 
 func (t *WebFetchTool) Name() string { return tool.NameWebFetch.String() }
+
+func (t *WebFetchTool) WithPerm(perm *permission.Engine) tool.Tool {
+	out := *t
+	out.Perm = perm
+	return &out
+}
 
 func (t *WebFetchTool) IsReadOnly() bool        { return true }
 func (t *WebFetchTool) IsConcurrencySafe() bool { return true }
@@ -72,7 +79,7 @@ func (t *WebFetchTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	if cached := cache.Get(key); cached != nil {
 		page = *cached
 	} else {
-		outcome, err := fetchURL(ctx, u, t.Cfg.Web.Allowlist)
+		outcome, err := fetchURL(ctx, u, t.Perm, nil)
 		if err != nil {
 			return "", err
 		}
@@ -123,7 +130,7 @@ func newWebFetchClient() *http.Client {
 			if err != nil {
 				return nil, err
 			}
-			if err := validateResolvedFetchHost(host); err != nil {
+			if err := permission.CheckResolvedFetchHost(host); err != nil {
 				return nil, err
 			}
 			return dialer.DialContext(ctx, network, net.JoinHostPort(host, port))
@@ -136,20 +143,4 @@ func newWebFetchClient() *http.Client {
 			return http.ErrUseLastResponse
 		},
 	}
-}
-
-func validateResolvedFetchHost(host string) error {
-	if isBlockedFetchHost(host) {
-		return fmt.Errorf(ErrBlockedHost, host)
-	}
-	ips, err := net.LookupIP(host)
-	if err != nil {
-		return fmt.Errorf(ErrDNSLookup, host, err)
-	}
-	for _, ip := range ips {
-		if isPrivateOrMetadataIP(ip) {
-			return fmt.Errorf(ErrBlockedIP, ip, host)
-		}
-	}
-	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/runmode"
 )
 
@@ -43,7 +44,7 @@ func HarnessConfig(mockBaseURL, projectRoot string) (*config.Config, error) {
 			ToolResultMaxChars:    100_000,
 		},
 		Agent:      config.AgentConfig{MaxTurns: 25},
-		Permission: config.PermissionConfig{Mode: "auto"},
+		Permission: config.PermissionConfig{Mode: permissionmode.Auto},
 		Tools: config.ToolsConfig{
 			ParallelToolCalls: true,
 			ReadFile:          config.ReadFileToolConfig{MaxLines: 2000},

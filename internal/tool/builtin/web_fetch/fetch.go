@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 )
 
 // FetchOutcome is the result of an HTTP fetch attempt.
@@ -17,20 +19,19 @@ type FetchOutcome struct {
 	CrossHostRedirect *url.URL
 }
 
-// fetchURL performs GET with manual redirect handling.
-func fetchURL(ctx context.Context, start *url.URL, allowlist []string) (*FetchOutcome, error) {
-	return fetchURLWithClient(ctx, start, allowlist, newWebFetchClient())
-}
-
-// fetchURLWithClient is like fetchURL but accepts a custom HTTP client (for tests).
-func fetchURLWithClient(ctx context.Context, start *url.URL, allowlist []string, client *http.Client) (*FetchOutcome, error) {
+func fetchURL(ctx context.Context, start *url.URL, perm *permission.Engine, client *http.Client) (*FetchOutcome, error) {
+	if client == nil {
+		client = newWebFetchClient()
+	}
 	current := *start
 	initialHost := start.Hostname()
 	redirected := false
 
 	for hops := 0; hops < 10; hops++ {
-		if err := validateFetchURLHost(current.Hostname(), allowlist); err != nil {
-			return nil, err
+		if perm != nil {
+			if err := perm.CheckFetchHost(ctx, current.Hostname()); err != nil {
+				return nil, err
+			}
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, current.String(), nil)
 		if err != nil {

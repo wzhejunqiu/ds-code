@@ -11,6 +11,8 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/trace"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -31,6 +33,8 @@ func (r *Runner) RunTurnSeeded(ctx context.Context, sessionID string, cb *TurnCa
 func (r *Runner) runTurn(ctx context.Context, sessionID, userText string, cb *TurnCallbacks, opts runTurnOptions) (*TurnResult, error) {
 	ctx = WithActiveTurn(ctx)
 	defer WithoutActiveTurn(ctx)
+	ctx, endTurn := trace.Start(ctx, trace.SpanRunTurn, attribute.String(trace.AttrSessionID, sessionID))
+	defer endTurn()
 	if r.Perm != nil {
 		r.Perm.SpillSessionID = sessionID
 		if r.Cfg != nil && r.Cfg.ProjectRoot != "" {

@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-07-01
+
+### Added
+
+- OpenTelemetry 追踪（默认关闭）：`tracing.enabled` YAML 或 `--trace` 开启；`logging.L()` 在 active span 内自动注入 `trace_id`/`span_id`；span 埋点覆盖 `run_turn`、`llm.chat`、`tool.*`、`subagent.*`；可选 `log`/`otlp` exporter（`log` 将完整 span 以 DEBUG 写入 `ds-code.log`，需 `-vv`）
+
+### Changed
+
+- `web_fetch` 主机访问策略迁入 `internal/permission`（SSRF + allowlist + mode 分支；三选一审批）
+
+### Breaking
+
+- `tracing.exporter: stdout` 已移除；改用 `log`（写入 `ds-code.log`）或 `otlp`
+- `web.allowlist` 语义变更：空列表不再全部拒绝；readonly/ask 访问未列入主机会弹出「允许本次 / 始终允许 / 拒绝」；auto 模式忽略 allowlist（仅 SSRF 硬规则）
+
 ## [0.1.4] - 2026-06-29
 
 ### Added

@@ -54,6 +54,8 @@ type State struct {
 
 	Prompt *permission.PromptRequest
 
+	WebFetchPrompt *permission.WebFetchPromptRequest
+
 	Running            bool
 	TurnWG             sync.WaitGroup
 	TurnCancel         context.CancelFunc

@@ -29,6 +29,7 @@ type Deps struct {
 	HandleSlash             SlashFunc
 	OnSessionEnd            func(sessionID string)
 	PromptCh                chan permission.PromptRequest
+	WebFetchPromptCh        chan permission.WebFetchPromptRequest
 	Events                  chan<- tea.Msg
 	BackgroundAgents        func() int
 	HasPendingNotifications func() bool

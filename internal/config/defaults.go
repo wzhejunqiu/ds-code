@@ -74,6 +74,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("web.fetch_cache_ttl", "15m")
 	v.SetDefault("web.fetch_cache_max_bytes", 52_428_800)
 
+	v.SetDefault("tracing.enabled", false)
+	v.SetDefault("tracing.exporter", "")
+	v.SetDefault("tracing.otlp_endpoint", "")
+
 	v.SetDefault("lsp.enabled", true)
 	v.SetDefault("lsp.idle_shutdown", "120s")
 	v.SetDefault("lsp.diagnostics_timeout", "20s")

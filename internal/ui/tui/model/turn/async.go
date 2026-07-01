@@ -105,6 +105,7 @@ func RunAsync(d deps.Deps, line string, events chan<- tea.Msg, wg *sync.WaitGrou
 		zap.Int("prompt_chars", len(line)),
 	)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer logging.Bind(ctx)()
 	sendAgentEvent(events, msg.TurnStartedMsg{Cancel: cancel}, true)
 
 	var buf streamBuffer

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/wzhejunqiu/ds-code/internal/permission"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 	"github.com/wzhejunqiu/ds-code/internal/ui/tui/chat"
@@ -27,6 +28,7 @@ func Cancel(s *state.State, syncView func()) {
 		s.TurnCancel()
 	}
 	DismissPrompt(s)
+	DismissWebFetchPrompt(s)
 	AppendInterruptBlock(s, syncView)
 }
 
@@ -126,4 +128,42 @@ func HandlePromptKey(s *state.State, key string, listenPrompt func() tea.Cmd) te
 		ReplyPrompt(s, false)
 	}
 	return listenPrompt()
+}
+
+func DismissWebFetchPrompt(s *state.State) {
+	if s.WebFetchPrompt == nil {
+		return
+	}
+	select {
+	case s.WebFetchPrompt.Reply <- permission.WebFetchDeny:
+	default:
+	}
+	s.WebFetchPrompt = nil
+	s.Overlay = state.OverlayNone
+	s.OverlayText = ""
+}
+
+func ReplyWebFetchPrompt(s *state.State, choice permission.WebFetchChoice) {
+	if s.WebFetchPrompt == nil {
+		return
+	}
+	select {
+	case s.WebFetchPrompt.Reply <- choice:
+	default:
+	}
+	s.WebFetchPrompt = nil
+	s.Overlay = state.OverlayNone
+	s.OverlayText = ""
+}
+
+func HandleWebFetchPromptKey(s *state.State, key string, listenWebFetch func() tea.Cmd) tea.Cmd {
+	switch strings.ToLower(key) {
+	case "1", "a":
+		ReplyWebFetchPrompt(s, permission.WebFetchAllowOnce)
+	case "2", "s":
+		ReplyWebFetchPrompt(s, permission.WebFetchAllowAlways)
+	case "3", "d", "n", "no", "esc":
+		ReplyWebFetchPrompt(s, permission.WebFetchDeny)
+	}
+	return listenWebFetch()
 }

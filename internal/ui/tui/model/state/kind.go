@@ -10,6 +10,7 @@ const (
 	OverlayComplete
 	OverlayResume
 	OverlayPrompt
+	OverlayWebFetchPrompt
 	OverlaySubagentList
 	OverlayTCase // harness: /tcase scenario picker (tuitest build)
 )

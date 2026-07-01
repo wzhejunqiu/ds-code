@@ -9,6 +9,7 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/patch"
+	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/security/classifier"
 	"github.com/wzhejunqiu/ds-code/internal/toolname"
 	wspkg "github.com/wzhejunqiu/ds-code/internal/workspace"
@@ -26,15 +27,16 @@ var ErrRejected = errors.New("permission: user rejected")
 
 // Engine enforces permission mode and path policies.
 type Engine struct {
-	Mode        string
-	Workspace   string
-	ProjectRoot string // cfg.ProjectRoot for spill paths (may differ from Workspace in worktrees)
-	// SpillSessionID is set per RunTurn for logging/trace; not used to bind spill read_file access.
-	SpillSessionID string
-	Interactive    bool
-	Prompter       Prompter
-	writeTool      func(string) bool
-	mcpTool        func(string) bool
+	Mode             permissionmode.Mode
+	Workspace        string
+	ProjectRoot      string // cfg.ProjectRoot for spill paths (may differ from Workspace in worktrees)
+	SpillSessionID   string
+	Interactive      bool
+	Prompter         Prompter
+	WebAllowlist     []string
+	WebFetchPrompter WebFetchPrompter
+	writeTool        func(string) bool
+	mcpTool          func(string) bool
 }
 
 // SetWriteToolDetector registers extra write tools (e.g. MCP write tools).
@@ -48,7 +50,7 @@ func (e *Engine) SetMCPToolDetector(fn func(string) bool) {
 }
 
 // NewEngine creates a permission engine.
-func NewEngine(mode, workspace string, interactive bool) *Engine {
+func NewEngine(mode permissionmode.Mode, workspace string, interactive bool) *Engine {
 	return &Engine{Mode: mode, Workspace: workspace, Interactive: interactive}
 }
 
@@ -80,10 +82,10 @@ func (e *Engine) check(tool string, args map[string]any) error {
 			}
 		}
 	}
-	if e.isWriteTool(tool) && e.Mode == "readonly" {
+	if e.isWriteTool(tool) && e.Mode == permissionmode.Readonly {
 		return fmt.Errorf("%w: %s in readonly mode", ErrDenied, tool)
 	}
-	if e.isWriteTool(tool) && e.Mode == "ask" && !e.Interactive {
+	if e.isWriteTool(tool) && e.Mode == permissionmode.Ask && !e.Interactive {
 		return ErrNeedTTY
 	}
 
@@ -124,7 +126,15 @@ func (e *Engine) check(tool string, args map[string]any) error {
 		}
 	}
 
-	if e.isWriteTool(tool) && e.Mode == "ask" && e.Interactive {
+	if tool == "web_fetch" {
+		url, _ := args["url"].(string)
+		if url == "" {
+			return nil // schema layer validates required url
+		}
+		return e.CheckWebFetch(url)
+	}
+
+	if e.isWriteTool(tool) && e.Mode == permissionmode.Ask && e.Interactive {
 		if tool == toolname.Bash {
 			if cmd, _ := args["command"].(string); cmd != "" {
 				if dec, _ := classifier.Classify(cmd); dec == classifier.Ask || dec == classifier.Allow {
@@ -157,15 +167,15 @@ func (e *Engine) checkShellCommand(cmd string) (handled bool, err error) {
 		if err := e.checkSensitiveShell(cmd); err != nil {
 			return true, err
 		}
-		if e.Mode == "readonly" {
+		if e.Mode == permissionmode.Readonly {
 			return true, nil
 		}
-		if e.Mode == "ask" && e.Interactive {
+		if e.Mode == permissionmode.Ask && e.Interactive {
 			return true, nil
 		}
 		return false, nil
 	case classifier.Ask:
-		if e.Mode == "readonly" {
+		if e.Mode == permissionmode.Readonly {
 			return true, fmt.Errorf("%w: %s", ErrDenied, reason)
 		}
 		if err := e.checkSensitiveShell(cmd); err != nil {

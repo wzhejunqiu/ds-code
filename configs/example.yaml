@@ -281,20 +281,18 @@ mcp:
   #   env: {}
 
 # ---------------------------------------------------------------------------
-# web — 网络工具（allowlist 防 SSRF；fetch_enabled 默认开）
+# web — 网络工具（SSRF 硬规则 + allowlist 预设；fetch_enabled 默认开）
 # ---------------------------------------------------------------------------
 web:
-  # 启用 web_fetch 工具（须在 allowlist 中配置允许的主机）
+  # 启用 web_fetch 工具
   fetch_enabled: true
   # 启用 web_search 工具
   search_enabled: false
-  # 允许访问的主机名白名单（仅主机名，不含 scheme/path/port）
-  # - 空列表 [] = 全部拒绝（即使 fetch_enabled: true）
-  # - 精确匹配：example.com 仅允许 example.com
-  # - 通配子域：*.github.io 允许 github.io 及其子域（如 docs.github.io）
-  #   不匹配 notgithub.io 或 evil.github.io.attacker.com
-  # - 通配符基底须 ≥3 字符（*.co 无效）
-  # - 即使命中白名单，localhost / 私有 IP / 169.254.169.254 仍拒绝
+  # 预设可访问主机（仅主机名，不含 scheme/path/port）
+  # - readonly/ask：列表内静默放行；未列入时交互询问（允许本次 / 始终允许 / 拒绝）
+  # - auto：忽略 allowlist，仅 SSRF 硬规则
+  # - 精确匹配：example.com；通配子域：*.github.io（基底须 ≥3 字符）
+  # - localhost / 私有 IP / 169.254.169.254 始终拒绝
   allowlist: []
   # allowlist:
   #   - example.com
@@ -305,6 +303,16 @@ web:
   # 原始正文 LRU 缓存 TTL / 总容量（gzip 压缩后计容）
   # fetch_cache_ttl: 15m
   # fetch_cache_max_bytes: 52428800
+
+# ---------------------------------------------------------------------------
+# tracing — OpenTelemetry span + trace_id/span_id 日志关联（默认关闭）
+# ---------------------------------------------------------------------------
+tracing:
+  # enabled: 开启后在 ds-code.log 输出 trace_id / span_id，并在 agent 链路创建 span
+  enabled: false
+  # exporter: 可选 log（写入 ds-code.log DEBUG）或 otlp（需 collector）；默认不导出
+  exporter: ""
+  # otlp_endpoint: http://localhost:4318
 
 # ---------------------------------------------------------------------------
 # run_mode — agent | plan（Plan 模式仅只读工具子集；CLI --plan 亦可设置）

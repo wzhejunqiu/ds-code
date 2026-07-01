@@ -10,18 +10,20 @@ import (
 )
 
 type KeyDeps struct {
-	HandleResumeEnter func() (tea.Cmd, bool)
-	HandleResumeKey   func(tea.KeyPressMsg) bool
-	HandleCompleteKey func(tea.KeyPressMsg) bool
-	HandleTCaseEnter  func() (tea.Cmd, bool)
-	HandleTCaseKey    func(tea.KeyPressMsg) bool
-	HandlePromptKey   func(tea.KeyPressMsg) tea.Cmd
-	ListenPrompt      func() tea.Cmd
-	RequestCancelTurn func()
-	ShowHelp          func() tea.Cmd
-	ShowContext       func() tea.Cmd
-	SyncChat          func()
-	ExitTimeout       func() tea.Cmd
+	HandleResumeEnter       func() (tea.Cmd, bool)
+	HandleResumeKey         func(tea.KeyPressMsg) bool
+	HandleCompleteKey       func(tea.KeyPressMsg) bool
+	HandleTCaseEnter        func() (tea.Cmd, bool)
+	HandleTCaseKey          func(tea.KeyPressMsg) bool
+	HandlePromptKey         func(tea.KeyPressMsg) tea.Cmd
+	HandleWebFetchPromptKey func(tea.KeyPressMsg) tea.Cmd
+	ListenPrompt            func() tea.Cmd
+	ListenWebFetchPrompt    func() tea.Cmd
+	RequestCancelTurn       func()
+	ShowHelp                func() tea.Cmd
+	ShowContext             func() tea.Cmd
+	SyncChat                func()
+	ExitTimeout             func() tea.Cmd
 }
 
 func HandleKey(s *state.State, msg tea.KeyPressMsg, d KeyDeps) (tea.Cmd, bool) {
@@ -44,6 +46,13 @@ func HandleKey(s *state.State, msg tea.KeyPressMsg, d KeyDeps) (tea.Cmd, bool) {
 			return d.ListenPrompt(), true
 		}
 		return d.HandlePromptKey(msg), true
+	}
+	if s.Overlay == state.OverlayWebFetchPrompt && s.WebFetchPrompt != nil {
+		if s.Running && msg.String() == "esc" {
+			d.RequestCancelTurn()
+			return d.ListenWebFetchPrompt(), true
+		}
+		return d.HandleWebFetchPromptKey(msg), true
 	}
 	if s.Overlay == state.OverlayComplete {
 		if d.HandleCompleteKey(msg) {
@@ -117,4 +126,9 @@ func HandleKey(s *state.State, msg tea.KeyPressMsg, d KeyDeps) (tea.Cmd, bool) {
 // HandlePromptKey wraps turn.HandlePromptKey for overlay KeyDeps wiring.
 func HandlePromptKey(s *state.State, msg tea.KeyPressMsg, listenPrompt func() tea.Cmd) tea.Cmd {
 	return turn.HandlePromptKey(s, msg.String(), listenPrompt)
+}
+
+// HandleWebFetchPromptKey wraps turn.HandleWebFetchPromptKey for overlay KeyDeps wiring.
+func HandleWebFetchPromptKey(s *state.State, msg tea.KeyPressMsg, listenWebFetch func() tea.Cmd) tea.Cmd {
+	return turn.HandleWebFetchPromptKey(s, msg.String(), listenWebFetch)
 }

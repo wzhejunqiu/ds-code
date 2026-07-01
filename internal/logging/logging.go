@@ -31,6 +31,8 @@ type Options struct {
 	Verbosity int
 	// AllowSensitiveData permits full bodies and paths in debug logs.
 	AllowSensitiveData bool
+	// TracingEnabled wraps the file core with traceCore for trace_id/span_id injection.
+	TracingEnabled bool
 }
 
 // TrySetup installs the file logger when possible; on failure it keeps the nop logger.
@@ -67,7 +69,7 @@ func Setup(opts Options) (func(), error) {
 		zapOpts = append(zapOpts, zap.AddCaller())
 	}
 
-	logger := zap.New(newCore(zapcore.AddSync(f), fileLevel), zapOpts...)
+	logger := zap.New(newCore(zapcore.AddSync(f), fileLevel, opts.TracingEnabled), zapOpts...)
 	prev := swap(logger)
 
 	cleanup := func() {
@@ -103,10 +105,22 @@ func ReplaceForTest(l *zap.Logger) func() {
 	return func() { swap(prev) }
 }
 
-func newCore(ws zapcore.WriteSyncer, level zapcore.Level) zapcore.Core {
+// NewTestCore returns a zapcore.Core wrapped with traceCore when logctx is active.
+func NewTestCore(core zapcore.Core) zapcore.Core {
+	if logctxActive {
+		return wrapTraceCore(core)
+	}
+	return core
+}
+
+func newCore(ws zapcore.WriteSyncer, level zapcore.Level, tracing bool) zapcore.Core {
 	encCfg := zap.NewProductionEncoderConfig()
 	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 	encCfg.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoder := zapcore.NewConsoleEncoder(encCfg)
-	return zapcore.NewCore(encoder, ws, level)
+	core := zapcore.NewCore(encoder, ws, level)
+	if tracing {
+		core = wrapTraceCore(core)
+	}
+	return core
 }
