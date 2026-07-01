@@ -122,8 +122,10 @@ func appendUniqueAllowlist(list []string, host string) []string {
 	if host == "" {
 		return list
 	}
-	if hostAllowed(host, list) {
-		return list
+	for _, entry := range list {
+		if normalizeFetchHost(entry) == host {
+			return list
+		}
 	}
 	return append(list, host)
 }

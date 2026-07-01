@@ -105,7 +105,7 @@ func TestEngine_ask_sameAsReadonly(t *testing.T) {
 		e.WebFetchPrompter = func(host, rawURL string) (WebFetchChoice, error) {
 			return WebFetchDeny, nil
 		}
-		_, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": "https://new.test/"})
+		_, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": "https://example.net/"})
 		if err != ErrRejected {
 			t.Fatalf("mode %s: err = %v, want ErrRejected", mode, err)
 		}
@@ -160,22 +160,22 @@ func TestEngine_allowAlways_updatesMemoryAndSkipsReprompt(t *testing.T) {
 		return WebFetchAllowAlways, nil
 	}
 
-	ctx, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": "https://new.test/"})
+	ctx, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": "https://example.net/"})
 	if err != nil {
 		t.Fatalf("first fetch: %v", err)
 	}
-	if !hostAllowed("new.test", e.WebAllowlist) {
-		t.Fatalf("WebAllowlist = %v, want new.test", e.WebAllowlist)
+	if !hostAllowed("example.net", e.WebAllowlist) {
+		t.Fatalf("WebAllowlist = %v, want example.net", e.WebAllowlist)
 	}
 	b, err := os.ReadFile(config.ProjectConfigPath(root))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(b), "new.test") {
-		t.Fatalf("config missing new.test: %s", b)
+	if !strings.Contains(string(b), "example.net") {
+		t.Fatalf("config missing example.net: %s", b)
 	}
 
-	_, err = e.PrepareWebFetch(ctx, map[string]any{"url": "https://new.test/page"})
+	_, err = e.PrepareWebFetch(ctx, map[string]any{"url": "https://example.net/page"})
 	if err != nil {
 		t.Fatalf("second fetch: %v", err)
 	}

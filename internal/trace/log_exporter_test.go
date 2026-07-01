@@ -8,6 +8,7 @@ import (
 
 	"github.com/wzhejunqiu/ds-code/internal/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -61,6 +62,7 @@ func TestLogExporter_writesDebugSpan(t *testing.T) {
 }
 
 func TestLogExporter_writesSpanToFile(t *testing.T) {
+	testutil.IsolatedHome(t)
 	dir := t.TempDir()
 	closeLog, err := logging.Setup(logging.Options{
 		ProjectRoot:    dir,

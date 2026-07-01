@@ -9,6 +9,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/logging"
+	"github.com/wzhejunqiu/ds-code/internal/testutil"
 	"github.com/wzhejunqiu/ds-code/internal/trace"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
@@ -26,6 +27,7 @@ func TestSetupThenTraceStart_noCaller_injectsTraceIDInLogFile(t *testing.T) {
 
 func runFileTraceInjectionTest(t *testing.T, verbosity int) {
 	t.Helper()
+	testutil.IsolatedHome(t)
 	dir := t.TempDir()
 	closeLog, err := logging.Setup(logging.Options{
 		ProjectRoot:    dir,
@@ -48,6 +50,7 @@ func runFileTraceInjectionTest(t *testing.T, verbosity int) {
 }
 
 func TestSetupThenObserverLogger_injectsTraceID(t *testing.T) {
+	testutil.IsolatedHome(t)
 	dir := t.TempDir()
 	closeLog, err := logging.Setup(logging.Options{
 		ProjectRoot:    dir,
