@@ -11,7 +11,15 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 )
 
+func skipIfHostBlockedBySSRF(t *testing.T, host string) {
+	t.Helper()
+	if isBlockedFetchHost(host) {
+		t.Skipf("host %q blocked by SSRF/DNS in this environment", host)
+	}
+}
+
 func TestHostAllowed(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.com")
 	list := []string{"example.com", "*.github.io"}
 	if !hostAllowed("example.com", list) {
 		t.Fatal("expected example.com")
@@ -61,6 +69,7 @@ func TestIsBlockedFetchHost_dnsFailureBlocks(t *testing.T) {
 }
 
 func TestEngine_auto_skipsAllowlist(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.com")
 	e := NewEngine(permissionmode.Auto, t.TempDir(), false)
 	ctx := WithWebFetchApproval(context.Background())
 	if err := e.CheckFetchHost(ctx, "example.com"); err != nil {
@@ -69,6 +78,7 @@ func TestEngine_auto_skipsAllowlist(t *testing.T) {
 }
 
 func TestEngine_readonly_allowlisted(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.com")
 	e := NewEngine(permissionmode.Readonly, t.TempDir(), false)
 	e.WebAllowlist = []string{"example.com"}
 	ctx := WithWebFetchApproval(context.Background())
@@ -78,6 +88,7 @@ func TestEngine_readonly_allowlisted(t *testing.T) {
 }
 
 func TestEngine_readonly_unlistedNeedsPrompt(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.com")
 	e := NewEngine(permissionmode.Readonly, t.TempDir(), true)
 	e.WebFetchPrompter = func(host, rawURL string) (WebFetchChoice, error) {
 		return WebFetchAllowOnce, nil
@@ -92,6 +103,7 @@ func TestEngine_readonly_unlistedNeedsPrompt(t *testing.T) {
 }
 
 func TestEngine_readonly_nonInteractiveNeedTTY(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.com")
 	e := NewEngine(permissionmode.Readonly, t.TempDir(), false)
 	_, err := e.PrepareWebFetch(context.Background(), map[string]any{"url": "https://example.com/"})
 	if err != ErrNeedTTY {
@@ -100,6 +112,7 @@ func TestEngine_readonly_nonInteractiveNeedTTY(t *testing.T) {
 }
 
 func TestEngine_ask_sameAsReadonly(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.net")
 	for _, mode := range []permissionmode.Mode{permissionmode.Readonly, permissionmode.Ask} {
 		e := NewEngine(mode, t.TempDir(), true)
 		e.WebFetchPrompter = func(host, rawURL string) (WebFetchChoice, error) {
@@ -133,6 +146,7 @@ func TestNormalizeFetchHost(t *testing.T) {
 }
 
 func TestEngine_CheckWebFetch_routesFromCheck(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.com")
 	auto := NewEngine(permissionmode.Auto, t.TempDir(), false)
 	if err := auto.Check("web_fetch", map[string]any{"url": "https://example.com/"}); err != nil {
 		t.Fatalf("auto Check: %v", err)
@@ -151,6 +165,7 @@ func TestEngine_CheckWebFetch_routesFromCheck(t *testing.T) {
 }
 
 func TestEngine_allowAlways_updatesMemoryAndSkipsReprompt(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.net")
 	root := t.TempDir()
 	e := NewEngine(permissionmode.Readonly, root, true)
 	e.ProjectRoot = root
@@ -185,6 +200,7 @@ func TestEngine_allowAlways_updatesMemoryAndSkipsReprompt(t *testing.T) {
 }
 
 func TestEngine_allowOnce_sameHostRedirect(t *testing.T) {
+	skipIfHostBlockedBySSRF(t, "example.com")
 	e := NewEngine(permissionmode.Readonly, t.TempDir(), true)
 	e.WebFetchPrompter = func(host, rawURL string) (WebFetchChoice, error) {
 		return WebFetchAllowOnce, nil

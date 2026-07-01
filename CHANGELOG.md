@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-07-01
+
 ### Added
 
 - OpenTelemetry 追踪（默认关闭）：`tracing.enabled` YAML 或 `--trace` 开启；`logging.L()` 在 active span 内自动注入 `trace_id`/`span_id`；span 埋点覆盖 `run_turn`、`llm.chat`、`tool.*`、`subagent.*`；可选 `log`/`otlp` exporter（`log` 将完整 span 以 DEBUG 写入 `ds-code.log`，需 `-vv`）

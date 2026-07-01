@@ -1,8 +1,8 @@
 # v0.1.5 设计文档
 
-> 版本：v0.1.5  
-> 状态：规划中  
-> 更新日期：2026-06-30  
+> 版本：v0.1.5
+> 状态：已实现
+> 更新日期：2026-07-01
 > 需求：[REQUIREMENTS.md](REQUIREMENTS.md)
 
 ## 1. 设计目标
@@ -51,46 +51,46 @@ sequenceDiagram
 
 ### 2.3 迁移文件清单
 
-| 操作 | 路径 |
-|------|------|
-| 新增 | `internal/permission/web.go` |
-| 新增 | `internal/permission/web_prompt.go` |
-| 新增 | `internal/permission/web_test.go` |
-| 新增 | `internal/config/web_allowlist.go` |
-| 新增 | `internal/config/web_allowlist_test.go` |
-| 修改 | `internal/permission/engine.go` |
-| 修改 | `internal/permission/log.go` |
-| 修改 | `internal/tool/builtin/web_fetch/web_fetch.go` |
-| 修改 | `internal/tool/builtin/web_fetch/fetch.go` |
-| 修改 | `internal/tool/setup/setup.go` |
-| 删除 | `internal/tool/builtin/web_fetch/web_fetch_policy.go` |
-| 修改 | `cmd/ds-code/app/runner.go` |
-| 修改 | `cmd/ds-code/app/tui.go` |
-| 修改 | `internal/agent/spawn/execute.go` |
-| 修改 | `internal/ui/tui/...`（overlay + msg） |
-| 新增 | `internal/trace/setup.go`、`span.go`、`*_test.go` |
-| 新增 | `internal/logging/logctx.go`（goroutine 上下文栈） |
-| 新增 | `internal/logging/trace_core.go`（`traceCore` 包装 `zapcore.Core`） |
-| 新增 | `internal/logging/context.go`（`FromContext`，可选） |
-| 修改 | `internal/config/flags.go`、`load.go`、`validate.go`、`types.go` |
-| 修改 | `configs/example.yaml`（`tracing` 段） |
-| 修改 | `internal/logging/logging.go`（`Setup` 串联 trace 初始化） |
+| 操作 | 路径                                                                          |
+| ---- | ----------------------------------------------------------------------------- |
+| 新增 | `internal/permission/web.go`                                                  |
+| 新增 | `internal/permission/web_prompt.go`                                           |
+| 新增 | `internal/permission/web_test.go`                                             |
+| 新增 | `internal/config/web_allowlist.go`                                            |
+| 新增 | `internal/config/web_allowlist_test.go`                                       |
+| 修改 | `internal/permission/engine.go`                                               |
+| 修改 | `internal/permission/log.go`                                                  |
+| 修改 | `internal/tool/builtin/web_fetch/web_fetch.go`                                |
+| 修改 | `internal/tool/builtin/web_fetch/fetch.go`                                    |
+| 修改 | `internal/tool/setup/setup.go`                                                |
+| 删除 | `internal/tool/builtin/web_fetch/web_fetch_policy.go`                         |
+| 修改 | `cmd/ds-code/app/runner.go`                                                   |
+| 修改 | `cmd/ds-code/app/tui.go`                                                      |
+| 修改 | `internal/agent/spawn/execute.go`                                             |
+| 修改 | `internal/ui/tui/...`（overlay + msg）                                        |
+| 新增 | `internal/trace/setup.go`、`span.go`、`*_test.go`                             |
+| 新增 | `internal/logging/logctx.go`（goroutine 上下文栈）                            |
+| 新增 | `internal/logging/trace_core.go`（`traceCore` 包装 `zapcore.Core`）           |
+| 新增 | `internal/logging/context.go`（`FromContext`，可选）                          |
+| 修改 | `internal/config/flags.go`、`load.go`、`validate.go`、`types.go`              |
+| 修改 | `configs/example.yaml`（`tracing` 段）                                        |
+| 修改 | `internal/logging/logging.go`（`Setup` 串联 trace 初始化）                    |
 | 修改 | `internal/agent/runner_turn.go`、`runner_loop.go`、`runner.go`、`recovery.go` |
-| 修改 | `internal/agent/spawn/execute.go`、`ephemeral.go` |
-| 修改 | `cmd/ds-code/main.go`（`setupLogging` 旁挂载 trace cleanup） |
-| 修改 | `go.mod`（OTel 依赖） |
+| 修改 | `internal/agent/spawn/execute.go`、`ephemeral.go`                             |
+| 修改 | `cmd/ds-code/main.go`（`setupLogging` 旁挂载 trace cleanup）                  |
+| 修改 | `go.mod`（OTel 依赖）                                                         |
 
 ## 3. `permission/web.go`
 
 ### 3.1 自 `web_fetch_policy.go` 迁入
 
-| 函数 | 可见性 | 说明 |
-|------|--------|------|
-| `CheckFetchSSRF(host string) error` | 导出 | loopback、私有 IP、metadata、DNS 失败 |
-| `hostAllowed(host, allowlist []string) bool` | 包内 | `*.domain` 通配；**无**空 list 全拒 |
-| `checkFetchAllowlist(host string) bool` | `Engine` 方法 | 读 `e.WebAllowlist` |
+| 函数                                            | 可见性        | 说明                                       |
+| ----------------------------------------------- | ------------- | ------------------------------------------ |
+| `CheckFetchSSRF(host string) error`             | 导出          | loopback、私有 IP、metadata、DNS 失败      |
+| `hostAllowed(host, allowlist []string) bool`    | 包内          | `*.domain` 通配；**无**空 list 全拒        |
+| `checkFetchAllowlist(host string) bool`         | `Engine` 方法 | 读 `e.WebAllowlist`                        |
 | `CheckFetchHost(host, approvedOnce bool) error` | `Engine` 方法 | SSRF + mode；`approvedOnce` 跳过 allowlist |
-| `CheckWebFetch(rawURL string) error` | `Engine` 方法 | 工具级入口 |
+| `CheckWebFetch(rawURL string) error`            | `Engine` 方法 | 工具级入口                                 |
 
 ### 3.2 `CheckWebFetch` 伪代码
 
@@ -185,10 +185,10 @@ type Engine struct {
 
 与现有 permission 双通道模式对齐（参见 v0.1.3 DESIGN §3.10）：
 
-| 通道 | 用途 | 类型 |
-|------|------|------|
-| `PromptCh` + `listenPrompt` | write/shell 二选一 | `permission.PromptRequest` |
-| `WebFetchPromptCh`（新） | web_fetch 三选一 | `permission.WebFetchPromptRequest` |
+| 通道                        | 用途               | 类型                               |
+| --------------------------- | ------------------ | ---------------------------------- |
+| `PromptCh` + `listenPrompt` | write/shell 二选一 | `permission.PromptRequest`         |
+| `WebFetchPromptCh`（新）    | web_fetch 三选一   | `permission.WebFetchPromptRequest` |
 
 ```go
 type WebFetchPromptRequest struct {
@@ -208,11 +208,11 @@ func TUIWebFetchPrompter(reqCh chan<- WebFetchPromptRequest) WebFetchPrompter {
 
 TUI overlay 文案示例：`访问 example.com 不在 allowlist`
 
-| 按键 | 选择 |
-|------|------|
-| `1` / `a` | `WebFetchAllowOnce` |
+| 按键      | 选择                  |
+| --------- | --------------------- |
+| `1` / `a` | `WebFetchAllowOnce`   |
 | `2` / `s` | `WebFetchAllowAlways` |
-| `3` / `d` | `WebFetchDeny` |
+| `3` / `d` | `WebFetchDeny`        |
 
 非 TUI：`StdinWebFetchPrompter(w io.Writer)` 打印选项读 stdin。
 
@@ -306,10 +306,10 @@ if err := perm.CheckFetchHost(host, approved); err != nil {
 
 `Runner` 在 `CheckWebFetch` 返回 `AllowOnce` 时记录 host，传入 `Execute`。实现方式二选一（推荐 A）：
 
-| 方案 | 说明 |
-|------|------|
-| **A. context value** | `context.WithValue` 存 `approvedWebHost`；`Execute` 读取 |
-| B. Execute 再调 Check | 重复逻辑，不推荐 |
+| 方案                  | 说明                                                     |
+| --------------------- | -------------------------------------------------------- |
+| **A. context value**  | `context.WithValue` 存 `approvedWebHost`；`Execute` 读取 |
+| B. Execute 再调 Check | 重复逻辑，不推荐                                         |
 
 `AllowAlways` 在 `CheckWebFetch` 内已完成内存 + 磁盘更新，`approvedHost` 可为该 host（同 `AllowOnce` 效果）。
 
@@ -343,23 +343,23 @@ perm.WebFetchPrompter = parentPerm.WebFetchPrompter
 
 ## 9. 错误与日志
 
-| 错误 | 场景 |
-|------|------|
-| `ErrNeedTTY` | 非交互 + 未命中 allowlist |
-| `ErrRejected` | 用户选拒绝 |
-| `ErrDenied` | SSRF 阻断 |
+| 错误            | 场景                                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| `ErrNeedTTY`    | 非交互 + 未命中 allowlist                                                                    |
+| `ErrRejected`   | 用户选拒绝                                                                                   |
+| `ErrDenied`     | SSRF 阻断                                                                                    |
 | config 写入失败 | `AllowAlways` 时返回错误（内存已更新是否回滚：建议先写盘成功再更新内存，或失败时不更新内存） |
 
 **推荐顺序**（`AllowAlways`）：规范化 → 写盘成功 → 更新 `e.WebAllowlist`。
 
 ## 10. 测试策略
 
-| 包 | 重点 |
-|----|------|
+| 包           | 重点                                                                     |
+| ------------ | ------------------------------------------------------------------------ |
 | `permission` | SSRF 矩阵；allowlist 通配；三模式；mock `WebFetchPrompter`；`ErrNeedTTY` |
-| `config` | 追加、去重、新建文件、原子写 |
-| `web_fetch` | mock `Engine` + 重定向 approvedOnce |
-| `ui/tui` | `HandleWebFetchPromptKey` 三键 |
+| `config`     | 追加、去重、新建文件、原子写                                             |
+| `web_fetch`  | mock `Engine` + 重定向 approvedOnce                                      |
+| `ui/tui`     | `HandleWebFetchPromptKey` 三键                                           |
 
 ```bash
 go test -race -count=1 ./internal/permission/... ./internal/config/... ./internal/tool/builtin/web_fetch/... ./internal/ui/tui/...
@@ -395,16 +395,16 @@ allowlist: []
 
 ### 13.1 设计原则
 
-| 原则 | 说明 |
-|------|------|
-| **默认关闭** | `tracing.enabled: false` 且未传 `--trace` 时不创建 span、日志无 trace 字段（NFR-5） |
-| **双入口** | CLI 与 YAML 均可开启；桌面端后续可直接注入 `config.Config` 无需 CLI |
-| **全局 L() 注入** | 所有 `logging.L()` 在 active span 内自动带 `trace_id`/`span_id`；**不**要求改各包调用点 |
-| **不替换 zap 调用方式** | 保留 `logging.L()` API；通过 Core 包装 + `logctx` 实现 |
-| **context 传播** | span 存于 `context.Context`（OTel 标准）；子代理/并发 tool 继承父 trace |
-| **业务字段保留** | `session_id`、`run_id`、`tool` 等继续显式传入，不与 trace 混用 |
-| **失败降级** | `TracerProvider` 初始化失败 → noop + `Warn`，不阻塞 CLI 启动（NFR-6） |
-| **日志优先** | v0.1.5 目标是 **日志串联**；span 导出到外部 collector 为可选（P2） |
+| 原则                    | 说明                                                                                    |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| **默认关闭**            | `tracing.enabled: false` 且未传 `--trace` 时不创建 span、日志无 trace 字段（NFR-5）     |
+| **双入口**              | CLI 与 YAML 均可开启；桌面端后续可直接注入 `config.Config` 无需 CLI                     |
+| **全局 L() 注入**       | 所有 `logging.L()` 在 active span 内自动带 `trace_id`/`span_id`；**不**要求改各包调用点 |
+| **不替换 zap 调用方式** | 保留 `logging.L()` API；通过 Core 包装 + `logctx` 实现                                  |
+| **context 传播**        | span 存于 `context.Context`（OTel 标准）；子代理/并发 tool 继承父 trace                 |
+| **业务字段保留**        | `session_id`、`run_id`、`tool` 等继续显式传入，不与 trace 混用                          |
+| **失败降级**            | `TracerProvider` 初始化失败 → noop + `Warn`，不阻塞 CLI 启动（NFR-6）                   |
+| **日志优先**            | v0.1.5 目标是 **日志串联**；span 导出到外部 collector 为可选（P2）                      |
 
 ### 13.2 包职责划分
 
@@ -425,14 +425,14 @@ flowchart LR
   core --> file["ds-code.log trace_id/span_id"]
 ```
 
-| 包 | 职责 |
-|----|------|
-| `internal/trace` | `Setup`；`Start`（创建 span + `logctx.Push`） |
-| `internal/logging/logctx` | goroutine 本地 context 栈：`Push`/`Pop`/`Current`/`Bind` |
+| 包                            | 职责                                                                 |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `internal/trace`              | `Setup`；`Start`（创建 span + `logctx.Push`）                        |
+| `internal/logging/logctx`     | goroutine 本地 context 栈：`Push`/`Pop`/`Current`/`Bind`             |
 | `internal/logging/trace_core` | 包装 `zapcore.Core`，`Write` 时从 `logctx.Current()` 注入 trace 字段 |
-| `internal/logging` | `L()` 不变；`Setup` 在 tracing 启用时装配 `traceCore` |
-| `internal/config` | `TracingConfig` YAML + CLI 覆盖 |
-| `internal/agent` 等 | **继续** `logging.L()`，无需改 import 或调用签名 |
+| `internal/logging`            | `L()` 不变；`Setup` 在 tracing 启用时装配 `traceCore`                |
+| `internal/config`             | `TracingConfig` YAML + CLI 覆盖                                      |
+| `internal/agent` 等           | **继续** `logging.L()`，无需改 import 或调用签名                     |
 
 ### 13.3 依赖
 
@@ -500,11 +500,11 @@ if f := fs.Lookup("trace-exporter"); f != nil && f.Changed {
 }
 ```
 
-| 来源 | 典型场景 |
-|------|----------|
-| 用户/项目 YAML | 桌面端默认配置、团队统一开启 trace |
-| `--trace` | 单次 CLI 调试，覆盖 YAML |
-| `config.Config` 直填 | 桌面端嵌入进程，不经过 cobra |
+| 来源                 | 典型场景                           |
+| -------------------- | ---------------------------------- |
+| 用户/项目 YAML       | 桌面端默认配置、团队统一开启 trace |
+| `--trace`            | 单次 CLI 调试，覆盖 YAML           |
+| `config.Config` 直填 | 桌面端嵌入进程，不经过 cobra       |
 
 #### 13.4.3 有效配置解析
 
@@ -513,12 +513,12 @@ if f := fs.Lookup("trace-exporter"); f != nil && f.Changed {
 enabled := cfg.Tracing.Enabled
 ```
 
-| 优先级（高 → 低） | 字段 |
-|-------------------|------|
-| CLI `--trace`（`Changed`） | `Tracing.Enabled` |
-| 项目 `.ds-code/config.yaml` | `tracing.*` |
-| 用户 `~/.ds-code/config/config.yaml` | `tracing.*` |
-| 内置默认 | `enabled: false` |
+| 优先级（高 → 低）                    | 字段              |
+| ------------------------------------ | ----------------- |
+| CLI `--trace`（`Changed`）           | `Tracing.Enabled` |
+| 项目 `.ds-code/config.yaml`          | `tracing.*`       |
+| 用户 `~/.ds-code/config/config.yaml` | `tracing.*`       |
+| 内置默认                             | `enabled: false`  |
 
 CLI 示例：
 
@@ -587,13 +587,13 @@ func Setup(cfg config.TracingConfig) (cleanup func()) {
 }
 ```
 
-| 条件 | 行为 |
-|------|------|
-| `enabled: false` 且未传 `--trace` | noop TracerProvider；`trace.Start` 快速返回原 ctx |
-| YAML `enabled: true` 或 `--trace` | 真实 TracerProvider；日志含 trace 字段 |
-| exporter 未设 | **无** span 导出器；span 驻内存；`traceCore` 从 `logctx` 读 ID |
-| `exporter: log` / `--trace-exporter=log` | 额外将 span 以 DEBUG 写入 `ds-code.log`（需 `-vv`） |
-| `exporter: otlp` + endpoint | 批量导出到 collector |
+| 条件                                     | 行为                                                           |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `enabled: false` 且未传 `--trace`        | noop TracerProvider；`trace.Start` 快速返回原 ctx              |
+| YAML `enabled: true` 或 `--trace`        | 真实 TracerProvider；日志含 trace 字段                         |
+| exporter 未设                            | **无** span 导出器；span 驻内存；`traceCore` 从 `logctx` 读 ID |
+| `exporter: log` / `--trace-exporter=log` | 额外将 span 以 DEBUG 写入 `ds-code.log`（需 `-vv`）            |
+| `exporter: otlp` + endpoint              | 批量导出到 collector                                           |
 
 > **仅日志关联**：YAML `tracing.enabled: true` 或 `ds-code --trace` 即可；无需 exporter。
 
@@ -622,15 +622,15 @@ func Start(ctx context.Context, name string, attrs ...attribute.KeyValue) (conte
 
 常用 attribute 键（包内常量）：
 
-| 键 | 用于 |
-|----|------|
-| `ds.session_id` | turn / tool |
-| `ds.tool.name` | tool span |
-| `ds.tool.call_id` | tool span |
-| `ds.sub_round` | llm.chat |
-| `ds.llm.model` | llm.chat |
-| `ds.subagent.run_id` | subagent span |
-| `ds.subagent.type` | subagent span（explore / shell / …） |
+| 键                   | 用于                                 |
+| -------------------- | ------------------------------------ |
+| `ds.session_id`      | turn / tool                          |
+| `ds.tool.name`       | tool span                            |
+| `ds.tool.call_id`    | tool span                            |
+| `ds.sub_round`       | llm.chat                             |
+| `ds.llm.model`       | llm.chat                             |
+| `ds.subagent.run_id` | subagent span                        |
+| `ds.subagent.type`   | subagent span（explore / shell / …） |
 
 遵循 OTel 语义约定时用 `attribute.String("ds.session_id", sessionID)`；v0.1.5 不强制 semconv 全量迁移。
 
@@ -685,23 +685,23 @@ func (c *traceCore) With(fields []zapcore.Field) zapcore.Core {
 
 #### 13.7.3 调用方零改动
 
-| 包 | 调用方式 | v0.1.5 |
-|----|----------|--------|
-| `internal/permission` | `logging.L().Info(...)` | **不改**；`executeTool` span 内自动带 trace |
-| `internal/mcp` | `logging.L().Warn(...)` | **不改** |
-| `internal/context` | `logging.L().Debug(...)` | **不改** |
-| `internal/agent` | `logging.L().Info(...)` | **不改** |
-| 启动 / 无 span | `logging.L()` | 无 trace 字段（栈为空） |
+| 包                    | 调用方式                 | v0.1.5                                      |
+| --------------------- | ------------------------ | ------------------------------------------- |
+| `internal/permission` | `logging.L().Info(...)`  | **不改**；`executeTool` span 内自动带 trace |
+| `internal/mcp`        | `logging.L().Warn(...)`  | **不改**                                    |
+| `internal/context`    | `logging.L().Debug(...)` | **不改**                                    |
+| `internal/agent`      | `logging.L().Info(...)`  | **不改**                                    |
+| 启动 / 无 span        | `logging.L()`            | 无 trace 字段（栈为空）                     |
 
 #### 13.7.4 新建 goroutine 绑定（必须）
 
 以下路径须在 goroutine 入口 `defer logctx.Bind(ctx)()`：
 
-| 位置 | 原因 |
-|------|------|
-| `runConcurrentBatch` | 并发 tool 各自 ctx + span |
-| `spawn` 异步后台 | 脱离父 goroutine |
-| TUI `async.go` turn 执行 | Bubble Tea 异步消息处理 |
+| 位置                     | 原因                      |
+| ------------------------ | ------------------------- |
+| `runConcurrentBatch`     | 并发 tool 各自 ctx + span |
+| `spawn` 异步后台         | 脱离父 goroutine          |
+| TUI `async.go` turn 执行 | Bubble Tea 异步消息处理   |
 
 父 goroutine 已 `trace.Start` 的子调用（同步 `Perm.Check`、`Tools.Execute`）**无需**传 ctx 给 logger。
 
@@ -741,13 +741,13 @@ flowchart TD
     CLC --> CTL
 ```
 
-| Span 名 | 埋点函数 | 父 context | 结束时机 | 关键 attributes |
-|---------|----------|------------|----------|-----------------|
-| `run_turn` | `runTurn` 入口 | 调用方传入（TUI turn / `-p` / subagent） | `defer` 于 `runTurn` 返回 | `ds.session_id` |
-| `llm.chat` | `chatWithRecovery` 入口 | 当前 `run_turn` ctx | `defer` 于 Chat 返回（含 compact 重试） | `ds.session_id`, `ds.sub_round`, `ds.llm.model` |
-| `tool.<name>` | `executeTool` 入口 | `runToolCalls` 传入的 ctx | `defer` 于工具执行完毕 | `ds.session_id`, `ds.tool.name`, `ds.tool.call_id` |
-| `subagent.<type>` | `ExecuteRun` 入口 | 父 `executeTool` ctx | `defer` 于子 run 结束 | `ds.subagent.run_id`, `ds.subagent.type` |
-| `btw` | `RunEphemeral` 入口（可选） | 父 turn ctx 或新建 | ephemeral 结束 | `ds.session_id` |
+| Span 名           | 埋点函数                    | 父 context                               | 结束时机                                | 关键 attributes                                    |
+| ----------------- | --------------------------- | ---------------------------------------- | --------------------------------------- | -------------------------------------------------- |
+| `run_turn`        | `runTurn` 入口              | 调用方传入（TUI turn / `-p` / subagent） | `defer` 于 `runTurn` 返回               | `ds.session_id`                                    |
+| `llm.chat`        | `chatWithRecovery` 入口     | 当前 `run_turn` ctx                      | `defer` 于 Chat 返回（含 compact 重试） | `ds.session_id`, `ds.sub_round`, `ds.llm.model`    |
+| `tool.<name>`     | `executeTool` 入口          | `runToolCalls` 传入的 ctx                | `defer` 于工具执行完毕                  | `ds.session_id`, `ds.tool.name`, `ds.tool.call_id` |
+| `subagent.<type>` | `ExecuteRun` 入口           | 父 `executeTool` ctx                     | `defer` 于子 run 结束                   | `ds.subagent.run_id`, `ds.subagent.type`           |
+| `btw`             | `RunEphemeral` 入口（可选） | 父 turn ctx 或新建                       | ephemeral 结束                          | `ds.session_id`                                    |
 
 #### 13.8.1 `run_turn`（根 span）
 
@@ -820,13 +820,13 @@ defer end()
 
 #### 13.8.5 不在范围 / 后续
 
-| 路径 | v0.1.5 处理 |
-|------|-------------|
-| DeepSeek HTTP 请求 | **不**注入 `traceparent` header（需求 out of scope） |
-| MCP 子进程 | 不传播 trace |
-| `permission` deny 日志 | `logging.L()` 在 `executeTool` span 内自动带 trace |
-| compact / collapse | 不单独建 span |
-| TUI 按键 / 渲染 | 不埋点 |
+| 路径                   | v0.1.5 处理                                          |
+| ---------------------- | ---------------------------------------------------- |
+| DeepSeek HTTP 请求     | **不**注入 `traceparent` header（需求 out of scope） |
+| MCP 子进程             | 不传播 trace                                         |
+| `permission` deny 日志 | `logging.L()` 在 `executeTool` span 内自动带 trace   |
+| compact / collapse     | 不单独建 span                                        |
+| TUI 按键 / 渲染        | 不埋点                                               |
 
 ### 13.9 与现有 ID 的关系
 
@@ -853,12 +853,12 @@ flowchart LR
     TCID --> OP
 ```
 
-| 字段 | 粒度 | 来源 |
-|------|------|------|
-| `session_id` | 会话级，跨多轮 turn | SQLite session |
-| `trace_id` | **单次** `run_turn`（含其下所有 sub-round、tool、子代理） | OTel `TraceID` |
-| `run_id` | 单次 subagent spawn | `subagentstore.Run.ID` |
-| `span_id` | 单个 span（llm.chat、tool.read、…） | OTel `SpanID` |
+| 字段         | 粒度                                                      | 来源                   |
+| ------------ | --------------------------------------------------------- | ---------------------- |
+| `session_id` | 会话级，跨多轮 turn                                       | SQLite session         |
+| `trace_id`   | **单次** `run_turn`（含其下所有 sub-round、tool、子代理） | OTel `TraceID`         |
+| `run_id`     | 单次 subagent spawn                                       | `subagentstore.Run.ID` |
+| `span_id`    | 单个 span（llm.chat、tool.read、…）                       | OTel `SpanID`          |
 
 **不**用 `trace_id` 替代 `session_id`；排查时先按 `session_id` 缩小会话，再按 `trace_id` 过滤单次 turn。
 
@@ -885,14 +885,14 @@ sequenceDiagram
 
 ##### trace_id 何时变
 
-| 时机 | 行为 |
-|------|------|
-| 每次用户 turn 进入 `runTurn` | 新建 root span `run_turn`，生成**新** `trace_id` |
-| 同一 turn 内（多轮 LLM、多个 tool、子代理） | **不变**，子 span 继承父 trace |
-| 子代理 `RunTurnSeeded` | 仍在父 turn 的 trace 下，**不变** |
-| 下一次用户消息（新 turn） | **新** `trace_id` |
-| tracing 未开启 | 日志**无** trace 字段 |
-| 无 active span（启动、idle、漏 `logctx.Bind` 的 goroutine） | 日志**无** trace 字段 |
+| 时机                                                        | 行为                                             |
+| ----------------------------------------------------------- | ------------------------------------------------ |
+| 每次用户 turn 进入 `runTurn`                                | 新建 root span `run_turn`，生成**新** `trace_id` |
+| 同一 turn 内（多轮 LLM、多个 tool、子代理）                 | **不变**，子 span 继承父 trace                   |
+| 子代理 `RunTurnSeeded`                                      | 仍在父 turn 的 trace 下，**不变**                |
+| 下一次用户消息（新 turn）                                   | **新** `trace_id`                                |
+| tracing 未开启                                              | 日志**无** trace 字段                            |
+| 无 active span（启动、idle、漏 `logctx.Bind` 的 goroutine） | 日志**无** trace 字段                            |
 
 粒度：**一次用户 turn = 一个 `trace_id`**（含其下所有 sub-round、tool、子代理）。见 §13.8.1。
 
@@ -900,13 +900,13 @@ sequenceDiagram
 
 每次 `trace.Start` 创建子 span 时 OTel 分配**新** `span_id`；`logctx.Push` 后，该 goroutine 内后续 `logging.L()` 使用此 `span_id`，直到 `defer end()` 弹出。
 
-| Span 边界 | 埋点位置（§13.8） | span_id |
-|-----------|-------------------|---------|
-| `run_turn` | `runTurn` 入口 | root（S0） |
-| `llm.chat` | 每个 sub-round 的 `chatWithRecovery` | 每轮 LLM 一次 |
-| `tool.<name>` | 每次 `executeTool` | 每个工具一次 |
-| `subagent.<type>` | `ExecuteRun` 入口 | 每个子代理一次 |
-| 子 `run_turn` | 子 Runner 的 `runTurn` | 每个子 turn 一次 |
+| Span 边界         | 埋点位置（§13.8）                    | span_id          |
+| ----------------- | ------------------------------------ | ---------------- |
+| `run_turn`        | `runTurn` 入口                       | root（S0）       |
+| `llm.chat`        | 每个 sub-round 的 `chatWithRecovery` | 每轮 LLM 一次    |
+| `tool.<name>`     | 每次 `executeTool`                   | 每个工具一次     |
+| `subagent.<type>` | `ExecuteRun` 入口                    | 每个子代理一次   |
+| 子 `run_turn`     | 子 Runner 的 `runTurn`               | 每个子 turn 一次 |
 
 **不变的情况**：
 
@@ -931,12 +931,12 @@ turn 结束 → 下次用户消息         trace_id=T2  span_id=S8（新 root）
 
 ##### 与 session_id / run_id 的对比
 
-| 字段 | 粒度 | 何时变 |
-|------|------|--------|
-| `session_id` | 整个会话，跨多轮 | 切换 session 时 |
-| `trace_id` | 单次用户 turn | 每轮用户消息 |
-| `run_id` | 单次 subagent spawn | 每次 spawn |
-| `span_id` | 单次操作（LLM / tool / subagent） | 每次 `trace.Start` |
+| 字段         | 粒度                              | 何时变             |
+| ------------ | --------------------------------- | ------------------ |
+| `session_id` | 整个会话，跨多轮                  | 切换 session 时    |
+| `trace_id`   | 单次用户 turn                     | 每轮用户消息       |
+| `run_id`     | 单次 subagent spawn               | 每次 spawn         |
+| `span_id`    | 单次操作（LLM / tool / subagent） | 每次 `trace.Start` |
 
 ### 13.10 调用链时序（启用 tracing）
 
@@ -965,11 +965,11 @@ sequenceDiagram
 
 ### 13.11 测试策略
 
-| 包 | 用例 |
-|----|------|
-| `internal/logging` | `logctx` Push/Pop/Bind；`traceCore` 有/无 span；disabled 时无字段 |
-| `internal/trace` | `Start` 联动 `logctx`；父子 trace_id 相同 |
-| `internal/agent` | turn 内 `permission`/`mcp` 仅 `L()` 的日志含 `trace_id`（跨包回归） |
+| 包                 | 用例                                                                |
+| ------------------ | ------------------------------------------------------------------- |
+| `internal/logging` | `logctx` Push/Pop/Bind；`traceCore` 有/无 span；disabled 时无字段   |
+| `internal/trace`   | `Start` 联动 `logctx`；父子 trace_id 相同                           |
+| `internal/agent`   | turn 内 `permission`/`mcp` 仅 `L()` 的日志含 `trace_id`（跨包回归） |
 
 ```go
 func TestPermissionDeny_logGetsTraceID(t *testing.T) {
@@ -1005,10 +1005,10 @@ go test -race -count=1 ./internal/logging/... ./internal/trace/... ./internal/ag
 
 ### 13.13 风险与缓解
 
-| 风险 | 缓解 |
-|------|------|
-| 默认开启影响性能 | `enabled` 默认 `false`；须 YAML 或 `--trace` 显式开启 |
+| 风险                      | 缓解                                                                  |
+| ------------------------- | --------------------------------------------------------------------- |
+| 默认开启影响性能          | `enabled` 默认 `false`；须 YAML 或 `--trace` 显式开启                 |
 | 并发 tool span 父节点模糊 | v0.1.5 接受 tool 与 `llm.chat` 同为 `run_turn` 子节点；`span_id` 区分 |
-| 新 goroutine 漏 Bind | 单测覆盖 `runConcurrentBatch`；code review 清单 |
-| `traceCore` 性能 | tracing 关闭时不包装 Core；`Write` 内仅读栈顶指针 |
-| exporter 误配 | `otlp` 无 endpoint 时启动失败 |
+| 新 goroutine 漏 Bind      | 单测覆盖 `runConcurrentBatch`；code review 清单                       |
+| `traceCore` 性能          | tracing 关闭时不包装 Core；`Write` 内仅读栈顶指针                     |
+| exporter 误配             | `otlp` 无 endpoint 时启动失败                                         |
