@@ -12,12 +12,13 @@
 | [v0.1.3/](v0.1.3/) | v0.1.3：Bubble Tea v2（`charm.land`）迁移、虚拟列表、选区增强、FR-3/4 延期项 |
 | [v0.1.4/](v0.1.4/) | v0.1.4：`shell`→`bash`、grep/glob ripgrep、8 工具 FR-0 prompt；`diagnostics`/`tool_search`/`web_search` prompt 延后 |
 | [v0.1.5/](v0.1.5/) | v0.1.5：`web_fetch` allowlist 迁入 permission、三选一审批、「始终允许」写项目 config；OTel 日志 `trace_id`/`span_id` |
+| [v0.2.0/](v0.2.0/) | v0.2.0：**macOS 桌面应用完整设计**（Wails v3 + React/Vite/TS + Bun 工具链 + 内嵌 Chromium）；workspace 多项目 + Agent 对话窗口；数据与 CLI 隔离（`~/.ds-code/desktop/projects/`，`ProjectID` 算法不变）；无弹窗内联审批 |
 
 ## 演进方向
 
 | 文档 | 说明 |
 |------|------|
-| [DESKTOP.md](DESKTOP.md) | 桌面版（Go + Wails + TypeScript）可行性研究与分阶段路线 |
+| [DESKTOP.md](DESKTOP.md) | **（已弃用 / deprecated）** 桌面版早期可行性研究；路线已被 [v0.2.0/](v0.2.0/) 取代，技术结论已吸收进 v0.2.0 设计 |
 
 ## 快速入口
 
