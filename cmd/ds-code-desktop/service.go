@@ -1,201 +1,211 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 
-	"github.com/google/uuid"
-	"github.com/wzhejunqiu/ds-code/cmd/ds-code/app"
-	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
-	desktopdatadir "github.com/wzhejunqiu/ds-code/desktop/datadir"
-	desktopperm "github.com/wzhejunqiu/ds-code/desktop/permission"
-	"github.com/wzhejunqiu/ds-code/internal/agent"
+	desktopworkspace "github.com/wzhejunqiu/ds-code/desktop/workspace"
 	"github.com/wzhejunqiu/ds-code/internal/config"
-	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
-	"github.com/wzhejunqiu/ds-code/internal/session"
 )
 
-// DesktopService exposes Wails bindings for the M0 single-workspace PoC.
+// DesktopService exposes Wails bindings for the desktop MVP.
 type DesktopService struct {
-	app     *app.App
-	runner  *agent.Runner
-	store   session.Store
-	session string
-
-	mu          sync.Mutex
-	turnCancel  context.CancelFunc
-	turnRunning bool
-	permReg     *desktopperm.Registry
-	emit        func(desktopbridge.AgentEventEnvelope)
-	emitSeq     uint64
+	mgr *desktopworkspace.Manager
 }
 
-func newDesktopService(emit func(desktopbridge.AgentEventEnvelope)) *DesktopService {
-	s := &DesktopService{emit: emit}
-	s.permReg = desktopperm.NewRegistry(s.emitPermission)
-	return s
-}
-
-func (s *DesktopService) emitPermission(p desktopbridge.PermissionRequestPayload) {
-	s.mu.Lock()
-	s.emitSeq++
-	seq := s.emitSeq
-	emit := s.emit
-	s.mu.Unlock()
-	if emit == nil {
-		return
-	}
-	emit(desktopbridge.AgentEventEnvelope{
-		V:           desktopbridge.EnvelopeVersion,
-		Seq:         seq,
-		StreamID:    "main",
-		WorkspaceID: "default",
-		Kind:        desktopbridge.KindPermissionRequest,
-		Ts:          time.Now().UnixMilli(),
-		Critical:    true,
-		Payload:     desktopbridge.MustPayload(p),
-	})
-}
-
-// OpenProject binds a single workspace/project root and prepares the agent runner.
-func (s *DesktopService) OpenProject(root string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	abs, err := filepath.Abs(root)
+func newDesktopService(emit func(desktopbridge.AgentEventEnvelope)) (*DesktopService, error) {
+	mgr, err := desktopworkspace.NewManager(emit)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if st, err := os.Stat(abs); err != nil || !st.IsDir() {
-		return fmt.Errorf("project root not found: %s", abs)
-	}
-
-	cfg, err := config.Load(nil, config.Options{
-		StartDir:           abs,
-		RequireAPIKey:      true,
-		SkipProjectDataDir: true,
-	})
-	if err != nil {
-		return err
-	}
-	dir, err := desktopdatadir.EnsureProjectDataDir(cfg.ProjectRoot)
-	if err != nil {
-		return err
-	}
-	cfg.ProjectDataDir = dir
-
-	if s.app != nil {
-		s.app.CloseDesktop()
-	}
-	s.app = app.New(cfg)
-	runner, store, _, err := s.app.NewDesktopRunner(io.Discard, s.permReg.Prompter())
-	if err != nil {
-		return err
-	}
-	runner.Perm.Interactive = true
-	if cfg.Permission.Mode == permissionmode.Ask {
-		runner.Perm.Prompter = s.permReg.Prompter()
-	}
-
-	ctx := context.Background()
-	sess, err := slashcmd.CreateSession(cfg, store)
-	if err != nil {
-		return err
-	}
-	if err := slashcmd.SeedGitSnapshot(cfg, ctx, store, sess.ID); err != nil {
-		return err
-	}
-
-	s.runner = runner
-	s.store = store
-	s.session = sess.ID
-	return nil
+	return &DesktopService{mgr: mgr}, nil
 }
 
-// SendMessage starts a new agent turn asynchronously.
-func (s *DesktopService) SendMessage(text string) error {
-	s.mu.Lock()
-	if s.runner == nil || s.session == "" {
-		s.mu.Unlock()
-		return fmt.Errorf("open a project first")
-	}
-	if s.turnRunning {
-		s.mu.Unlock()
-		return fmt.Errorf("turn already running")
-	}
-	runner := s.runner
-	sessionID := s.session
-	emit := s.emit
-	s.turnRunning = true
-	s.mu.Unlock()
-
-	go s.runTurn(runner, sessionID, text, emit)
-	return nil
+// ListWorkspaces returns all registered workspaces.
+func (s *DesktopService) ListWorkspaces() []desktopworkspace.Summary {
+	return s.mgr.List()
 }
 
-func (s *DesktopService) runTurn(runner *agent.Runner, sessionID, text string, emit func(desktopbridge.AgentEventEnvelope)) {
-	ctx, cancel := context.WithCancel(context.Background())
-	s.mu.Lock()
-	s.turnCancel = cancel
-	s.mu.Unlock()
-	defer func() {
-		s.mu.Lock()
-		s.turnRunning = false
-		s.turnCancel = nil
-		s.mu.Unlock()
-	}()
-
-	turnID := uuid.NewString()
-	emitter := desktopbridge.NewStreamEmitter(desktopbridge.StreamEmitterOptions{
-		TurnID:      turnID,
-		WorkspaceID: "default",
-		Emit: func(env desktopbridge.AgentEventEnvelope) bool {
-			emit(env)
-			return true
-		},
-	})
-	desktopbridge.EmitTurnStarted(emitter, sessionID)
-	cb := desktopbridge.TurnCallbacks(desktopbridge.TurnCallbacksOptions{
-		Emitter:   emitter,
-		SessionID: sessionID,
-	})
-	result, err := runner.RunTurn(ctx, sessionID, text, cb)
-	desktopbridge.EmitTurnDone(emitter, result, err)
+// AddWorkspace adds a project root as a workspace.
+func (s *DesktopService) AddWorkspace(root string) (desktopworkspace.Summary, error) {
+	return s.mgr.Add(root)
 }
 
-// CancelTurn cancels the in-flight turn.
-func (s *DesktopService) CancelTurn() error {
-	s.mu.Lock()
-	cancel := s.turnCancel
-	s.mu.Unlock()
-	if cancel == nil {
-		return fmt.Errorf("no running turn")
-	}
-	s.permReg.DenyAll()
-	cancel()
-	return nil
+// RemoveWorkspace removes a workspace from the registry.
+func (s *DesktopService) RemoveWorkspace(id string) error {
+	return s.mgr.Remove(id)
+}
+
+// SwitchWorkspace sets the active workspace.
+func (s *DesktopService) SwitchWorkspace(id string) error {
+	return s.mgr.Switch(id)
+}
+
+// ActiveWorkspaceID returns the active workspace id.
+func (s *DesktopService) ActiveWorkspaceID() string {
+	return s.mgr.ActiveID()
+}
+
+// ListChats lists agent conversation windows for a workspace.
+func (s *DesktopService) ListChats(wsID string) ([]desktopworkspace.ChatSummary, error) {
+	return s.mgr.ListChats(wsID)
+}
+
+// CreateChat creates a new agent conversation in a workspace.
+func (s *DesktopService) CreateChat(wsID string) (desktopworkspace.ChatSummary, error) {
+	return s.mgr.CreateChat(wsID)
+}
+
+// ResumeChat loads session history.
+func (s *DesktopService) ResumeChat(wsID, sessionID string) ([]desktopworkspace.ChatMessage, desktopworkspace.ChatSummary, error) {
+	return s.mgr.ResumeChat(wsID, sessionID)
+}
+
+// RenameChat renames a session.
+func (s *DesktopService) RenameChat(wsID, sessionID, title string) error {
+	return s.mgr.RenameChat(wsID, sessionID, title)
+}
+
+// SendMessage starts an agent turn.
+func (s *DesktopService) SendMessage(wsID, sessionID, text string) error {
+	return s.mgr.SendMessage(wsID, sessionID, text)
+}
+
+// CancelTurn cancels the in-flight turn for a workspace.
+func (s *DesktopService) CancelTurn(wsID string) error {
+	return s.mgr.CancelTurn(wsID)
+}
+
+// TurnStatus returns idle/running/waiting_permission for a workspace.
+func (s *DesktopService) TurnStatus(wsID string) string {
+	return s.mgr.TurnStatus(wsID)
 }
 
 // ResolvePermission completes an inline approval card.
-func (s *DesktopService) ResolvePermission(requestID string, allow bool) error {
-	if !s.permReg.Resolve(requestID, allow) {
+// choice: "allow"|"deny" for write_shell; "allow_once"|"allow_always"|"deny" for web_fetch.
+func (s *DesktopService) ResolvePermission(wsID, requestID, choice string) error {
+	reg, err := s.mgr.PermissionRegistry(wsID)
+	if err != nil {
+		return err
+	}
+	if !reg.ResolveChoice(requestID, choice) {
 		return fmt.Errorf("unknown permission request: %s", requestID)
 	}
 	return nil
 }
 
-// ProjectRoot returns the active project root (for UI status).
+// GetWindowLayout returns persisted column layout.
+func (s *DesktopService) GetWindowLayout() desktopworkspace.WindowLayout {
+	return s.mgr.Registry().WindowLayout()
+}
+
+// SaveWindowLayout persists column layout.
+func (s *DesktopService) SaveWindowLayout(layout desktopworkspace.WindowLayout) error {
+	s.mgr.Registry().SetWindowLayout(layout)
+	return s.mgr.SaveRegistry()
+}
+
+// APIKeyStatus reports whether an API key is configured via environment.
+func (s *DesktopService) APIKeyStatus() (bool, string) {
+	_, err := config.LoadAPIKey()
+	if err != nil {
+		return false, err.Error()
+	}
+	return true, ""
+}
+
+// ConfigView is a read-only config snapshot for the settings UI.
+type ConfigView struct {
+	PermissionMode string `json:"permissionMode"`
+	Model          string `json:"model"`
+	RunMode        string `json:"runMode"`
+	ProjectRoot    string `json:"projectRoot,omitempty"`
+}
+
+// GetConfig returns user-level or project-level config for a workspace.
+// scope: "user" or "project" (requires wsID for project).
+func (s *DesktopService) GetConfig(scope, wsID string) (ConfigView, error) {
+	var startDir string
+	if scope == "project" {
+		root, err := s.mgr.ProjectRoot(wsID)
+		if err != nil {
+			return ConfigView{}, err
+		}
+		startDir = root
+	}
+	cfg, err := config.Load(nil, config.Options{
+		StartDir:           startDir,
+		RequireAPIKey:      false,
+		SkipProjectDataDir: true,
+	})
+	if err != nil {
+		return ConfigView{}, err
+	}
+	return ConfigView{
+		PermissionMode: cfg.Permission.Mode.String(),
+		Model:          cfg.LLM.Model,
+		RunMode:        cfg.RunMode.String(),
+		ProjectRoot:    cfg.ProjectRoot,
+	}, nil
+}
+
+// SaveConfigPatch updates permission mode for user or project scope.
+func (s *DesktopService) SaveConfigPatch(scope, wsID, permissionMode string) error {
+	if permissionMode == "" {
+		return fmt.Errorf("permissionMode required")
+	}
+	var startDir string
+	if scope == "project" {
+		root, err := s.mgr.ProjectRoot(wsID)
+		if err != nil {
+			return err
+		}
+		startDir = root
+	}
+	cfg, err := config.Load(nil, config.Options{
+		StartDir:           startDir,
+		RequireAPIKey:      false,
+		SkipProjectDataDir: true,
+	})
+	if err != nil {
+		return err
+	}
+	mode, err := parsePermissionMode(permissionMode)
+	if err != nil {
+		return err
+	}
+	var projectRoot string
+	if scope == "project" {
+		projectRoot = cfg.ProjectRoot
+	}
+	return savePermissionMode(projectRoot, scope == "project", mode)
+}
+
+// PickFolder opens a native folder picker (macOS); implemented in pick_darwin.go.
+func (s *DesktopService) PickFolder() (string, error) {
+	return pickFolderNative()
+}
+
+// OpenProject adds a workspace (compat with M0 CLI arg).
+func (s *DesktopService) OpenProject(root string) error {
+	_, err := s.mgr.Add(root)
+	return err
+}
+
+// ProjectRoot returns the active workspace project root.
 func (s *DesktopService) ProjectRoot() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.app == nil || s.app.Cfg == nil {
+	id := s.mgr.ActiveID()
+	if id == "" {
 		return ""
 	}
-	return s.app.Cfg.ProjectRoot
+	root, err := s.mgr.ProjectRoot(id)
+	if err != nil {
+		return ""
+	}
+	return root
+}
+
+// Close releases all workspace resources.
+func (s *DesktopService) Close() {
+	s.mgr.Close()
 }

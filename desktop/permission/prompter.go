@@ -13,9 +13,10 @@ type PermissionEmitter func(payload desktopbridge.PermissionRequestPayload)
 
 // Registry tracks pending permission requests keyed by ID.
 type Registry struct {
-	mu      sync.Mutex
-	pending map[string]chan bool
-	emit    PermissionEmitter
+	mu         sync.Mutex
+	pending    map[string]chan bool
+	webPending map[string]chan webFetchReply
+	emit       PermissionEmitter
 }
 
 // NewRegistry creates a permission wait registry.
@@ -65,11 +66,19 @@ func (r *Registry) Resolve(id string, allow bool) bool {
 func (r *Registry) DenyAll() {
 	r.mu.Lock()
 	pending := r.pending
+	webPending := r.webPending
 	r.pending = make(map[string]chan bool)
+	r.webPending = make(map[string]chan webFetchReply)
 	r.mu.Unlock()
 	for _, reply := range pending {
 		select {
 		case reply <- false:
+		default:
+		}
+	}
+	for _, reply := range webPending {
+		select {
+		case reply <- webFetchReply{choice: permission.WebFetchDeny}:
 		default:
 		}
 	}

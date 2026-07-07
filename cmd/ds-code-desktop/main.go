@@ -14,12 +14,15 @@ func init() {
 }
 
 func main() {
-	var wailsApp *application.App
-	svc := newDesktopService(func(env desktopbridge.AgentEventEnvelope) {
-		if wailsApp != nil {
-			wailsApp.Event.Emit(desktopbridge.EventTopic, env)
+	var app *application.App
+	svc, err := newDesktopService(func(env desktopbridge.AgentEventEnvelope) {
+		if app != nil {
+			app.Event.Emit(desktopbridge.EventTopic, env)
 		}
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	opts := application.Options{
 		Name:        "ds-code",
@@ -35,14 +38,11 @@ func main() {
 		},
 	}
 	modifyOptionsForIOS(&opts)
-	wailsApp = application.New(opts)
+	app = application.New(opts)
+	setupLifecycle(app, svc)
+	setupMenu(app, svc)
 
-	projectRoot := "."
-	if len(os.Args) > 1 {
-		projectRoot = os.Args[1]
-	}
-
-	wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  "ds-code",
 		Width:  1100,
 		Height: 780,
@@ -54,17 +54,23 @@ func main() {
 		BackgroundColour: application.NewRGB(15, 17, 23),
 		URL:              "/",
 	})
+	_ = win
 
-	// Best-effort auto-open when a project path is passed on the command line.
+	projectRoot := "."
+	if len(os.Args) > 1 {
+		projectRoot = os.Args[1]
+	}
 	if projectRoot != "." {
 		go func() {
 			if err := svc.OpenProject(projectRoot); err != nil {
 				log.Printf("auto open project: %v", err)
 			}
 		}()
+	} else {
+		restoreWorkspacesOnStart(svc)
 	}
 
-	if err := wailsApp.Run(); err != nil {
+	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

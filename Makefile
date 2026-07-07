@@ -35,9 +35,21 @@ build-debug: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 install: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go install -ldflags "$(LDFLAGS)" ./cmd/ds-code
 
+fetch-tokenizers: $(TOKENIZERS_LIB)
+
+fetch-tokenizers-universal:
+	./scripts/fetch-tokenizers-universal.sh
+
 # Desktop (Wails v3 + Bun/Vite). Requires wails3 CLI and bun.
 build-desktop: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
-	cd cmd/ds-code-desktop && PACKAGE_MANAGER=bun wails3 task package
+	cd cmd/ds-code-desktop && PACKAGE_MANAGER=bun wails3 task darwin:package
+
+build-desktop-universal: $(RIPGREP_TAR)
+	$(MAKE) fetch-tokenizers-universal
+	cd cmd/ds-code-desktop && PACKAGE_MANAGER=bun wails3 task darwin:package:universal
+
+build-desktop-dmg: build-desktop-universal
+	cd cmd/ds-code-desktop && PACKAGE_MANAGER=bun wails3 task darwin:dmg
 
 desktop-dev:
 	cd cmd/ds-code-desktop && PACKAGE_MANAGER=bun wails3 dev -config ./build/config.yml

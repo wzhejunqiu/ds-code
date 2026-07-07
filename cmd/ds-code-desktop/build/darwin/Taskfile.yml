@@ -127,6 +127,14 @@ tasks:
     cmds:
       - task: create:app:bundle
 
+  dmg:
+    summary: Creates a .dmg from the .app bundle
+    deps:
+      - task: package:universal
+    cmds:
+      - rm -f "{{.BIN_DIR}}/{{.APP_NAME}}.dmg"
+      - hdiutil create -volname "{{.APP_NAME}}" -srcfolder "{{.BIN_DIR}}/{{.APP_NAME}}.app" -ov -format UDZO "{{.BIN_DIR}}/{{.APP_NAME}}.dmg"
+
 
   create:app:bundle:
     summary: Creates an `.app` bundle
