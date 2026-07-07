@@ -1,6 +1,6 @@
 # ds-code 桌面版演进方向：Go + Wails + TypeScript 可行性研究
 
-> ⚠️ **本文档已弃用（DEPRECATED）**。其分阶段路线（Phase 0–3）已被 **[v0.2.0/](v0.2.0/README.md)** 完整取代；仍然有效的技术结论（流式 IPC 双层 batch、Envelope 协议、HTML 双模式安全分析）已被 [v0.2.0/DESIGN.md](v0.2.0/DESIGN.md) 吸收并落为具体设计。本文仅作为历史可行性研究背景保留，不再更新。桌面应用的权威设计请以 v0.2.0 为准。
+> ⚠️ **本文档已弃用（DEPRECATED）**。其分阶段路线（Phase 0–3）已被 **[v0.2.0/spec/](v0.2.0/spec/)** 完整取代；仍然有效的技术结论（流式 IPC 双层 batch、Envelope 协议、HTML 双模式安全分析）已被 [v0.2.0/spec/DESIGN.md](v0.2.0/spec/DESIGN.md) 吸收并落为具体设计。本文仅作为历史可行性研究背景保留，不再更新。桌面应用的权威设计总纲请以 `v0.2.0/spec/` 为准；实现从 [v0.2.0/README.md](v0.2.0/README.md)（M0）起。
 
 > 文档版本：v0.4  
 > 更新日期：2026-06-22  
