@@ -4,7 +4,7 @@
 > 版本：v0.2.0-spec
 > 状态：设计中（Design）
 > 更新日期：2026-07-04
-> 实现版本：从 [v0.2.0 根](../)（M0）起，见 [ROADMAP.md](ROADMAP.md)
+> 实现阶段：从 [phase0](../phase0/)（M0）起，见 [ROADMAP.md](ROADMAP.md)
 > 基线：v0.1.5
 > 目标形态：macOS 桌面应用（Go + Wails v3 + TypeScript）
 
@@ -20,7 +20,7 @@
 
 **非目标（本总纲）**：
 - Windows / Linux 打包与平台差异；
-- **仅总纲、无实现**（实现从 v0.2.0 根目录 M0 起）；
+- **仅总纲、无实现**（实现从 phase0 M0 起）；
 - 助手 HTML 输出模式的实现（仅列为 M4+ 设计预留，需独立安全 PoC）；
 - 改变 `TurnCallbacks`、`permission.Engine`、SQLite schema 的既有语义；
 - 云端会话同步、多用户协作、IDE 插件。
@@ -346,8 +346,7 @@
 - `desktop/datadir/`（桌面数据路径 `~/.ds-code/desktop/projects/<project-id>/`；复用 `datadir.ProjectID`）
 - 系统集成（菜单栏、通知、Dock、拖拽、深浅色）
 - 打包/签名/公证/PATH/onboarding
-- `docs/v0.2.0/**`（含 `spec/` 总纲与本目录实现文档）
-- `docs/v0.2.1/**` … `docs/v0.2.4/**`
+- `docs/v0.2.0/**`（含 `spec/` 总纲与 `phase0/`~`phase4/` 实现文档）
 
 **Out of scope**
 - Windows / Linux 平台
@@ -359,12 +358,12 @@
 
 ## 7. 分期实施路线
 
-> 完整 FR 见上文；下表映射到 **实现版本**（v0.2.0 根目录起即为可交付代码）。路线图：[ROADMAP.md](ROADMAP.md)。
+> 完整 FR 见上文；下表映射到 **v0.2.0 实现阶段**（phase0 起即为可交付代码）。路线图：[ROADMAP.md](ROADMAP.md)。
 
-| 里程碑 | 实现版本 | 目标 | gate |
-| ------ | -------- | ---- | ---- |
-| **M0** | [v0.2.0 根](../) | Wails + Chromium + bridge + 单 workspace 流式/审批/停止 | 能打开项目、发消息、看流式、批准一次写 |
-| **M1** | [v0.2.1](../../v0.2.1/) | 多 workspace + 三栏 + P0 + 打包 | FR-0/1/2/3/4/5/6/7/14/15/17（P0）绿 |
-| **M2** | [v0.2.2](../../v0.2.2/) | Inspector + Plan + 子代理 + 命令面板 + 公证 | FR-8/9/10/11/13.4/16/18.2/18.3 |
-| **M3** | [v0.2.3](../../v0.2.3/) | checkpoint + MCP/LSP + 托盘 + 更新 | FR-12/13/16.5/2.5/18.4 |
-| **M4** | [v0.2.4](../../v0.2.4/) | HTML 输出（可选） | FR-4.8；OWASP XSS 全通过 |
+| 里程碑 | Phase | 目标 | gate |
+| ------ | ----- | ---- | ---- |
+| **M0** | [phase0](../phase0/) | Wails + Chromium + bridge + 单 workspace 流式/审批/停止 | 能打开项目、发消息、看流式、批准一次写 |
+| **M1** | [phase1](../phase1/) | 多 workspace + 三栏 + P0 + 打包 | FR-0/1/2/3/4/5/6/7/14/15/17（P0）绿 |
+| **M2** | [phase2](../phase2/) | Inspector + Plan + 子代理 + 命令面板 + 公证 | FR-8/9/10/11/13.4/16/18.2/18.3 |
+| **M3** | [phase3](../phase3/) | checkpoint + MCP/LSP + 托盘 + 更新 | FR-12/13/16.5/2.5/18.4 |
+| **M4** | [phase4](../phase4/) | HTML 输出（可选） | FR-4.8；OWASP XSS 全通过 |

@@ -1,15 +1,16 @@
-# v0.2.0 需求文档
+# v0.2.0 phase0 需求文档
 
-> 版本：v0.2.0（M0 PoC）
+> 版本：v0.2.0
+> 阶段：phase0（M0 PoC）
 > 状态：待实现
-> 总纲：[spec/REQUIREMENTS](spec/REQUIREMENTS.md)
+> 总纲：[spec/REQUIREMENTS](../spec/REQUIREMENTS.md)
 > 更新日期：2026-07-07
 
 ## 1. 目标
 
 验证桌面技术栈与后端桥接契约可行，在**单 workspace** 下跑通最小 agent 闭环。
 
-## 2. 本版功能需求
+## 2. 本阶段功能需求
 
 > FR 编号引用总纲，不新增 ID。
 
@@ -32,7 +33,7 @@
 | FR-1.7 | `datadir.ProjectID` 算法不变 | FR-1.7 |
 | FR-1.8 | 数据落 `~/.ds-code/desktop/projects/<project-id>/` | FR-1.8 |
 
-> 多 workspace、注册表、拖拽添加 → **v0.2.1**
+> 多 workspace、注册表、拖拽添加 → **phase1**
 
 ### FR-4 聊天与流式（最小）
 
@@ -41,7 +42,7 @@
 | FR-4.1 | 助手回复流式 pre-wrap；段末 Markdown（可简化） | FR-4.1 |
 | FR-4.2 | Envelope v1 + TS reducer 摄取 | FR-4.2 |
 
-> 虚拟列表、reasoning 折叠、代码高亮完整度 → **v0.2.1**
+> 虚拟列表、reasoning 折叠、代码高亮完整度 → **phase1**
 
 ### FR-6 权限审批（最小）
 
@@ -51,7 +52,7 @@
 | FR-6.3 | 无打断式弹窗 | FR-6.3 |
 | FR-6.6 | S3 denylist / SSRF 硬规则生效 | FR-6.6 |
 
-> web_fetch 三选一 → **v0.2.1**
+> web_fetch 三选一 → **phase1**
 
 ### FR-7 停止 turn
 
@@ -71,7 +72,7 @@
 | FR-17.3 | critical 事件不丢；delta 可丢帧 | FR-17.3 |
 | FR-17.4 | binding：发消息、取消、权限回复 | FR-17.4 |
 
-## 3. 非功能需求（本版）
+## 3. 非功能需求（本阶段）
 
 | ID | 描述 |
 | -- | ---- |
@@ -82,11 +83,11 @@
 
 ## 4. 明确不包含
 
-- 多 workspace、`workspaces.json`（v0.2.1）
-- 三栏布局、Inspector、设置、onboarding（v0.2.1）
-- 完整工具卡片、Plan、子代理、命令面板（v0.2.1+）
-- 签名公证、`.dmg` 分发（v0.2.1 基础打包 / v0.2.2 公证）
-- web_fetch 三选一 Prompter（v0.2.1）
+- 多 workspace、`workspaces.json`（phase1）
+- 三栏布局、Inspector、设置、onboarding（phase1）
+- 完整工具卡片、Plan、子代理、命令面板（phase1+）
+- 签名公证、`.dmg` 分发（phase1 基础打包 / phase2 公证）
+- web_fetch 三选一 Prompter（phase1）
 
 ## 5. Gate
 

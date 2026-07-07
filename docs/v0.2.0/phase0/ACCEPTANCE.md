@@ -1,13 +1,14 @@
-# v0.2.0 验收文档
+# v0.2.0 phase0 验收文档
 
-> 版本：v0.2.0（M0 PoC）
+> 版本：v0.2.0
+> 阶段：phase0（M0 PoC）
 > 状态：待实现
-> 总纲：[spec/ACCEPTANCE](spec/ACCEPTANCE.md)
+> 总纲：[spec/ACCEPTANCE](../spec/ACCEPTANCE.md)
 > 更新日期：2026-07-07
 
 ## Gate 总述
 
-本版通过即表示技术栈与桥接契约可行，可进入 v0.2.1 MVP 开发。
+本阶段通过即表示技术栈与桥接契约可行，可进入 phase1 MVP 开发。
 
 ## 必过验收
 
@@ -72,7 +73,7 @@
 5. 检查 `~/.ds-code/desktop/projects/<id>/sessions.db` 已创建
 6. 运行 `bun run test`、bridge 单测
 
-## 明确不要求（本版）
+## 明确不要求（本阶段）
 
 - AC-1 多 workspace、AC-2 多 session 列表、AC-3 三栏
 - AC-6.2 web_fetch 三选一、AC-10 设置/onboarding

@@ -23,7 +23,7 @@ export function InspectorPlaceholder() {
         </Button>
       </div>
       <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-[var(--color-muted-foreground)]">
-        Diff and file preview arrive in v0.2.2. Tool details can be expanded in chat cards for now.
+        Diff and file preview arrive in phase2. Tool details can be expanded in chat cards for now.
       </div>
     </aside>
   );

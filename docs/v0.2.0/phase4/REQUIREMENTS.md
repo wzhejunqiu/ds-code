@@ -1,8 +1,9 @@
-# v0.2.4 需求文档
+# v0.2.0 phase4 需求文档
 
-> 版本：v0.2.4（M4 HTML 输出，可选）
+> 版本：v0.2.0
+> 阶段：phase4（M4 HTML 输出，可选）
 > 状态：待实现
-> 前置：[v0.2.3](../v0.2.3/)　总纲：[spec/REQUIREMENTS](../v0.2.0/spec/REQUIREMENTS.md)
+> 前置阶段：phase3　总纲：[spec/REQUIREMENTS](../spec/REQUIREMENTS.md)
 > 更新日期：2026-07-07
 
 ## 1. 目标
@@ -15,4 +16,4 @@
 
 ## 3. Gate
 
-独立安全 PoC + FR-4.8 + v0.2.0–v0.2.3 回归全绿。
+独立安全 PoC + FR-4.8 + phase0–phase3 回归全绿。

@@ -1,13 +1,14 @@
-# v0.2.1 设计文档
+# v0.2.0 phase1 设计文档
 
-> 版本：v0.2.1（M1 MVP）
+> 版本：v0.2.0
+> 阶段：phase1（M1 MVP）
 > 状态：待实现
-> 前置：[v0.2.0](../v0.2.0/)　总纲：[spec/DESIGN](../v0.2.0/spec/DESIGN.md)
+> 前置阶段：phase0　总纲：[spec/DESIGN](../spec/DESIGN.md)
 > 更新日期：2026-07-07
 
-## 1. 本版定位
+## 1. 本阶段定位
 
-在 v0.2.0 单 workspace PoC 上扩展为完整 MVP。**复用** v0.2.0 的 bridge/datadir/permission，新增 workspace 层与三栏前端。
+在 phase0 单 workspace PoC 上扩展为完整 MVP。**复用** phase0 的 bridge/datadir/permission，新增 workspace 层与三栏前端。
 
 ## 2. 新增模块
 
@@ -19,7 +20,7 @@ cmd/ds-code-desktop/       # menu.go、lifecycle.go
 
 ## 3. 实现焦点（引用总纲 spec/）
 
-| 主题 | 总纲章节 | 本版要点 |
+| 主题 | 总纲章节 | 本阶段要点 |
 | ---- | -------- | -------- |
 | WorkspaceManager | §4.1、§5 | 多 App 懒初始化、`workspaces.json` |
 | 三栏 UI | §6 | Inspector **占位折叠** |
@@ -27,7 +28,7 @@ cmd/ds-code-desktop/       # menu.go、lifecycle.go
 | 设置/onboarding | §6.1.7–6.1.8 | `#/settings`、首启空状态 |
 | 打包 | §15 | universal `.app` + `.dmg`（无公证） |
 
-## 4. 与 v0.2.0 的兼容
+## 4. 与 phase0 的兼容
 
 - Envelope v1 不变；`workspaceId` 从 `"default"` 改为真实 ID
 - bridge/datadir 契约不重构

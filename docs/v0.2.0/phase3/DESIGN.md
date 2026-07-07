@@ -1,8 +1,9 @@
-# v0.2.3 设计文档
+# v0.2.0 phase3 设计文档
 
-> 版本：v0.2.3（M3 深化）
+> 版本：v0.2.0
+> 阶段：phase3（M3 深化）
 > 状态：待实现
-> 总纲：[spec/DESIGN](../v0.2.0/spec/DESIGN.md)
+> 总纲：[spec/DESIGN](../spec/DESIGN.md)
 > 更新日期：2026-07-07
 
 ## 1. 实现焦点

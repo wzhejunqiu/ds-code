@@ -1,16 +1,17 @@
-# ds-code v0.2.2 版本文档
+# ds-code v0.2.0 — phase2（M2 对齐增强）
 
-> 版本：v0.2.2
+> 版本：v0.2.0
+> 阶段：phase2
 > 状态：待实现
-> 基线版本：v0.2.1
+> 前置阶段：phase1
 > 对应里程碑：M2 — 对齐增强
 > 更新日期：2026-07-07
 
 ## 概述
 
-v0.2.2 在 MVP 基础上补齐 Inspector（Monaco diff）、Plan 模式、子代理分轨、命令面板、系统集成，以及 **Developer ID 签名 + Apple 公证**。
+phase2 在 MVP 基础上补齐 Inspector（Monaco diff）、Plan 模式、子代理分轨、命令面板、系统集成，以及 **Developer ID 签名 + Apple 公证**。
 
-总纲：[spec/](../v0.2.0/spec/)
+总纲：[spec/](../spec/)
 
 ## 文档索引
 
@@ -26,8 +27,8 @@ Inspector diff 可用；Plan/子代理/⌘K 可用；签名公证通过 Gatekeep
 
 ## 依赖
 
-[v0.2.1](../v0.2.1/) MVP 已交付
+[phase1](../phase1/) MVP 已交付
 
-## 下一版本
+## 下一阶段
 
-[v0.2.3](../v0.2.3/) — checkpoint、MCP/LSP、托盘、自动更新
+[phase3](../phase3/) — checkpoint、MCP/LSP、托盘、自动更新

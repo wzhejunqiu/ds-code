@@ -38,7 +38,7 @@ export function SettingsView() {
 
       <section>
         <h3 className="mb-2 text-sm font-medium">About</h3>
-        <p className="text-sm text-[var(--color-muted-foreground)]">ds-code desktop v0.2.1 (M1 MVP)</p>
+        <p className="text-sm text-[var(--color-muted-foreground)]">ds-code desktop v0.2.0 · phase1 (M1 MVP)</p>
       </section>
     </div>
   );

@@ -1,13 +1,14 @@
-# v0.2.3 验收文档
+# v0.2.0 phase3 验收文档
 
-> 版本：v0.2.3（M3 深化）
+> 版本：v0.2.0
+> 阶段：phase3（M3 深化）
 > 状态：待实现
-> 总纲：[spec/ACCEPTANCE](../v0.2.0/spec/ACCEPTANCE.md)
+> 总纲：[spec/ACCEPTANCE](../spec/ACCEPTANCE.md)
 > 更新日期：2026-07-07
 
 ## Gate
 
-RW-*、ML-*、INT-*、BILL-*、UPD-* 项（见本版 README 对应总纲 M3 门禁）全过；v0.2.0–v0.2.2 回归全绿。
+RW-*、ML-*、INT-*、BILL-*、UPD-* 项（见本阶段 README 对应总纲 M3 门禁）全过；phase0–phase2 回归全绿。
 
 ## 功能验收清单
 

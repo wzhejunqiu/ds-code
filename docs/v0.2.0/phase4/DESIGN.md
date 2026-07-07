@@ -1,8 +1,9 @@
-# v0.2.4 设计文档
+# v0.2.0 phase4 设计文档
 
-> 版本：v0.2.4（M4 HTML 输出）
+> 版本：v0.2.0
+> 阶段：phase4（M4 HTML 输出）
 > 状态：待实现
-> 总纲：[spec/DESIGN](../v0.2.0/spec/DESIGN.md)
+> 总纲：[spec/DESIGN](../spec/DESIGN.md)
 > 更新日期：2026-07-07
 
 ## 1. 渲染路径
@@ -19,4 +20,4 @@
 
 ## 4. 安全 PoC
 
-建议 `docs/v0.2.4/SECURITY-HTML-POC.md` 记录 OWASP 向量测试结果。
+建议 `docs/v0.2.0/phase4/SECURITY-HTML-POC.md` 记录 OWASP 向量测试结果。

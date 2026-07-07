@@ -10,18 +10,18 @@
 本目录为**设计总纲**（`spec/`）。下列验收标准分三类：
 
 - **DOC 验收**：`spec/` 文档完整性、决策一致性（本目录可核验）。
-- **IMPL 验收（AC-x）**：总纲级功能标准；**各实现版本** scoped 清单见 [v0.2.0 根](../ACCEPTANCE.md)、[v0.2.1](../../v0.2.1/ACCEPTANCE.md) 等。
-- **子版本 gate**：见 [ROADMAP.md](ROADMAP.md)。
+- **IMPL 验收（AC-x）**：总纲级功能标准；**各 phase** scoped 清单见 [phase0](../phase0/ACCEPTANCE.md)、[phase1](../phase1/ACCEPTANCE.md) 等。
+- **阶段 gate**：见 [ROADMAP.md](ROADMAP.md)。
 
 ## A. 文档验收（本版必须通过）
 
 | ID     | 标准                                                                                              |
 | ------ | ----------------------------------------------------------------------------------------------- |
-| DOC-1  | `docs/v0.2.0/spec/` 含总纲四件套 + ROADMAP；`docs/v0.2.0/` 根及 `v0.2.1`–`v0.2.4` 各有实现版四件套 |
+| DOC-1  | `docs/v0.2.0/spec/` 含总纲四件套 + ROADMAP；`docs/v0.2.0/phase0/`~`phase4/` 各有实现版四件套 |
 | DOC-2  | 六项核心立场（macOS 唯一、UI 重设计、无弹窗、workspace、三栏、Wails v3）在三份文档中口径一致       |
 | DOC-3  | 所有 FR 均有目标里程碑与优先级；FR ↔ US ↔ AC 可追溯                                               |
 | DOC-4  | 明确「不改 `TurnCallbacks`/`permission.Engine`/`session.Store`/SQLite schema 语义」               |
-| DOC-5  | `docs/README.md` v0.2.x 行更新；[DESKTOP.md](../../DESKTOP.md) 指向 `v0.2.0/spec/` |
+| DOC-5  | `docs/README.md` v0.2.0 行更新；[DESKTOP.md](../../DESKTOP.md) 指向 `v0.2.0/spec/` |
 | DOC-6  | `ProjectID` 算法不变、桌面数据靠 `~/.ds-code/desktop/projects/<project-id>/` 目录隔离被明确写明     |
 | DOC-7  | 无弹窗策略对「权限/设置/命令/取消」四处均给出具体替代方案                                          |
 | DOC-8  | workspace 下 Agent 对话窗口（= TUI session）层级与 UI 导航被明确写明                               |
@@ -172,10 +172,10 @@
 
 ## D. 里程碑门禁总表
 
-| 里程碑 | 实现版本 | 必过验收 |
-| ------ | -------- | -------- |
-| M0 | [v0.2.0 根](../ACCEPTANCE.md) | AC-11.1/11.2/11.3、AC-7.1、AC-6.1、AC-12.5、AC-13 |
-| M1 | [v0.2.1](../../v0.2.1/ACCEPTANCE.md) | AC-1~5、AC-6、AC-7、AC-10、AC-11、REG-1~4、AC-12.1/12.4 |
-| M2 | [v0.2.2](../../v0.2.2/ACCEPTANCE.md) | AC-8、AC-9、AC-12.2/12.3、Plan/子代理/命令面板 |
-| M3 | [v0.2.3](../../v0.2.3/ACCEPTANCE.md) | checkpoint、MCP/LSP、billing、托盘、自动更新 |
-| M4 | [v0.2.4](../../v0.2.4/ACCEPTANCE.md) | HTML 输出（OWASP XSS 全通过） |
+| 里程碑 | Phase | 必过验收 |
+| ------ | ----- | -------- |
+| M0 | [phase0](../phase0/ACCEPTANCE.md) | AC-11.1/11.2/11.3、AC-7.1、AC-6.1、AC-12.5、AC-13 |
+| M1 | [phase1](../phase1/ACCEPTANCE.md) | AC-1~5、AC-6、AC-7、AC-10、AC-11、REG-1~4、AC-12.1/12.4 |
+| M2 | [phase2](../phase2/ACCEPTANCE.md) | AC-8、AC-9、AC-12.2/12.3、Plan/子代理/命令面板 |
+| M3 | [phase3](../phase3/ACCEPTANCE.md) | checkpoint、MCP/LSP、billing、托盘、自动更新 |
+| M4 | [phase4](../phase4/ACCEPTANCE.md) | HTML 输出（OWASP XSS 全通过） |

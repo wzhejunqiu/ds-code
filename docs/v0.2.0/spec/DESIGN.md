@@ -1061,10 +1061,10 @@ bun run test                              # Vitest
 
 对应 [REQUIREMENTS §7](REQUIREMENTS.md#7-分期实施路线)，详见 [ROADMAP.md](ROADMAP.md)：
 
-| 实现版本 | 里程碑 | 实现焦点 |
-| -------- | ------ | -------- |
-| [v0.2.0 根](../) | M0 | 骨架 + Chromium PoC + bridge + datadir + 单 workspace 流式/审批/停止 |
-| [v0.2.1](../../v0.2.1/) | M1 | WorkspaceManager + 三栏 UI + P0 + onboarding + 基础打包 |
-| [v0.2.2](../../v0.2.2/) | M2 | Inspector + Plan + 子代理 + 命令面板 + 公证 + `internal/ui/port` |
-| [v0.2.3](../../v0.2.3/) | M3 | checkpoint + MCP/LSP + billing + 托盘 + 自动更新 |
-| [v0.2.4](../../v0.2.4/) | M4 | HTML 输出（安全 PoC 通过后） |
+| Phase | 里程碑 | 实现焦点 |
+| ----- | ------ | -------- |
+| [phase0](../phase0/) | M0 | 骨架 + Chromium PoC + bridge + datadir + 单 workspace 流式/审批/停止 |
+| [phase1](../phase1/) | M1 | WorkspaceManager + 三栏 UI + P0 + onboarding + 基础打包 |
+| [phase2](../phase2/) | M2 | Inspector + Plan + 子代理 + 命令面板 + 公证 + `internal/ui/port` |
+| [phase3](../phase3/) | M3 | checkpoint + MCP/LSP + billing + 托盘 + 自动更新 |
+| [phase4](../phase4/) | M4 | HTML 输出（安全 PoC 通过后） |
