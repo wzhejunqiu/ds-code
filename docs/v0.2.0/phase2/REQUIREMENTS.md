@@ -2,7 +2,7 @@
 
 > 版本：v0.2.0
 > 阶段：phase2（M2 对齐增强）
-> 状态：待实现
+> 状态：已实现
 > 前置阶段：phase1　总纲：[spec/REQUIREMENTS](../spec/REQUIREMENTS.md)
 > 更新日期：2026-07-07
 

@@ -1,8 +1,15 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DesktopService } from "../../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
 import { useAppState } from "@/state/app-store";
 
 export function Onboarding() {
   const { apiKeyOk, apiKeyHint, permissionMode, savePermissionMode, addWorkspace } = useAppState();
+  const [deps, setDeps] = useState<{ name: string; found: boolean; hint?: string }[]>([]);
+
+  useEffect(() => {
+    void DesktopService.CheckDependencies().then(setDeps);
+  }, []);
 
   if (apiKeyOk) return null;
 
@@ -17,6 +24,18 @@ export function Onboarding() {
         <li>Choose a permission mode (current: {permissionMode}).</li>
         <li>Open your first project workspace.</li>
       </ol>
+      {deps.some((d) => !d.found) && (
+        <div className="mb-3 rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+          <div className="mb-1 font-medium text-amber-200">Optional dependencies missing</div>
+          {deps
+            .filter((d) => !d.found)
+            .map((d) => (
+              <div key={d.name}>
+                <code>{d.name}</code>: {d.hint}
+              </div>
+            ))}
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {(["readonly", "ask"] as const).map((mode) => (
           <Button

@@ -27,6 +27,7 @@ const (
 	KindUsageUpdate         AgentEventKind = "usage.update"
 	KindTurnDone            AgentEventKind = "turn.done"
 	KindPermissionRequest   AgentEventKind = "permission.request"
+	KindSystemNotice        AgentEventKind = "system.notice"
 )
 
 // AgentEventEnvelope is the versioned event wrapper sent over Wails Events.
@@ -104,6 +105,10 @@ type SubagentToolStartPayload struct {
 	Name       string `json:"name"`
 	Args       string `json:"args"`
 	Command    string `json:"command,omitempty"`
+}
+
+type SystemNoticePayload struct {
+	Text string `json:"text"`
 }
 
 type SubagentToolEndPayload struct {

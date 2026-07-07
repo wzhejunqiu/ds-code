@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
+	desktopinspect "github.com/wzhejunqiu/ds-code/desktop/inspect"
+	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 	desktopworkspace "github.com/wzhejunqiu/ds-code/desktop/workspace"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 )
@@ -66,9 +68,24 @@ func (s *DesktopService) RenameChat(wsID, sessionID, title string) error {
 	return s.mgr.RenameChat(wsID, sessionID, title)
 }
 
-// SendMessage starts an agent turn.
-func (s *DesktopService) SendMessage(wsID, sessionID, text string) error {
+// SendMessage starts an agent turn or handles a slash command.
+func (s *DesktopService) SendMessage(wsID, sessionID, text string) (desktopworkspace.SlashResult, error) {
 	return s.mgr.SendMessage(wsID, sessionID, text)
+}
+
+// ExecuteSlash runs a slash command without starting a turn.
+func (s *DesktopService) ExecuteSlash(wsID, sessionID, line string) (desktopworkspace.SlashResult, error) {
+	return s.mgr.ExecuteSlash(wsID, sessionID, line)
+}
+
+// SetRunMode switches agent/plan mode for a session.
+func (s *DesktopService) SetRunMode(wsID, sessionID, mode string) error {
+	return s.mgr.SetRunMode(wsID, sessionID, mode)
+}
+
+// SessionRunMode returns the run mode for a session.
+func (s *DesktopService) SessionRunMode(wsID, sessionID string) (string, error) {
+	return s.mgr.SessionRunMode(wsID, sessionID)
 }
 
 // CancelTurn cancels the in-flight turn for a workspace.
@@ -82,7 +99,6 @@ func (s *DesktopService) TurnStatus(wsID string) string {
 }
 
 // ResolvePermission completes an inline approval card.
-// choice: "allow"|"deny" for write_shell; "allow_once"|"allow_always"|"deny" for web_fetch.
 func (s *DesktopService) ResolvePermission(wsID, requestID, choice string) error {
 	reg, err := s.mgr.PermissionRegistry(wsID)
 	if err != nil {
@@ -91,6 +107,7 @@ func (s *DesktopService) ResolvePermission(wsID, requestID, choice string) error
 	if !reg.ResolveChoice(requestID, choice) {
 		return fmt.Errorf("unknown permission request: %s", requestID)
 	}
+	desktopsys.PermissionWaiting(false)
 	return nil
 }
 
@@ -203,6 +220,29 @@ func (s *DesktopService) ProjectRoot() string {
 		return ""
 	}
 	return root
+}
+
+// PreviewPatch returns Monaco-ready diffs for apply_patch text.
+func (s *DesktopService) PreviewPatch(wsID, patchText string) ([]desktopinspect.PatchFileDiff, error) {
+	root, err := s.mgr.ProjectRoot(wsID)
+	if err != nil {
+		return nil, err
+	}
+	return desktopinspect.PreviewPatch(root, patchText)
+}
+
+// ReadFilePreview returns read-only file content for Inspector.
+func (s *DesktopService) ReadFilePreview(wsID, path string, offset, limit int) (desktopinspect.FilePreviewResult, error) {
+	root, err := s.mgr.ProjectRoot(wsID)
+	if err != nil {
+		return desktopinspect.FilePreviewResult{}, err
+	}
+	return desktopinspect.ReadFilePreview(root, path, offset, limit)
+}
+
+// CheckDependencies reports git/node/gopls availability.
+func (s *DesktopService) CheckDependencies() []desktopsys.DepStatus {
+	return desktopsys.CheckDependencies()
 }
 
 // Close releases all workspace resources.

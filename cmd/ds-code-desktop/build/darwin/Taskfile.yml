@@ -192,10 +192,14 @@ tasks:
     desc: |
       Signs the .app bundle and submits it for notarization.
       Uses signing identity and keychain profile from `wails3 setup`.
+      Entitlements: build/darwin/entitlements.plist
 
       First-time setup:
         wails3 setup
+
+      Verify:
+        ../../scripts/desktop-verify-sign.sh
     deps:
       - task: package
     cmds:
-      - wails3 tool sign --input "{{.BIN_DIR}}/{{.APP_NAME}}.app" --notarize {{.CLI_ARGS}}
+      - wails3 tool sign --input "{{.BIN_DIR}}/{{.APP_NAME}}.app" --notarize --entitlements build/darwin/entitlements.plist {{.CLI_ARGS}}

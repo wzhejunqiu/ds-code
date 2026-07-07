@@ -110,6 +110,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (action === "toggle_inspector") {
         setLayoutState((l) => ({ ...l, rightCollapsed: !l.rightCollapsed }));
       }
+      if (action === "open_command_palette") {
+        window.dispatchEvent(new CustomEvent("ds-code:command-palette"));
+      }
       if (action === "workspace_added" || action === "chat_created") {
         void refreshWorkspaces();
         void refreshChats();

@@ -3,6 +3,7 @@ package app
 import (
 	"io"
 
+	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
 	desktopdatadir "github.com/wzhejunqiu/ds-code/desktop/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
@@ -33,6 +34,11 @@ func (a *App) NewDesktopRunner(out io.Writer, prompter permission.Prompter) (*ag
 func (a *App) OpenSubagentStoreForDesktop() (subagentstore.Store, error) {
 	a.useDesktopDataDir = true
 	return a.openSubagentStore()
+}
+
+// SpawnRunnerForDesktop exposes slash spawn for desktop bindings.
+func (a *App) SpawnRunnerForDesktop(runner *agent.Runner) slashcmd.SpawnRunner {
+	return a.spawnRunner(runner)
 }
 
 // CloseDesktop releases desktop app resources.

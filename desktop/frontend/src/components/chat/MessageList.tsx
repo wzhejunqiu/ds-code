@@ -2,6 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { marked } from "marked";
 import { useEffect, useRef, useState } from "react";
 import { PermissionCard } from "@/components/permission/PermissionCard";
+import { SubagentCard } from "@/components/subagent/SubagentCard";
 import { ToolCard } from "@/components/tools/ToolCard";
 import type { ChatBlock } from "@/protocol/agent-events";
 
@@ -20,11 +21,15 @@ function BlockView({
   workspaceId,
   onPermissionResolve,
   onToolToggle,
+  onToolInspect,
+  onSubagentToggle,
 }: {
   block: ChatBlock;
   workspaceId: string;
   onPermissionResolve: (id: string, choice: string) => void;
   onToolToggle: (id: string) => void;
+  onToolInspect?: (block: Extract<ChatBlock, { role: "tool" }>) => void;
+  onSubagentToggle: (id: string) => void;
 }) {
   switch (block.role) {
     case "user":
@@ -59,6 +64,14 @@ function BlockView({
         <ToolCard
           block={block}
           onToggle={() => onToolToggle(block.id)}
+          onInspect={onToolInspect ? () => onToolInspect(block) : undefined}
+        />
+      );
+    case "subagent":
+      return (
+        <SubagentCard
+          record={block.record}
+          onToggle={() => onSubagentToggle(block.id)}
         />
       );
     case "permission":
@@ -83,12 +96,16 @@ export function MessageList({
   workspaceId,
   onPermissionResolve,
   onToolToggle,
+  onToolInspect,
+  onSubagentToggle,
   follow,
 }: {
   blocks: ChatBlock[];
   workspaceId: string;
   onPermissionResolve: (id: string, choice: string) => void;
   onToolToggle: (id: string) => void;
+  onToolInspect?: (block: Extract<ChatBlock, { role: "tool" }>) => void;
+  onSubagentToggle: (id: string) => void;
   follow: boolean;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -134,6 +151,8 @@ export function MessageList({
                 workspaceId={workspaceId}
                 onPermissionResolve={onPermissionResolve}
                 onToolToggle={onToolToggle}
+                onToolInspect={onToolInspect}
+                onSubagentToggle={onSubagentToggle}
               />
             </div>
           );

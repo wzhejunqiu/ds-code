@@ -851,3 +851,21 @@ Reducer 按 `contentFormat` 选择 pipeline；§10 的 batch、背压、段末 f
 6. 主要风险在 **Wails 版本、子进程 PATH、分发、HTML XSS**；前四项与 HTML 均可通过 PoC 量化验证。
 
 **下一步（若立项）**：按 §10 实现 `StreamEmitter` PoC、Envelope v1、主聊天 Markdown 管线；HTML 模式单列安全 PoC（§11.13）。
+
+---
+
+## 14. M2（phase2）验收步骤
+
+实现文档：[v0.2.0/phase2/](v0.2.0/phase2/)
+
+| 项 | 验证 |
+|----|------|
+| Inspector diff | 触发 `apply_patch` → 点击工具卡片 → 右栏 Monaco diff（并排/内联） |
+| 文件预览 | `read` 卡片 → Inspector 只读高亮 |
+| Plan 模式 | 聊天区段控件 Agent/Plan；Plan 下仅 read/grep/glob/diagnostics |
+| 子代理 | task 工具：同步内嵌卡片；后台子代理在 Inspector「Subagents」tab |
+| 命令面板 | ⌘K 或 View 菜单；`/compact`、`/plan` 可执行 |
+| 系统集成 | 后台 turn 完成 osascript 通知；Dock badge；拖拽文件夹/文件 |
+| 签名公证 | `cd cmd/ds-code-desktop && task darwin:sign:notarize`；`scripts/desktop-verify-sign.sh` |
+
+绑定 regeneration：`wails3 generate bindings -d ../../desktop/frontend/bindings -clean=true -ts`

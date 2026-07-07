@@ -50,4 +50,41 @@ describe("turnReducer", () => {
     expect(state.waitingPermission).toBe(true);
     expect(state.blocks.some((b) => b.role === "permission")).toBe(true);
   });
+
+  it("tracks subagent start on main stream", () => {
+    let state = initialTurnState();
+    state = turnReducer(state, env("turn.started", { sessionId: "s1" }));
+    state = turnReducer(
+      state,
+      env("subagent.start", {
+        id: "sa-1",
+        label: "explore",
+        prompt: "find callers",
+        agentType: "explore",
+        background: false,
+      }),
+    );
+    expect(state.subagents).toHaveLength(1);
+    expect(state.blocks.some((b) => b.role === "subagent")).toBe(true);
+  });
+
+  it("routes subagent tool events by streamId", () => {
+    let state = initialTurnState();
+    state = turnReducer(state, env("turn.started", { sessionId: "s1" }));
+    state = turnReducer(
+      state,
+      env("subagent.start", {
+        id: "sa-1",
+        label: "",
+        prompt: "",
+        agentType: "explore",
+        background: true,
+      }),
+    );
+    state = turnReducer(state, {
+      ...env("subagent.tool.start", { subagentId: "sa-1", name: "grep", args: "{}" }),
+      streamId: "subagent:sa-1",
+    });
+    expect(state.subagents[0]?.tools).toHaveLength(1);
+  });
 });

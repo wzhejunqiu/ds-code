@@ -15,6 +15,7 @@ type ChatSummary struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
 	Model     string `json:"model"`
+	RunMode   string `json:"runMode,omitempty"`
 	UpdatedAt int64  `json:"updatedAt"`
 	CreatedAt int64  `json:"createdAt"`
 }

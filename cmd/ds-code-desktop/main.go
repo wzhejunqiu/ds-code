@@ -7,6 +7,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wzhejunqiu/ds-code/desktop/assets"
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
+	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 )
 
 func init() {
@@ -14,6 +15,10 @@ func init() {
 }
 
 func main() {
+	desktopsys.EnsurePATH()
+	desktopsys.Hooks.UpdateBadge = setDockBadge
+	desktopsys.Hooks.Notify = desktopsys.Notify
+
 	var app *application.App
 	svc, err := newDesktopService(func(env desktopbridge.AgentEventEnvelope) {
 		if app != nil {

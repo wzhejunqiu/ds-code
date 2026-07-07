@@ -8,8 +8,14 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as inspect$0 from "../../desktop/inspect/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as sys$0 from "../../desktop/sys/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as workspace$0 from "../../desktop/workspace/models.js";
@@ -36,7 +42,9 @@ export function ActiveWorkspaceID(): $CancellablePromise<string> {
  * AddWorkspace adds a project root as a workspace.
  */
 export function AddWorkspace(root: string): $CancellablePromise<workspace$0.Summary> {
-    return $Call.ByID(3339324385, root);
+    return $Call.ByID(3339324385, root).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 /**
@@ -44,6 +52,15 @@ export function AddWorkspace(root: string): $CancellablePromise<workspace$0.Summ
  */
 export function CancelTurn(wsID: string): $CancellablePromise<void> {
     return $Call.ByID(2246300016, wsID);
+}
+
+/**
+ * CheckDependencies reports git/node/gopls availability.
+ */
+export function CheckDependencies(): $CancellablePromise<sys$0.DepStatus[]> {
+    return $Call.ByID(2285041026).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 /**
@@ -57,7 +74,18 @@ export function Close(): $CancellablePromise<void> {
  * CreateChat creates a new agent conversation in a workspace.
  */
 export function CreateChat(wsID: string): $CancellablePromise<workspace$0.ChatSummary> {
-    return $Call.ByID(309053043, wsID);
+    return $Call.ByID(309053043, wsID).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * ExecuteSlash runs a slash command without starting a turn.
+ */
+export function ExecuteSlash(wsID: string, sessionID: string, line: string): $CancellablePromise<workspace$0.SlashResult> {
+    return $Call.ByID(100156161, wsID, sessionID, line).then(($result: any) => {
+        return $$createType4($result);
+    });
 }
 
 /**
@@ -65,28 +93,36 @@ export function CreateChat(wsID: string): $CancellablePromise<workspace$0.ChatSu
  * scope: "user" or "project" (requires wsID for project).
  */
 export function GetConfig(scope: string, wsID: string): $CancellablePromise<$models.ConfigView> {
-    return $Call.ByID(3281232725, scope, wsID);
+    return $Call.ByID(3281232725, scope, wsID).then(($result: any) => {
+        return $$createType5($result);
+    });
 }
 
 /**
  * GetWindowLayout returns persisted column layout.
  */
 export function GetWindowLayout(): $CancellablePromise<workspace$0.WindowLayout> {
-    return $Call.ByID(3099839837);
+    return $Call.ByID(3099839837).then(($result: any) => {
+        return $$createType6($result);
+    });
 }
 
 /**
  * ListChats lists agent conversation windows for a workspace.
  */
-export function ListChats(wsID: string): $CancellablePromise<workspace$0.ChatSummary[] | null> {
-    return $Call.ByID(2087797316, wsID);
+export function ListChats(wsID: string): $CancellablePromise<workspace$0.ChatSummary[]> {
+    return $Call.ByID(2087797316, wsID).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
 /**
  * ListWorkspaces returns all registered workspaces.
  */
-export function ListWorkspaces(): $CancellablePromise<workspace$0.Summary[] | null> {
-    return $Call.ByID(94092003);
+export function ListWorkspaces(): $CancellablePromise<workspace$0.Summary[]> {
+    return $Call.ByID(94092003).then(($result: any) => {
+        return $$createType8($result);
+    });
 }
 
 /**
@@ -104,10 +140,28 @@ export function PickFolder(): $CancellablePromise<string> {
 }
 
 /**
+ * PreviewPatch returns Monaco-ready diffs for apply_patch text.
+ */
+export function PreviewPatch(wsID: string, patchText: string): $CancellablePromise<inspect$0.PatchFileDiff[]> {
+    return $Call.ByID(1732033947, wsID, patchText).then(($result: any) => {
+        return $$createType10($result);
+    });
+}
+
+/**
  * ProjectRoot returns the active workspace project root.
  */
 export function ProjectRoot(): $CancellablePromise<string> {
     return $Call.ByID(956207050);
+}
+
+/**
+ * ReadFilePreview returns read-only file content for Inspector.
+ */
+export function ReadFilePreview(wsID: string, path: string, offset: number, limit: number): $CancellablePromise<inspect$0.FilePreviewResult> {
+    return $Call.ByID(191215701, wsID, path, offset, limit).then(($result: any) => {
+        return $$createType11($result);
+    });
 }
 
 /**
@@ -126,7 +180,6 @@ export function RenameChat(wsID: string, sessionID: string, title: string): $Can
 
 /**
  * ResolvePermission completes an inline approval card.
- * choice: "allow"|"deny" for write_shell; "allow_once"|"allow_always"|"deny" for web_fetch.
  */
 export function ResolvePermission(wsID: string, requestID: string, choice: string): $CancellablePromise<void> {
     return $Call.ByID(1546399332, wsID, requestID, choice);
@@ -135,8 +188,12 @@ export function ResolvePermission(wsID: string, requestID: string, choice: strin
 /**
  * ResumeChat loads session history.
  */
-export function ResumeChat(wsID: string, sessionID: string): $CancellablePromise<[workspace$0.ChatMessage[] | null, workspace$0.ChatSummary]> {
-    return $Call.ByID(2237051732, wsID, sessionID);
+export function ResumeChat(wsID: string, sessionID: string): $CancellablePromise<[workspace$0.ChatMessage[], workspace$0.ChatSummary]> {
+    return $Call.ByID(2237051732, wsID, sessionID).then(($result: any) => {
+        $result[0] = $$createType13($result[0]);
+        $result[1] = $$createType3($result[1]);
+        return $result;
+    });
 }
 
 /**
@@ -154,10 +211,26 @@ export function SaveWindowLayout(layout: workspace$0.WindowLayout): $Cancellable
 }
 
 /**
- * SendMessage starts an agent turn.
+ * SendMessage starts an agent turn or handles a slash command.
  */
-export function SendMessage(wsID: string, sessionID: string, text: string): $CancellablePromise<void> {
-    return $Call.ByID(2661530478, wsID, sessionID, text);
+export function SendMessage(wsID: string, sessionID: string, text: string): $CancellablePromise<workspace$0.SlashResult> {
+    return $Call.ByID(2661530478, wsID, sessionID, text).then(($result: any) => {
+        return $$createType4($result);
+    });
+}
+
+/**
+ * SessionRunMode returns the run mode for a session.
+ */
+export function SessionRunMode(wsID: string, sessionID: string): $CancellablePromise<string> {
+    return $Call.ByID(3852721379, wsID, sessionID);
+}
+
+/**
+ * SetRunMode switches agent/plan mode for a session.
+ */
+export function SetRunMode(wsID: string, sessionID: string, mode: string): $CancellablePromise<void> {
+    return $Call.ByID(2358595175, wsID, sessionID, mode);
 }
 
 /**
@@ -173,3 +246,19 @@ export function SwitchWorkspace(id: string): $CancellablePromise<void> {
 export function TurnStatus(wsID: string): $CancellablePromise<string> {
     return $Call.ByID(2751455620, wsID);
 }
+
+// Private type creation functions
+const $$createType0 = workspace$0.Summary.createFrom;
+const $$createType1 = sys$0.DepStatus.createFrom;
+const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = workspace$0.ChatSummary.createFrom;
+const $$createType4 = workspace$0.SlashResult.createFrom;
+const $$createType5 = $models.ConfigView.createFrom;
+const $$createType6 = workspace$0.WindowLayout.createFrom;
+const $$createType7 = $Create.Array($$createType3);
+const $$createType8 = $Create.Array($$createType0);
+const $$createType9 = inspect$0.PatchFileDiff.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = inspect$0.FilePreviewResult.createFrom;
+const $$createType12 = workspace$0.ChatMessage.createFrom;
+const $$createType13 = $Create.Array($$createType12);

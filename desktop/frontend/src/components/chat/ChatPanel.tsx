@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useState } from "react";
 import { Events } from "@wailsio/runtime";
 import { Composer } from "@/components/chat/Composer";
 import { MessageList } from "@/components/chat/MessageList";
+import { ModeSwitcher } from "@/components/chat/ModeSwitcher";
 import { Button } from "@/components/ui/button";
 import {
   blocksFromHistory,
@@ -13,6 +14,7 @@ import {
   type TurnState,
 } from "@/protocol/agent-events";
 import { useAppState } from "@/state/app-store";
+import { useInspector } from "@/state/inspector-store";
 import { DesktopService } from "../../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
 
 type UIAction =
@@ -20,6 +22,7 @@ type UIAction =
   | { type: "user"; text: string }
   | { type: "perm"; id: string; choice: string }
   | { type: "toggle_tool"; id: string }
+  | { type: "toggle_subagent"; id: string }
   | { type: "load"; blocks: ChatBlock[] };
 
 function uiReducer(state: TurnState, action: UIAction): TurnState {
@@ -44,6 +47,16 @@ function uiReducer(state: TurnState, action: UIAction): TurnState {
         ),
       };
     }
+    if (action.type === "toggle_subagent") {
+      return {
+        ...state,
+        blocks: state.blocks.map((b) =>
+          b.role === "subagent" && b.id === action.id
+            ? { ...b, record: { ...b.record, collapsed: !b.record.collapsed } }
+            : b,
+        ),
+      };
+    }
     if (action.type === "load") {
       return { ...initialTurnState(), blocks: action.blocks };
     }
@@ -51,9 +64,18 @@ function uiReducer(state: TurnState, action: UIAction): TurnState {
   return turnReducer(state, action as AgentEventEnvelope);
 }
 
-export function ChatPanel() {
-  const { activeWorkspaceId, activeChatId, chats, workspaces, createChat, addWorkspace } =
+export function ChatPanel({
+  dropInsert,
+  onDropConsumed,
+  onSubagentsChange,
+}: {
+  dropInsert?: string;
+  onDropConsumed?: () => void;
+  onSubagentsChange?: (subs: import("@/protocol/agent-events").SubagentRecord[]) => void;
+}) {
+  const { activeWorkspaceId, activeChatId, chats, workspaces, createChat, addWorkspace, setLayout } =
     useAppState();
+  const { openTool } = useInspector();
   const [turnState, dispatch] = useReducer(uiReducer, undefined, initialTurnState);
   const [status, setStatus] = useState("");
 
@@ -90,7 +112,16 @@ export function ChatPanel() {
     return () => window.clearInterval(id);
   }, [activeWorkspaceId]);
 
+  useEffect(() => {
+    onSubagentsChange?.(turnState.subagents);
+  }, [turnState.subagents, onSubagentsChange]);
+
   const running = turnState.running || status === "running" || status === "waiting_permission";
+
+  const handleInspectTool = (block: Extract<ChatBlock, { role: "tool" }>) => {
+    openTool(block);
+    setLayout({ rightCollapsed: false });
+  };
 
   if (!activeWorkspaceId) {
     return (
@@ -120,21 +151,27 @@ export function ChatPanel() {
         <span className="font-medium">{activeWs?.name}</span>
         <span className="mx-2 text-[var(--color-muted-foreground)]">▸</span>
         <span>{activeChat?.title ?? "Chat"}</span>
+        {turnState.planning && <span className="ml-3 text-xs text-blue-400">planning…</span>}
         {status === "waiting_permission" && (
           <span className="ml-3 text-xs text-amber-400">waiting approval</span>
         )}
       </header>
+      <ModeSwitcher />
       <MessageList
         blocks={turnState.blocks}
         workspaceId={activeWorkspaceId}
         onPermissionResolve={(id, choice) => dispatch({ type: "perm", id, choice })}
         onToolToggle={(id) => dispatch({ type: "toggle_tool", id })}
+        onToolInspect={handleInspectTool}
+        onSubagentToggle={(id) => dispatch({ type: "toggle_subagent", id })}
         follow={running}
       />
       <Composer
         running={running}
         disabled={!activeWorkspaceId || !activeChatId}
         onSend={(text) => dispatch({ type: "user", text })}
+        insertText={dropInsert}
+        onInsertConsumed={onDropConsumed}
       />
     </main>
   );

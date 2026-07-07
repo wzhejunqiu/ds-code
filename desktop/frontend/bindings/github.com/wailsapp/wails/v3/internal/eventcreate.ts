@@ -6,4 +6,17 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-Object.freeze($Create.Events);
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as bridge$0 from "../../../../wzhejunqiu/ds-code/desktop/bridge/models.js";
+
+function configure() {
+    Object.freeze(Object.assign($Create.Events, {
+        "agent:event": $$createType0,
+    }));
+}
+
+// Private type creation functions
+const $$createType0 = bridge$0.AgentEventEnvelope.createFrom;
+
+configure();

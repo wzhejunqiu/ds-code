@@ -14,8 +14,10 @@ import (
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
 	desktopdatadir "github.com/wzhejunqiu/ds-code/desktop/datadir"
 	desktopperm "github.com/wzhejunqiu/ds-code/desktop/permission"
+	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/config"
+	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
 	"github.com/wzhejunqiu/ds-code/internal/session"
 )
@@ -28,6 +30,7 @@ type Runtime struct {
 	app    *app.App
 	runner *agent.Runner
 	store  session.Store
+	ctxSvc *ctxpkg.Service
 	perm   *desktopperm.Registry
 }
 
@@ -101,6 +104,7 @@ func (m *Manager) emitFor(wsID string) EmitFunc {
 
 func (m *Manager) emitPermission(wsID string, p desktopbridge.PermissionRequestPayload) {
 	m.turnState(wsID).setWaitingPerm(true)
+	desktopsys.PermissionWaiting(true)
 	m.emitFor(wsID)(desktopbridge.AgentEventEnvelope{
 		V:           desktopbridge.EnvelopeVersion,
 		StreamID:    "main",
@@ -254,7 +258,7 @@ func (m *Manager) initRuntime(id string) (*Runtime, error) {
 	})
 
 	a := app.New(cfg)
-	runner, store, _, err := a.NewDesktopRunner(io.Discard, permReg.Prompter())
+	runner, store, ctxSvc, err := a.NewDesktopRunner(io.Discard, permReg.Prompter())
 	if err != nil {
 		a.CloseDesktop()
 		return nil, err
@@ -265,7 +269,7 @@ func (m *Manager) initRuntime(id string) (*Runtime, error) {
 	}
 	runner.Perm.WebFetchPrompter = permReg.WebFetchPrompter()
 
-	rt := &Runtime{app: a, runner: runner, store: store, perm: permReg}
+	rt := &Runtime{app: a, runner: runner, store: store, ctxSvc: ctxSvc, perm: permReg}
 	m.mu.Lock()
 	if old, ok := m.runtime[id]; ok && old != nil && old.app != nil && old.app != a {
 		old.app.CloseDesktop()
@@ -332,6 +336,7 @@ func chatSummaryFromSession(s session.Session) ChatSummary {
 		ID:        s.ID,
 		Title:     title,
 		Model:     s.Model,
+		RunMode:   s.RunMode.String(),
 		UpdatedAt: s.UpdatedAt.UnixMilli(),
 		CreatedAt: s.CreatedAt.UnixMilli(),
 	}

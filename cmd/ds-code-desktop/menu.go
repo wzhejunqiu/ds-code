@@ -36,6 +36,9 @@ func setupMenu(app *application.App, svc *DesktopService) {
 	viewMenu.Add("Toggle Inspector").SetAccelerator("Cmd+Alt+\\").OnClick(func(_ *application.Context) {
 		app.Event.Emit("desktop:action", map[string]string{"action": "toggle_inspector"})
 	})
+	viewMenu.Add("Command Palette").SetAccelerator("Cmd+K").OnClick(func(_ *application.Context) {
+		app.Event.Emit("desktop:action", map[string]string{"action": "open_command_palette"})
+	})
 
 	settingsItem := menu.Add("Settings…").SetAccelerator("Cmd+,")
 	settingsItem.OnClick(func(_ *application.Context) {

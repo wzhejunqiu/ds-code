@@ -7,7 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
+	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
+	uislash "github.com/wzhejunqiu/ds-code/internal/ui/slash"
 )
 
 type turnState struct {
@@ -71,42 +73,60 @@ func (m *Manager) runTurn(wsID, sessionID, text string, runner *agent.Runner, em
 	ctx, cancel := context.WithCancel(context.Background())
 	state := m.turnState(wsID)
 	state.setRunning(cancel)
-	defer state.clear()
+	desktopsys.TurnStarted()
+	defer func() {
+		state.clear()
+		desktopsys.TurnFinished("ds-code", "Agent turn finished", true)
+	}()
 
 	turnID := uuid.NewString()
-	emitter := desktopbridge.NewStreamEmitter(desktopbridge.StreamEmitterOptions{
-		TurnID:      turnID,
-		WorkspaceID: wsID,
-		Emit: func(env desktopbridge.AgentEventEnvelope) bool {
-			emit(env)
-			return true
-		},
+	hub := desktopbridge.NewEmitterHub(turnID, wsID, func(env desktopbridge.AgentEventEnvelope) bool {
+		emit(env)
+		return true
 	})
-	desktopbridge.EmitTurnStarted(emitter, sessionID)
-	cb := desktopbridge.TurnCallbacks(desktopbridge.TurnCallbacksOptions{
-		Emitter:   emitter,
-		SessionID: sessionID,
-	})
+	hub.EmitTurnStarted(sessionID)
+	cb := hub.TurnCallbacks(sessionID)
 	result, err := runner.RunTurn(ctx, sessionID, text, cb)
-	desktopbridge.EmitTurnDone(emitter, result, err)
+	hub.EmitTurnDone(result, err)
 }
 
-// SendMessage starts an agent turn for the given workspace and session.
-func (m *Manager) SendMessage(wsID, sessionID, text string) error {
+// SendMessage starts an agent turn or handles a slash command for the given workspace and session.
+func (m *Manager) SendMessage(wsID, sessionID, text string) (SlashResult, error) {
 	ws, err := m.Ensure(wsID)
 	if err != nil {
-		return err
+		return SlashResult{}, err
 	}
 	if ws.runner == nil {
-		return fmt.Errorf("workspace not ready")
+		return SlashResult{}, fmt.Errorf("workspace not ready")
+	}
+	if _, _, ok := uislash.Parse(text); ok {
+		res, err := m.executeSlash(ws, sessionID, text)
+		if err != nil {
+			return SlashResult{}, err
+		}
+		if res.Handled && res.Output != "" {
+			m.emitSystemNotice(wsID, res.Output)
+		}
+		return res, nil
 	}
 	state := m.turnState(wsID)
 	if state.isRunning() {
-		return fmt.Errorf("turn already running")
+		return SlashResult{}, fmt.Errorf("turn already running")
 	}
 	emit := m.emitFor(wsID)
 	go m.runTurn(wsID, sessionID, text, ws.runner, emit)
-	return nil
+	return SlashResult{Handled: false}, nil
+}
+
+func (m *Manager) emitSystemNotice(wsID, text string) {
+	m.emitFor(wsID)(desktopbridge.AgentEventEnvelope{
+		V:           desktopbridge.EnvelopeVersion,
+		StreamID:    "main",
+		WorkspaceID: wsID,
+		Kind:        desktopbridge.KindSystemNotice,
+		Critical:    true,
+		Payload:     desktopbridge.MustPayload(desktopbridge.SystemNoticePayload{Text: text}),
+	})
 }
 
 // CancelTurn cancels the in-flight turn for a workspace.
