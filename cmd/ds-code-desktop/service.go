@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
+	desktopcheckpoint "github.com/wzhejunqiu/ds-code/desktop/checkpoint"
 	desktopinspect "github.com/wzhejunqiu/ds-code/desktop/inspect"
 	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 	desktopworkspace "github.com/wzhejunqiu/ds-code/desktop/workspace"
@@ -222,6 +223,26 @@ func (s *DesktopService) ProjectRoot() string {
 	return root
 }
 
+// ListCheckpoints returns checkpoint metadata for a session.
+func (s *DesktopService) ListCheckpoints(wsID, sessionID string) ([]desktopcheckpoint.Meta, error) {
+	return s.mgr.ListCheckpoints(wsID, sessionID)
+}
+
+// PreviewCheckpointRewind returns diffs for rewinding to a checkpoint.
+func (s *DesktopService) PreviewCheckpointRewind(wsID, sessionID string, id int) ([]desktopinspect.PatchFileDiff, error) {
+	return s.mgr.PreviewCheckpointRewind(wsID, sessionID, id)
+}
+
+// RewindCheckpoint restores workspace files to a checkpoint.
+func (s *DesktopService) RewindCheckpoint(wsID, sessionID string, id int) error {
+	return s.mgr.RewindCheckpoint(wsID, sessionID, id)
+}
+
+// CheckpointNewerIDs returns checkpoint ids newer than targetID.
+func (s *DesktopService) CheckpointNewerIDs(wsID, sessionID string, targetID int) ([]int, error) {
+	return s.mgr.CheckpointNewerIDs(wsID, sessionID, targetID)
+}
+
 // PreviewPatch returns Monaco-ready diffs for apply_patch text.
 func (s *DesktopService) PreviewPatch(wsID, patchText string) ([]desktopinspect.PatchFileDiff, error) {
 	root, err := s.mgr.ProjectRoot(wsID)
@@ -243,6 +264,36 @@ func (s *DesktopService) ReadFilePreview(wsID, path string, offset, limit int) (
 // CheckDependencies reports git/node/gopls availability.
 func (s *DesktopService) CheckDependencies() []desktopsys.DepStatus {
 	return desktopsys.CheckDependencies()
+}
+
+// SessionUsage returns cumulative token usage and cost for a chat session.
+func (s *DesktopService) SessionUsage(wsID, sessionID string) (desktopworkspace.SessionUsageView, error) {
+	return s.mgr.SessionUsage(wsID, sessionID)
+}
+
+// ServiceStatus returns MCP/LSP status for a workspace.
+func (s *DesktopService) ServiceStatus(wsID string) (desktopworkspace.ServiceStatusView, error) {
+	return s.mgr.ServiceStatus(wsID)
+}
+
+// GetMCPLSPConfig loads MCP/LSP config for user or project scope.
+func (s *DesktopService) GetMCPLSPConfig(scope, wsID string) (desktopworkspace.MCPLSPConfigView, error) {
+	return s.mgr.GetMCPLSPConfig(scope, wsID)
+}
+
+// SaveMCPLSPConfig writes MCP/LSP config atomically (JSON body).
+func (s *DesktopService) SaveMCPLSPConfig(scope, wsID, configJSON string) error {
+	return s.mgr.SaveMCPLSPConfig(scope, wsID, configJSON)
+}
+
+// ReloadWorkspaceServices reconnects MCP/LSP for a workspace.
+func (s *DesktopService) ReloadWorkspaceServices(wsID string) error {
+	return s.mgr.ReloadWorkspaceServices(wsID)
+}
+
+// SearchChats finds sessions by title or message content.
+func (s *DesktopService) SearchChats(wsID, query string) ([]desktopworkspace.ChatSummary, error) {
+	return s.mgr.SearchChats(wsID, query)
 }
 
 // Close releases all workspace resources.

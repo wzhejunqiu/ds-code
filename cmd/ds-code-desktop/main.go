@@ -39,11 +39,18 @@ func main() {
 			Handler: application.AssetFileServerFS(assets.Dist),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	}
 	modifyOptionsForIOS(&opts)
 	app = application.New(opts)
+	desktopsys.Hooks.BackgroundAgentComplete = func(workspaceID, sessionID, agentID string) {
+		app.Event.Emit("desktop:focus_subagent", map[string]string{
+			"workspaceId": workspaceID,
+			"sessionId":   sessionID,
+			"subagentId":  agentID,
+		})
+	}
 	setupLifecycle(app, svc)
 	setupMenu(app, svc)
 
@@ -59,7 +66,8 @@ func main() {
 		BackgroundColour: application.NewRGB(15, 17, 23),
 		URL:              "/",
 	})
-	_ = win
+	setupTray(app, win, svc)
+	configureWindowClose(app, win)
 
 	projectRoot := "."
 	if len(os.Args) > 1 {

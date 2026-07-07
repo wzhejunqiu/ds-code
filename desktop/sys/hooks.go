@@ -2,8 +2,9 @@ package sys
 
 // Hooks are optional callbacks wired from cmd/ds-code-desktop on startup.
 var Hooks struct {
-	UpdateBadge func(count int)
-	Notify      func(title, body string)
+	UpdateBadge             func(count int)
+	Notify                  func(title, body string)
+	BackgroundAgentComplete func(workspaceID, sessionID, agentID string)
 }
 
 func refreshBadge() {

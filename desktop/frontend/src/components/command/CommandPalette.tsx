@@ -41,6 +41,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         hint: w.root,
         run: async () => switchWorkspace(w.id),
       })),
+      ...chats.map((c) => ({
+        id: `chat-${c.id}`,
+        label: `Switch chat: ${c.title || "(untitled)"}`,
+        hint: c.id.slice(0, 8),
+        run: async () => selectChat(c.id),
+      })),
       {
         id: "settings",
         label: "Open Settings",
@@ -60,7 +66,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const all = [...cmds, ...nav];
     if (!q) return all;
     return all.filter((i) => i.label.toLowerCase().includes(q) || i.hint.toLowerCase().includes(q));
-  }, [query, workspaces, activeWorkspaceId, activeChatId, switchWorkspace, navigate, createChat, selectChat]);
+  }, [query, workspaces, chats, activeWorkspaceId, activeChatId, switchWorkspace, navigate, createChat, selectChat]);
 
   if (!open) return null;
 

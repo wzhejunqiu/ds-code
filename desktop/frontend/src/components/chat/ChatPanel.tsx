@@ -93,10 +93,19 @@ export function ChatPanel({
   }, [loadHistory]);
 
   useEffect(() => {
+    const onReload = () => void loadHistory();
+    window.addEventListener("ds-code:reload-chat", onReload);
+    return () => window.removeEventListener("ds-code:reload-chat", onReload);
+  }, [loadHistory]);
+
+  useEffect(() => {
     const off = Events.On("agent:event", (raw: { data: AgentEventEnvelope }) => {
       const event = raw.data;
       if (event.workspaceId && activeWorkspaceId && event.workspaceId !== activeWorkspaceId) {
         return;
+      }
+      if (event.kind === "turn.done") {
+        window.dispatchEvent(new CustomEvent("ds-code:turn-done"));
       }
       dispatch(event);
     });

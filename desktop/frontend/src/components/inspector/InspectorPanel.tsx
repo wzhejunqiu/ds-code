@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { CheckpointTimeline } from "@/components/inspector/CheckpointTimeline";
 import { DiffView } from "@/components/inspector/DiffView";
 import { ToolDetail } from "@/components/inspector/ToolDetail";
+import { WorkspaceOverview } from "@/components/inspector/WorkspaceOverview";
 import { useInspector, type InspectorTab } from "@/state/inspector-store";
 import { useAppState } from "@/state/app-store";
 import type { SubagentRecord } from "@/protocol/agent-events";
@@ -9,18 +12,32 @@ const tabs: { id: InspectorTab; label: string }[] = [
   { id: "detail", label: "Detail" },
   { id: "diff", label: "Diff" },
   { id: "subagent", label: "Subagents" },
+  { id: "history", label: "History" },
 ];
 
 export function InspectorPanel({
   subagents,
   onSelectSubagent,
+  onRewound,
+  focusSubagentId,
+  onFocusSubagentConsumed,
 }: {
   subagents: SubagentRecord[];
   onSelectSubagent?: (id: string) => void;
+  onRewound?: () => void;
+  focusSubagentId?: string | null;
+  onFocusSubagentConsumed?: () => void;
 }) {
-  const { layout, setLayout } = useAppState();
-  const { activeWorkspaceId } = useAppState();
+  const { layout, setLayout, activeWorkspaceId, activeChatId } = useAppState();
   const { tab, setTab, selection, setDiffInline, diffInline, setSelection } = useInspector();
+
+  useEffect(() => {
+    if (!focusSubagentId) return;
+    setTab("subagent");
+    setSelection({ kind: "subagent", id: focusSubagentId });
+    onSelectSubagent?.(focusSubagentId);
+    onFocusSubagentConsumed?.();
+  }, [focusSubagentId, setTab, setSelection, onSelectSubagent, onFocusSubagentConsumed]);
 
   if (layout.rightCollapsed) {
     return (
@@ -63,12 +80,25 @@ export function InspectorPanel({
       </div>
       <div className="min-h-0 flex-1">
         {tab === "detail" && selection.kind === "tool" && <ToolDetail block={selection.block} />}
-        {tab === "detail" && selection.kind !== "tool" && (
+        {tab === "detail" && selection.kind !== "tool" && activeWorkspaceId && (
+          <WorkspaceOverview workspaceId={activeWorkspaceId} />
+        )}
+        {tab === "detail" && selection.kind !== "tool" && !activeWorkspaceId && (
           <div className="p-4 text-sm text-[var(--color-muted-foreground)]">
-            Select a tool card to inspect details.
+            Select a workspace to see overview.
           </div>
         )}
         {tab === "diff" && activeWorkspaceId && <DiffView workspaceId={activeWorkspaceId} />}
+        {tab === "history" && activeWorkspaceId && activeChatId && (
+          <CheckpointTimeline
+            workspaceId={activeWorkspaceId}
+            sessionId={activeChatId}
+            onRewound={onRewound}
+          />
+        )}
+        {tab === "history" && (!activeWorkspaceId || !activeChatId) && (
+          <div className="p-4 text-sm text-[var(--color-muted-foreground)]">Select a chat to view checkpoint history.</div>
+        )}
         {tab === "subagent" && (
           <div className="overflow-auto p-2 text-sm">
             {subagents.length === 0 && (

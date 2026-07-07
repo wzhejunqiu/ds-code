@@ -1,5 +1,8 @@
-import { FolderPlus, MessageSquarePlus, Trash2 } from "lucide-react";
+import { FolderPlus, MessageSquarePlus, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DesktopService } from "../../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
+import type { ChatSummary } from "../../../bindings/github.com/wzhejunqiu/ds-code/desktop/workspace/models";
 import { useAppState } from "@/state/app-store";
 
 export function WorkspaceSidebar() {
@@ -14,8 +17,31 @@ export function WorkspaceSidebar() {
     createChat,
     selectChat,
   } = useAppState();
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ChatSummary[] | null>(null);
 
   const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
+
+  useEffect(() => {
+    if (!activeWorkspaceId) {
+      setSearchResults(null);
+      return;
+    }
+    const q = query.trim();
+    if (!q) {
+      setSearchResults(null);
+      return;
+    }
+    const t = window.setTimeout(() => {
+      void DesktopService.SearchChats(activeWorkspaceId, q).then(setSearchResults);
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [query, activeWorkspaceId]);
+
+  const displayChats = useMemo(() => {
+    if (searchResults) return searchResults;
+    return chats;
+  }, [searchResults, chats]);
 
   return (
     <aside className="flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-card)]">
@@ -27,6 +53,19 @@ export function WorkspaceSidebar() {
           <FolderPlus className="h-4 w-4" />
         </Button>
       </div>
+      {activeWorkspaceId && (
+        <div className="border-b border-[var(--color-border)] px-2 py-2">
+          <div className="flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1">
+            <Search className="h-3 w-3 text-[var(--color-muted-foreground)]" />
+            <input
+              className="w-full bg-transparent text-xs outline-none"
+              placeholder="Search chats…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {workspaces.length === 0 && (
           <p className="px-2 py-4 text-sm text-[var(--color-muted-foreground)]">
@@ -66,7 +105,7 @@ export function WorkspaceSidebar() {
                     <MessageSquarePlus className="h-3 w-3" />
                   </Button>
                 </div>
-                {chats.map((chat) => (
+                {displayChats.map((chat) => (
                   <button
                     key={chat.id}
                     type="button"
@@ -78,8 +117,10 @@ export function WorkspaceSidebar() {
                     {chat.title || "(untitled)"}
                   </button>
                 ))}
-                {chats.length === 0 && (
-                  <p className="px-2 text-xs text-[var(--color-muted-foreground)]">No chats yet</p>
+                {displayChats.length === 0 && (
+                  <p className="px-2 text-xs text-[var(--color-muted-foreground)]">
+                    {query.trim() ? "No matches" : "No chats yet"}
+                  </p>
                 )}
               </div>
             )}

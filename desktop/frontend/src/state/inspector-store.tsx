@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ChatBlock } from "@/protocol/agent-events";
 
-export type InspectorTab = "detail" | "diff" | "subagent";
+export type InspectorTab = "detail" | "diff" | "subagent" | "history";
 
 export type InspectorSelection =
   | { kind: "none" }

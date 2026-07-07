@@ -13,15 +13,27 @@ import { useAppState } from "@/state/app-store";
 import { InspectorProvider } from "@/state/inspector-store";
 
 function ChatLayout() {
-  const { layout, addWorkspace } = useAppState();
+  const { layout, addWorkspace, setLayout } = useAppState();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dropInsert, setDropInsert] = useState("");
   const [subagents, setSubagents] = useState<SubagentRecord[]>([]);
+  const [focusSubagentId, setFocusSubagentId] = useState<string | null>(null);
   const gridCols = [
     layout.leftCollapsed ? "0px" : `${layout.leftWidth}px`,
     "1fr",
     layout.rightCollapsed ? "48px" : `${layout.rightWidth}px`,
   ].join(" ");
+
+  useEffect(() => {
+    const off = Events.On("desktop:focus_subagent", (raw: { data: Record<string, string> }) => {
+      const subagentId = raw.data?.subagentId;
+      if (subagentId) {
+        setFocusSubagentId(subagentId);
+        setLayout({ rightCollapsed: false });
+      }
+    });
+    return () => off();
+  }, [setLayout]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -70,7 +82,12 @@ function ChatLayout() {
               onSubagentsChange={setSubagents}
             />
           </div>
-          <InspectorPanel subagents={subagents} />
+          <InspectorPanel
+            subagents={subagents}
+            focusSubagentId={focusSubagentId}
+            onFocusSubagentConsumed={() => setFocusSubagentId(null)}
+            onRewound={() => window.dispatchEvent(new CustomEvent("ds-code:reload-chat"))}
+          />
         </div>
         <StatusBar />
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

@@ -16,6 +16,7 @@ import (
 	desktopperm "github.com/wzhejunqiu/ds-code/desktop/permission"
 	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/billing"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	ctxpkg "github.com/wzhejunqiu/ds-code/internal/context"
 	"github.com/wzhejunqiu/ds-code/internal/permissionmode"
@@ -55,6 +56,7 @@ func NewManager(emit EmitFunc) (*Manager, error) {
 
 // NewManagerWithRegistry constructs a manager with an explicit registry (for tests).
 func NewManagerWithRegistry(reg *Registry, emit EmitFunc) (*Manager, error) {
+	_ = billing.SetupFromUserConfig()
 	return &Manager{
 		registry: reg,
 		runtime:  make(map[string]*Runtime),

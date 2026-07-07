@@ -57,5 +57,10 @@ func setupMenu(app *application.App, svc *DesktopService) {
 		app.Event.Emit("desktop:action", map[string]string{"action": "workspace_added"})
 	})
 
+	helpMenu := menu.AddSubmenu("Help")
+	helpMenu.Add("Check for Updates…").OnClick(func(_ *application.Context) {
+		checkForUpdates()
+	})
+
 	app.Menu.Set(menu)
 }

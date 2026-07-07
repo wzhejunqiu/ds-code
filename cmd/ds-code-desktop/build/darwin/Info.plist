@@ -25,5 +25,9 @@
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
             <string>© 2026 wzhejunqiu</string>
+        <key>SUFeedURL</key>
+            <string>https://example.com/ds-code/appcast.xml</string>
+        <key>SUPublicEDKey</key>
+            <string>REPLACE_WITH_SPARKLE_EDDSA_PUBLIC_KEY</string>
     </dict>
 </plist>

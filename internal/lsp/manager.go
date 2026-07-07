@@ -112,3 +112,14 @@ func (m *Manager) idleWatch(serverID string, c *client.Client) {
 func (m *Manager) Registry() map[string]ServerConfig {
 	return m.registry
 }
+
+// StartedServerIDs returns server ids with active clients.
+func (m *Manager) StartedServerIDs() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]string, 0, len(m.clients))
+	for id := range m.clients {
+		out = append(out, id)
+	}
+	return out
+}

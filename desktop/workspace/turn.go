@@ -76,7 +76,7 @@ func (m *Manager) runTurn(wsID, sessionID, text string, runner *agent.Runner, em
 	desktopsys.TurnStarted()
 	defer func() {
 		state.clear()
-		desktopsys.TurnFinished("ds-code", "Agent turn finished", true)
+		desktopsys.TurnFinished("", "", false)
 	}()
 
 	turnID := uuid.NewString()
@@ -86,6 +86,16 @@ func (m *Manager) runTurn(wsID, sessionID, text string, runner *agent.Runner, em
 	})
 	hub.EmitTurnStarted(sessionID)
 	cb := hub.TurnCallbacks(sessionID)
+	prevComplete := cb.OnBackgroundAgentComplete
+	cb.OnBackgroundAgentComplete = func(agentID string) {
+		if prevComplete != nil {
+			prevComplete(agentID)
+		}
+		desktopsys.Hooks.Notify("ds-code", "Background agent finished")
+		if desktopsys.Hooks.BackgroundAgentComplete != nil {
+			desktopsys.Hooks.BackgroundAgentComplete(wsID, sessionID, agentID)
+		}
+	}
 	result, err := runner.RunTurn(ctx, sessionID, text, cb)
 	hub.EmitTurnDone(result, err)
 }
