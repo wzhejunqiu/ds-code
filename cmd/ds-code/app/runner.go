@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/wzhejunqiu/ds-code/cmd/ds-code/slashcmd"
+	desktopdatadir "github.com/wzhejunqiu/ds-code/desktop/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/agent/spawn"
 	"github.com/wzhejunqiu/ds-code/internal/audit"
@@ -98,7 +99,11 @@ func (a *App) newRunner(out io.Writer) (*agent.Runner, session.Store, *ctxpkg.Se
 
 	var auditLog *audit.Logger
 	if a.Cfg.Audit.Enabled {
-		auditLog = audit.NewLogger(config.DefaultAuditLogPath(a.Cfg.ProjectRoot))
+		auditPath := config.DefaultAuditLogPath(a.Cfg.ProjectRoot)
+		if a.useDesktopDataDir {
+			auditPath = desktopdatadir.DefaultAuditLogPath(a.Cfg.ProjectRoot)
+		}
+		auditLog = audit.NewLogger(auditPath)
 	}
 
 	cpStore, err := a.openCheckpointStore()

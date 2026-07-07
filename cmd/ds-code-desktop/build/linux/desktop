@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A ds-code-desktop application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/ds-code-desktop %u
+Terminal=false
+Type=Application
+Icon=ds-code-desktop
+Categories=Utility;
+StartupWMClass=ds-code-desktop
+
+ 

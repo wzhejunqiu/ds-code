@@ -1,6 +1,7 @@
 package app
 
 import (
+	desktopdatadir "github.com/wzhejunqiu/ds-code/desktop/datadir"
 	"github.com/wzhejunqiu/ds-code/internal/checkpoint"
 	"github.com/wzhejunqiu/ds-code/internal/config"
 	"github.com/wzhejunqiu/ds-code/internal/lsp"
@@ -13,14 +14,15 @@ import (
 
 // App holds CLI runtime state and lazy-initialized dependencies.
 type App struct {
-	Cfg          *config.Config
-	store        session.Store
-	subStore     subagentstore.Store
-	sqliteDB     *sessionsqlite.Store
-	mcpMgr       *mcpsvc.Manager
-	lspMgr       *lsp.Manager
-	checkpointSt *checkpoint.Store
-	shellJobs    *manager.Manager
+	Cfg               *config.Config
+	useDesktopDataDir bool
+	store             session.Store
+	subStore          subagentstore.Store
+	sqliteDB          *sessionsqlite.Store
+	mcpMgr            *mcpsvc.Manager
+	lspMgr            *lsp.Manager
+	checkpointSt      *checkpoint.Store
+	shellJobs         *manager.Manager
 }
 
 // New builds an App from loaded configuration.
@@ -32,7 +34,15 @@ func (a *App) openStore() (session.Store, error) {
 	if a.store != nil {
 		return a.store, nil
 	}
-	sqlite, err := sessionsqlite.OpenDefault(a.Cfg.ProjectRoot)
+	var (
+		sqlite *sessionsqlite.Store
+		err    error
+	)
+	if a.useDesktopDataDir {
+		sqlite, err = desktopdatadir.OpenDefault(a.Cfg.ProjectRoot)
+	} else {
+		sqlite, err = sessionsqlite.OpenDefault(a.Cfg.ProjectRoot)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +63,18 @@ func (a *App) openCheckpointStore() (*checkpoint.Store, error) {
 	if a.checkpointSt != nil {
 		return a.checkpointSt, nil
 	}
-	st, err := checkpoint.OpenStore(a.Cfg.ProjectRoot)
+	var (
+		st  *checkpoint.Store
+		err error
+	)
+	if a.useDesktopDataDir {
+		if _, err = desktopdatadir.EnsureProjectDataDir(a.Cfg.ProjectRoot); err != nil {
+			return nil, err
+		}
+		st, err = checkpoint.OpenAt(desktopdatadir.DefaultCheckpointDir(a.Cfg.ProjectRoot))
+	} else {
+		st, err = checkpoint.OpenStore(a.Cfg.ProjectRoot)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -19,16 +19,24 @@ type Store struct {
 	root string
 }
 
+// OpenAt creates a checkpoint store at an explicit root directory.
+func OpenAt(rootDir string) (*Store, error) {
+	if rootDir == "" {
+		return nil, fmt.Errorf("checkpoint: empty root dir")
+	}
+	if err := os.MkdirAll(rootDir, 0o700); err != nil {
+		return nil, fmt.Errorf("checkpoint: mkdir: %w", err)
+	}
+	return &Store{root: rootDir}, nil
+}
+
 // OpenStore creates the checkpoint store for a project.
 func OpenStore(projectRoot string) (*Store, error) {
 	if _, err := config.EnsureProjectDataDir(projectRoot); err != nil {
 		return nil, err
 	}
 	dir := config.DefaultCheckpointDir(projectRoot)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return nil, fmt.Errorf("checkpoint: mkdir: %w", err)
-	}
-	return &Store{root: dir}, nil
+	return OpenAt(dir)
 }
 
 func (s *Store) sessionDir(sessionID string) string {

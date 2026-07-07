@@ -12,6 +12,10 @@ bin/
 coverage.out
 coverage.html
 /ds-code
+desktop/frontend/node_modules/
+cmd/ds-code-desktop/frontend/
+cmd/ds-code-desktop/bin/
+cmd/ds-code-desktop/.task/
 .vscode/
 __debug_bin*
 .ds-code/

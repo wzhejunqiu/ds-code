@@ -1,4 +1,4 @@
-.PHONY: build build-tui-test test test-tui test-integration cover cover-html verify-release verify-charm-v2 lint vet staticcheck vuln install fetch-tokenizers fetch-ripgrep check-commit check-push install-hooks
+.PHONY: build build-tui-test build-desktop desktop-dev desktop-test test test-tui test-integration cover cover-html verify-release verify-charm-v2 lint vet staticcheck vuln install fetch-tokenizers fetch-ripgrep check-commit check-push install-hooks
 
 COVERPROFILE ?= coverage.out
 
@@ -34,6 +34,16 @@ build-debug: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 
 install: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go install -ldflags "$(LDFLAGS)" ./cmd/ds-code
+
+# Desktop (Wails v3 + Bun/Vite). Requires wails3 CLI and bun.
+build-desktop: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
+	cd cmd/ds-code-desktop && PACKAGE_MANAGER=bun wails3 task package
+
+desktop-dev:
+	cd cmd/ds-code-desktop && PACKAGE_MANAGER=bun wails3 dev -config ./build/config.yml
+
+desktop-test:
+	cd desktop/frontend && bun run test
 
 test: $(TOKENIZERS_LIB) $(RIPGREP_TAR)
 	go test -race -count=1 ./...

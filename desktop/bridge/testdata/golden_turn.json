@@ -1,0 +1,74 @@
+[
+  {
+    "v": 1,
+    "seq": 1,
+    "turnId": "golden-turn",
+    "streamId": "main",
+    "workspaceId": "default",
+    "kind": "turn.started",
+    "critical": true,
+    "payload": {
+      "sessionId": "sess-1"
+    }
+  },
+  {
+    "v": 1,
+    "seq": 2,
+    "turnId": "golden-turn",
+    "streamId": "main",
+    "workspaceId": "default",
+    "kind": "content.delta",
+    "critical": false,
+    "payload": {
+      "delta": "Hi"
+    }
+  },
+  {
+    "v": 1,
+    "seq": 3,
+    "turnId": "golden-turn",
+    "streamId": "main",
+    "workspaceId": "default",
+    "kind": "assistant.segment_end",
+    "critical": false,
+    "payload": {}
+  },
+  {
+    "v": 1,
+    "seq": 4,
+    "turnId": "golden-turn",
+    "streamId": "main",
+    "workspaceId": "default",
+    "kind": "tool.start",
+    "critical": false,
+    "payload": {
+      "name": "read",
+      "args": "{}"
+    }
+  },
+  {
+    "v": 1,
+    "seq": 5,
+    "turnId": "golden-turn",
+    "streamId": "main",
+    "workspaceId": "default",
+    "kind": "tool.end",
+    "critical": true,
+    "payload": {
+      "name": "read",
+      "args": "{}",
+      "result": "content",
+      "isError": false
+    }
+  },
+  {
+    "v": 1,
+    "seq": 6,
+    "turnId": "golden-turn",
+    "streamId": "main",
+    "workspaceId": "default",
+    "kind": "turn.done",
+    "critical": true,
+    "payload": {}
+  }
+]
