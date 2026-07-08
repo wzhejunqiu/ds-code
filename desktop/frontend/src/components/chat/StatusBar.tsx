@@ -14,6 +14,7 @@ type UsageState = {
 export function StatusBar() {
   const { permissionMode, activeWorkspaceId, activeChatId } = useAppState();
   const wsStatus = activeWorkspaceId ? "ready" : "no workspace";
+  const [hint, setHint] = useState("");
   const [usage, setUsage] = useState<UsageState>({
     model: "deepseek-v4",
     promptTokens: 0,
@@ -72,10 +73,24 @@ export function StatusBar() {
     return () => window.removeEventListener("ds-code:turn-done", onDone);
   }, [activeWorkspaceId, activeChatId]);
 
+  useEffect(() => {
+    const off = Events.On("desktop:hint", (raw: { data: { text?: string } }) => {
+      setHint(raw.data?.text ?? "");
+    });
+    return () => off();
+  }, []);
+
+  useEffect(() => {
+    if (!hint) return;
+    const id = window.setTimeout(() => setHint(""), 5000);
+    return () => window.clearTimeout(id);
+  }, [hint]);
+
   const tokens = usage.promptTokens + usage.completionTokens;
 
   return (
     <footer className="status-bar">
+      {hint ? <span className="status-bar-hint">{hint}</span> : null}
       <span>{usage.model}</span>
       <span>{permissionMode}</span>
       <span>{tokens > 0 ? `${tokens.toLocaleString()} tok` : "0 tok"}</span>

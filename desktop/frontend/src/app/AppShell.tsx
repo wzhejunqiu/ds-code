@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { DesktopActionBridge } from "@/app/DesktopActionBridge";
 import { Events } from "@wailsio/runtime";
 import { TitleBar } from "@/components/chrome/TitleBar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
@@ -105,6 +106,7 @@ function ChatLayout() {
 export function AppShell() {
   return (
     <HashRouter>
+      <DesktopActionBridge />
       <Routes>
         <Route path="/" element={<Navigate to="/chat" replace />} />
         <Route path="/chat" element={<ChatLayout />} />

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
+	desktopperm "github.com/wzhejunqiu/ds-code/desktop/permission"
 	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
 	"github.com/wzhejunqiu/ds-code/internal/session/contentformat"
@@ -165,4 +167,53 @@ func (m *Manager) CancelTurn(wsID string) error {
 // TurnStatus returns running / waiting_permission / idle for a workspace.
 func (m *Manager) TurnStatus(wsID string) string {
 	return m.turnState(wsID).status()
+}
+
+// HasRunningTurn reports whether any workspace has an in-flight turn.
+func (m *Manager) HasRunningTurn() bool {
+	m.mu.Lock()
+	turns := make([]*turnState, 0, len(m.turns))
+	for _, st := range m.turns {
+		turns = append(turns, st)
+	}
+	m.mu.Unlock()
+	for _, st := range turns {
+		if st.isRunning() {
+			return true
+		}
+	}
+	return false
+}
+
+// CancelAllTurns cancels every in-flight turn across workspaces.
+func (m *Manager) CancelAllTurns() {
+	m.mu.Lock()
+	turns := make([]*turnState, 0, len(m.turns))
+	for _, st := range m.turns {
+		turns = append(turns, st)
+	}
+	regs := make([]*desktopperm.Registry, 0, len(m.runtime))
+	for _, rt := range m.runtime {
+		if rt != nil && rt.perm != nil {
+			regs = append(regs, rt.perm)
+		}
+	}
+	m.mu.Unlock()
+	for _, st := range turns {
+		st.cancelTurn()
+	}
+	for _, reg := range regs {
+		reg.DenyAll()
+	}
+}
+
+// WaitTurns blocks until no turns are running or timeout elapses.
+func (m *Manager) WaitTurns(timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if !m.HasRunningTurn() {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }

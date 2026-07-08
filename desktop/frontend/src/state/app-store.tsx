@@ -1,6 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Events } from "@wailsio/runtime";
 import { DesktopService } from "../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
+import type {
+  ConfigView,
+  SettingsPatch,
+} from "../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop/models";
 import type { ChatSummary, Summary } from "../../bindings/github.com/wzhejunqiu/ds-code/desktop/workspace/models";
 
 export interface LayoutState {
@@ -29,7 +33,9 @@ interface AppState {
   setLayout: (patch: Partial<LayoutState>) => void;
   refreshApiKey: () => Promise<void>;
   refreshConfig: () => Promise<void>;
-  savePermissionMode: (mode: string) => Promise<void>;
+  getConfig: (scope: "user" | "project") => Promise<ConfigView>;
+  saveSettings: (scope: "user" | "project", patch: SettingsPatch) => Promise<void>;
+  savePermissionMode: (mode: string, scope?: "user" | "project") => Promise<void>;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -101,9 +107,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const off = Events.On("desktop:action", (raw: { data: Record<string, string> }) => {
       const action = raw.data?.action;
-      if (action === "open_settings") {
-        window.location.hash = "#/settings";
-      }
       if (action === "toggle_sidebar") {
         setLayoutState((l) => ({ ...l, leftCollapsed: !l.leftCollapsed }));
       }
@@ -181,12 +184,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setActiveChatId(id);
   }, []);
 
-  const savePermissionMode = useCallback(
-    async (mode: string) => {
-      await DesktopService.SaveConfigPatch("user", "", mode);
-      setPermissionMode(mode);
+  const getConfig = useCallback(
+    async (scope: "user" | "project") => {
+      const wsID = scope === "project" ? activeWorkspaceId : "";
+      return DesktopService.GetConfig(scope, wsID);
     },
-    [],
+    [activeWorkspaceId],
+  );
+
+  const saveSettings = useCallback(
+    async (scope: "user" | "project", patch: SettingsPatch) => {
+      const wsID = scope === "project" ? activeWorkspaceId : "";
+      await DesktopService.SaveSettingsPatch(scope, wsID, patch);
+      if (scope === "user" && patch.permissionMode) {
+        setPermissionMode(patch.permissionMode);
+      }
+    },
+    [activeWorkspaceId],
+  );
+
+  const savePermissionMode = useCallback(
+    async (mode: string, scope: "user" | "project" = "user") => {
+      await saveSettings(scope, { permissionMode: mode });
+      if (scope === "user") {
+        setPermissionMode(mode);
+      }
+    },
+    [saveSettings],
   );
 
   const value = useMemo<AppState>(
@@ -209,6 +233,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLayout,
       refreshApiKey,
       refreshConfig,
+      getConfig,
+      saveSettings,
       savePermissionMode,
     }),
     [
@@ -230,6 +256,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLayout,
       refreshApiKey,
       refreshConfig,
+      getConfig,
+      saveSettings,
       savePermissionMode,
     ],
   );

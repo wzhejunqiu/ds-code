@@ -20,6 +20,11 @@ func main() {
 	desktopsys.Hooks.Notify = desktopsys.Notify
 
 	var app *application.App
+	emitDesktopAction := func(action string) {
+		if app != nil {
+			app.Event.Emit("desktop:action", map[string]string{"action": action})
+		}
+	}
 	svc, err := newDesktopService(func(env desktopbridge.AgentEventEnvelope) {
 		if app != nil {
 			app.Event.Emit(desktopbridge.EventTopic, env)
@@ -38,11 +43,15 @@ func main() {
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets.Dist),
 		},
+		KeyBindings: map[string]func(application.Window){
+			"Cmd+,": func(_ application.Window) { emitDesktopAction("open_settings") },
+		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	}
 	modifyOptionsForIOS(&opts)
+	applyExitConfirm(&opts, svc)
 	app = application.New(opts)
 	desktopsys.Hooks.BackgroundAgentComplete = func(workspaceID, sessionID, agentID string) {
 		app.Event.Emit("desktop:focus_subagent", map[string]string{

@@ -6,6 +6,7 @@ import (
 
 func setupMenu(app *application.App, svc *DesktopService) {
 	menu := app.NewMenu()
+	prependPlatformMenu(menu, app)
 
 	fileMenu := menu.AddSubmenu("File")
 	fileMenu.Add("Open Folder…").SetAccelerator("Cmd+O").OnClick(func(_ *application.Context) {
@@ -38,11 +39,6 @@ func setupMenu(app *application.App, svc *DesktopService) {
 	})
 	viewMenu.Add("Command Palette").SetAccelerator("Cmd+K").OnClick(func(_ *application.Context) {
 		app.Event.Emit("desktop:action", map[string]string{"action": "open_command_palette"})
-	})
-
-	settingsItem := menu.Add("Settings…").SetAccelerator("Cmd+,")
-	settingsItem.OnClick(func(_ *application.Context) {
-		app.Event.Emit("desktop:action", map[string]string{"action": "open_settings"})
 	})
 
 	workspaceMenu := menu.AddSubmenu("Workspace")

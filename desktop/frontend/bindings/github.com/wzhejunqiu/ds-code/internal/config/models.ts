@@ -3,33 +3,184 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import { Create as $Create } from "@wailsio/runtime";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as time$0 from "../../../../../time/models.js";
 
-export interface LSPConfig {
+export class LSPConfig {
     "Enabled": boolean;
     "IdleShutdown": time$0.Duration;
     "DiagnosticsTimeout": time$0.Duration;
     "MaxFilesPerCall": number;
     "MaxIssuesPerFile": number;
-    "WarmupOnStart": string[] | null;
-    "Servers": { [_ in string]?: LSPServerConfig } | null;
+    "WarmupOnStart": string[];
+    "Servers": { [_ in string]?: LSPServerConfig };
+
+    /** Creates a new LSPConfig instance. */
+    constructor($$source: Partial<LSPConfig> = {}) {
+        if (!("Enabled" in $$source)) {
+            this["Enabled"] = false;
+        }
+        if (!("IdleShutdown" in $$source)) {
+            this["IdleShutdown"] = time$0.Duration.$zero;
+        }
+        if (!("DiagnosticsTimeout" in $$source)) {
+            this["DiagnosticsTimeout"] = time$0.Duration.$zero;
+        }
+        if (!("MaxFilesPerCall" in $$source)) {
+            this["MaxFilesPerCall"] = 0;
+        }
+        if (!("MaxIssuesPerFile" in $$source)) {
+            this["MaxIssuesPerFile"] = 0;
+        }
+        if (!("WarmupOnStart" in $$source)) {
+            this["WarmupOnStart"] = [];
+        }
+        if (!("Servers" in $$source)) {
+            this["Servers"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LSPConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): LSPConfig {
+        const $$createField5_0 = $$createType0;
+        const $$createField6_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("WarmupOnStart" in $$parsedSource) {
+            $$parsedSource["WarmupOnStart"] = $$createField5_0($$parsedSource["WarmupOnStart"]);
+        }
+        if ("Servers" in $$parsedSource) {
+            $$parsedSource["Servers"] = $$createField6_0($$parsedSource["Servers"]);
+        }
+        return new LSPConfig($$parsedSource as Partial<LSPConfig>);
+    }
 }
 
-export interface LSPServerConfig {
+export class LSPServerConfig {
     "Command": string;
-    "Args": string[] | null;
-    "Extensions": string[] | null;
-    "Env": { [_ in string]?: string } | null;
+    "Args": string[];
+    "Extensions": string[];
+    "Env": { [_ in string]?: string };
     "Disabled": boolean;
+
+    /** Creates a new LSPServerConfig instance. */
+    constructor($$source: Partial<LSPServerConfig> = {}) {
+        if (!("Command" in $$source)) {
+            this["Command"] = "";
+        }
+        if (!("Args" in $$source)) {
+            this["Args"] = [];
+        }
+        if (!("Extensions" in $$source)) {
+            this["Extensions"] = [];
+        }
+        if (!("Env" in $$source)) {
+            this["Env"] = {};
+        }
+        if (!("Disabled" in $$source)) {
+            this["Disabled"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LSPServerConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): LSPServerConfig {
+        const $$createField1_0 = $$createType0;
+        const $$createField2_0 = $$createType0;
+        const $$createField3_0 = $$createType3;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("Args" in $$parsedSource) {
+            $$parsedSource["Args"] = $$createField1_0($$parsedSource["Args"]);
+        }
+        if ("Extensions" in $$parsedSource) {
+            $$parsedSource["Extensions"] = $$createField2_0($$parsedSource["Extensions"]);
+        }
+        if ("Env" in $$parsedSource) {
+            $$parsedSource["Env"] = $$createField3_0($$parsedSource["Env"]);
+        }
+        return new LSPServerConfig($$parsedSource as Partial<LSPServerConfig>);
+    }
 }
 
-export interface MCPConfig {
-    "Servers": MCPServerConfig[] | null;
+export class MCPConfig {
+    "Servers": MCPServerConfig[];
+
+    /** Creates a new MCPConfig instance. */
+    constructor($$source: Partial<MCPConfig> = {}) {
+        if (!("Servers" in $$source)) {
+            this["Servers"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MCPConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MCPConfig {
+        const $$createField0_0 = $$createType5;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("Servers" in $$parsedSource) {
+            $$parsedSource["Servers"] = $$createField0_0($$parsedSource["Servers"]);
+        }
+        return new MCPConfig($$parsedSource as Partial<MCPConfig>);
+    }
 }
 
-export interface MCPServerConfig {
+export class MCPServerConfig {
     "Name": string;
     "Command": string;
-    "Args": string[] | null;
-    "Env": { [_ in string]?: string } | null;
+    "Args": string[];
+    "Env": { [_ in string]?: string };
+
+    /** Creates a new MCPServerConfig instance. */
+    constructor($$source: Partial<MCPServerConfig> = {}) {
+        if (!("Name" in $$source)) {
+            this["Name"] = "";
+        }
+        if (!("Command" in $$source)) {
+            this["Command"] = "";
+        }
+        if (!("Args" in $$source)) {
+            this["Args"] = [];
+        }
+        if (!("Env" in $$source)) {
+            this["Env"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MCPServerConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MCPServerConfig {
+        const $$createField2_0 = $$createType0;
+        const $$createField3_0 = $$createType3;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("Args" in $$parsedSource) {
+            $$parsedSource["Args"] = $$createField2_0($$parsedSource["Args"]);
+        }
+        if ("Env" in $$parsedSource) {
+            $$parsedSource["Env"] = $$createField3_0($$parsedSource["Env"]);
+        }
+        return new MCPServerConfig($$parsedSource as Partial<MCPServerConfig>);
+    }
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = LSPServerConfig.createFrom;
+const $$createType2 = $Create.Map($Create.Any, $$createType1);
+const $$createType3 = $Create.Map($Create.Any, $Create.Any);
+const $$createType4 = MCPServerConfig.createFrom;
+const $$createType5 = $Create.Array($$createType4);

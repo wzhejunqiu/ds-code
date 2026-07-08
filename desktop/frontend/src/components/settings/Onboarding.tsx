@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DesktopService } from "../../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
 import { useAppState } from "@/state/app-store";
+import { PERMISSION_MODES, type PermissionMode } from "./constants";
 
 export function Onboarding() {
   const { apiKeyOk, apiKeyHint, permissionMode, savePermissionMode, addWorkspace } = useAppState();
@@ -37,12 +38,12 @@ export function Onboarding() {
         </div>
       )}
       <div className="flex flex-wrap gap-2">
-        {(["readonly", "ask"] as const).map((mode) => (
+        {PERMISSION_MODES.map((mode) => (
           <Button
             key={mode}
             variant={permissionMode === mode ? "default" : "secondary"}
             size="sm"
-            onClick={() => void savePermissionMode(mode)}
+            onClick={() => void savePermissionMode(mode as PermissionMode)}
           >
             {mode}
           </Button>

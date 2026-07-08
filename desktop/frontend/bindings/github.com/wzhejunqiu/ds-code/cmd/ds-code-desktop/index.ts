@@ -6,6 +6,7 @@ export {
     DesktopService
 };
 
-export type {
-    ConfigView
+export {
+    ConfigView,
+    SettingsPatch
 } from "./models.js";

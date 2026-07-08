@@ -3,6 +3,10 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import { Create as $Create } from "@wailsio/runtime";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as app$0 from "../../cmd/ds-code/app/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -11,7 +15,7 @@ import * as config$0 from "../../internal/config/models.js";
 /**
  * ChatMessage is a history row for resume rendering.
  */
-export interface ChatMessage {
+export class ChatMessage {
     "id": number;
     "role": string;
     "content": string;
@@ -21,27 +25,115 @@ export interface ChatMessage {
     "toolCallId"?: string;
     "toolName"?: string;
     "createdAt": number;
+
+    /** Creates a new ChatMessage instance. */
+    constructor($$source: Partial<ChatMessage> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("role" in $$source)) {
+            this["role"] = "";
+        }
+        if (!("content" in $$source)) {
+            this["content"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ChatMessage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ChatMessage {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ChatMessage($$parsedSource as Partial<ChatMessage>);
+    }
 }
 
 /**
  * ChatSummary is an Agent conversation window row.
  */
-export interface ChatSummary {
+export class ChatSummary {
     "id": string;
     "title": string;
     "model": string;
     "runMode"?: string;
     "updatedAt": number;
     "createdAt": number;
+
+    /** Creates a new ChatSummary instance. */
+    constructor($$source: Partial<ChatSummary> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("model" in $$source)) {
+            this["model"] = "";
+        }
+        if (!("updatedAt" in $$source)) {
+            this["updatedAt"] = 0;
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ChatSummary instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ChatSummary {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ChatSummary($$parsedSource as Partial<ChatSummary>);
+    }
 }
 
 /**
  * MCPLSPConfigView is editable MCP/LSP config.
  */
-export interface MCPLSPConfigView {
+export class MCPLSPConfigView {
     "mcp": config$0.MCPConfig;
     "lsp": config$0.LSPConfig;
+
+    /** Creates a new MCPLSPConfigView instance. */
+    constructor($$source: Partial<MCPLSPConfigView> = {}) {
+        if (!("mcp" in $$source)) {
+            this["mcp"] = (new config$0.MCPConfig());
+        }
+        if (!("lsp" in $$source)) {
+            this["lsp"] = (new config$0.LSPConfig());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MCPLSPConfigView instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MCPLSPConfigView {
+        const $$createField0_0 = $$createType0;
+        const $$createField1_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("mcp" in $$parsedSource) {
+            $$parsedSource["mcp"] = $$createField0_0($$parsedSource["mcp"]);
+        }
+        if ("lsp" in $$parsedSource) {
+            $$parsedSource["lsp"] = $$createField1_0($$parsedSource["lsp"]);
+        }
+        return new MCPLSPConfigView($$parsedSource as Partial<MCPLSPConfigView>);
+    }
 }
+
+/**
+ * ServiceStatusView is re-exported for Wails bindings.
+ */
+export const ServiceStatusView = app$0.ServiceStatusView;
 
 /**
  * ServiceStatusView is re-exported for Wails bindings.
@@ -51,43 +143,142 @@ export type ServiceStatusView = app$0.ServiceStatusView;
 /**
  * SessionUsageView is cumulative token usage and cost for the status bar.
  */
-export interface SessionUsageView {
+export class SessionUsageView {
     "model": string;
     "promptTokens": number;
     "completionTokens": number;
     "estimatedCostCNY": number;
     "estimatedCostLabel": string;
+
+    /** Creates a new SessionUsageView instance. */
+    constructor($$source: Partial<SessionUsageView> = {}) {
+        if (!("model" in $$source)) {
+            this["model"] = "";
+        }
+        if (!("promptTokens" in $$source)) {
+            this["promptTokens"] = 0;
+        }
+        if (!("completionTokens" in $$source)) {
+            this["completionTokens"] = 0;
+        }
+        if (!("estimatedCostCNY" in $$source)) {
+            this["estimatedCostCNY"] = 0;
+        }
+        if (!("estimatedCostLabel" in $$source)) {
+            this["estimatedCostLabel"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SessionUsageView instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SessionUsageView {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SessionUsageView($$parsedSource as Partial<SessionUsageView>);
+    }
 }
 
 /**
  * SlashResult is returned when a slash command is handled.
  */
-export interface SlashResult {
+export class SlashResult {
     "output": string;
     "newSessionId"?: string;
     "handled": boolean;
+
+    /** Creates a new SlashResult instance. */
+    constructor($$source: Partial<SlashResult> = {}) {
+        if (!("output" in $$source)) {
+            this["output"] = "";
+        }
+        if (!("handled" in $$source)) {
+            this["handled"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SlashResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SlashResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SlashResult($$parsedSource as Partial<SlashResult>);
+    }
 }
 
 /**
  * Summary is a workspace row for UI listing.
  */
-export interface Summary {
+export class Summary {
     "id": string;
     "name": string;
     "root": string;
     "active": boolean;
     "lastOpenedAt": number;
     "valid": boolean;
+
+    /** Creates a new Summary instance. */
+    constructor($$source: Partial<Summary> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("root" in $$source)) {
+            this["root"] = "";
+        }
+        if (!("active" in $$source)) {
+            this["active"] = false;
+        }
+        if (!("lastOpenedAt" in $$source)) {
+            this["lastOpenedAt"] = 0;
+        }
+        if (!("valid" in $$source)) {
+            this["valid"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Summary instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Summary {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Summary($$parsedSource as Partial<Summary>);
+    }
 }
 
 /**
  * WindowLayout persists column widths and collapse state.
  */
-export interface WindowLayout {
+export class WindowLayout {
     "width"?: number;
     "height"?: number;
     "leftWidth"?: number;
     "rightWidth"?: number;
     "leftCollapsed"?: boolean;
     "rightCollapsed"?: boolean;
+
+    /** Creates a new WindowLayout instance. */
+    constructor($$source: Partial<WindowLayout> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WindowLayout instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WindowLayout {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WindowLayout($$parsedSource as Partial<WindowLayout>);
+    }
 }
+
+// Private type creation functions
+const $$createType0 = config$0.MCPConfig.createFrom;
+const $$createType1 = config$0.LSPConfig.createFrom;

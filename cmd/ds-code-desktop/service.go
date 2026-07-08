@@ -136,9 +136,23 @@ func (s *DesktopService) APIKeyStatus() (bool, string) {
 type ConfigView struct {
 	PermissionMode        string `json:"permissionMode"`
 	Model                 string `json:"model"`
+	ReasoningEffort       string `json:"reasoningEffort"`
 	RunMode               string `json:"runMode"`
 	AssistantOutputFormat string `json:"assistantOutputFormat"`
+	TracingEnabled        bool   `json:"tracingEnabled"`
+	TracingExporter       string `json:"tracingExporter"`
+	TracingOTLPEndpoint   string `json:"tracingOtlpEndpoint"`
 	ProjectRoot           string `json:"projectRoot,omitempty"`
+}
+
+// SettingsPatch is a partial settings update from the desktop UI.
+type SettingsPatch struct {
+	PermissionMode      string `json:"permissionMode,omitempty"`
+	Model               string `json:"model,omitempty"`
+	ReasoningEffort     string `json:"reasoningEffort,omitempty"`
+	TracingEnabled      *bool  `json:"tracingEnabled,omitempty"`
+	TracingExporter     string `json:"tracingExporter,omitempty"`
+	TracingOTLPEndpoint string `json:"tracingOtlpEndpoint,omitempty"`
 }
 
 // GetConfig returns user-level or project-level config for a workspace.
@@ -163,42 +177,46 @@ func (s *DesktopService) GetConfig(scope, wsID string) (ConfigView, error) {
 	return ConfigView{
 		PermissionMode:        cfg.Permission.Mode.String(),
 		Model:                 cfg.LLM.Model,
+		ReasoningEffort:       cfg.LLM.ReasoningEffort,
 		RunMode:               cfg.RunMode.String(),
 		AssistantOutputFormat: cfg.Desktop.AssistantOutputFormat,
+		TracingEnabled:        cfg.Tracing.Enabled,
+		TracingExporter:       cfg.Tracing.Exporter,
+		TracingOTLPEndpoint:   cfg.Tracing.OTLPEndpoint,
 		ProjectRoot:           cfg.ProjectRoot,
 	}, nil
 }
 
+// SaveSettingsPatch updates general settings for user or project scope.
+func (s *DesktopService) SaveSettingsPatch(scope, wsID string, patch SettingsPatch) error {
+	projectRoot, isProject, err := s.scopeProjectRoot(scope, wsID)
+	if err != nil {
+		return err
+	}
+	return config.SaveSettingsPatch(projectRoot, isProject, config.SettingsPatch{
+		PermissionMode:      patch.PermissionMode,
+		Model:               patch.Model,
+		ReasoningEffort:     patch.ReasoningEffort,
+		TracingEnabled:      patch.TracingEnabled,
+		TracingExporter:     patch.TracingExporter,
+		TracingOTLPEndpoint: patch.TracingOTLPEndpoint,
+	})
+}
+
 // SaveConfigPatch updates permission mode for user or project scope.
 func (s *DesktopService) SaveConfigPatch(scope, wsID, permissionMode string) error {
-	if permissionMode == "" {
-		return fmt.Errorf("permissionMode required")
-	}
-	var startDir string
+	return s.SaveSettingsPatch(scope, wsID, SettingsPatch{PermissionMode: permissionMode})
+}
+
+func (s *DesktopService) scopeProjectRoot(scope, wsID string) (projectRoot string, isProject bool, err error) {
 	if scope == "project" {
 		root, err := s.mgr.ProjectRoot(wsID)
 		if err != nil {
-			return err
+			return "", false, err
 		}
-		startDir = root
+		return root, true, nil
 	}
-	cfg, err := config.Load(nil, config.Options{
-		StartDir:           startDir,
-		RequireAPIKey:      false,
-		SkipProjectDataDir: true,
-	})
-	if err != nil {
-		return err
-	}
-	mode, err := parsePermissionMode(permissionMode)
-	if err != nil {
-		return err
-	}
-	var projectRoot string
-	if scope == "project" {
-		projectRoot = cfg.ProjectRoot
-	}
-	return savePermissionMode(projectRoot, scope == "project", mode)
+	return "", false, nil
 }
 
 // GetAssistantOutputFormat returns the session-level assistant output format.
