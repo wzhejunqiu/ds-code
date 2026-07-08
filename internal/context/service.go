@@ -44,6 +44,12 @@ type Service struct {
 	// AgentOverlay is injected into the dynamic system section for sub-agents.
 	AgentOverlay string
 
+	// OutputOverlay is injected for desktop HTML output mode (desktop only).
+	OutputOverlay string
+
+	// OutputFormat is the assistant content format for the current turn (desktop: markdown|html).
+	OutputFormat string
+
 	// ForceAggressiveSnip enables L1 Snip during PrepareRequest (context-too-long recovery only).
 	ForceAggressiveSnip bool
 
@@ -221,6 +227,9 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 		if s.AgentOverlay != "" {
 			view.AgentOverlay = s.AgentOverlay
 		}
+		if s.OutputOverlay != "" {
+			view.OutputOverlay = s.OutputOverlay
+		}
 		return &view, nil
 	}
 
@@ -281,6 +290,7 @@ func (s *Service) BuildAPIContext(ctx context.Context, sessionID string) (*APICo
 	}
 	view.Messages = apiMsgs
 	view.AgentOverlay = s.AgentOverlay
+	view.OutputOverlay = s.OutputOverlay
 	logging.L().Debug("build api context",
 		zap.String("session_id", sessionID),
 		zap.Int("history_msgs", len(msgs)),

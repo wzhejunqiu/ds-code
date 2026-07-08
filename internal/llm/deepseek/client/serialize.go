@@ -11,7 +11,7 @@ import (
 
 // MergeSystem combines fixed system base with project context into one system string.
 func MergeSystem(systemBase, runtimeEnv, agentsMD, rules, skills, gitSnapshot string) string {
-	return prompt.MergeSystem(systemBase, runtimeEnv, agentsMD, rules, skills, gitSnapshot, "")
+	return prompt.MergeSystem(systemBase, runtimeEnv, agentsMD, rules, skills, gitSnapshot, "", "")
 }
 
 // ToAPIMessages converts view fields to API messages (single system + history).

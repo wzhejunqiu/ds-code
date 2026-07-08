@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DesktopService } from "../../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
+import type { ServiceStatusView } from "../../../bindings/github.com/wzhejunqiu/ds-code/desktop/workspace/models";
 import { useAppState } from "@/state/app-store";
 
 type MCPLSPConfig = {
@@ -8,34 +9,33 @@ type MCPLSPConfig = {
   lsp?: { enabled?: boolean; servers?: Record<string, { command?: string; disabled?: boolean }> };
 };
 
-type ServiceStatus = {
-  mcp?: {
-    connected?: boolean;
-    configuredServers?: { name: string; command: string; connected?: boolean }[];
-    skippedTools?: { server: string; tool: string; reason: string }[];
-  };
-  lsp?: {
-    enabled?: boolean;
-    servers?: { id: string; command: string; commandFound?: boolean; started?: boolean; hint?: string }[];
-  };
-};
-
 export function SettingsView() {
   const { apiKeyOk, apiKeyHint, permissionMode, savePermissionMode, activeWorkspaceId } = useAppState();
   const [scope, setScope] = useState<"user" | "project">("user");
   const [configText, setConfigText] = useState("");
-  const [status, setStatus] = useState<ServiceStatus | null>(null);
+  const [status, setStatus] = useState<ServiceStatusView | null>(null);
   const [deps, setDeps] = useState<{ name: string; ok: boolean; hint?: string }[]>([]);
   const [saveMsg, setSaveMsg] = useState("");
+  const [outputFormat, setOutputFormat] = useState<"markdown" | "html">("markdown");
+  const [htmlAck, setHtmlAck] = useState(() => localStorage.getItem("ds-code-html-ack") === "1");
 
-  const loadConfig = useCallback(async () => {
+  const loadMCPLSP = useCallback(async () => {
     const cfg = await DesktopService.GetMCPLSPConfig(scope, scope === "project" ? activeWorkspaceId : "");
     setConfigText(JSON.stringify(cfg, null, 2));
   }, [scope, activeWorkspaceId]);
 
+  const loadDesktopPrefs = useCallback(async () => {
+    const cfg = await DesktopService.GetConfig("user", "");
+    setOutputFormat(cfg.assistantOutputFormat === "html" ? "html" : "markdown");
+  }, []);
+
   useEffect(() => {
-    void loadConfig();
-  }, [loadConfig]);
+    void loadMCPLSP();
+  }, [loadMCPLSP]);
+
+  useEffect(() => {
+    void loadDesktopPrefs();
+  }, [loadDesktopPrefs]);
 
   useEffect(() => {
     if (!activeWorkspaceId) return;
@@ -44,6 +44,25 @@ export function SettingsView() {
       setDeps(rows?.map((r) => ({ name: r.name, ok: r.found, hint: r.hint })) ?? []),
     );
   }, [activeWorkspaceId]);
+
+  const saveOutputFormat = async (format: "markdown" | "html") => {
+    if (format === "html" && !htmlAck) {
+      const ok = window.confirm(
+        "HTML 模式会渲染模型输出的富文本。内容经 DOMPurify 消毒，但仍可能产生误导性排版。是否启用？",
+      );
+      if (!ok) return;
+      localStorage.setItem("ds-code-html-ack", "1");
+      setHtmlAck(true);
+    }
+    setSaveMsg("");
+    try {
+      await DesktopService.SaveDesktopAssistantOutputFormat(format);
+      setOutputFormat(format);
+      setSaveMsg("Assistant output format saved (default for new sessions).");
+    } catch (e) {
+      setSaveMsg(String(e));
+    }
+  };
 
   const saveMCPLSP = async () => {
     setSaveMsg("");
@@ -93,6 +112,25 @@ export function SettingsView() {
               onClick={() => void savePermissionMode(mode)}
             >
               {mode}
+            </Button>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-6">
+        <h3 className="mb-2 text-sm font-medium">Appearance · Assistant output</h3>
+        <p className="mb-2 text-xs text-[var(--color-muted-foreground)]">
+          新会话默认格式。会话内可在聊天区 Output 切换（仅影响后续回复）。
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(["markdown", "html"] as const).map((f) => (
+            <Button
+              key={f}
+              variant={outputFormat === f ? "default" : "secondary"}
+              size="sm"
+              onClick={() => void saveOutputFormat(f)}
+            >
+              {f}
             </Button>
           ))}
         </div>
@@ -163,7 +201,7 @@ export function SettingsView() {
 
       <section>
         <h3 className="mb-2 text-sm font-medium">About</h3>
-        <p className="text-sm text-[var(--color-muted-foreground)]">ds-code desktop v0.2.0 · phase3 (M3)</p>
+        <p className="text-sm text-[var(--color-muted-foreground)]">ds-code desktop v0.2.0 · phase4 (M4)</p>
       </section>
     </div>
   );

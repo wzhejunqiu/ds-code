@@ -1,16 +1,12 @@
 import { useEffect, useState } from "react";
 import { DesktopService } from "../../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
+import type { ServiceStatusView } from "../../../bindings/github.com/wzhejunqiu/ds-code/desktop/workspace/models";
 import { useAppState } from "@/state/app-store";
-
-type ServiceStatus = {
-  mcp?: { connected?: boolean; configuredServers?: { name: string; connected?: boolean }[] };
-  lsp?: { enabled?: boolean; servers?: { id: string; started?: boolean }[] };
-};
 
 export function WorkspaceOverview({ workspaceId }: { workspaceId: string }) {
   const { workspaces, chats, activeWorkspaceId } = useAppState();
   const ws = workspaces.find((w) => w.id === workspaceId);
-  const [status, setStatus] = useState<ServiceStatus | null>(null);
+  const [status, setStatus] = useState<ServiceStatusView | null>(null);
 
   useEffect(() => {
     if (!workspaceId) return;

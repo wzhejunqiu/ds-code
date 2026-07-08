@@ -26,6 +26,7 @@ type Config struct {
 	Tracing               TracingConfig        `mapstructure:"tracing"`
 	RunMode               runmode.RunMode      `mapstructure:"run_mode"`
 	TUI                   TUIConfig            `mapstructure:"tui"`
+	Desktop               DesktopConfig        `mapstructure:"desktop"`
 	LogVerbosity          int                  `mapstructure:"-"`
 	AllowLogSensitiveData bool                 `mapstructure:"-"`
 	JSONOutput            bool                 `mapstructure:"-"`
@@ -83,6 +84,11 @@ type AgentConfig struct {
 // TUIConfig holds interactive terminal UI options.
 type TUIConfig struct {
 	CopyOnSelect bool `mapstructure:"copy_on_select"`
+}
+
+// DesktopConfig holds desktop-only settings (ignored by CLI/TUI).
+type DesktopConfig struct {
+	AssistantOutputFormat string `mapstructure:"assistant_output_format"`
 }
 
 type ToolsConfig struct {

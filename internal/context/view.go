@@ -14,6 +14,7 @@ type APIContextView struct {
 	Skills                 string
 	GitSnapshot            string
 	AgentOverlay           string
+	OutputOverlay          string
 	ToolsJSON              string
 	Messages               []llm.Message
 	WindowTokens           int
@@ -33,7 +34,7 @@ func (v *APIContextView) MergedSystemDynamic() string {
 	if v.RenderedSystemOverride != "" {
 		return ""
 	}
-	return prompt.MergeSystemDynamic(v.RuntimeEnv, v.AgentsMD, v.Rules, v.Skills, v.GitSnapshot, v.AgentOverlay)
+	return prompt.MergeSystemDynamic(v.RuntimeEnv, v.AgentsMD, v.Rules, v.Skills, v.GitSnapshot, v.AgentOverlay, v.OutputOverlay)
 }
 
 // MergedSystem returns the single system string for the API.

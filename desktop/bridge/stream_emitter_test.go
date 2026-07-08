@@ -81,7 +81,7 @@ func TestGoldenTurnSequence(t *testing.T) {
 		return true
 	}
 	em := bridge.NewStreamEmitter(bridge.StreamEmitterOptions{TurnID: "golden-turn", Emit: emit})
-	bridge.EmitTurnStarted(em, "sess-1")
+	bridge.EmitTurnStarted(em, "sess-1", "markdown")
 	cb := bridge.TurnCallbacks(bridge.TurnCallbacksOptions{Emitter: em, SessionID: "sess-1"})
 	cb.OnContentDelta("Hi")
 	cb.OnAssistantSegmentEnd()

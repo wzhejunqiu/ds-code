@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/contentformat"
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/role"
@@ -12,6 +13,7 @@ import (
 
 func (s *Store) ListMessages(ctx context.Context, sessionID string) ([]session.Message, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, role, content,
+		COALESCE(content_format, 'markdown'),
 		COALESCE(reasoning_content, ''),
 		COALESCE(reasoning_duration_ms, 0), COALESCE(turn_duration_ms, 0),
 		COALESCE(tool_calls_json, ''),
@@ -39,7 +41,7 @@ func scanMessage(rows *sql.Rows) (session.Message, error) {
 	var m session.Message
 	var created string
 	err := rows.Scan(
-		&m.ID, &m.SessionID, &m.Role, &m.Content, &m.ReasoningContent,
+		&m.ID, &m.SessionID, &m.Role, &m.Content, &m.ContentFormat, &m.ReasoningContent,
 		&m.ReasoningDurationMS, &m.TurnDurationMS,
 		&m.ToolCallsJSON, &m.ToolCallID, &m.ToolName,
 		&m.PromptTokens, &m.CompletionTokens, &m.PromptCacheHitTokens,
@@ -61,13 +63,13 @@ func (s *Store) AppendMessage(ctx context.Context, msg session.Message) error {
 		msg.CreatedAt = now
 	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO messages (
-		session_id, role, content, reasoning_content, reasoning_duration_ms, turn_duration_ms,
+		session_id, role, content, content_format, reasoning_content, reasoning_duration_ms, turn_duration_ms,
 		tool_calls_json, tool_call_id, tool_name,
 		prompt_tokens, completion_tokens, prompt_cache_hit_tokens,
 		model_id, pricing_snapshot_json, estimated_cost_cny,
 		created_at
-	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		msg.SessionID, msg.Role, msg.Content, msg.ReasoningContent,
+	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		msg.SessionID, msg.Role, msg.Content, contentFormatOrDefault(msg.ContentFormat), msg.ReasoningContent,
 		msg.ReasoningDurationMS, msg.TurnDurationMS,
 		msg.ToolCallsJSON, msg.ToolCallID, msg.ToolName,
 		msg.PromptTokens, msg.CompletionTokens, msg.PromptCacheHitTokens,
@@ -98,4 +100,8 @@ func (s *Store) AppendMessage(ctx context.Context, msg session.Message) error {
 	}
 	session.LogAppendDebug(msg)
 	return nil
+}
+
+func contentFormatOrDefault(f string) string {
+	return contentformat.Normalize(f)
 }

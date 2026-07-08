@@ -67,7 +67,8 @@ type ToolEndPayload struct {
 }
 
 type TurnStartedPayload struct {
-	SessionID string `json:"sessionId"`
+	SessionID     string `json:"sessionId"`
+	ContentFormat string `json:"contentFormat,omitempty"`
 }
 
 type TurnDonePayload struct {

@@ -14,6 +14,7 @@ type Session struct {
 	ThinkingType              string
 	PermissionMode            PermissionMode
 	RunMode                   RunMode
+	AssistantOutputFormat     string // markdown | html; controls subsequent assistant replies (desktop)
 	CompactSummary            string
 	CompactUpToMessageID      int64
 	PromptTokensTotal         int64
@@ -38,6 +39,7 @@ type Message struct {
 	SessionID            string
 	Role                 role.Role
 	Content              string
+	ContentFormat        string // markdown | html; assistant messages only
 	ReasoningContent     string
 	ReasoningDurationMS  int64 // assistant: thinking phase duration
 	TurnDurationMS       int64 // assistant: full user-turn wall time (final reply only)

@@ -15,7 +15,7 @@ func MergeSystemStatic(systemBase, toolsJSON string) string {
 }
 
 // MergeSystemDynamic is the per-turn variable suffix of the system prompt.
-func MergeSystemDynamic(runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentOverlay string) string {
+func MergeSystemDynamic(runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentOverlay, outputOverlay string) string {
 	var b strings.Builder
 	appendSection(&b, SectionRuntimeEnv, runtimeEnv)
 	appendSection(&b, SectionAgentsMD, agentsMD)
@@ -23,6 +23,7 @@ func MergeSystemDynamic(runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentO
 	appendSection(&b, SectionAgentOverlay, agentOverlay)
 	appendSection(&b, SectionSkill, skills)
 	appendSection(&b, SectionGit, gitSnapshot)
+	appendSection(&b, SectionOutputOverlay, outputOverlay)
 	if agentOverlay != "" {
 		b.WriteString("\n</agent-type-overlay>")
 	}
@@ -30,10 +31,10 @@ func MergeSystemDynamic(runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentO
 }
 
 // MergeSystem combines fixed system base with project context into one system string.
-func MergeSystem(systemBase, runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentOverlay string) string {
+func MergeSystem(systemBase, runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentOverlay, outputOverlay string) string {
 	return MergeSystemParts(
 		MergeSystemStatic(systemBase, ""),
-		MergeSystemDynamic(runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentOverlay),
+		MergeSystemDynamic(runtimeEnv, agentsMD, rules, skills, gitSnapshot, agentOverlay, outputOverlay),
 	)
 }
 

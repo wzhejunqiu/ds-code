@@ -2,14 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { DiffEditor } from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { DesktopService } from "../../../bindings/github.com/wzhejunqiu/ds-code/cmd/ds-code-desktop";
+import type { Meta as CheckpointMeta } from "../../../bindings/github.com/wzhejunqiu/ds-code/desktop/checkpoint/models";
 import { useInspector } from "@/state/inspector-store";
-
-type CheckpointMeta = {
-  id: number;
-  tool: string;
-  files?: string[];
-  createdAt: number;
-};
 
 export function CheckpointTimeline({
   workspaceId,

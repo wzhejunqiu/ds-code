@@ -6,7 +6,7 @@ import { useAppState } from "@/state/app-store";
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
-  const { workspaces, activeWorkspaceId, activeChatId, switchWorkspace, selectChat, createChat } =
+  const { workspaces, chats, activeWorkspaceId, activeChatId, switchWorkspace, selectChat, createChat } =
     useAppState();
   const [query, setQuery] = useState("");
 

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/wzhejunqiu/ds-code/internal/billing"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/contentformat"
 	_ "modernc.org/sqlite"
 )
 
@@ -94,13 +95,15 @@ func (s *Store) Create(ctx context.Context, sess session.Session) error {
 	}
 	_, err := s.db.ExecContext(ctx, `INSERT INTO sessions (
 		id, title, model, reasoning_effort, thinking_type, permission_mode, run_mode,
+		assistant_output_format,
 		compact_summary, compact_up_to_message_id,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		pricing_snapshot_json, estimated_cost_cny,
 		git_snapshot, created_at, updated_at
-	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		sess.ID, sess.Title, sess.Model, sess.ReasoningEffort, sess.ThinkingType,
-		sess.PermissionMode, sess.RunMode, sess.CompactSummary, sess.CompactUpToMessageID,
+		sess.PermissionMode, sess.RunMode, contentformat.Normalize(sess.AssistantOutputFormat),
+		sess.CompactSummary, sess.CompactUpToMessageID,
 		sess.PromptTokensTotal, sess.CompletionTokensTotal, sess.PromptCacheHitTokensTotal,
 		sess.PricingSnapshotJSON, sess.EstimatedCostCNY,
 		sess.GitSnapshot, sess.CreatedAt.Format(time.RFC3339), sess.UpdatedAt.Format(time.RFC3339),

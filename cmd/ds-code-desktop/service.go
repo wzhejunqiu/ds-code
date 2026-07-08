@@ -134,10 +134,11 @@ func (s *DesktopService) APIKeyStatus() (bool, string) {
 
 // ConfigView is a read-only config snapshot for the settings UI.
 type ConfigView struct {
-	PermissionMode string `json:"permissionMode"`
-	Model          string `json:"model"`
-	RunMode        string `json:"runMode"`
-	ProjectRoot    string `json:"projectRoot,omitempty"`
+	PermissionMode        string `json:"permissionMode"`
+	Model                 string `json:"model"`
+	RunMode               string `json:"runMode"`
+	AssistantOutputFormat string `json:"assistantOutputFormat"`
+	ProjectRoot           string `json:"projectRoot,omitempty"`
 }
 
 // GetConfig returns user-level or project-level config for a workspace.
@@ -160,10 +161,11 @@ func (s *DesktopService) GetConfig(scope, wsID string) (ConfigView, error) {
 		return ConfigView{}, err
 	}
 	return ConfigView{
-		PermissionMode: cfg.Permission.Mode.String(),
-		Model:          cfg.LLM.Model,
-		RunMode:        cfg.RunMode.String(),
-		ProjectRoot:    cfg.ProjectRoot,
+		PermissionMode:        cfg.Permission.Mode.String(),
+		Model:                 cfg.LLM.Model,
+		RunMode:               cfg.RunMode.String(),
+		AssistantOutputFormat: cfg.Desktop.AssistantOutputFormat,
+		ProjectRoot:           cfg.ProjectRoot,
 	}, nil
 }
 
@@ -197,6 +199,21 @@ func (s *DesktopService) SaveConfigPatch(scope, wsID, permissionMode string) err
 		projectRoot = cfg.ProjectRoot
 	}
 	return savePermissionMode(projectRoot, scope == "project", mode)
+}
+
+// GetAssistantOutputFormat returns the session-level assistant output format.
+func (s *DesktopService) GetAssistantOutputFormat(wsID, sessionID string) (string, error) {
+	return s.mgr.GetAssistantOutputFormat(wsID, sessionID)
+}
+
+// SetAssistantOutputFormat sets the session format for subsequent assistant replies.
+func (s *DesktopService) SetAssistantOutputFormat(wsID, sessionID, format string) error {
+	return s.mgr.SetAssistantOutputFormat(wsID, sessionID, format)
+}
+
+// SaveDesktopAssistantOutputFormat saves the user-level default assistant output format.
+func (s *DesktopService) SaveDesktopAssistantOutputFormat(format string) error {
+	return config.SaveDesktopAssistantOutputFormat(format)
 }
 
 // PickFolder opens a native folder picker (macOS); implemented in pick_darwin.go.

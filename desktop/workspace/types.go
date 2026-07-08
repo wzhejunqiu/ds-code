@@ -22,12 +22,13 @@ type ChatSummary struct {
 
 // ChatMessage is a history row for resume rendering.
 type ChatMessage struct {
-	ID         int64  `json:"id"`
-	Role       string `json:"role"`
-	Content    string `json:"content"`
-	Reasoning  string `json:"reasoning,omitempty"`
-	ToolCalls  string `json:"toolCalls,omitempty"`
-	ToolCallID string `json:"toolCallId,omitempty"`
-	ToolName   string `json:"toolName,omitempty"`
-	CreatedAt  int64  `json:"createdAt"`
+	ID            int64  `json:"id"`
+	Role          string `json:"role"`
+	Content       string `json:"content"`
+	ContentFormat string `json:"contentFormat,omitempty"`
+	Reasoning     string `json:"reasoning,omitempty"`
+	ToolCalls     string `json:"toolCalls,omitempty"`
+	ToolCallID    string `json:"toolCallId,omitempty"`
+	ToolName      string `json:"toolName,omitempty"`
+	CreatedAt     int64  `json:"createdAt"`
 }

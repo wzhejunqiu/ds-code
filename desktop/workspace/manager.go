@@ -323,6 +323,13 @@ func (m *Manager) CreateChat(wsID string) (ChatSummary, error) {
 		return ChatSummary{}, err
 	}
 	ctx := context.Background()
+	defaultFmt := DefaultAssistantOutputFormat()
+	if err := rt.store.UpdateSession(ctx, sess.ID, func(s *session.Session) error {
+		s.AssistantOutputFormat = defaultFmt
+		return nil
+	}); err != nil {
+		return ChatSummary{}, err
+	}
 	if err := slashcmd.SeedGitSnapshot(rt.app.Cfg, ctx, rt.store, sess.ID); err != nil {
 		return ChatSummary{}, err
 	}

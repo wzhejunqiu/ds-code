@@ -5,12 +5,18 @@ import { useAppState } from "@/state/app-store";
 export function ModeSwitcher() {
   const { activeWorkspaceId, activeChatId, permissionMode, savePermissionMode } = useAppState();
   const [runMode, setRunMode] = useStateRunMode(activeWorkspaceId, activeChatId);
+  const [outputFormat, setOutputFormat] = useStateOutputFormat(activeWorkspaceId, activeChatId);
 
   if (!activeWorkspaceId || !activeChatId) return null;
 
   const setMode = async (mode: string) => {
     await DesktopService.SetRunMode(activeWorkspaceId, activeChatId, mode);
     setRunMode(mode);
+  };
+
+  const setFormat = async (format: "markdown" | "html") => {
+    await DesktopService.SetAssistantOutputFormat(activeWorkspaceId, activeChatId, format);
+    setOutputFormat(format);
   };
 
   return (
@@ -24,6 +30,19 @@ export function ModeSwitcher() {
           onClick={() => void setMode(m)}
         >
           {m}
+        </button>
+      ))}
+      <span className="mx-2 text-[var(--color-border)]">|</span>
+      <span className="text-[var(--color-muted-foreground)]">Output</span>
+      {(["markdown", "html"] as const).map((f) => (
+        <button
+          key={f}
+          type="button"
+          title="仅影响后续 assistant 回复"
+          className={`rounded px-2 py-1 capitalize ${outputFormat === f ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-muted)]"}`}
+          onClick={() => void setFormat(f)}
+        >
+          {f}
         </button>
       ))}
       <span className="mx-2 text-[var(--color-border)]">|</span>
@@ -52,4 +71,15 @@ function useStateRunMode(wsId: string, chatId: string) {
       .catch(() => setRunMode("agent"));
   }, [wsId, chatId]);
   return [runMode, setRunMode] as const;
+}
+
+function useStateOutputFormat(wsId: string, chatId: string) {
+  const [format, setFormat] = useState<"markdown" | "html">("markdown");
+  useEffect(() => {
+    if (!wsId || !chatId) return;
+    void DesktopService.GetAssistantOutputFormat(wsId, chatId)
+      .then((f) => setFormat(f === "html" ? "html" : "markdown"))
+      .catch(() => setFormat("markdown"));
+  }, [wsId, chatId]);
+  return [format, setFormat] as const;
 }

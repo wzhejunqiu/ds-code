@@ -66,14 +66,15 @@ func messagesToDTO(msgs []session.Message) []ChatMessage {
 			r = "tool"
 		}
 		out = append(out, ChatMessage{
-			ID:         msg.ID,
-			Role:       r,
-			Content:    msg.Content,
-			Reasoning:  msg.ReasoningContent,
-			ToolCalls:  msg.ToolCallsJSON,
-			ToolCallID: msg.ToolCallID,
-			ToolName:   msg.ToolName,
-			CreatedAt:  msg.CreatedAt.UnixMilli(),
+			ID:            msg.ID,
+			Role:          r,
+			Content:       msg.Content,
+			ContentFormat: msg.ContentFormat,
+			Reasoning:     msg.ReasoningContent,
+			ToolCalls:     msg.ToolCallsJSON,
+			ToolCallID:    msg.ToolCallID,
+			ToolName:      msg.ToolName,
+			CreatedAt:     msg.CreatedAt.UnixMilli(),
 		})
 	}
 	return out

@@ -8,7 +8,8 @@
     "kind": "turn.started",
     "critical": true,
     "payload": {
-      "sessionId": "sess-1"
+      "sessionId": "sess-1",
+      "contentFormat": "markdown"
     }
   },
   {

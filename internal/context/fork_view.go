@@ -14,5 +14,6 @@ func BuildForkAPIContext(parentView *APIContextView, forkMsgs []llm.Message, ren
 	out.Messages = append([]llm.Message(nil), forkMsgs...)
 	out.RenderedSystemOverride = renderedSystem
 	out.AgentOverlay = ""
+	out.OutputOverlay = ""
 	return &out
 }

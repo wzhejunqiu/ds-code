@@ -8,7 +8,7 @@ export function Onboarding() {
   const [deps, setDeps] = useState<{ name: string; found: boolean; hint?: string }[]>([]);
 
   useEffect(() => {
-    void DesktopService.CheckDependencies().then(setDeps);
+    void DesktopService.CheckDependencies().then((rows) => setDeps(rows ?? []));
   }, []);
 
   if (apiKeyOk) return null;

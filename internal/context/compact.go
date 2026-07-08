@@ -12,6 +12,7 @@ import (
 	"github.com/wzhejunqiu/ds-code/internal/logging"
 	"github.com/wzhejunqiu/ds-code/internal/role"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/contentformat"
 	"go.uber.org/zap"
 )
 
@@ -158,7 +159,11 @@ func formatTurnsForCompact(turns []session.UserTurn) string {
 				}
 				if m.Content != "" {
 					b.WriteString(CompactRoleAssistant)
-					b.WriteString(truncateCompact(m.Content, 8000))
+					content := m.Content
+					if contentformat.Normalize(m.ContentFormat) == contentformat.HTML {
+						content = StripHTMLTags(content)
+					}
+					b.WriteString(truncateCompact(content, 8000))
 					b.WriteByte('\n')
 				}
 			case role.Tool:

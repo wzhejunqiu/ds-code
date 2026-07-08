@@ -93,6 +93,9 @@ func validate(cfg *Config) error {
 	if !cfg.RunMode.Configured() {
 		return fmt.Errorf("config: run_mode must be agent or plan, got %q", cfg.RunMode)
 	}
+	if cfg.Desktop.AssistantOutputFormat != "" && !contentformatValid(cfg.Desktop.AssistantOutputFormat) {
+		return fmt.Errorf("config: desktop.assistant_output_format must be markdown or html, got %q", cfg.Desktop.AssistantOutputFormat)
+	}
 	compiled, err := compileEnvBlacklist(cfg.Tools.Shell.EnvBlacklist)
 	if err != nil {
 		return err
@@ -115,6 +118,10 @@ func validateTracing(cfg *Config) error {
 		return fmt.Errorf("config: tracing.otlp_endpoint is required when tracing.exporter is otlp")
 	}
 	return nil
+}
+
+func contentformatValid(s string) bool {
+	return s == "markdown" || s == "html"
 }
 
 func compileEnvBlacklist(patterns []string) ([]*regexp.Regexp, error) {

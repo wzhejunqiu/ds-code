@@ -67,7 +67,7 @@ func TestDefaultSystemBase_injectsBuiltinToolNames(t *testing.T) {
 }
 
 func TestMergeSystem_runtimeEnvBeforeAgentsMD(t *testing.T) {
-	merged := MergeSystem("BASE", "工作区（project_root）：/x", "AGENTS", "", "", "", "")
+	merged := MergeSystem("BASE", "工作区（project_root）：/x", "AGENTS", "", "", "", "", "")
 	if !strings.Contains(merged, "## 运行环境") {
 		t.Fatalf("missing runtime section: %q", merged)
 	}

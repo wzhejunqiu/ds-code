@@ -89,6 +89,7 @@ func (r *Runner) finishTerminalRound(
 		ReasoningDurationMS: durationMS(reasoningDur),
 		TurnDurationMS:      durationMS(turnDur),
 	}
+	applyOutputFormat(&assistantMsg, outputFormatFromRunner(r))
 	enrichAssistantUsage(&assistantMsg, modelID, resp.Usage)
 	if err := r.Sessions.AppendMessage(ctx, assistantMsg); err != nil {
 		return nil, err
@@ -309,6 +310,7 @@ func (r *Runner) appendAssistantWithTools(
 		ReasoningDurationMS: durationMS(stream.timing.duration()),
 		ToolCallsJSON:       string(tcJSON),
 	}
+	applyOutputFormat(&assistantMsg, outputFormatFromRunner(r))
 	enrichAssistantUsage(&assistantMsg, modelID, resp.Usage)
 	return r.Sessions.AppendMessage(ctx, assistantMsg)
 }

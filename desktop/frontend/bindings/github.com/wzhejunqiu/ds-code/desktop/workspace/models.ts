@@ -3,184 +3,91 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import * as app$0 from "../../cmd/ds-code/app/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as config$0 from "../../internal/config/models.js";
 
 /**
  * ChatMessage is a history row for resume rendering.
  */
-export class ChatMessage {
+export interface ChatMessage {
     "id": number;
     "role": string;
     "content": string;
+    "contentFormat"?: string;
     "reasoning"?: string;
     "toolCalls"?: string;
     "toolCallId"?: string;
     "toolName"?: string;
     "createdAt": number;
-
-    /** Creates a new ChatMessage instance. */
-    constructor($$source: Partial<ChatMessage> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = 0;
-        }
-        if (!("role" in $$source)) {
-            this["role"] = "";
-        }
-        if (!("content" in $$source)) {
-            this["content"] = "";
-        }
-        if (!("createdAt" in $$source)) {
-            this["createdAt"] = 0;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new ChatMessage instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ChatMessage {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ChatMessage($$parsedSource as Partial<ChatMessage>);
-    }
 }
 
 /**
  * ChatSummary is an Agent conversation window row.
  */
-export class ChatSummary {
+export interface ChatSummary {
     "id": string;
     "title": string;
     "model": string;
     "runMode"?: string;
     "updatedAt": number;
     "createdAt": number;
+}
 
-    /** Creates a new ChatSummary instance. */
-    constructor($$source: Partial<ChatSummary> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = "";
-        }
-        if (!("title" in $$source)) {
-            this["title"] = "";
-        }
-        if (!("model" in $$source)) {
-            this["model"] = "";
-        }
-        if (!("updatedAt" in $$source)) {
-            this["updatedAt"] = 0;
-        }
-        if (!("createdAt" in $$source)) {
-            this["createdAt"] = 0;
-        }
+/**
+ * MCPLSPConfigView is editable MCP/LSP config.
+ */
+export interface MCPLSPConfigView {
+    "mcp": config$0.MCPConfig;
+    "lsp": config$0.LSPConfig;
+}
 
-        Object.assign(this, $$source);
-    }
+/**
+ * ServiceStatusView is re-exported for Wails bindings.
+ */
+export type ServiceStatusView = app$0.ServiceStatusView;
 
-    /**
-     * Creates a new ChatSummary instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ChatSummary {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ChatSummary($$parsedSource as Partial<ChatSummary>);
-    }
+/**
+ * SessionUsageView is cumulative token usage and cost for the status bar.
+ */
+export interface SessionUsageView {
+    "model": string;
+    "promptTokens": number;
+    "completionTokens": number;
+    "estimatedCostCNY": number;
+    "estimatedCostLabel": string;
 }
 
 /**
  * SlashResult is returned when a slash command is handled.
  */
-export class SlashResult {
+export interface SlashResult {
     "output": string;
     "newSessionId"?: string;
     "handled": boolean;
-
-    /** Creates a new SlashResult instance. */
-    constructor($$source: Partial<SlashResult> = {}) {
-        if (!("output" in $$source)) {
-            this["output"] = "";
-        }
-        if (!("handled" in $$source)) {
-            this["handled"] = false;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new SlashResult instance from a string or object.
-     */
-    static createFrom($$source: any = {}): SlashResult {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new SlashResult($$parsedSource as Partial<SlashResult>);
-    }
 }
 
 /**
  * Summary is a workspace row for UI listing.
  */
-export class Summary {
+export interface Summary {
     "id": string;
     "name": string;
     "root": string;
     "active": boolean;
     "lastOpenedAt": number;
     "valid": boolean;
-
-    /** Creates a new Summary instance. */
-    constructor($$source: Partial<Summary> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = "";
-        }
-        if (!("name" in $$source)) {
-            this["name"] = "";
-        }
-        if (!("root" in $$source)) {
-            this["root"] = "";
-        }
-        if (!("active" in $$source)) {
-            this["active"] = false;
-        }
-        if (!("lastOpenedAt" in $$source)) {
-            this["lastOpenedAt"] = 0;
-        }
-        if (!("valid" in $$source)) {
-            this["valid"] = false;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Summary instance from a string or object.
-     */
-    static createFrom($$source: any = {}): Summary {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Summary($$parsedSource as Partial<Summary>);
-    }
 }
 
 /**
  * WindowLayout persists column widths and collapse state.
  */
-export class WindowLayout {
+export interface WindowLayout {
     "width"?: number;
     "height"?: number;
     "leftWidth"?: number;
     "rightWidth"?: number;
     "leftCollapsed"?: boolean;
     "rightCollapsed"?: boolean;
-
-    /** Creates a new WindowLayout instance. */
-    constructor($$source: Partial<WindowLayout> = {}) {
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new WindowLayout instance from a string or object.
-     */
-    static createFrom($$source: any = {}): WindowLayout {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new WindowLayout($$parsedSource as Partial<WindowLayout>);
-    }
 }

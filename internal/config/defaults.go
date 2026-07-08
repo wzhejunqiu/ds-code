@@ -88,5 +88,6 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("run_mode", "agent")
 	v.SetDefault("tui.copy_on_select", true)
+	v.SetDefault("desktop.assistant_output_format", "markdown")
 	v.SetDefault("tools.search.skip_dirs", []string{})
 }

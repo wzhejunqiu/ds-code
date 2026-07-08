@@ -26,7 +26,7 @@ describe("turnReducer", () => {
 
   it("streams assistant content and completes turn", () => {
     let state = initialTurnState();
-    state = turnReducer(state, env("turn.started", { sessionId: "s1" }));
+    state = turnReducer(state, env("turn.started", { sessionId: "s1", contentFormat: "markdown" }));
     state = turnReducer(state, env("content.delta", { delta: "Hello" }));
     state = turnReducer(state, env("assistant.segment_end", {}));
     state = turnReducer(state, env("turn.done", {}));
@@ -34,6 +34,14 @@ describe("turnReducer", () => {
     expect(state.running).toBe(false);
     expect(state.blocks.filter((b) => b.role === "assistant")).toHaveLength(1);
     expect(state.blocks.find((b) => b.role === "assistant")?.raw).toBe("Hello");
+  });
+
+  it("propagates html contentFormat on new assistant blocks", () => {
+    let state = initialTurnState();
+    state = turnReducer(state, env("turn.started", { sessionId: "s1", contentFormat: "html" }));
+    state = turnReducer(state, env("content.delta", { delta: "<p>Hi</p>" }));
+    const block = state.blocks.find((b) => b.role === "assistant");
+    expect(block?.contentFormat).toBe("html");
   });
 
   it("records permission request block", () => {

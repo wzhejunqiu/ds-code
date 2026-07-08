@@ -3,16 +3,12 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
 import * as json$0 from "../../../../../encoding/json/models.js";
 
 /**
  * AgentEventEnvelope is the versioned event wrapper sent over Wails Events.
  */
-export class AgentEventEnvelope {
+export interface AgentEventEnvelope {
     "v": number;
     "seq": number;
     "turnId": string;
@@ -22,47 +18,6 @@ export class AgentEventEnvelope {
     "ts": number;
     "critical": boolean;
     "payload": json$0.RawMessage;
-
-    /** Creates a new AgentEventEnvelope instance. */
-    constructor($$source: Partial<AgentEventEnvelope> = {}) {
-        if (!("v" in $$source)) {
-            this["v"] = 0;
-        }
-        if (!("seq" in $$source)) {
-            this["seq"] = 0;
-        }
-        if (!("turnId" in $$source)) {
-            this["turnId"] = "";
-        }
-        if (!("streamId" in $$source)) {
-            this["streamId"] = "";
-        }
-        if (!("workspaceId" in $$source)) {
-            this["workspaceId"] = "";
-        }
-        if (!("kind" in $$source)) {
-            this["kind"] = AgentEventKind.$zero;
-        }
-        if (!("ts" in $$source)) {
-            this["ts"] = 0;
-        }
-        if (!("critical" in $$source)) {
-            this["critical"] = false;
-        }
-        if (!("payload" in $$source)) {
-            this["payload"] = null;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new AgentEventEnvelope instance from a string or object.
-     */
-    static createFrom($$source: any = {}): AgentEventEnvelope {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new AgentEventEnvelope($$parsedSource as Partial<AgentEventEnvelope>);
-    }
 }
 
 /**

@@ -112,3 +112,46 @@ func TestStore_appendMessageRollsUpSessionCost(t *testing.T) {
 		t.Fatalf("session cost = %v, want 0.42", got.EstimatedCostCNY)
 	}
 }
+
+func TestStore_contentFormat(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sessions.db")
+	store, err := sqlite.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	sess, err := store.CreateSession("m", "max", "enabled", "ask", "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := store.UpdateSession(ctx, sess.ID, func(s *session.Session) error {
+		s.AssistantOutputFormat = "html"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.AppendMessage(ctx, session.Message{
+		SessionID:     sess.ID,
+		Role:          role.Assistant,
+		Content:       "<p>hi</p>",
+		ContentFormat: "html",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	msgs, err := store.ListMessages(ctx, sess.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(msgs) != 1 || msgs[0].ContentFormat != "html" {
+		t.Fatalf("content_format = %q", msgs[0].ContentFormat)
+	}
+	got, err := store.Get(ctx, sess.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AssistantOutputFormat != "html" {
+		t.Fatalf("assistant_output_format = %q", got.AssistantOutputFormat)
+	}
+}

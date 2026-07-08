@@ -1,20 +1,10 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { marked } from "marked";
 import { useEffect, useRef, useState } from "react";
 import { PermissionCard } from "@/components/permission/PermissionCard";
 import { SubagentCard } from "@/components/subagent/SubagentCard";
 import { ToolCard } from "@/components/tools/ToolCard";
+import { AssistantContent } from "@/render/AssistantContent";
 import type { ChatBlock } from "@/protocol/agent-events";
-
-marked.setOptions({ breaks: true, gfm: true });
-
-function renderMarkdown(raw: string): string {
-  try {
-    return marked.parse(raw, { async: false }) as string;
-  } catch {
-    return raw;
-  }
-}
 
 function BlockView({
   block,
@@ -49,14 +39,11 @@ function BlockView({
               <pre className="mt-1 whitespace-pre-wrap">{block.reasoning}</pre>
             </details>
           )}
-          {block.streaming ? (
-            <pre className="whitespace-pre-wrap text-sm">{block.raw}</pre>
-          ) : (
-            <div
-              className="msg-markdown prose prose-invert max-w-none text-sm"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(block.raw) }}
-            />
-          )}
+          <AssistantContent
+            raw={block.raw}
+            streaming={block.streaming}
+            contentFormat={block.contentFormat}
+          />
         </div>
       );
     case "tool":

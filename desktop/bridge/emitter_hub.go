@@ -127,8 +127,8 @@ func (h *EmitterHub) TurnCallbacks(sessionID string) *agent.TurnCallbacks {
 }
 
 // EmitTurnStarted sends turn.started on the main stream.
-func (h *EmitterHub) EmitTurnStarted(sessionID string) {
-	EmitTurnStarted(h.main, sessionID)
+func (h *EmitterHub) EmitTurnStarted(sessionID, contentFormat string) {
+	EmitTurnStarted(h.main, sessionID, contentFormat)
 }
 
 // EmitTurnDone flushes all streams and sends turn.done on main.

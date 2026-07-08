@@ -99,6 +99,11 @@ export interface UsageUpdatePayload {
   maxTokens?: number;
 }
 
+export interface TurnStartedPayload {
+  sessionId: string;
+  contentFormat?: "markdown" | "html";
+}
+
 export interface TurnDonePayload {
   error?: string;
   cancelled?: boolean;
@@ -133,6 +138,7 @@ export type ChatBlock =
       id: string;
       role: "assistant";
       raw: string;
+      contentFormat?: "markdown" | "html";
       reasoning?: string;
       reasoningOpen?: boolean;
       streaming: boolean;
@@ -168,6 +174,7 @@ export interface TurnState {
   running: boolean;
   waitingPermission: boolean;
   planning: boolean;
+  contentFormat: "markdown" | "html";
   blocks: ChatBlock[];
   subagents: SubagentRecord[];
   usage: UsageUpdatePayload;
@@ -178,6 +185,7 @@ export const initialTurnState = (): TurnState => ({
   running: false,
   waitingPermission: false,
   planning: false,
+  contentFormat: "markdown",
   blocks: [],
   subagents: [],
   usage: {},
@@ -204,12 +212,15 @@ export function turnReducer(state: TurnState, event: AgentEventEnvelope): TurnSt
   }
 
   switch (event.kind) {
-    case "turn.started":
+    case "turn.started": {
+      const payload = (event.payload ?? {}) as TurnStartedPayload;
       return {
         ...initialTurnState(),
         turnId: event.turnId,
         running: true,
+        contentFormat: payload.contentFormat ?? "markdown",
       };
+    }
     case "content.delta": {
       const payload = event.payload as ContentDeltaPayload;
       const blocks = [...state.blocks];
@@ -225,6 +236,7 @@ export function turnReducer(state: TurnState, event: AgentEventEnvelope): TurnSt
           id: nextBlockId("assistant"),
           role: "assistant",
           raw: payload.delta,
+          contentFormat: state.contentFormat,
           streaming: true,
           reasoningOpen: false,
         });
@@ -246,6 +258,7 @@ export function turnReducer(state: TurnState, event: AgentEventEnvelope): TurnSt
           id: nextBlockId("assistant"),
           role: "assistant",
           raw: "",
+          contentFormat: state.contentFormat,
           reasoning: payload.delta,
           reasoningOpen: true,
           streaming: true,
@@ -445,6 +458,7 @@ export interface HistoryMessage {
   id: number;
   role: string;
   content: string;
+  contentFormat?: string;
   reasoning?: string;
   toolCalls?: string;
   toolCallId?: string;
@@ -458,10 +472,12 @@ export function blocksFromHistory(messages: HistoryMessage[]): ChatBlock[] {
     if (m.role === "user") {
       blocks.push({ id: nextBlockId("user"), role: "user", text: m.content });
     } else if (m.role === "assistant") {
+      const fmt = m.contentFormat === "html" ? "html" : "markdown";
       blocks.push({
         id: nextBlockId("assistant"),
         role: "assistant",
         raw: m.content,
+        contentFormat: fmt,
         reasoning: m.reasoning,
         streaming: false,
       });

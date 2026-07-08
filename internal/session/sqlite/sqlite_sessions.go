@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/wzhejunqiu/ds-code/internal/session"
+	"github.com/wzhejunqiu/ds-code/internal/session/contentformat"
 	"time"
 
 	"github.com/wzhejunqiu/ds-code/internal/llm"
@@ -12,6 +13,7 @@ import (
 
 func (s *Store) Get(ctx context.Context, id string) (session.Session, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT id, title, model, reasoning_effort, thinking_type, permission_mode, run_mode,
+		COALESCE(assistant_output_format, 'markdown'),
 		compact_summary, compact_up_to_message_id,
 		prompt_tokens_total, completion_tokens_total, prompt_cache_hit_tokens_total,
 		COALESCE(pricing_snapshot_json, ''), COALESCE(estimated_cost_cny, 0),
@@ -24,7 +26,7 @@ func scanSession(row *sql.Row) (session.Session, error) {
 	var created, updated string
 	err := row.Scan(
 		&sess.ID, &sess.Title, &sess.Model, &sess.ReasoningEffort, &sess.ThinkingType,
-		&sess.PermissionMode, &sess.RunMode, &sess.CompactSummary, &sess.CompactUpToMessageID,
+		&sess.PermissionMode, &sess.RunMode, &sess.AssistantOutputFormat, &sess.CompactSummary, &sess.CompactUpToMessageID,
 		&sess.PromptTokensTotal, &sess.CompletionTokensTotal, &sess.PromptCacheHitTokensTotal,
 		&sess.PricingSnapshotJSON, &sess.EstimatedCostCNY,
 		&sess.GitSnapshot, &created, &updated,
@@ -70,12 +72,14 @@ func (s *Store) UpdateSession(ctx context.Context, sessionID string, fn func(*se
 	sess.UpdatedAt = time.Now().UTC()
 	_, err = s.db.ExecContext(ctx, `UPDATE sessions SET
 		title=?, model=?, reasoning_effort=?, thinking_type=?, permission_mode=?, run_mode=?,
+		assistant_output_format=?,
 		compact_summary=?, compact_up_to_message_id=?,
 		prompt_tokens_total=?, completion_tokens_total=?, prompt_cache_hit_tokens_total=?,
 		pricing_snapshot_json=?, estimated_cost_cny=?,
 		git_snapshot=?, updated_at=?
 		WHERE id=?`,
 		sess.Title, sess.Model, sess.ReasoningEffort, sess.ThinkingType, sess.PermissionMode, sess.RunMode,
+		contentformat.Normalize(sess.AssistantOutputFormat),
 		sess.CompactSummary, sess.CompactUpToMessageID,
 		sess.PromptTokensTotal, sess.CompletionTokensTotal, sess.PromptCacheHitTokensTotal,
 		sess.PricingSnapshotJSON, sess.EstimatedCostCNY,

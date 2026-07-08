@@ -8,7 +8,7 @@ import (
 )
 
 // schemaVersion must increase whenever the table layout changes.
-const schemaVersion = 5
+const schemaVersion = 6
 
 func (s *Store) initSchema() error {
 	var v int
@@ -42,6 +42,7 @@ func (s *Store) applySchema() error {
 			thinking_type TEXT NOT NULL,
 			permission_mode TEXT NOT NULL,
 			run_mode TEXT NOT NULL,
+			assistant_output_format TEXT NOT NULL DEFAULT 'markdown',
 			compact_summary TEXT NOT NULL DEFAULT '',
 			compact_up_to_message_id INTEGER NOT NULL DEFAULT 0,
 			prompt_tokens_total INTEGER NOT NULL DEFAULT 0,
@@ -58,6 +59,7 @@ func (s *Store) applySchema() error {
 			session_id TEXT NOT NULL,
 			role TEXT NOT NULL,
 			content TEXT NOT NULL,
+			content_format TEXT NOT NULL DEFAULT 'markdown',
 			reasoning_content TEXT NOT NULL DEFAULT '',
 			reasoning_duration_ms INTEGER NOT NULL DEFAULT 0,
 			turn_duration_ms INTEGER NOT NULL DEFAULT 0,

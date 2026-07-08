@@ -82,8 +82,8 @@ func TurnCallbacks(opts TurnCallbacksOptions) *agent.TurnCallbacks {
 }
 
 // EmitTurnStarted sends turn.started (critical).
-func EmitTurnStarted(em *StreamEmitter, sessionID string) {
-	em.EmitCritical(KindTurnStarted, TurnStartedPayload{SessionID: sessionID})
+func EmitTurnStarted(em *StreamEmitter, sessionID, contentFormat string) {
+	em.EmitCritical(KindTurnStarted, TurnStartedPayload{SessionID: sessionID, ContentFormat: contentFormat})
 }
 
 // EmitTurnDone sends turn.done after RunTurn returns.

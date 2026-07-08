@@ -9,6 +9,7 @@ import (
 	desktopbridge "github.com/wzhejunqiu/ds-code/desktop/bridge"
 	desktopsys "github.com/wzhejunqiu/ds-code/desktop/sys"
 	"github.com/wzhejunqiu/ds-code/internal/agent"
+	"github.com/wzhejunqiu/ds-code/internal/session/contentformat"
 	uislash "github.com/wzhejunqiu/ds-code/internal/ui/slash"
 )
 
@@ -79,12 +80,22 @@ func (m *Manager) runTurn(wsID, sessionID, text string, runner *agent.Runner, em
 		desktopsys.TurnFinished("", "", false)
 	}()
 
+	rt, _ := m.Ensure(wsID)
+	format := contentformat.Markdown
+	if rt != nil {
+		if f, err := m.ResolveAssistantOutputFormat(wsID, sessionID); err == nil {
+			format = f
+		}
+		rt.ApplyOutputContext(format)
+		defer rt.ClearOutputContext()
+	}
+
 	turnID := uuid.NewString()
 	hub := desktopbridge.NewEmitterHub(turnID, wsID, func(env desktopbridge.AgentEventEnvelope) bool {
 		emit(env)
 		return true
 	})
-	hub.EmitTurnStarted(sessionID)
+	hub.EmitTurnStarted(sessionID, format)
 	cb := hub.TurnCallbacks(sessionID)
 	prevComplete := cb.OnBackgroundAgentComplete
 	cb.OnBackgroundAgentComplete = func(agentID string) {
