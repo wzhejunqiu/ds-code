@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Events } from "@wailsio/runtime";
+import { TitleBar } from "@/components/chrome/TitleBar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { StatusBar } from "@/components/chat/StatusBar";
 import { CommandPalette } from "@/components/command/CommandPalette";
@@ -72,9 +73,14 @@ function ChatLayout() {
           }
         }}
       >
+        <TitleBar />
         <div className="three-col" style={{ gridTemplateColumns: gridCols }}>
-          {!layout.leftCollapsed && <WorkspaceSidebar />}
-          <div className="flex min-h-0 flex-col">
+          {layout.leftCollapsed ? (
+            <div aria-hidden="true" className="min-w-0 overflow-hidden" />
+          ) : (
+            <WorkspaceSidebar />
+          )}
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             <Onboarding />
             <ChatPanel
               dropInsert={dropInsert}
@@ -106,6 +112,7 @@ export function AppShell() {
           path="/settings"
           element={
             <div className="app-shell">
+              <TitleBar />
               <div className="three-col" style={{ gridTemplateColumns: "260px 1fr" }}>
                 <WorkspaceSidebar />
                 <SettingsView />

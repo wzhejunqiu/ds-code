@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { InspectorCollapsedRail } from "@/components/inspector/InspectorCollapsedRail";
 import { CheckpointTimeline } from "@/components/inspector/CheckpointTimeline";
 import { DiffView } from "@/components/inspector/DiffView";
 import { ToolDetail } from "@/components/inspector/ToolDetail";
@@ -40,13 +41,7 @@ export function InspectorPanel({
   }, [focusSubagentId, setTab, setSelection, onSelectSubagent, onFocusSubagentConsumed]);
 
   if (layout.rightCollapsed) {
-    return (
-      <div className="flex h-full items-start justify-center border-l border-[var(--color-border)] p-2">
-        <Button variant="secondary" size="sm" onClick={() => setLayout({ rightCollapsed: false })}>
-          Inspector
-        </Button>
-      </div>
-    );
+    return <InspectorCollapsedRail onExpand={() => setLayout({ rightCollapsed: false })} />;
   }
 
   const bgCount = subagents.filter((s) => s.background).length;

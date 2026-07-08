@@ -1,3 +1,4 @@
+import { InspectorCollapsedRail } from "@/components/inspector/InspectorCollapsedRail";
 import { Button } from "@/components/ui/button";
 import { useAppState } from "@/state/app-store";
 
@@ -5,13 +6,7 @@ export function InspectorPlaceholder() {
   const { layout, setLayout } = useAppState();
 
   if (layout.rightCollapsed) {
-    return (
-      <div className="flex h-full items-start justify-center border-l border-[var(--color-border)] p-2">
-        <Button variant="secondary" size="sm" onClick={() => setLayout({ rightCollapsed: false })}>
-          Inspector
-        </Button>
-      </div>
-    );
+    return <InspectorCollapsedRail onExpand={() => setLayout({ rightCollapsed: false })} />;
   }
 
   return (

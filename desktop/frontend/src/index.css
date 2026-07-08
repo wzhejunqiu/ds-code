@@ -32,7 +32,9 @@ html,
 body,
 #root {
   height: 100%;
+  width: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
@@ -42,21 +44,41 @@ body {
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+:root {
+  --titlebar-height: 0px;
+}
+
+html[data-platform="darwin"] {
+  /* Matches InvisibleTitleBarHeight in cmd/ds-code-desktop/main.go */
+  --titlebar-height: 50px;
+}
+
 .app-shell {
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: var(--titlebar-height) 1fr auto;
   height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.titlebar {
+  --wails-draggable: drag;
+  height: var(--titlebar-height);
+  min-height: 0;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .three-col {
   display: grid;
   height: 100%;
+  width: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
-.three-col > aside,
-.three-col > main,
-.three-col > .inspector {
+.three-col > * {
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
